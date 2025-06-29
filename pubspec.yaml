@@ -17,12 +17,14 @@ dependencies:
   go_router: ^14.6.2
   google_fonts: ^6.2.1
   http_parser: ^4.1.2
+  idempiere_rest: ^1.0.2
   image_picker: ^1.1.2
   shared_preferences: ^2.3.5
   webview_flutter: ^4.10.0
   intl: ^0.20.2
   flutter_launcher_icons: ^0.14.3
-
+  change_app_package_name: ^1.5.0
+  awesome_dialog: ^3.2.1
 dev_dependencies:
   flutter_test:
     sdk: flutter

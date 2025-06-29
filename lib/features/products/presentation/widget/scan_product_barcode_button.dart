@@ -1,17 +1,22 @@
+import 'package:awesome_dialog/awesome_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:monalisa_app_001/config/config.dart';
-import 'package:monalisa_app_001/features/m_inout/presentation/providers/m_in_out_providers.dart';
 
-class EnterBarcodeButton extends StatefulWidget {
-  final MInOutNotifier mInOutNotifier;
-  const EnterBarcodeButton(this.mInOutNotifier, {super.key});
+import '../../../shared/data/messages.dart';
+import '../providers/idempiere_products_notifier.dart';
+
+class ScanProductBarcodeButton extends StatefulWidget {
+  final IdempiereScanNotifier notifier;
+  const ScanProductBarcodeButton(this.notifier,{super.key});
 
   @override
-  EnterBarcodeButtonState createState() => EnterBarcodeButtonState();
+  ScanProductBarcodeButtonState createState() => ScanProductBarcodeButtonState();
 }
 
-class EnterBarcodeButtonState extends State<EnterBarcodeButton> {
+
+
+class ScanProductBarcodeButtonState extends State<ScanProductBarcodeButton> {
   final FocusNode _focusNode = FocusNode();
   String scannedData = "";
 
@@ -31,10 +36,27 @@ class EnterBarcodeButtonState extends State<EnterBarcodeButton> {
   }
 
   void _handleKeyEvent(KeyEvent event) {
+
     if (event.logicalKey == LogicalKeyboardKey.enter) {
       addBarcode();
       return;
     }
+    /*else if (event.logicalKey.keyId== 8589935383) {
+
+      AwesomeDialog(
+        context: context,
+        animType: AnimType.scale,
+        dialogType: DialogType.info,
+        body: Center(child: Text(
+          Messages.PLEASE_CONFIGURE_SCANNER_BUTTON,
+        ),),
+        title: Messages.INFORMATION,
+        desc:   '',
+        btnOkOnPress: () {},
+      ).show();
+
+      return;
+    }*/
 
     if (event.character != null && event.character!.isNotEmpty) {
       setState(() {
@@ -46,11 +68,7 @@ class EnterBarcodeButtonState extends State<EnterBarcodeButton> {
 
   void addBarcode() {
     if (scannedData.isNotEmpty) {
-      //UPC TO EAN13
-      //if(scannedData.length == 12){
-      //  scannedData ='0$scannedData';
-      //}
-      widget.mInOutNotifier.addBarcode(scannedData);
+      widget.notifier.addBarcode(scannedData);
       setState(() {
         scannedData = "";
       });
@@ -84,8 +102,8 @@ class EnterBarcodeButtonState extends State<EnterBarcodeButton> {
                   _focusNode.hasFocus
                       ? scannedData.isNotEmpty
                           ? scannedData
-                          : 'Listo para escanear'
-                      : 'Presiona para escanear',
+                          : Messages.READY_TO_SCAN
+                      : Messages.PRESS_TO_SCAN,
                   style: TextStyle(
                       color: Colors.white, fontSize: themeFontSizeLarge),
                   overflow: TextOverflow.ellipsis,

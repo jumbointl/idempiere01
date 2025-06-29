@@ -1,14 +1,28 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:monalisa_app_001/config/constants/roles_app.dart';
 import 'package:monalisa_app_001/config/router/app_router_notifier.dart';
 import 'package:monalisa_app_001/features/auth/auth.dart';
 import 'package:monalisa_app_001/features/auth/presentation/providers/auth_provider.dart';
 import 'package:monalisa_app_001/features/home/presentation/screens/home_screen.dart';
 import 'package:monalisa_app_001/features/m_inout/presentation/screens/m_in_out_screen.dart';
 import '../../features/auth/presentation/screens/auth_data_screen.dart';
+import '../../features/products/presentation/screens/product_screen.dart';
 
 final goRouterProvider = Provider((ref) {
   final goRouterNotifier = ref.read(goRouterNotifierProvider);
+  bool hasStockPrivilege() {
+    bool b = RolesApp.appInventory ;
+    if(!b){
+      return false;
+    }
+    final warehouse = ref.read(authProvider).selectedWarehouse;
+    if(warehouse == null) {
+      return false;
+    }
+    return true;
+  }
+
   return GoRouter(
     initialLocation: '/splash',
     refreshListenable: goRouterNotifier,
@@ -45,6 +59,11 @@ final goRouterProvider = Provider((ref) {
           return MInOutScreen(type: type);
         },
       ),
+      ///* MInOut Routes
+      GoRoute(
+        path: '/products/search',
+        builder: (context, state) => hasStockPrivilege() ? ProductScreen() : const HomeScreen(),
+      ),
 
     ],
     redirect: (context, state) {
@@ -73,4 +92,11 @@ final goRouterProvider = Provider((ref) {
       return null;
     },
   );
+
 });
+
+
+
+
+
+

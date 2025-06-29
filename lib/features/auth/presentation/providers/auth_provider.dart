@@ -118,8 +118,8 @@ class AuthNotifier extends StateNotifier<AuthState> {
       bool urlApi = await setUrlApi();
 
       if (!urlApi) {
-        String mensage = state.urlApiError.isNotEmpty ? state.urlApiError : '';
-        throw Exception(mensage);
+        String message = state.urlApiError.isNotEmpty ? state.urlApiError : '';
+        throw Exception(message);
       }
 
       final loginResponse = await authRepository.login(userName, password);

@@ -89,6 +89,12 @@ const appHomeOptionCol3Items = <MenuItem>[
     link: '/mInOut/moveconfirm',
     icon: Icons.swap_horiz,
   ),
+  MenuItem(
+    title: 'Product Info',
+    subTitle: '',
+    link: '/products/search',
+    icon: Icons.inventory,
+  ),
 ];
 
 const appTemplateMenuItems = <MenuItem>[

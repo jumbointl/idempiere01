@@ -16,29 +16,33 @@ class LoginScreen extends StatelessWidget {
       onTap: () => FocusScope.of(context).unfocus(),
       child: Scaffold(
         backgroundColor: Colors.white,
-        body: ListView(
-          children: [
-            SizedBox(
-              height: size.height - 385,
-              child: Center(
-                child: Image.asset(
-                  'assets/images/logo-monalisa.jpg',
-                  fit: BoxFit.contain,
+        body: SizedBox(
+          height: MediaQuery.of(context).size.height-10,
+          child: ListView(
+            shrinkWrap: true,
+            children: [
+              SizedBox(
+                height: MediaQuery.of(context).size.height - 385-20,
+                child: Center(
+                  child: Image.asset(
+                    'assets/images/logo-monalisa.jpg',
+                    fit: BoxFit.contain,
+                  ),
                 ),
               ),
-            ),
-            Container(
-              height: 385,
-              decoration: BoxDecoration(
-                color: themeColorGrayLight,
-                borderRadius: const BorderRadius.only(
-                  topLeft: Radius.circular(30),
-                  topRight: Radius.circular(30),
+              Container(
+                height: 365,
+                decoration: BoxDecoration(
+                  color: themeColorGrayLight,
+                  borderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(30),
+                    topRight: Radius.circular(30),
+                  ),
                 ),
+                child: const _LoginForm(),
               ),
-              child: const _LoginForm(),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
