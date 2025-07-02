@@ -8,6 +8,7 @@ import 'package:monalisa_app_001/features/home/presentation/screens/home_screen.
 import 'package:monalisa_app_001/features/m_inout/presentation/screens/m_in_out_screen.dart';
 import '../../features/auth/presentation/screens/auth_data_screen.dart';
 import '../../features/products/presentation/screens/product_screen.dart';
+import '../../features/products/presentation/screens/product_search_by_sku_screen.dart';
 
 final goRouterProvider = Provider((ref) {
   final goRouterNotifier = ref.read(goRouterNotifierProvider);
@@ -59,10 +60,18 @@ final goRouterProvider = Provider((ref) {
           return MInOutScreen(type: type);
         },
       ),
-      ///* MInOut Routes
       GoRoute(
         path: '/products/search',
         builder: (context, state) => hasStockPrivilege() ? ProductScreen() : const HomeScreen(),
+      ),
+      ///* MInOut Routes
+      /*GoRoute(
+        path: '/products/scan',
+        builder: (context, state) => hasStockPrivilege() ? ProductScreen() : const HomeScreen(),
+      ),*/
+      GoRoute(
+        path: '/products/updateUPC',
+        builder: (context, state) => hasStockPrivilege() ? ProductSearchBySkuScreen() : const HomeScreen(),
       ),
 
     ],

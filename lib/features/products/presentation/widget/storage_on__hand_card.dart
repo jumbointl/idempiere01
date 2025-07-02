@@ -3,8 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../config/theme/app_theme.dart';
 import '../../../auth/presentation/providers/auth_provider.dart';
+import '../../../shared/data/memory.dart';
 import '../../../shared/data/messages.dart';
 import '../../domain/idempiere/idempiere_storage_on_hande.dart';
+import '../../domain/idempiere/idempiere_warehouse.dart';
 class StorageOnHandCard extends ConsumerStatefulWidget {
 
   final IdempiereStorageOnHande storage;
@@ -25,14 +27,14 @@ class StorageOnHandCardState extends ConsumerState<StorageOnHandCard> {
   Widget build(BuildContext context) {
     final warehouse = ref.read(authProvider).selectedWarehouse;
     int warehouseID = warehouse?.id ?? 0;
-    Color background = widget.storage.mLocatorID?.id == warehouseID ? widget.colorSameWarehouse : widget.colorDifferentWarehouse;
-    double widthLarge = widget.width/5*2;
-    double widthSmall = widget.width/5;
-    print('----------user warehouse id $warehouseID');
-    // solo prueba
-    if(widget.index==1){
-      background = widget.colorSameWarehouse;
-    }
+    IdempiereWarehouse? warehouseStorage = widget.storage.mLocatorID?.mWarehouseID;
+
+    Color background = warehouseStorage?.id == warehouseID ? widget.colorSameWarehouse : widget.colorDifferentWarehouse;
+    double widthLarge = widget.width/3*2;
+    double widthSmall = widget.width/3;
+    String warehouseName = warehouseStorage?.identifier ?? '--';
+    double qtyOnHand = widget.storage.qtyOnHand ?? 0;
+    String quantity = Memory.numberFormatter0Digit.format(qtyOnHand) ;
 
     return Container(
       margin: const EdgeInsets.all(5),
@@ -47,41 +49,33 @@ class StorageOnHandCardState extends ConsumerState<StorageOnHandCard> {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Expanded(
+              flex: widthSmall.toInt(), // Use widthLarge for this column's width
+              child: Column(
+                spacing: 5,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(Messages.WAREHOUSE),
+                  Text(Messages.LOCATOR),
+                  Text(Messages.QUANTITY),
+                  Text(Messages.ATTRIBUET_INSTANCE),
+
+                ],
+              ),
+            ),
+            Expanded(
               flex: widthLarge.toInt(), // Use widthLarge for this column's width
               child: Column(
                 spacing: 5,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(Messages.LOCATORS),
-                  Text(widget.storage.mLocatorID?.identifier ?? '--', overflow: TextOverflow.ellipsis),
+                  Text(warehouseName),
+                  Text(widget.storage.mLocatorID?.value ?? '--', overflow: TextOverflow.ellipsis),
+                  Text(quantity),
+                  Text(widget.storage.mAttributeSetInstanceID?.identifier ?? '--', overflow: TextOverflow.ellipsis),
                 ],
               ),
             ),
-            Expanded(
-              flex: widthLarge.toInt(), // Use widthLarge for this column's width
-              child: Column(
-                spacing: 5,
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  Text(Messages.QUANTITY),
-                  Text('${widget.storage.qtyOnHand ?? '--'}'),
-                ],
-              ),
-            ),
-            Expanded(
-              flex: widthSmall.toInt(), // Use widthLarge for this column's width
-              child: Column(
-                spacing: 5,
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  //Text(Messages.REGISTERS),
-                  Text('${widget.index} / ${widget.listLength}'),
-                  Text(''),
-                ],
-              ),
-            ),
+
           ],
         ),
       ),

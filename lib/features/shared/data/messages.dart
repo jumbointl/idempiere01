@@ -300,7 +300,7 @@ class Messages{
 
   static String SHOULD_BE_CLOSER_TO_THE_CUSTOMER='DEBE ESTAR MAS CERCA DEL CLENTE';
 
-  static String WAREHOUSE='DEPOSITO';
+  static String WAREHOUSE='ALMACEN';
   static String ORGANIZATION='ORGANIZACION';
 
   static var EXPIRES_AT='VENCE EN';
@@ -454,7 +454,8 @@ class Messages{
 
   static String LOCATIONS='UBICACIONES';
 
-  static String LOCATORS='ESTANTES';
+  static String LOCATORS='LOCALIZADORES';
+  static String LOCATOR='LOCALIZADOR';
 
   static String WAREHOUSES='DEPOSITOS';
 
@@ -506,4 +507,16 @@ class Messages{
   static var PLEASE_CONFIGURE_SCANNER_BUTTON='FAVOR DE CONFIGURAR EL BOTON DE ESCANEO';
 
   static var INFORMATION='INFORMACION';
+
+  static String WAREHOUSE_SHORT='DEP';
+
+  static String OF='DE';
+
+  static String SCANNING='ESCANEANDO...';
+
+  static String OPEN_CAMERA='ABRIR CAMARA';
+
+  static String ATTRIBUET_INSTANCE='ATT';
+
+  static String NOT_FOUND='NO ENCONTRADO';
 }

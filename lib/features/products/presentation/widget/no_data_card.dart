@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../config/theme/app_theme.dart';
 import '../../../shared/data/messages.dart';
-import '../../domain/idempiere/idempiere_product.dart';
 import '../providers/product_screen_provider.dart';
 class NoDataCard extends ConsumerStatefulWidget {
 
@@ -19,15 +18,31 @@ class ProductDetailCardState extends ConsumerState<NoDataCard> {
   @override
   Widget build(BuildContext context) {
     int count = ref.watch(scannedCodeTimesProvider.notifier).state;
-    Color color = (count.isEven) ? themeColorWarningLight : themeColorWarning;
-
+    String scannedCode = ref.watch(scannedCodeProvider) ?? Messages.EMPTY;
+    bool hideText = false;
+    if(scannedCode == Messages.EMPTY || scannedCode == ''){
+      hideText = true;
+    }
+    Color color = themeColorGrayLight;
+    String image ='assets/images/not-found.png';
+    (count.isEven) ? image ='assets/images/no_data1.png' : image ='assets/images/no_data2.png';
+    if(count == 0) image ='assets/images/barcode_scan.png';
     return Container(
       decoration: BoxDecoration(
         color: color,
         borderRadius: BorderRadius.circular(10),
       ),
-      padding: const EdgeInsets.all(10),
-      child: IconButton(onPressed: ()=>{}, icon: Image.asset('assets/images/not-found.png')),
+      padding: const EdgeInsets.symmetric(vertical: 10,horizontal: 20),
+      child:  hideText ?  IconButton(onPressed: ()=>{}, icon: Image.asset(image)) : Row(
+        children: [
+
+          (count.isEven) ? Text(scannedCode, style: const TextStyle(fontSize: themeFontSizeTitle),)
+              : IconButton(onPressed: ()=>{}, icon: Image.asset(image)) ,
+          Spacer(),
+          (count.isEven) ? IconButton(onPressed: ()=>{}, icon: Image.asset(image))
+              : Text(scannedCode, style: const TextStyle(fontSize: themeFontSizeTitle),),
+        ],
+      ),
     );
   }
 }

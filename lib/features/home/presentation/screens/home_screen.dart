@@ -11,86 +11,89 @@ class HomeScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scaffoldKey = GlobalKey<ScaffoldState>();
-
     return Scaffold(
       drawer: SideMenu(scaffoldKey: scaffoldKey),
       appBar: AppBar(
         title: const Text('Opciones'),
       ),
-      body: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            SizedBox(
-              width: 100,
-              child: ListView.builder(
-                itemCount: appHomeOptionCol1Items.length,
-                itemBuilder: (context, index) {
-                  final menuHomeOption = appHomeOptionCol1Items[index];
-                  return HomeOption(
-                    title: menuHomeOption.title,
-                    icon: menuHomeOption.icon,
-                    onTap: () {
-                      context.push(menuHomeOption.link);
-                    },
-                  );
-                },
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              SizedBox(
+                width: 100,
+                child: ListView.builder(
+                  itemCount: appHomeOptionCol1Items.length,
+                  itemBuilder: (context, index) {
+                    final menuHomeOption = appHomeOptionCol1Items[index];
+                    return HomeOption(
+                      title: menuHomeOption.title,
+                      icon: menuHomeOption.icon,
+                      onTap: () {
+                        context.push(menuHomeOption.link);
+                      },
+                    );
+                  },
+                ),
               ),
-            ),
-            SizedBox(width: 10),
-            SizedBox(
-              width: 100,
-              child: ListView.builder(
-                itemCount: appHomeOptionCol2Items.length,
-                itemBuilder: (context, index) {
-                  final menuHomeOption = appHomeOptionCol2Items[index];
-                  return HomeOption(
-                    title: menuHomeOption.title,
-                    icon: menuHomeOption.icon,
-                    onTap: () {
-                      context.push(menuHomeOption.link);
-                    },
-                  );
-                },
+              SizedBox(width: 10),
+              SizedBox(
+                width: 100,
+                child: ListView.builder(
+                  itemCount: appHomeOptionCol2Items.length,
+                  itemBuilder: (context, index) {
+                    final menuHomeOption = appHomeOptionCol2Items[index];
+                    return HomeOption(
+                      title: menuHomeOption.title,
+                      icon: menuHomeOption.icon,
+                      onTap: () {
+                        context.push(menuHomeOption.link);
+                      },
+                    );
+                  },
+                ),
               ),
-            ),
-            SizedBox(width: 10),
-            SizedBox(
-              width: 100,
-              child: ListView.builder(
-                itemCount: appHomeOptionCol3Items.length,
-                itemBuilder: (context, index) {
-                  final menuHomeOption = appHomeOptionCol3Items[index];
-                  return HomeOption(
-                    title: menuHomeOption.title,
-                    icon: menuHomeOption.icon,
-                    onTap: () {
-                      context.push(menuHomeOption.link);
-                    },
-                  );
-                },
+              SizedBox(width: 10),
+              SizedBox(
+                width: 100,
+                child: ListView.builder(
+                  itemCount: appHomeOptionCol3Items.length,
+                  itemBuilder: (context, index) {
+                    final menuHomeOption = appHomeOptionCol3Items[index];
+                    return HomeOption(
+                      title: menuHomeOption.title,
+                      icon: menuHomeOption.icon,
+                      onTap: () {
+                        context.push(menuHomeOption.link);
+                      },
+                    );
+                  },
+                ),
               ),
-            ),
-            // SizedBox(width: 8),
-            // Expanded(
-            //   child: ListView.builder(
-            //     itemCount: appHomeOptionCol3Items.length,
-            //     itemBuilder: (context, index) {
-            //       final menuHomeOption = appHomeOptionCol3Items[index];
-            //       return HomeOption(
-            //         title: menuHomeOption.title,
-            //         icon: menuHomeOption.icon,
-            //         onTap: () {
-            //           context.push(menuHomeOption.link);
-            //         },
-            //       );
-            //     },
-            //   ),
-            // ),
-          ],
+              // SizedBox(width: 8),
+              // Expanded(
+              //   child: ListView.builder(
+              //     itemCount: appHomeOptionCol3Items.length,
+              //     itemBuilder: (context, index) {
+              //       final menuHomeOption = appHomeOptionCol3Items[index];
+              //       return HomeOption(
+              //         title: menuHomeOption.title,
+              //         icon: menuHomeOption.icon,
+              //         onTap: () {
+              //           context.push(menuHomeOption.link);
+              //         },
+              //       );
+              //     },
+              //   ),
+              // ),
+            ],
+          ),
         ),
       ),
     );
   }
+
+
 }

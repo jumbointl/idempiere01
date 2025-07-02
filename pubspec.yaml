@@ -21,8 +21,11 @@ dependencies:
   image_picker: ^1.1.2
   shared_preferences: ^2.3.5
   webview_flutter: ^4.10.0
-  intl: ^0.20.2
   flutter_launcher_icons: ^0.14.3
+  intl: ^0.20.2
+  mobile_scanner: ^7.0.1
+  flutter_datawedge: ^3.2.0
+  simple_barcode_scanner: ^0.3.0
   change_app_package_name: ^1.5.0
   awesome_dialog: ^3.2.1
 dev_dependencies:

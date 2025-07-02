@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 // const themeColorPrimary = Color.fromRGBO(25, 35, 70, 1);
 const themeColorPrimary = Color.fromRGBO(31, 44, 80, 1);
 const themeColorPrimaryLight = Color.fromRGBO(140, 150, 255, 1);
+const themeColorPrimaryLight2 = Color.fromRGBO(173, 180, 246, 1.0);
 
 const themeBackgroundColor = Colors.white;
 const themeBackgroundColorLight = Color.fromRGBO(245, 245, 245, 1);

@@ -95,6 +95,13 @@ const appHomeOptionCol3Items = <MenuItem>[
     link: '/products/search',
     icon: Icons.inventory,
   ),
+
+  /*MenuItem(
+    title: 'Update UPC',
+    subTitle: '',
+    link: '/products/updateUPC',
+    icon: Icons.scanner,
+  ),*/
 ];
 
 const appTemplateMenuItems = <MenuItem>[

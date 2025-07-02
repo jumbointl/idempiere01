@@ -1,4 +1,3 @@
-import 'package:monalisa_app_001/features/products/domain/idempiere/idempiere_warehouse.dart';
 
 import 'idempiere_locator.dart';
 import 'idempiere_object.dart';
@@ -23,7 +22,6 @@ class IdempiereStorageOnHande extends IdempiereObject{
   String? updated;
   IdempiereUser? updatedBy;
   String? dateMaterialPolicy;
-  IdempiereWarehouse? warehouse;
 
   IdempiereStorageOnHande(
       { 
@@ -41,7 +39,6 @@ class IdempiereStorageOnHande extends IdempiereObject{
         this.updated,
         this.updatedBy,
         this.dateMaterialPolicy,
-        this.warehouse,
         super.modelName,
         super.id,
         super.identifier,

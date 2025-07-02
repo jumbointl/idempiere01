@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:simple_barcode_scanner/simple_barcode_scanner.dart';
 
-import '../../../../config/constants/environment.dart';
 import '../../../shared/data/memory.dart';
 import '../../../shared/data/messages.dart';
 import '../providers/idempiere_products_notifier.dart';
@@ -13,18 +12,18 @@ import '../widget/scan_product_barcode_button.dart';
 import '../widget/storage_on__hand_card.dart';
 
 
-class ProductScreen extends ConsumerStatefulWidget {
+class ProductSearchBySkuScreen extends ConsumerStatefulWidget {
   int countScannedCamera =0;
   late IdempiereScanNotifier productsNotifier ;
 
-  ProductScreen({super.key});
+  ProductSearchBySkuScreen({super.key});
 
   @override
   ConsumerState<ConsumerStatefulWidget> createState() => _ProductScreenState();
 
 }
 
-class _ProductScreenState extends ConsumerState<ProductScreen> {
+class _ProductScreenState extends ConsumerState<ProductSearchBySkuScreen> {
 
 
   @override
@@ -33,7 +32,7 @@ class _ProductScreenState extends ConsumerState<ProductScreen> {
     final productsStoredAsync = ref.watch(findProductsStoreOnHandProvider);
     widget.productsNotifier = ref.watch(scanStateNotifierProvider.notifier);
     final double width = MediaQuery.of(context).size.width - 30;
-    //print('Bearer ${Environment.token}');
+
     return Scaffold(
 
       appBar: AppBar(

@@ -25,7 +25,7 @@ class ProductDetailCardState extends ConsumerState<ProductDetailCard> {
 
     return Container(
       decoration: BoxDecoration(
-        color: themeColorPrimaryLight,
+        color: themeColorPrimaryLight2,
         borderRadius: BorderRadius.circular(10),
       ),
       padding: const EdgeInsets.all(10),
