@@ -1,4 +1,3 @@
-import 'package:flutter_datawedge/src/flutter_datawedge.dart';
 import 'package:intl/intl.dart';
 
 class Memory {
@@ -11,6 +10,5 @@ class Memory {
   static final numberFormatter0Digit = NumberFormat.decimalPatternDigits
     (locale: 'es_PY',decimalDigits: 0);
 
-  static FlutterDataWedge flutterDataWedge = FlutterDataWedge();
-  
+
 }

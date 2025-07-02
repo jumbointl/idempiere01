@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:simple_barcode_scanner/simple_barcode_scanner.dart';
 
-import '../../../../config/constants/environment.dart';
 import '../../../shared/data/memory.dart';
 import '../../../shared/data/messages.dart';
 import '../providers/idempiere_products_notifier.dart';
