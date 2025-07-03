@@ -74,7 +74,6 @@ class _ProductScreenState extends ConsumerState<ProductSearchBySkuScreen> {
           ),
 
             Container(
-              //TODO: create a widget for this
               width: MediaQuery.of(context).size.width - 30,
               margin: EdgeInsets.all(10),
               decoration: BoxDecoration(

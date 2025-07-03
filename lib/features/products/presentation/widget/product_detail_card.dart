@@ -20,7 +20,7 @@ class ProductDetailCardState extends ConsumerState<ProductDetailCard> {
   Widget build(BuildContext context) {
     String att = widget.product.mAttributeSetInstanceID?.identifier  ?? '';
     if(att==''){
-      att = 'ATT ID: ${widget.product.mAttributeSetInstanceID?.id  ?? '--'}';
+      att = '${Messages.ATTRIBUET_INSTANCE}: ${widget.product.mAttributeSetInstanceID?.identifier  ?? '--'}';
     }
 
     return Container(
