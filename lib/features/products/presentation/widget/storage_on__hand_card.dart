@@ -54,9 +54,9 @@ class StorageOnHandCardState extends ConsumerState<StorageOnHandCard> {
                 spacing: 5,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(Messages.WAREHOUSE),
-                  Text(Messages.LOCATOR),
-                  Text(Messages.QUANTITY),
+                  Text(Messages.WAREHOUSE_SHORT),
+                  Text(Messages.LOCATOR_SHORT),
+                  Text(Messages.QUANTITY_SHORT),
                   Text(Messages.ATTRIBUET_INSTANCE),
 
                 ],
@@ -70,7 +70,12 @@ class StorageOnHandCardState extends ConsumerState<StorageOnHandCard> {
                 children: [
                   Text(warehouseName),
                   Text(widget.storage.mLocatorID?.value ?? '--', overflow: TextOverflow.ellipsis),
-                  Text(quantity),
+                  Text(
+                    quantity,
+                    style: TextStyle(
+                      color: qtyOnHand < 0 ? Colors.redAccent : Colors.black,
+                    ),
+                  ),
                   Text(widget.storage.mAttributeSetInstanceID?.identifier ?? '--', overflow: TextOverflow.ellipsis),
                 ],
               ),

@@ -400,6 +400,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "0.2.1+1"
+  input_dialog:
+    dependency: "direct main"
+    description:
+      name: input_dialog
+      sha256: "3b54e7b336fa567a4cd2865bafb4855ce18c991d37810a318f9ea5909c4c70b0"
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.1.1"
   intl:
     dependency: "direct main"
     description:

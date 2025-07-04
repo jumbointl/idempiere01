@@ -32,15 +32,16 @@ class ProductDetailCardState extends ConsumerState<NoDataCard> {
         color: color,
         borderRadius: BorderRadius.circular(10),
       ),
-      padding: const EdgeInsets.symmetric(vertical: 10,horizontal: 20),
+      padding: const EdgeInsets.symmetric(vertical: 10,horizontal: 10),
       child:  hideText ?  IconButton(onPressed: ()=>{}, icon: Image.asset(image)) : Row(
+        spacing: 5,
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
 
-          (count.isEven) ? Text(scannedCode, style: const TextStyle(fontSize: themeFontSizeTitle),)
+          (count.isEven) ? Expanded(child: Text(scannedCode, style: const TextStyle(fontSize: themeFontSizeTitle),))
               : IconButton(onPressed: ()=>{}, icon: Image.asset(image)) ,
-          Spacer(),
           (count.isEven) ? IconButton(onPressed: ()=>{}, icon: Image.asset(image))
-              : Text(scannedCode, style: const TextStyle(fontSize: themeFontSizeTitle),),
+              : Expanded(child: Text(scannedCode, style: const TextStyle(fontSize: themeFontSizeTitle),)),
         ],
       ),
     );

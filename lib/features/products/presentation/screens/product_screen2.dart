@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:simple_barcode_scanner/simple_barcode_scanner.dart';
 
+import '../../../auth/domain/entities/warehouse.dart';
+import '../../../auth/presentation/providers/auth_provider.dart';
 import '../../../shared/data/memory.dart';
 import '../../../shared/data/messages.dart';
 import '../providers/idempiere_products_notifier.dart';
@@ -12,18 +14,18 @@ import '../widget/scan_product_barcode_button.dart';
 import '../widget/storage_on__hand_card.dart';
 
 
-class ProductSearchBySkuScreen extends ConsumerStatefulWidget {
+class ProductScreen2 extends ConsumerStatefulWidget {
   int countScannedCamera =0;
   late IdempiereScanNotifier productsNotifier ;
 
-  ProductSearchBySkuScreen({super.key});
+  ProductScreen2({super.key});
 
   @override
   ConsumerState<ConsumerStatefulWidget> createState() => _ProductScreenState();
 
 }
 
-class _ProductScreenState extends ConsumerState<ProductSearchBySkuScreen> {
+class _ProductScreenState extends ConsumerState<ProductScreen2> {
 
 
   @override
@@ -32,8 +34,9 @@ class _ProductScreenState extends ConsumerState<ProductSearchBySkuScreen> {
     final productsStoredAsync = ref.watch(findProductsStoreOnHandProvider);
     widget.productsNotifier = ref.watch(scanStateNotifierProvider.notifier);
     final double width = MediaQuery.of(context).size.width - 30;
-
+    //print('Bearer ${Environment.token}');
     return Scaffold(
+
 
       appBar: AppBar(
         title: Text(Messages.PRODUCT),
@@ -52,8 +55,6 @@ class _ProductScreenState extends ConsumerState<ProductSearchBySkuScreen> {
 
       ),
 
-      /*bottomSheet:
-      */
       body: Container(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -75,7 +76,7 @@ class _ProductScreenState extends ConsumerState<ProductSearchBySkuScreen> {
 
             Container(
               width: MediaQuery.of(context).size.width - 30,
-              margin: EdgeInsets.all(10),
+              margin: EdgeInsets.symmetric(horizontal: 10),
               decoration: BoxDecoration(
                 color: Colors.grey[200],
                 borderRadius: BorderRadius.circular(10),
@@ -86,12 +87,44 @@ class _ProductScreenState extends ConsumerState<ProductSearchBySkuScreen> {
                 loading: () => Container(),
               ),
             ),
+            /*ref.watch(isScanningProvider) ?Container(): Container(
+              width: MediaQuery.of(context).size.width - 30,
+              margin: EdgeInsets.symmetric(horizontal: 10),
+              decoration: BoxDecoration(
+                color: Colors.grey[200],
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: ref.watch(showResultCardProvider.notifier).state ? ProductResumeCard(width-10) : Container() ,
+            ),*/
+
             Expanded(
                 child: productsStoredAsync.when(
               data: (storages) {
                 WidgetsBinding.instance.addPostFrameCallback((_) async {
                   // deley 1 secund
+
+                  Warehouse? w = ref.read(authProvider).selectedWarehouse;
+                  int warehouseUser = w?.id ?? 0;
+                  String warehouseName = w?.name ?? '';
+                  double quantity = 0;
+                  for (var data in storages) {
+                    int warehouseID = data.mLocatorID?.mWarehouseID?.id ?? 0;
+
+                    if (warehouseID == warehouseUser) {
+                      quantity += data.qtyOnHand ?? 0;
+                    }
+                  }
+
+                  String aux = Memory.numberFormatter0Digit.format(quantity);
+                  ref.read(resultOfSameWarehouseProvider.notifier).state = [aux,warehouseName];
+
+                  if(storages.isNotEmpty){
+                    ref.read(showResultCardProvider.notifier).state = true;
+                  } else {
+                    ref.read(showResultCardProvider.notifier).state = false;
+                  }
                   await Future.delayed(Duration(milliseconds: Memory.DELAY_TO_REFRESH_PROVIDER_MILLISECOND));
+
                   ref.watch(isScanningProvider.notifier).update((state) => false);
                 });
                 return storages.isEmpty

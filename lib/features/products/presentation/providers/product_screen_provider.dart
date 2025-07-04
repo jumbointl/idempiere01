@@ -13,12 +13,18 @@ import '../../domain/idempiere/idempiere_storage_on_hande.dart';
 import 'idempiere_products_notifier.dart';
 
 final findProductByUPCProvider = FutureProvider.autoDispose<IdempiereProduct>((ref) async {
-  final scannedCode = ref.watch(scannedCodeProvider);
+  final String? scannedCode = ref.watch(scannedCodeProvider)?.toUpperCase();
   if(scannedCode==null || scannedCode=='') return IdempiereProduct(id:0);
+  int? aux = int.tryParse(scannedCode);
+  String searchField ='upc';
+  if(aux==null){
+    searchField = 'sku';
+  }
   Dio dio = await DioClient.create();
   try {
     String url =
-        "/api/v1/models/m_product?\$filter=upc eq '$scannedCode'";
+        "/api/v1/models/m_product?\$filter=$searchField eq '$scannedCode'";
+    print('url $url');
     url = url.replaceAll(' ', '%20');
 
     final response = await dio.get(url);
@@ -52,10 +58,19 @@ final findProductByUPCProvider = FutureProvider.autoDispose<IdempiereProduct>((r
 final findProductsBySKUProvider = FutureProvider.autoDispose<List<IdempiereProduct>>((ref) async {
   final scannedCode = ref.watch(scannedSKUCodeProvider);
   if(scannedCode==null || scannedCode=='') return [];
+
+  int? aux = int.tryParse(scannedCode);
+  String searchField ='upc';
+  if(aux==null){
+    searchField = 'sku';
+  }
+
+
+
   Dio dio = await DioClient.create();
   try {
     String url =
-        "/api/v1/models/m_product?\$filter=sku eq '$scannedCode'";
+        "/api/v1/models/m_product?\$filter=$searchField eq '$scannedCode'";
     url = url.replaceAll(' ', '%20');
 
     final response = await dio.get(url);
@@ -91,8 +106,10 @@ final findProductsStoreOnHandProvider = FutureProvider.autoDispose<List<Idempier
   //final product = ref.watch(futureProvider).value;
   //int productId = product?.id ?? 0;
   if(productId== 0){
+
     return [];
   }
+
   Dio dio = await DioClient.create();
   try {
     String url = "/api/v1/models/m_storageonhand?\$expand=M_Locator_ID&\$IsActive=true"
@@ -106,8 +123,10 @@ final findProductsStoreOnHandProvider = FutureProvider.autoDispose<List<Idempier
       if (responseApi.records != null && responseApi.records!.isNotEmpty) {
         final productsListRaw = responseApi.records!;
         Map<String, IdempiereStorageOnHande> groupedProducts = {};
+        int warehouseUser = ref.read(authProvider).selectedWarehouse?.id ?? 0;
 
         for (var data in productsListRaw) {
+
           if (productId == data.mProductID?.id) {
             String key = '${data.mLocatorID?.value}-${data.mAttributeSetInstanceID?.id}';
             if (groupedProducts.containsKey(key)) {
@@ -125,14 +144,14 @@ final findProductsStoreOnHandProvider = FutureProvider.autoDispose<List<Idempier
             }
           }
         }
-        List<IdempiereStorageOnHande> productsList = groupedProducts.values.toList();
 
-        int warehouseUser = ref.read(authProvider).selectedWarehouse?.id ?? 0;
+        List<IdempiereStorageOnHande> productsList = groupedProducts.values.toList();
 
         // Group products by warehouse
         Map<int, List<IdempiereStorageOnHande>> groupedByWarehouse = {};
         for (var product in productsList) {
           int warehouseID = product.mLocatorID?.mWarehouseID?.id ?? 0;
+
           groupedByWarehouse.putIfAbsent(warehouseID, () => []).add(product);
         }
 
@@ -151,11 +170,8 @@ final findProductsStoreOnHandProvider = FutureProvider.autoDispose<List<Idempier
         // Flatten the grouped and sorted products into a single list
         List<IdempiereStorageOnHande> sortedProductsList = [];
         for (var warehouseID in sortedWarehouseIDs) {
-          sortedProductsList.addAll(groupedByWarehouse[warehouseID]!);
+          sortedProductsList.addAll(groupedByWarehouse[warehouseID]!.where((product) => product.qtyOnHand != 0));
         }
-
-
-
 
         return sortedProductsList;
       } else {
@@ -189,11 +205,15 @@ final scannedCodeTimesProvider = StateProvider.autoDispose<int>((ref) {
   return 0;
 });
 
+final resultOfSameWarehouseProvider = StateProvider.autoDispose<List<String>>((ref) {
+  return [];
+});
+
 final isScanningProvider = StateProvider.autoDispose<bool>((ref) {
   return false;
 });
 
-final usePhoneCameraToScan = StateProvider.autoDispose<bool>((ref) {
+final usePhoneCameraToScanProvider = StateProvider.autoDispose<bool>((ref) {
   return false;
 });
 final productSKUProvider = StateProvider.autoDispose<String>((ref) {
@@ -206,3 +226,8 @@ final productIdProvider = StateProvider.autoDispose<int>((ref) {
 });
 
 final barcodeDataProvider = StateProvider<String?>((ref) => null);
+
+final showResultCardProvider = StateProvider.autoDispose<bool>((ref) {
+  return false;
+});
+

@@ -1,5 +1,7 @@
 import 'package:monalisa_app_001/features/auth/domain/entities/role.dart';
 
+import 'environment.dart';
+
 class RolesApp {
   static final Map<String, bool> _roles = {
 
@@ -54,6 +56,8 @@ class RolesApp {
     'APP_INVENTORY': false,
     'APP_INVENTORY_QTY': false,
     'APP_INVENTORY_COMPLETE': false,
+    //STOCK
+    'APP_STOCK': false,
   };
 
   // SHIPMENT
@@ -107,6 +111,8 @@ class RolesApp {
   static bool get appInventory => _roles['APP_INVENTORY']!;
   static bool get appInventoryQty => _roles['APP_INVENTORY_QTY']!;
   static bool get appInventoryComplete => _roles['APP_INVENTORY_COMPLETE']!;
+  //STOCK
+  static bool get appStock => _roles['APP_STOCK']!;
 
   static void set(List<Role> roles) {
     for (var role in roles) {
@@ -117,4 +123,11 @@ class RolesApp {
   static String getString() {
     return 'RolesApp{${_roles.entries.map((e) => '${e.key}: ${e.value}').join(', ')}}';
   }
+  static bool hasStockPrivilege() {
+    if(Environment.apiUrl.contains('idempiere-api')){
+      return true;
+    }
+    return  RolesApp.appStock ;
+  }
+
 }

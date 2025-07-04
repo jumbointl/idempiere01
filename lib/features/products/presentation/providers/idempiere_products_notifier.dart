@@ -12,6 +12,7 @@ class IdempiereScanNotifier  extends StateNotifier<List<IdempiereProduct>>{
     if(scannedData.length==12){
       scannedData='0$scannedData';
     }
+    ref.watch(resultOfSameWarehouseProvider.notifier).state = [];
     ref.watch(scannedCodeProvider.notifier).update((state) => scannedData);
     ref.watch(scannedCodeTimesProvider.notifier).update((state) => state+1);
     ref.watch(isScanningProvider.notifier).update((state) => true);

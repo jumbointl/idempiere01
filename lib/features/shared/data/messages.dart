@@ -361,7 +361,7 @@ class Messages{
 
   static String SUM ='SUMA';
 
-  static String QUANTITY_SHORT='CAN.';
+  static String QUANTITY_SHORT='CANT.';
   static String PRICE_SHORT='PRE.';
 
   static String DELIVERY_DATE='FECHA DE ENTREGA';
@@ -455,7 +455,7 @@ class Messages{
   static String LOCATIONS='UBICACIONES';
 
   static String LOCATORS='LOCALIZADORES';
-  static String LOCATOR='LOCALIZADOR';
+  static String LOCATOR='LOC';
 
   static String WAREHOUSES='DEPOSITOS';
 
@@ -508,7 +508,7 @@ class Messages{
 
   static var INFORMATION='INFORMACION';
 
-  static String WAREHOUSE_SHORT='DEP';
+  static String WAREHOUSE_SHORT='ALM.';
 
   static String OF='DE';
 
@@ -516,7 +516,15 @@ class Messages{
 
   static String OPEN_CAMERA='ABRIR CAMARA';
 
-  static String ATTRIBUET_INSTANCE='ATT';
+  static String ATTRIBUET_INSTANCE='ATT.';
 
   static String NOT_FOUND='NO ENCONTRADO';
+
+  static String LOCATOR_SHORT ='LOC.';
+
+  static String FIND_PRODUCT_BY_UPC_SKU='BUSCAR POR UPC O SKU';
+
+  static String FIND='BUSCAR';
+
+  static String ERROR_UPC_EMPTY='ERROR: CAMPO UPC VACIO';
 }
