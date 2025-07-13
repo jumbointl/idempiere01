@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 
+import '../../features/shared/data/memory.dart';
+import '../../features/shared/data/messages.dart';
 import '../constants/roles_app.dart';
+import '../router/app_router.dart';
 
 class MenuItem {
   final String title;
@@ -76,32 +79,37 @@ var appHomeOptionCol2Items = <MenuItem>[
     ),
 ];
 
-const appHomeOptionCol3Items = <MenuItem>[
-  MenuItem(
+final appHomeOptionCol3Items = <MenuItem>[
+  const MenuItem(
     title: 'Inventory Move',
     subTitle: '',
     link: '/mInOut/move',
     icon: Icons.swap_horiz,
   ),
-  MenuItem(
+  const MenuItem(
     title: 'Move Confirm',
     subTitle: '',
     link: '/mInOut/moveconfirm',
     icon: Icons.swap_horiz,
   ),
   MenuItem(
-    title: 'Product Info',
+    title: Messages.STORE_ON_HAND,
     subTitle: '',
-    link: '/products/search',
+    link: AppRouter.PAGE_PRODUCT_STORE_ON_HAND,
     icon: Icons.inventory,
   ),
-
-  /*MenuItem(
-    title: 'Update UPC',
+  MenuItem(
+    title: Messages.ADD_UPC,
     subTitle: '',
-    link: '/products/updateUPC',
-    icon: Icons.scanner,
-  ),*/
+    link: AppRouter.PAGE_PRODUCT_SEARCH_UPDATE_UPC,
+    icon: Icons.search,
+  ),
+  MenuItem(
+    title: Messages.SEARCH_PRODUCT,
+    subTitle: '',
+    link: AppRouter.PAGE_PRODUCT_SEARCH,
+    icon: Icons.search,
+  ),
 ];
 
 const appTemplateMenuItems = <MenuItem>[

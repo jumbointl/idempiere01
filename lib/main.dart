@@ -2,8 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:monalisa_app_001/config/config.dart';
 
+import 'features/shared/data/memory.dart';
+
 void main() async {
   await Environment.initEnvironment();
+
   runApp(
     const ProviderScope(
       child: MainApp(),
@@ -17,7 +20,7 @@ class MainApp extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final appRouter = ref.watch(goRouterProvider);
-
+    Memory.setImageSize(context);
     return MaterialApp.router(
       routerConfig: appRouter,
       theme: AppTheme().getTheme(),

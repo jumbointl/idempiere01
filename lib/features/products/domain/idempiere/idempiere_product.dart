@@ -1,9 +1,12 @@
 
 
+import 'package:monalisa_app_001/features/products/domain/idempiere/idempiere_MOLIHSID.dart';
+import 'package:monalisa_app_001/features/products/domain/idempiere/idempiere_product_line.dart';
 import 'package:monalisa_app_001/features/products/domain/idempiere/object_with_name_and_id.dart';
 
 import 'idempiere_UOM.dart';
 import 'idempiere_organization.dart';
+import 'idempiere_product_brand.dart';
 import 'idempiere_product_category.dart';
 import 'idempiere_resource.dart';
 import 'idempiere_tax_category.dart';
@@ -65,9 +68,13 @@ class IdempiereProduct extends IdempiereObject {
   int? unitsPerPallet;
   int? guaranteeDays;
   int? guaranteeDaysMin;
+  String? imageURL;
 
-
-
+  String? mOLIConfigurableSKU;
+  String? descriptionURL;
+  IdempiereProductBrand? mOLIProductBrandID;
+  IdempiereProductLine? mOLIProductLineID;
+  IdempiereMOLIHSID? mOLIHSID;
 
   IdempiereProduct(
       {
@@ -121,6 +128,12 @@ class IdempiereProduct extends IdempiereObject {
         this.unitsPerPallet,
         this.guaranteeDays,
         this.guaranteeDaysMin,
+        this.mOLIConfigurableSKU,
+        this.descriptionURL,
+        this.mOLIProductBrandID,
+        this.mOLIProductLineID,
+        this.mOLIHSID,
+        this.imageURL,
         super.id,
         super.name,
         super.active,
@@ -215,6 +228,18 @@ class IdempiereProduct extends IdempiereObject {
     identifier = json['identifier'];
     image = json['image'];
     category = json['category'];
+    descriptionURL = json['DescriptionURL'];
+    mOLIProductBrandID = json['MOLI_ProductBrand_ID'] != null
+        ? IdempiereProductBrand.fromJson(json['MOLI_ProductBrand_ID'])
+        : null;
+    mOLIProductLineID = json['MOLI_ProductLine_ID'] != null
+        ? IdempiereProductLine.fromJson(json['MOLI_ProductLine_ID'])
+        : null;
+    mOLIHSID = json['MOLI_HS_ID'] != null
+        ? IdempiereMOLIHSID.fromJson(json['MOLI_HS_ID'])
+        : null;
+    mOLIConfigurableSKU = json['MOLI_ConfigurableSKU'];
+    imageURL = json['ImageURL'];
 
   }
 
@@ -295,6 +320,26 @@ class IdempiereProduct extends IdempiereObject {
     data['ShelfDepth'] = shelfDepth;
     data['UnitsPerPallet'] = unitsPerPallet;
     data['Discontinued'] = discontinued;
+    data['SalesRep_ID'] = salesRepID;
+    data['active'] = active;
+    data['propertyLabel'] = propertyLabel;
+    data['identifier'] = identifier;
+    data['image'] = image;
+    data['category'] = category;
+
+    data['MOLI_ConfigurableSKU'] = mOLIConfigurableSKU;
+    if (mOLIHSID != null) {
+      data['MOLI_HS_ID'] = mOLIHSID!.toJson();
+    }
+    if (mOLIProductBrandID != null) {
+      data['MOLI_ProductBrand_ID'] = mOLIProductBrandID!.toJson();
+    }
+    if (mOLIProductLineID != null) {
+      data['MOLI_ProductLine_ID'] = mOLIProductLineID!.toJson();
+    }
+    data['DescriptionURL'] = descriptionURL;
+    data['ImageURL'] = imageURL;
+
 
 
     return data;
@@ -378,6 +423,12 @@ class IdempiereProduct extends IdempiereObject {
     String? modelName,
     String? image,
     ObjectWithNameAndId? category,
+    String? descriptionURL,
+    IdempiereProductBrand? mOLIProductBrandID,
+    IdempiereProductLine? mOLIProductLineID,
+    IdempiereMOLIHSID? mOLIHSID,
+    String? mOLIConfigurableSKU,
+    String? imageURL,
   }) {
     return IdempiereProduct(
       uid: uid ?? this.uid,
@@ -438,10 +489,14 @@ class IdempiereProduct extends IdempiereObject {
       modelName: modelName ?? this.modelName,
       image: image ?? this.image,
       category: category ?? this.category,
+      descriptionURL: descriptionURL ?? this.descriptionURL,
+      mOLIProductBrandID: mOLIProductBrandID ?? this.mOLIProductBrandID,
+      mOLIProductLineID: mOLIProductLineID ?? this.mOLIProductLineID,
+      mOLIHSID: mOLIHSID ?? this.mOLIHSID,
+      mOLIConfigurableSKU: mOLIConfigurableSKU ?? this.mOLIConfigurableSKU,
     );
   }
 }
-
 
 
 
