@@ -4,48 +4,35 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:monalisa_app_001/config/config.dart';
 
-import '../../../shared/data/memory.dart';
-import '../../../shared/data/messages.dart';
-import '../providers/product_provider_common.dart';
-import '../providers/products_scan_notifier.dart';
-class ScanProductBarcodeButton extends ConsumerStatefulWidget {
+import '../../../../shared/data/memory.dart';
+import '../../../../shared/data/messages.dart';
+import '../../providers/product_provider_common.dart';
+import '../../providers/products_scan_notifier.dart';
+class ScanBarcodeMultipurposeButton extends ConsumerStatefulWidget {
   final ProductsScanNotifier notifier;
-  int actionTypeInt;
+  final int actionTypeInt;
 
   String scannedData = "";
-  ScanProductBarcodeButton(this.notifier,{required this.actionTypeInt,super.key});
+  ScanBarcodeMultipurposeButton(this.notifier,{ required this.actionTypeInt, super.key});
   void handleResult(WidgetRef ref, String data) {
-    print('----------------------------SCANNED $actionTypeInt');
     if (data.isNotEmpty) {
-      switch(actionTypeInt){
-        case Memory.ACTION_UPDATE_UPC:
-          notifier.addNewUPCCode(data);
+      switch (actionTypeInt) {
+        case Memory.ACTION_GET_LOCATOR_TO_VALUE:
+          Memory.awesomeDialog?.dismiss();
+          notifier.setLocatorToValue(data);
           break;
-        case Memory.ACTION_CALL_UPDATE_PRODUCT_UPC_PAGE:
-          notifier.addBarcodeByUPCOrSKUForSearch(data);
-          break;
-        case Memory.ACTION_FIND_BY_UPC_SKU:
-          notifier.addBarcodeByUPCOrSKUForSearch(data);
-          break;
-        case Memory.ACTION_FIND_BY_UPC_SKU_FOR_STORE_ON_HAND:
-          notifier.addBarcodeByUPCOrSKUForStoreOnHande(data);
-          break;
-        default:
-          notifier.addBarcodeByUPCOrSKUForSearch(data);
-          break;
-      }
 
+      }
       scannedData = "";
     }
   }
   @override
-  ConsumerState<ScanProductBarcodeButton> createState() => _ScanProductBarcodeButtonState();
+  ConsumerState<ScanBarcodeMultipurposeButton> createState() => _ScanBarcodeMultipurposeButtonState();
 }
 
 
-class _ScanProductBarcodeButtonState extends ConsumerState<ScanProductBarcodeButton> {
+class _ScanBarcodeMultipurposeButtonState extends ConsumerState<ScanBarcodeMultipurposeButton> {
   final FocusNode _focusNode = FocusNode();
-
   int scannedTimes = 0;
   @override
   initState() {
@@ -55,6 +42,7 @@ class _ScanProductBarcodeButtonState extends ConsumerState<ScanProductBarcodeBut
         setState(() {});
       }
     });
+
     _focusNode.requestFocus();
   }
   @override
@@ -65,11 +53,10 @@ class _ScanProductBarcodeButtonState extends ConsumerState<ScanProductBarcodeBut
 
   void _handleKeyEvent(KeyEvent event) async {
 
-   /* print('event.character ${event.character}');
-    print('event.logicalKey ${event.logicalKey.keyLabel}');
-    print('event.keyName ${event.logicalKey.keyId}');
-    print('scannedData ${widget.scannedData}');*/
-    print('event.logicalKey ${event.logicalKey.keyLabel}');
+    print('--x--event.character ${event.character}');
+    print('--x--event.logicalKey ${event.logicalKey.keyLabel}');
+    print('--x--event.keyName ${event.logicalKey.keyId}');
+    print('--x--scannedData ${widget.scannedData}');
 
     if (event.logicalKey == LogicalKeyboardKey.enter) {
       widget.handleResult(ref, widget.scannedData);
@@ -87,26 +74,30 @@ class _ScanProductBarcodeButtonState extends ConsumerState<ScanProductBarcodeBut
   @override
   Widget build(BuildContext context) {
     WidgetsBinding.instance.addPostFrameCallback((_) {
+
+
+      print('focusnode ${_focusNode.hasFocus}');
       if (mounted) {
-        if (ref.watch(isScanningProvider)) {
+
+        if (ref.read(isScanningProvider.notifier).state) {
           _focusNode.unfocus();
         } else {
           _focusNode.requestFocus();
+          if (!_focusNode.hasFocus) {
+            Future.delayed(const Duration(milliseconds: 100), () {
+              _focusNode.requestFocus();
+              print('focusnode ${_focusNode.hasFocus}');
+
+            });
+          }
         }
       }
-
-      _focusNode.requestFocus();
     });
     return KeyboardListener(
-      focusNode: _focusNode,
-      onKeyEvent: ref.watch(isScanningProvider) ? null : _handleKeyEvent,
+      focusNode:_focusNode,
+      onKeyEvent: ref.read(isScanningProvider) ? null : _handleKeyEvent,
       child: GestureDetector(
         onTap: (){},
-        /*onTap: () async {
-          await Future.delayed(const Duration(seconds: 1));
-          addBarcode();
-          if (mounted) _focusNode.requestFocus();
-        },*/
         child: Container(
           height: 40,
           width: double.infinity,
@@ -122,11 +113,11 @@ class _ScanProductBarcodeButtonState extends ConsumerState<ScanProductBarcodeBut
               Flexible(
                 child: Text( // Use ref.watch here to react to state changes
                   ref.watch(isScanningProvider) ? Messages.SCANNING :
-                   _focusNode.hasFocus
+                  _focusNode.hasFocus
                       ? widget.scannedData.isNotEmpty
                           ? widget.scannedData
                           : Messages.READY_TO_SCAN
-                      : Messages.PRESS_TO_SCAN
+                      : Messages.SCAN
                   ,
                   style: TextStyle(
                       color: Colors.white, fontSize: themeFontSizeLarge),

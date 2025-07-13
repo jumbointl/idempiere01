@@ -6,6 +6,7 @@ class HomeOption extends StatelessWidget {
   final String title;
   final IconData icon;
   final VoidCallback onTap;
+  final double width = 94;
 
   const HomeOption({
     super.key,
@@ -22,8 +23,8 @@ class HomeOption extends StatelessWidget {
         elevation: 5,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(themeBorderRadius)),
         child: Container(
-          width: 90,
-          height: 90,
+          width: width,
+          height: width,
           padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(themeBorderRadius),
@@ -32,6 +33,7 @@ class HomeOption extends StatelessWidget {
           ),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
+
             children: [
               Icon(icon, size: 34, color: Colors.white),
               // Icon(icon, size: 34, color: themeColorPrimary),

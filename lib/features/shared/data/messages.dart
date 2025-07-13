@@ -278,7 +278,7 @@ class Messages{
 
   static String MAP = 'MAP';
 
-  static String FROM ='FROM';
+  static String FROM ='DE';
   static String DELIVER ='ENTREGAR';
   static String RETURN ='DEVOLVER';
   static String RETURNS ='DEVOLUCION';
@@ -527,4 +527,72 @@ class Messages{
   static String FIND='BUSCAR';
 
   static String ERROR_UPC_EMPTY='ERROR: CAMPO UPC VACIO';
+
+  static String SKU_EQUAL_MOLI_SKU='SKU = MOLI_SKU';
+
+  static String NO_RECORDS_FOUND='NO HAY RESGIRSTROS';
+
+  static String SKU_NULL='SKU NULL';
+
+  static String EDIT_UPC='EDITAR UPC';
+
+  static String UPC_EXIST ='UPC EXISTENTE';
+
+  static String FIND_BY ='BUSCADO POR';
+
+  static String SCAN_UPC='ESCANEAR UPC';
+
+  static String EDIT_PRODUCT='EDITAR PRODUCTO';
+
+  static String PLEASE_SCAN_NEW_UPC='FAVOR DE ESCANEAR EL NUEVO CODIGO';
+
+  static String SEARCH_PRODUCT='BUSCAR PRODUCTO';
+
+  static String STORE_ON_HAND='STOCK';
+
+  static String GOTO_UPDATE_UPC_PAGE='PAGINA DE ACTUALIZACION';
+
+  static String UPDATE_UPC='ACTUALIZAR UPC';
+
+  static String ERROR_UPDATE_PRODUCT_UPC='ERROR AL ACTUALIZAR UPC';
+
+  static String UPC_ALREADY_EXISTS = 'UPC EXISTENTE';
+
+  static String NO_DATA_INPUTED='NO HAY DATOS INGRESADOS';
+
+  static String ERROR_ID ='ERROR ID';
+
+  static String ERROR_UPC='ERROR UPC';
+
+  static String DATA_NOT_VALID='DATOS NO VALIDOS';
+
+  static String UPDATE_UPC_WITH_SUCCESS='EXITO AL ACTUALIZAR UPC';
+
+  static String FIND_OTHER='BUSCAR OTRO';
+
+  static String FINISHED='FINALIZAR';
+
+  static String FIND_PRODUCT_BY_SKU='BUSCAR POR SKU';
+
+  static String ADD_UPC='AGREGAR UPC';
+
+  static String UPDATE_IMAGE ='ACTUALIZAR IMAGEN';
+
+  static String SCAN_LOCATOR_TO='SCAN LOC DE DESTINO';
+
+  static String ERROR_LOCATOR_EMPTY ='ERROR LOCALIZADOR VACIO';
+
+  static String SCAN ='ESCANEAR';
+
+  static String LOCATOR_TO='LOC DE DESTINO';
+
+  static String QUANTITY_TO_MOVE='CANTIDAD A MOVER';
+
+  static String DESTINATION='DESTINO';
+
+  static String TO='A';
+
+  static String MOVEMENT='MOVIMIENTOS';
+
+  static String CREATE='CREAR';
 }

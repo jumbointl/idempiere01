@@ -121,7 +121,7 @@ class MInOutNotifier extends StateNotifier<MInOutStatus> {
         mInOutType: MInOutType.move,
         title: 'Move',
         rolShowQty: true,
-        rolManualQty: false,
+        rolManualQty: RolesApp.appShipmentManual,
         rolShowScrap: false,
         rolManualScrap: false,
         rolCompleteLow: true,
@@ -939,7 +939,8 @@ class MInOutStatus {
     this.isComplete = false,
     this.rolShowQty = false,
     this.rolShowScrap = false,
-    this.rolManualQty = false,
+    // temporaria
+    this.rolManualQty = true,
     this.rolManualScrap = false,
     this.rolCompleteLow = false,
     this.rolCompleteOver = false,

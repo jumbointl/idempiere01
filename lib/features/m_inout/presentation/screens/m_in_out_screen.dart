@@ -1083,12 +1083,15 @@ class _MInOutView extends ConsumerWidget {
     return showDialog(
       context: context,
       builder: (BuildContext context) {
+
         return AlertDialog(
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(themeBorderRadius),
           ),
           title: const Text('Detalles de la Línea'),
           content: SingleChildScrollView(
+
+
             child: Column(
               children: [
                 Table(
@@ -1135,6 +1138,7 @@ class _MInOutView extends ConsumerWidget {
                     _showInsertManualLine(context, mInOutState, item);
                   }
                 },
+                //
                 label: (item.verifiedStatus?.contains('manually') ?? false)
                     ? 'Reiniciar'
                     : 'Manual',
@@ -1370,6 +1374,7 @@ class _MInOutView extends ConsumerWidget {
 }
 
 TableRow _buildTableRow(String label, String value, bool alignRight) {
+
   return TableRow(
     children: [
       Container(
