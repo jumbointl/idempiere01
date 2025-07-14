@@ -52,8 +52,8 @@ final idempiereLocatorToProvider = StateProvider.autoDispose<IdempiereLocator>((
 });
 
 final findLocatorToProvider = FutureProvider.autoDispose<IdempiereLocator>((ref) async {
-  final String? scannedCode = ref.watch(scannedLocatorToProvider).toUpperCase();
-  if(scannedCode==null || scannedCode=='') return IdempiereLocator(id:-1,value: Messages.EMPTY);
+  final String scannedCode = ref.watch(scannedLocatorToProvider).toUpperCase();
+  if(scannedCode=='') return IdempiereLocator(id:-1,value: Messages.EMPTY);
 
   String searchField ='Value';
 

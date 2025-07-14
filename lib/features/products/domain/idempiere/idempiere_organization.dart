@@ -37,6 +37,8 @@ class IdempiereOrganization extends IdempiereObject {
         super.active,
         super.propertyLabel,
         super.identifier,
+        super.modelName = 'ad_org',
+        super.category,
       });
 
   IdempiereOrganization.fromJson(Map<String, dynamic> json) {

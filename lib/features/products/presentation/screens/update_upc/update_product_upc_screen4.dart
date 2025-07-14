@@ -190,7 +190,6 @@ class UpdateProductUpcScreen4State extends ConsumerState<UpdateProductUpcScreen4
           cameraFace: CameraFace.back,
         );
         if(result!=null){
-          print('-----------------------------add new upc code $result');
           ref.read(scanStateNotifierProvider.notifier).addNewUPCCode(result);
           //widget.productsNotifier.addBarcodeByUPCOrSKUForSearch(result);
         }

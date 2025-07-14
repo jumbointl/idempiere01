@@ -1,9 +1,10 @@
-import 'package:awesome_dialog/awesome_dialog.dart';
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:monalisa_app_001/features/products/presentation/screens/store_on_hand/scan_barcode_multipurpose_button.dart';
+import 'package:monalisa_app_001/features/products/domain/sql/sql_data_movement.dart';
+import 'package:monalisa_app_001/features/products/domain/sql/sql_data_movement_line.dart';
 import 'package:monalisa_app_001/features/products/presentation/screens/store_on_hand/unsorted_storage_on__hand_card.dart';
-import 'package:simple_barcode_scanner/simple_barcode_scanner.dart';
 
 import '../../../../../config/theme/app_theme.dart';
 import '../../../../auth/presentation/providers/auth_provider.dart';
@@ -44,8 +45,8 @@ class StorageOnHandCardState extends ConsumerState<StorageOnHandCard> {
     int warehouseID = warehouse?.id ?? 0;
     IdempiereWarehouse? warehouseStorage = widget.storage.mLocatorID?.mWarehouseID;
     Color background = warehouseStorage?.id == warehouseID ? widget.colorSameWarehouse : widget.colorDifferentWarehouse;
-    double widthLarge = widget.width/3*2;
-    double widthSmall = widget.width/3;
+    double widthLarge = (widget.width-15)/3*2;
+    double widthSmall = (widget.width-15)/3;
     String warehouseName = warehouseStorage?.identifier ?? '--';
     double qtyOnHand = widget.storage.qtyOnHand ?? 0;
     String quantity = Memory.numberFormatter0Digit.format(qtyOnHand) ;
@@ -66,44 +67,47 @@ class StorageOnHandCardState extends ConsumerState<StorageOnHandCard> {
           color: background,
           borderRadius: BorderRadius.circular(10),
         ),
-        child: Row(
-          spacing: 5,
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            SizedBox(
-              width: widthSmall,
-              child: Column(
-                spacing: 5,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(Messages.WAREHOUSE_SHORT),
-                  Text(Messages.LOCATOR_SHORT),
-                  Text(Messages.QUANTITY_SHORT),
-                  Text(Messages.ATTRIBUET_INSTANCE),
+        child: Padding(
+          padding: const EdgeInsets.all(8.0),
+          child: Row(
+            spacing: 5,
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              SizedBox(
+                width: widthSmall,
+                child: Column(
+                  spacing: 5,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(Messages.WAREHOUSE_SHORT),
+                    Text(Messages.LOCATOR_SHORT),
+                    Text(Messages.QUANTITY_SHORT),
+                    Text(Messages.ATTRIBUET_INSTANCE),
 
-                ],
+                  ],
+                ),
               ),
-            ),
-            SizedBox(
-              width: widthLarge,
-              child: Column(
-                spacing: 5,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(warehouseName),
-                  Text(widget.storage.mLocatorID?.value ?? '--', overflow: TextOverflow.ellipsis),
-                  Text(
-                    quantity,
-                    style: TextStyle(
-                      color: qtyOnHand < 0 ? Colors.redAccent : Colors.black,
+              SizedBox(
+                width: widthLarge,
+                child: Column(
+                  spacing: 5,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(warehouseName),
+                    Text(widget.storage.mLocatorID?.value ?? '--', overflow: TextOverflow.ellipsis),
+                    Text(
+                      quantity,
+                      style: TextStyle(
+                        color: qtyOnHand < 0 ? Colors.redAccent : Colors.black,
+                      ),
                     ),
-                  ),
-                  Text(widget.storage.mAttributeSetInstanceID?.identifier ?? '--', overflow: TextOverflow.ellipsis),
-                ],
+                    Text(widget.storage.mAttributeSetInstanceID?.identifier ?? '--', overflow: TextOverflow.ellipsis),
+                  ],
+                ),
               ),
-            ),
 
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -119,14 +123,7 @@ class StorageOnHandCardState extends ConsumerState<StorageOnHandCard> {
       builder:  (BuildContext context) =>Consumer(builder: (_, ref, __) {
 
         return AlertDialog(
-           backgroundColor:Colors.grey[200],
-          /*title: Center(
-            child: Text(Messages.MOVEMENT,
-              style: TextStyle(
-                fontSize: 22,
-                fontWeight: FontWeight.bold,
-              ),),
-          ),*/
+          backgroundColor:Colors.grey[200],
           content: Container(
             decoration: BoxDecoration(
               color: Colors.grey[200], // Change background color based on isSelected
@@ -161,15 +158,34 @@ class StorageOnHandCardState extends ConsumerState<StorageOnHandCard> {
                     ),
                     child: Text(Messages.CREATE),
                     onPressed: () {
-                      ref.read(isDialogShowedProvider.notifier).update((state) => true);
-                      // ignore: avoid_print
-                      print('------------------------------------ok-----scan--------result $locatorTo');
                       if (locatorTo.isNotEmpty) {
                         // Perform the movement logic here
                         // For example, call a function from your notifier:
-                        // widget.notifier.createMovement(widget.storage, locatorTo);
+                        SqlDataMovement movement = SqlDataMovement();
+                        Memory.sqlUsersData.copyToSqlData(movement);
+                        //In this case locatorTo and  locatorFrom are the same warehouse
+                        if(movement.mWarehouseID != null && movement.mWarehouseID!.id != null){
+                          movement.setIdempiereWarehouseTo(movement.mWarehouseID!.id!);
+                        }
+                        print('---------------------------------- ${jsonEncode(movement.getInsertJson())}');
+                        // creado para borrar
+                        Memory.newSqlDataMovement = movement ;
+                        movement.id = 1018275;
+
+                        SqlDataMovementLine movementLine = SqlDataMovementLine();
+                        Memory.sqlUsersData.copyToSqlData(movementLine);
+                        movementLine.mMovementID = movement;
+                        movementLine.mLocatorID = widget.storage.mLocatorID;
+                        movementLine.mProductID = widget.storage.mProductID;
+                        movementLine.mLocatorToID = ref.read(idempiereLocatorToProvider);
+                        movementLine.movementQty = ref.read(quantityToMoveProvider);
+                        movementLine.mAttributeSetInstanceID = widget.storage.mAttributeSetInstanceID;
+                        Memory.newSqlDataMovementLines.add(movementLine);
+
+                        print('----------------------------------  ${jsonEncode(movementLine.getInsertJson())}');
+                        widget.notifier.createMovement();
+
                       }
-                      Navigator.of(context).pop();
                     },
                   ),
                 ),

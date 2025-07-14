@@ -30,7 +30,6 @@ class IdempiereObjectIdString{
   }
 
 
-  @override
   Map<String, dynamic> toJson() {
     final Map<String, dynamic> data = {};
     data['propertyLabel'] = propertyLabel;
@@ -39,6 +38,14 @@ class IdempiereObjectIdString{
     data['model-name'] = modelName;
     data['image'] = image;
     data['category'] = category;
+    return data;
+  }
+  Map<String, dynamic> toJsonForIdempiereSqlUse() {
+    final Map<String, dynamic> data = {};
+    if(propertyLabel !=null) data['propertyLabel'] = propertyLabel;
+    if(id !=null) data['id'] = id;
+    if(identifier !=null) data['identifier'] = identifier;
+    if(modelName !=null) data['model-name'] = modelName;
     return data;
   }
   static List<IdempiereObjectIdString> fromJsonList(List<dynamic> list){

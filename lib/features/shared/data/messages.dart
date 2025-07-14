@@ -595,4 +595,12 @@ class Messages{
   static String MOVEMENT='MOVIMIENTOS';
 
   static String CREATE='CREAR';
+
+  static String APP_DESCRIPTION='DESDE APP USUARIO';
+
+  static String ERROR_LOCATOR='ERROR LOCALIZADOR';
+
+  static String DOC_STATUS='DOC_STATUS';
+
+  static String UPC='UPC';
 }

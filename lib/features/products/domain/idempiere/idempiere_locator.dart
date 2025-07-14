@@ -42,7 +42,7 @@ class IdempiereLocator extends IdempiereObject  {
         this.isDefault,
         super.id,
         super.name,
-        super.modelName,
+        super.modelName='m_locator',
         super.active,
         super.category,
         super.identifier,

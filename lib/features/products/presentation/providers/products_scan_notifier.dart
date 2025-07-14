@@ -9,6 +9,7 @@ import 'package:monalisa_app_001/features/products/presentation/providers/produc
 import '../../../shared/data/memory.dart';
 import '../../../shared/data/messages.dart';
 import '../../domain/idempiere/idempiere_product.dart';
+import 'movement_provider.dart';
 import 'store_on_hand_provider.dart';
 
 class ProductsScanNotifier  extends StateNotifier<List<IdempiereProduct>>{
@@ -47,19 +48,17 @@ class ProductsScanNotifier  extends StateNotifier<List<IdempiereProduct>>{
   }
 
   void addNewUPCCode(String scannedData){
-    print('-----------------addNewUPCCode called with: $scannedData');
     ref.watch(newUPCToUpdateProvider.notifier).update((state) => scannedData);
     ref.watch(scannedCodeTimesProvider.notifier).update((state) => state+1);
     ref.watch(isScanningProvider.notifier).update((state) => false);
   }
 
   void updateProductUPC(BuildContext context) async {
-    print('----------------update product upc:');
     String id = ref.read(productForUpcUpdateProvider.notifier).state.id!.toString();
     String newUPC = ref.read(newUPCToUpdateProvider.notifier).state;
 
-    if(id == '' || int.tryParse(id)==null || int.tryParse(id) == 0 || newUPC=='' ||
-        int.tryParse(newUPC)==null || int.tryParse(newUPC) == 0)
+    if(id == '' || int.tryParse(id)==null || int.tryParse(id)! <= 0 || newUPC=='' ||
+        int.tryParse(newUPC)==null || int.tryParse(newUPC)! <= 0)
     {
       await AwesomeDialog(
         context: context,
@@ -111,6 +110,10 @@ class ProductsScanNotifier  extends StateNotifier<List<IdempiereProduct>>{
   void dialogDispose() {
     ref.watch(isDialogShowedProvider.notifier).update((state) =>false);
   }
-
+  void createMovement(){
+    print('----------------------------------start createMovement');
+    ref.watch(startedCreateNewPutAwayMovementProvider.notifier).update((state) => true);
+    ref.watch(newSqlDataMovementProvider.notifier).update((state) => Memory.newSqlDataMovement);
+  }
 }
 

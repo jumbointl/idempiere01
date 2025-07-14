@@ -12,6 +12,7 @@ import 'package:monalisa_app_001/features/auth/infrastructure/mappers/organizati
 import 'package:monalisa_app_001/features/auth/infrastructure/mappers/role_mapper.dart';
 import 'package:monalisa_app_001/features/shared/shared.dart';
 
+import '../../../shared/data/memory.dart';
 import '../../../shared/domain/entities/response_api.dart';
 import '../../domain/entities/ad_role_included.dart';
 import '../../domain/entities/role.dart';
@@ -30,6 +31,7 @@ class AuthDataSourceImpl implements AuthDataSource {
 
   @override
   Future<LoginDto> login(String userName, String password) async {
+    Memory.userName = userName;
     try {
       final response = await dio.post('/api/v1/auth/tokens',
           data: {'userName': userName, 'password': password});
@@ -98,6 +100,7 @@ class AuthDataSourceImpl implements AuthDataSource {
   @override
   Future<AuthDataDto> getAuthData(
       int clientId, int roleId, int organizationId, int warehouseId) async {
+
     try {
       final response = await dio.put(
         '/api/v1/auth/tokens',
@@ -112,6 +115,14 @@ class AuthDataSourceImpl implements AuthDataSource {
 
       final authDataResponse =
           AuthDataMapper.authDataDtoJsonToEntity(response.data);
+      if(authDataResponse.token!=null){
+        Memory.sqlUsersData.setIdempiereClient(clientId);
+        Memory.sqlUsersData.setIdempiereOrganization(organizationId);
+        Memory.sqlUsersData.setIdempiereWarehouse(warehouseId);
+        if(authDataResponse.userId!=null) Memory.sqlUsersData.setIdempiereCreateBy(authDataResponse.userId!);
+
+      }
+
       return authDataResponse;
     } on DioException catch (e) {
       print(e);

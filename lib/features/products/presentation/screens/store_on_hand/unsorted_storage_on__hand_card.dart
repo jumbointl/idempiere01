@@ -1,11 +1,11 @@
 import 'package:awesome_dialog/awesome_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:monalisa_app_001/features/products/domain/idempiere/idempiere_locator.dart';
 import 'package:monalisa_app_001/features/products/presentation/providers/products_providers.dart';
 import 'package:monalisa_app_001/features/products/presentation/providers/products_scan_notifier.dart';
 import 'package:monalisa_app_001/features/products/presentation/screens/store_on_hand/scan_barcode_multipurpose_button.dart';
-import 'package:monalisa_app_001/features/shared/data/data_utils.dart';
+import 'package:monalisa_app_001/features/products/presentation/widget/movement_card.dart';
+import 'package:monalisa_app_001/features/products/presentation/widget/movement_line_card.dart';
 import 'package:simple_barcode_scanner/simple_barcode_scanner.dart';
 
 import '../../../../../config/theme/app_theme.dart';
@@ -14,6 +14,8 @@ import '../../../../shared/data/memory.dart';
 import '../../../../shared/data/messages.dart';
 import '../../../domain/idempiere/idempiere_storage_on_hande.dart';
 import '../../../domain/idempiere/idempiere_warehouse.dart';
+import '../../providers/movement_provider.dart';
+import '../../widget/no_data_card.dart';
 class UnsortedStorageOnHandCard extends ConsumerStatefulWidget {
 
   final IdempiereStorageOnHande storage;
@@ -49,10 +51,13 @@ class _UnsortedStorageOnHandCardState extends ConsumerState<UnsortedStorageOnHan
   double fontSizeMedium = 16;
   double fontSizeLarge = 22;
   late Widget buttonScan;
-
+  late AsyncValue createMovement;
+  late var startedCreateNewPutAwayMovement;
 
   @override
   Widget build(BuildContext context) {
+    createMovement = ref.watch(newPutAwayMovementProvider);
+    startedCreateNewPutAwayMovement = ref.watch(startedCreateNewPutAwayMovementProvider.notifier);
 
     findLocatorTo = ref.watch(findLocatorToProvider);
     widget.width = MediaQuery.of(context).size.width;
@@ -194,7 +199,7 @@ class _UnsortedStorageOnHandCardState extends ConsumerState<UnsortedStorageOnHan
                 ),
                 if(usePhoneCamera.state) _buttonScanWithPhone(context, ref) ,
           
-                SizedBox(height:dialogHeight/2,
+                startedCreateNewPutAwayMovement.state == null ?  SizedBox(height:dialogHeight/2,
                   child: ListView.separated(
                     itemCount: storageList.length,
                     itemBuilder: (context, index) {
@@ -204,6 +209,12 @@ class _UnsortedStorageOnHandCardState extends ConsumerState<UnsortedStorageOnHan
                       return const SizedBox(height: 10);
                     },
                   ),
+                ) : createMovement.when(
+                    data: (data){
+                      return getMovementCard(context, ref, data);
+                    }
+                  ,error: (error, stackTrace) => Text('Error: $error'),
+                  loading: () => LinearProgressIndicator(),
                 ),
               ],
             ),
@@ -223,7 +234,7 @@ class _UnsortedStorageOnHandCardState extends ConsumerState<UnsortedStorageOnHan
     return GestureDetector(
       onTap: () {
         if( qtyOnHand<=0){
-          String message =  '${Messages.ERROR_QUANTITY} $qtyOnHand}';
+          String message =  '${Messages.ERROR_QUANTITY} $quantity';
           showErrorMessage(context, ref, message);
           return;
 
@@ -311,15 +322,18 @@ class _UnsortedStorageOnHandCardState extends ConsumerState<UnsortedStorageOnHan
 
     int? aux = int.tryParse(r);
     if(aux==null || aux<=0){
-      String message =  '${Messages.ERROR_QUANTITY} $quantity}';
+      String message =  '${Messages.ERROR_QUANTITY} $quantity';
       showErrorMessage(context, ref, message);
       return;
     }
     quantityController.text = aux.toString();
-    //ref.read(quantityToMoveProvider.notifier).update((state) => aux);
 
   }
   void showErrorMessage(BuildContext context, WidgetRef ref, String message) {
+    if (!context.mounted) {
+      Future.delayed(const Duration(seconds: 1));
+      if(!context.mounted) return;
+    }
     AwesomeDialog(
       context: context,
       animType: AnimType.scale,
@@ -681,10 +695,24 @@ class _UnsortedStorageOnHandCardState extends ConsumerState<UnsortedStorageOnHan
       delayMillis: 300,
       cameraFace: CameraFace.back,
     );
-    if(scanBarcode!=null){
-      //locatorTo = scanBarcode;
+    String locatorFrom = widget.storage.mLocatorID?.value ?? '';
+    if(scanBarcode!=null && scanBarcode!= locatorFrom){
       widget.notifier.setLocatorToValue(scanBarcode);
-      //isScanningFromDialog.state = false;
+    }else {
+      String message =  '${Messages.ERROR_LOCATOR} $locatorFrom = $scanBarcode';
+
+      if(!context.mounted){
+        Future.delayed(const Duration(seconds: 1));
+        if(!context.mounted){
+          return;
+        } else {
+          showErrorMessage(context, ref, message);
+        }
+      } else {
+        showErrorMessage(context, ref, message);
+      }
+
+      return;
     }
 
   }
@@ -718,15 +746,51 @@ class _UnsortedStorageOnHandCardState extends ConsumerState<UnsortedStorageOnHan
             cameraFace: CameraFace.back,
           );
           if(scanBarcode!=null){
-            //locatorTo = scanBarcode;
             widget.notifier.setLocatorToValue(scanBarcode);
-            //isScanningFromDialog.state = false;
           }
 
         },
         child: Text(Messages.OPEN_CAMERA),
       ),
     );
+  }
+
+  Widget getMovementCard(BuildContext context, WidgetRef ref, data) {
+
+    if(data==null){
+      return NoDataCard();
+    } else {
+      final movement = Memory.newSqlDataMovement;
+      final movementLines = Memory.newSqlDataMovementLines;
+      return Container(
+        decoration: BoxDecoration(
+          color: Colors.grey[200], // Change background color based on isSelected
+          borderRadius: BorderRadius.circular(10),
+        ),
+        padding: const EdgeInsets.all(8.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          spacing: 5,
+          children: [
+            MovementCard(productsNotifier: widget.notifier, movement: movement, width: widget.width-30),
+            SizedBox(
+              height: dialogHeight / 3, // Adjust height as needed
+              child: ListView.separated(
+                itemCount: movementLines.length,
+                itemBuilder: (context, index) {
+                  return MovementLineCard(movementLine: movementLines[index], productsNotifier: widget.notifier,);
+                },
+                separatorBuilder: (BuildContext context, int index) => const SizedBox(height: 10),
+              ),
+            ),
+
+
+        ],
+      ));
+    }
+
+
+
   }
 
 

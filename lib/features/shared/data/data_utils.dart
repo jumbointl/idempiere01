@@ -1,7 +1,6 @@
 
 import 'dart:convert';
 
-import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../products/domain/idempiere/idempiere_product.dart';
@@ -44,7 +43,5 @@ class DataUtils {
     await prefs.remove(Memory.KEY_SCAN_ACTION);
   }
 
-  static scanLocatorToDialog(BuildContext context){
 
-  }
 }

@@ -43,7 +43,7 @@ class IdempiereWarehouse extends IdempiereObject  {
         this.mReserveLocatorID,
         super.id,
         super.name,
-        super.modelName,
+        super.modelName = 'm_warehouse',
         super.active,
         super.category,
       });

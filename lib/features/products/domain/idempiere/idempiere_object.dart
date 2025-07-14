@@ -1,6 +1,8 @@
+import '../../../shared/data/memory.dart';
+import '../sql/common_sql_data.dart';
 import 'object_with_name_and_id.dart';
 
-class IdempiereObject {
+class IdempiereObject implements CommonSqlData {
   int? id;
   String? name;
   bool? active;
@@ -9,6 +11,7 @@ class IdempiereObject {
   String? modelName;
   String? image;
   ObjectWithNameAndId? category;
+  final String appEndpointModel = Memory.APP_ENDPOINT_MODELS;
   IdempiereObject({
     this.id,
     this.name,
@@ -32,7 +35,6 @@ class IdempiereObject {
   }
 
 
-  @override
   Map<String, dynamic> toJson() {
     final Map<String, dynamic> data = {};
     data['propertyLabel'] = propertyLabel;
@@ -43,6 +45,14 @@ class IdempiereObject {
     data['category'] = category;
     data['name'] = name;
     data['active'] = active;
+    return data;
+  }
+  Map<String, dynamic> toJsonForIdempiereSqlUse() {
+    final Map<String, dynamic> data = {};
+    if(propertyLabel !=null) data['propertyLabel'] = propertyLabel;
+    if(id !=null) data['id'] = id;
+    if(identifier !=null) data['identifier'] = identifier;
+    if(modelName !=null) data['model-name'] = modelName;
     return data;
   }
   static List<IdempiereObject> fromJsonList(List<dynamic> list){
@@ -84,5 +94,33 @@ class IdempiereObject {
       return true;
     }
     return false;
+  }
+  @override
+  String getInsertUrl(){
+    String url = '$appEndpointModel/$modelName';
+    return url;
+  }
+  @override
+  String getDeleteUrl() {
+    return getUpdateUrl();
+  }
+
+  @override
+  String getSelectUrl() {
+    return getUpdateUrl();
+  }
+  @override
+  String getUpdateUrl(){
+    String url = '$appEndpointModel/$modelName/$id';
+    return url;
+  }
+  @override
+  Map<String, dynamic> getDeleteJson() {
+    return {"msg": "Deleted"};
+  }
+
+  @override
+  Map<String, dynamic> getUpdateDocStatusJson(String status) {
+    return {"doc-action": status};
   }
 }

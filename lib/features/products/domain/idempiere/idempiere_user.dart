@@ -46,7 +46,7 @@ class IdempiereUser extends IdempiereObject{
     super.active,
     super.propertyLabel,
     super.identifier,
-    super.modelName,
+    super.modelName = 'ad_user',
     this.userName,
     this.password,
     this.token,

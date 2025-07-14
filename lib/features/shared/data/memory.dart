@@ -2,12 +2,22 @@ import 'package:awesome_dialog/awesome_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:monalisa_app_001/features/products/domain/idempiere/idempiere_product.dart';
+import 'package:monalisa_app_001/features/products/domain/sql/sql_users_data.dart';
+
+import '../../products/domain/sql/sql_data_movement.dart';
+import '../../products/domain/sql/sql_data_movement_line.dart';
+import 'messages.dart';
 
 class Memory {
   static int DELAY_TO_REFRESH_PROVIDER_MILLISECOND = 1500;
   static const int  TOKEN_EXPIRE_MINUTES = 720;
   static const int REFRESH_TOKEN_EXPIRE_MINUTES = 1200;
+  static const String APP_ENDPOINT_MODELS = '/api/v1/models';
   static bool isUseCameraToScan = false ;
+  static String userName ='';
+  static SqlUsersData sqlUsersData = SqlUsersData();
+  static List<SqlDataMovementLine> newSqlDataMovementLines = <SqlDataMovementLine>[];
+  static SqlDataMovement newSqlDataMovement = SqlDataMovement();
 
   static final numberFormatter2Digit = NumberFormat.decimalPatternDigits
     (locale: 'es_PY',decimalDigits: 2);
@@ -66,15 +76,13 @@ class Memory {
     SIZE_PRODUCT_IMAGE_WIDTH = originalSize*r;
     SIZE_PRODUCT_IMAGE_HEIGHT = originalSize*r;
 
-
-
-
-
-
   }
 
 
-
+  static String getDescriptionFromApp(){
+    String description = '${Messages.APP_DESCRIPTION} $userName';
+    return description;
+  }
 
 
 

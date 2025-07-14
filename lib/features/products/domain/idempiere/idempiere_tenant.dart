@@ -8,7 +8,7 @@ class IdempiereTenant extends IdempiereObject{
     super.active,
     super.propertyLabel,
     super.identifier,
-    super.modelName,
+    super.modelName='ad_client',
     super.image,
     super.category,
   });

@@ -31,11 +31,13 @@ class IdempiereMovementLine extends IdempiereObject {
   int? scrappedQty;
   bool? processed;
   String? value;
-  int? priceEntered;
-  int? priceList;
-  int? priceActual;
+  double? priceEntered;
+  double? priceList;
+  double? priceActual;
   String? productName;
-  int? lineNetAmt;
+  double? lineNetAmt;
+  String? sKU;
+  String? uPC;
 
   IdempiereMovementLine(
       {
@@ -70,9 +72,11 @@ class IdempiereMovementLine extends IdempiereObject {
         super.active,
         super.propertyLabel,
         super.identifier,
-        super.modelName,
+        super.modelName='m_movementline',
         super.image,
         super.category,
+        this.sKU,
+        this.uPC,
       });
 
   IdempiereMovementLine.fromJson(Map<String, dynamic> json) {
@@ -117,11 +121,11 @@ class IdempiereMovementLine extends IdempiereObject {
     scrappedQty = json['ScrappedQty'];
     processed = json['Processed'];
     value = json['Value'];
-    priceEntered = json['PriceEntered'];
-    priceList = json['PriceList'];
-    priceActual = json['PriceActual'];
+    priceEntered = json['PriceEntered']!= null ? double.tryParse(json['PriceEntered'].toString()) : null;
+    priceList = json['PriceList']!= null ? double.tryParse(json['PriceList'].toString()) : null;
+    priceActual = json['PriceActual']!= null ? double.tryParse(json['PriceActual'].toString()) : null;
     productName = json['ProductName'];
-    lineNetAmt = json['LineNetAmt'];
+    lineNetAmt = json['LineNetAmt']!= null ? double.tryParse(json['LineNetAmt'].toString()) : null;
     modelName = json['model-name'];
     active = json['active'];
     propertyLabel = json['propertyLabel'];
@@ -129,6 +133,8 @@ class IdempiereMovementLine extends IdempiereObject {
     image = json['image'];
     category = json['category'];
     name = json['name'];
+    sKU = json['SKU'];
+    uPC = json['UPC'];
   }
 
   @override
@@ -187,6 +193,8 @@ class IdempiereMovementLine extends IdempiereObject {
     data['image'] = image;
     data['category'] = category;
     data['name'] = name;
+    data['SKU'] = sKU;
+    data['UPC'] = uPC;
     return data;
   }
   static List<IdempiereMovement> fromJsonList(List<dynamic> list){

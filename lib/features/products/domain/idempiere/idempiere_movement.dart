@@ -1,4 +1,6 @@
 
+import 'package:monalisa_app_001/features/products/domain/idempiere/idempiere_warehouse.dart';
+
 import 'idempiere_document_status.dart';
 import 'idempiere_document_type.dart';
 import 'idempiere_price_list.dart';
@@ -30,8 +32,16 @@ class IdempiereMovement extends IdempiereObject {
   IdempiereDocumentType? cDocTypeID;
   int? approvalAmt;
   bool? isApproved;
-  int? processedOn;
+  double? processedOn;
   IdempierePriceList? mPriceListID;
+
+  double? chargeAmt;
+  double? freightAmt;
+  IdempiereWarehouse? mWarehouseID;
+  IdempiereWarehouse? mWarehouseToID;
+  String? mOLIFsMessage;
+  String? mOLIFiscalDocumentNo;
+  IdempiereDocumentStatus? mOLIFsPaused;
 
   IdempiereMovement(
       {
@@ -60,9 +70,16 @@ class IdempiereMovement extends IdempiereObject {
         super.active,
         super.propertyLabel,
         super.identifier,
-        super.modelName,
+        super.modelName = 'm_movement',
         super.image,
         super.category,
+        this.chargeAmt,
+        this.freightAmt,
+        this.mWarehouseID,
+        this.mWarehouseToID,
+        this.mOLIFsMessage,
+        this.mOLIFiscalDocumentNo,
+        this.mOLIFsPaused,
       });
 
   IdempiereMovement.fromJson(Map<String, dynamic> json) {
@@ -97,7 +114,7 @@ class IdempiereMovement extends IdempiereObject {
         : null;
     approvalAmt = json['ApprovalAmt'];
     isApproved = json['IsApproved'];
-    processedOn = json['ProcessedOn'];
+    processedOn = json['ProcessedOn']!=null ? double.tryParse(json['ProcessedOn'].toString()) : null;
     mPriceListID = json['M_PriceList_ID'] != null
         ?  IdempierePriceList.fromJson(json['M_PriceList_ID'])
         : null;
@@ -108,6 +125,20 @@ class IdempiereMovement extends IdempiereObject {
     image = json['image'];
     category = json['category'];
     name = json['name'];
+
+    chargeAmt = json['ChargeAmt']!= null ? double.parse(json['ChargeAmt'].toString()) : null;
+    freightAmt = json['FreightAmt']!= null ? double.parse(json['FreightAmt'].toString()) : null;
+    mOLIFsMessage = json['MOLI_FsMessage'];
+    mOLIFiscalDocumentNo = json['MOLI_FiscalDocumentNo'];
+    mWarehouseID = json['M_Warehouse_ID'] != null
+        ? IdempiereWarehouse.fromJson(json['M_Warehouse_ID'])
+        : null;
+    mWarehouseToID = json['M_WarehouseTo_ID'] != null
+        ? IdempiereWarehouse.fromJson(json['M_WarehouseTo_ID'])
+        : null;
+    mOLIFsPaused = json['MOLI_FsPaused'] != null
+        ? IdempiereDocumentStatus.fromJson(json['MOLI_FsPaused'])
+        : null;
   }
 
   @override
@@ -155,6 +186,20 @@ class IdempiereMovement extends IdempiereObject {
     data['image'] = image;
     data['category'] = category;
     data['name'] = name;
+
+    if (mWarehouseID != null) {
+      data['M_Warehouse_ID'] = mWarehouseID!.toJson();
+    }
+    if (mWarehouseToID != null) {
+      data['M_WarehouseTo_ID'] = mWarehouseToID!.toJson();
+    }
+    if (mOLIFsPaused != null) {
+      data['MOLI_FsPaused'] = mOLIFsPaused!.toJson();
+    }
+    data['MOLI_FsMessage'] = mOLIFsMessage;
+    data['MOLI_FiscalDocumentNo'] = mOLIFiscalDocumentNo;
+    data['ChargeAmt'] = chargeAmt;
+    data['FreightAmt'] = freightAmt;
     return data;
   }
   static List<IdempiereMovement> fromJsonList(List<dynamic> list){
