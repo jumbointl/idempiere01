@@ -3,6 +3,7 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:monalisa_app_001/features/products/presentation/providers/product_provider_common.dart';
+import 'package:monalisa_app_001/features/products/presentation/providers/product_search_provider.dart';
 import 'package:monalisa_app_001/features/shared/data/messages.dart';
 
 import '../../../../config/http/dio_client.dart';
@@ -238,4 +239,182 @@ final quantityToMoveProvider = StateProvider.autoDispose<int>((ref) {
   return 0;
 });
 
+
+final findProductsStoreOnHandProvider2 = FutureProvider.autoDispose<List<IdempiereStorageOnHande>>((ref) async {
+  //from ProductHomeScreen (copy from) ProductSearchScreen
+  print('findProductsStoreOnHandProvider2');
+  print('-------------------------------------1');
+  final productId = ref.watch(productForUpcUpdateProvider.notifier).state.id ?? 0;
+  //final productId = ref.watch(productIdProvider2);
+  if(productId== 0){
+
+    return [];
+  }
+  print('-------------------------------------2');
+  Dio dio = await DioClient.create();
+  try {
+    String url = "/api/v1/models/m_storageonhand?\$expand=M_Locator_ID&\$IsActive=true"
+        "&\$filter=QtyOnHand%20neq%200%20AND%20M_Product_ID%20eq%20$productId";
+    final response = await dio.get(url);
+    if (response.statusCode == 200) {
+      final responseApi =
+      ResponseApi<IdempiereStorageOnHande>.fromJson(response.data, IdempiereStorageOnHande.fromJson);
+
+      if (responseApi.records != null && responseApi.records!.isNotEmpty) {
+        final productsListRaw = responseApi.records!;
+        ref.watch(unsortedStoreOnHandListProvider.notifier).state = productsListRaw;
+        Map<String, IdempiereStorageOnHande> groupedProducts = {};
+        int warehouseUser = ref.read(authProvider).selectedWarehouse?.id ?? 0;
+
+        for (var data in productsListRaw) {
+
+          if (productId == data.mProductID?.id) {
+            String key = '${data.mLocatorID?.value}-${data.mAttributeSetInstanceID?.id}';
+            if (groupedProducts.containsKey(key)) {
+              // If the group already exists, sum the qtyOnHand
+              groupedProducts[key]!.qtyOnHand = (groupedProducts[key]!.qtyOnHand ?? 0) + (data.qtyOnHand ?? 0);
+            } else {
+              // Otherwise, add the new group
+              groupedProducts[key] = IdempiereStorageOnHande(
+                mLocatorID: data.mLocatorID,
+                mAttributeSetInstanceID: data.mAttributeSetInstanceID,
+                qtyOnHand: data.qtyOnHand,
+                mProductID: data.mProductID,
+                // Copy other necessary fields
+              );
+            }
+          }
+        }
+        print('-------------------------------------3');
+        List<IdempiereStorageOnHande> productsList = groupedProducts.values.toList();
+
+        // Group products by warehouse
+        Map<int, List<IdempiereStorageOnHande>> groupedByWarehouse = {};
+        for (var product in productsList) {
+          int warehouseID = product.mLocatorID?.mWarehouseID?.id ?? 0;
+
+          groupedByWarehouse.putIfAbsent(warehouseID, () => []).add(product);
+        }
+
+        // Sort products within each group by qtyOnHand in descending order
+        groupedByWarehouse.forEach((key, value) {
+          value.sort((a, b) => b.qtyOnHand!.compareTo(a.qtyOnHand!));
+        });
+
+        // Put the user's warehouse first, then sort the rest by warehouse ID
+        List<int> sortedWarehouseIDs = groupedByWarehouse.keys.toList()..sort();
+        if (groupedByWarehouse.containsKey(warehouseUser)) {
+          sortedWarehouseIDs.remove(warehouseUser);
+          sortedWarehouseIDs.insert(0, warehouseUser);
+        }
+
+        // Flatten the grouped and sorted products into a single list
+        List<IdempiereStorageOnHande> sortedProductsList = [];
+        for (var warehouseID in sortedWarehouseIDs) {
+          sortedProductsList.addAll(groupedByWarehouse[warehouseID]!.where((product) => product.qtyOnHand != 0));
+        }
+        return sortedProductsList;
+      } else {
+        return [];
+      }
+    } else {
+      throw Exception(
+          'Error al obtener la lista de $productId: ${response.statusCode}');
+    }
+  } on DioException catch (e) {
+    final authDataNotifier = ref.read(authProvider.notifier);
+    throw CustomErrorDioException(e, authDataNotifier);
+  } catch (e) {
+    throw Exception(e.toString());
+  }
+
+});
+final findProductsStoreOnHandProvider3 = FutureProvider.autoDispose<List<IdempiereStorageOnHande>>((ref) async {
+
+  final productId = ref.watch(productIdProvider2);
+  //final product = ref.watch(futureProvider).value;
+  //int productId = product?.id ?? 0;
+  if(productId== 0){
+
+    return [];
+  }
+
+  Dio dio = await DioClient.create();
+  try {
+    String url = "/api/v1/models/m_storageonhand?\$expand=M_Locator_ID&\$IsActive=true"
+        "&\$filter=QtyOnHand%20neq%200%20AND%20M_Product_ID%20eq%20$productId";
+    final response = await dio.get(url);
+    if (response.statusCode == 200) {
+      final responseApi =
+      ResponseApi<IdempiereStorageOnHande>.fromJson(response.data, IdempiereStorageOnHande.fromJson);
+
+      if (responseApi.records != null && responseApi.records!.isNotEmpty) {
+        final productsListRaw = responseApi.records!;
+        ref.watch(unsortedStoreOnHandListProvider.notifier).state = productsListRaw;
+        Map<String, IdempiereStorageOnHande> groupedProducts = {};
+        int warehouseUser = ref.read(authProvider).selectedWarehouse?.id ?? 0;
+
+        for (var data in productsListRaw) {
+
+          if (productId == data.mProductID?.id) {
+            String key = '${data.mLocatorID?.value}-${data.mAttributeSetInstanceID?.id}';
+            if (groupedProducts.containsKey(key)) {
+              // If the group already exists, sum the qtyOnHand
+              groupedProducts[key]!.qtyOnHand = (groupedProducts[key]!.qtyOnHand ?? 0) + (data.qtyOnHand ?? 0);
+            } else {
+              // Otherwise, add the new group
+              groupedProducts[key] = IdempiereStorageOnHande(
+                mLocatorID: data.mLocatorID,
+                mAttributeSetInstanceID: data.mAttributeSetInstanceID,
+                qtyOnHand: data.qtyOnHand,
+                mProductID: data.mProductID,
+                // Copy other necessary fields
+              );
+            }
+          }
+        }
+
+        List<IdempiereStorageOnHande> productsList = groupedProducts.values.toList();
+
+        // Group products by warehouse
+        Map<int, List<IdempiereStorageOnHande>> groupedByWarehouse = {};
+        for (var product in productsList) {
+          int warehouseID = product.mLocatorID?.mWarehouseID?.id ?? 0;
+
+          groupedByWarehouse.putIfAbsent(warehouseID, () => []).add(product);
+        }
+
+        // Sort products within each group by qtyOnHand in descending order
+        groupedByWarehouse.forEach((key, value) {
+          value.sort((a, b) => b.qtyOnHand!.compareTo(a.qtyOnHand!));
+        });
+
+        // Put the user's warehouse first, then sort the rest by warehouse ID
+        List<int> sortedWarehouseIDs = groupedByWarehouse.keys.toList()..sort();
+        if (groupedByWarehouse.containsKey(warehouseUser)) {
+          sortedWarehouseIDs.remove(warehouseUser);
+          sortedWarehouseIDs.insert(0, warehouseUser);
+        }
+
+        // Flatten the grouped and sorted products into a single list
+        List<IdempiereStorageOnHande> sortedProductsList = [];
+        for (var warehouseID in sortedWarehouseIDs) {
+          sortedProductsList.addAll(groupedByWarehouse[warehouseID]!.where((product) => product.qtyOnHand != 0));
+        }
+        return sortedProductsList;
+      } else {
+        return [];
+      }
+    } else {
+      throw Exception(
+          'Error al obtener la lista de $productId: ${response.statusCode}');
+    }
+  } on DioException catch (e) {
+    final authDataNotifier = ref.read(authProvider.notifier);
+    throw CustomErrorDioException(e, authDataNotifier);
+  } catch (e) {
+    throw Exception(e.toString());
+  }
+
+});
 

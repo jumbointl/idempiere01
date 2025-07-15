@@ -15,7 +15,9 @@ final scanStateNotifierProvider = StateNotifierProvider.autoDispose<ProductsScan
   return ProductsScanNotifier(ref);
 
 });
-
+final indexBottomNavbarProvider = StateProvider<int>((ref) {
+  return 2;
+});
 
 final scannedCodeTimesProvider = StateProvider.autoDispose<int>((ref) {
   return 0;
@@ -39,6 +41,12 @@ final productSKUProvider = StateProvider.autoDispose<String>((ref) {
 
 
 final productIdProvider = StateProvider.autoDispose<int>((ref) {
+  return 0;
+});
+final productIdProvider2 = StateProvider.autoDispose<int>((ref) {
+  return 0;
+});
+final productIdProvider3 = StateProvider.autoDispose<int>((ref) {
   return 0;
 });
 

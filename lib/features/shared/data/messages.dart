@@ -603,4 +603,12 @@ class Messages{
   static String DOC_STATUS='DOC_STATUS';
 
   static String UPC='UPC';
+
+  static String LIST ='LISTA';
+
+  static String MOVEMENT_SHORT='MOV';
+
+  static String FIND_LOCATOR='BUSCAR LOCALIZADOR';
+
+  static String SELECT_LOCATOR_TO='SELECCIONAR LOCALIZADOR DE DESTINO';
 }

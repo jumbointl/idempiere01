@@ -1,11 +1,10 @@
-import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:monalisa_app_001/features/products/domain/sql/sql_data_movement.dart';
-import 'package:monalisa_app_001/features/products/domain/sql/sql_data_movement_line.dart';
-import 'package:monalisa_app_001/features/products/presentation/screens/store_on_hand/unsorted_storage_on__hand_card.dart';
+import 'package:go_router/go_router.dart';
+import 'package:monalisa_app_001/features/products/presentation/screens/store_on_hand/memory_products.dart';
 
+import '../../../../../config/router/app_router.dart';
 import '../../../../../config/theme/app_theme.dart';
 import '../../../../auth/presentation/providers/auth_provider.dart';
 import '../../../../shared/data/memory.dart';
@@ -55,10 +54,9 @@ class StorageOnHandCardState extends ConsumerState<StorageOnHandCard> {
         if(warehouseStorage?.id != warehouseID){
           return;
         }
-
         ref.read(isDialogShowedProvider.notifier).update((state)=>true);
         ref.read(isScanningFromDialogProvider.notifier).update((state)=>false);
-        _createMovementDialog(context,ref);
+        _selectLocatorDialog(context,ref);
 
       },
       child: Container(
@@ -112,9 +110,93 @@ class StorageOnHandCardState extends ConsumerState<StorageOnHandCard> {
       ),
     );
   }
+  void _selectLocatorDialog(BuildContext context, WidgetRef ref) {
+
+    MemoryProducts.index = widget.index;
+    MemoryProducts.listLength = widget.listLength;
+    MemoryProducts.storage = widget.storage;
+    MemoryProducts.width = widget.width;
+    MemoryProducts.createNewMovement = true;
 
 
-  Future<Future<String?>> _createMovementDialog(BuildContext context, WidgetRef ref) async {
+    /*showDialog<String>(
+      context: context,
+      barrierDismissible: false, // user must tap button!
+      builder:  (BuildContext context) =>Consumer(builder: (_, ref, __) {
+
+        return AlertDialog(
+          backgroundColor:Colors.grey[200],
+          content: Container(
+            decoration: BoxDecoration(
+              color: Colors.grey[200], // Change background color based on isSelected
+              borderRadius: BorderRadius.circular(10),
+            ),
+            height: MediaQuery.of(context).size.height,
+            width: MediaQuery.of(context).size.width,
+            child: UnsortedStorageOnHandCard(widget.notifier, widget.storage, widget.index, width: widget.width,),
+
+          ),
+          actions: <Widget>[
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              spacing: 5,
+              children: <Widget>[
+                if(MemoryProducts.newSqlDataMovement.id!=null && MemoryProducts.newSqlDataMovement.id!>0)Expanded(
+                  child: TextButton(
+                    style: TextButton.styleFrom(
+                      backgroundColor: Colors.red[300],
+                    ),
+                    child: Text(Messages.CONTINUE),
+                    onPressed: () async {
+                      MemoryProducts.createNewMovement = false;
+                      ref.read(isDialogShowedProvider.notifier).update((state)=>true);
+                      ref.read(scannedLocatorToProvider.notifier).update((state)=>'');
+                      Navigator.of(context).pop();
+                      context.push(AppRouter.PAGE_SELECT_LOCATOR,extra:widget.notifier);
+                    },
+                  ),
+                ),
+                Expanded(
+                  child: TextButton(
+                    style: TextButton.styleFrom(
+                      backgroundColor: Colors.red[300],
+                    ),
+                    child: Text(Messages.CANCEL),
+                    onPressed: () async {
+                      ref.read(isDialogShowedProvider.notifier).update((state) => false);
+                      Navigator.of(context).pop();
+                    },
+                  ),
+                ),
+                Expanded(
+                  child: TextButton(
+                    style: TextButton.styleFrom(
+                      backgroundColor: Colors.green[300],
+                    ),
+                    child: Text(Messages.CREATE),
+                    onPressed: () {
+                      MemoryProducts.createNewMovement = true;
+                      ref.read(isDialogShowedProvider.notifier).update((state)=>true);
+                      ref.read(scannedLocatorToProvider.notifier).update((state)=>'');
+                      Navigator.of(context).pop();
+                      context.push(AppRouter.PAGE_SELECT_LOCATOR,extra:widget.notifier);
+                    },
+                  ),
+                ),
+              ],
+            ),
+          ],
+          actionsAlignment: MainAxisAlignment.center,
+          actionsPadding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+        );
+      }),
+    );*/
+
+    context.push(AppRouter.PAGE_SELECT_LOCATOR,extra:widget.notifier);
+  }
+
+
+  /*Future<Future<String?>> _createMovementDialog(BuildContext context, WidgetRef ref) async {
     ref.read(scannedLocatorToProvider.notifier).update((state)=>'');
     ref.read(isDialogShowedProvider.notifier).update((state)=>true);
     return showDialog<String>(
@@ -169,7 +251,7 @@ class StorageOnHandCardState extends ConsumerState<StorageOnHandCard> {
                         }
                         print('---------------------------------- ${jsonEncode(movement.getInsertJson())}');
                         // creado para borrar
-                        Memory.newSqlDataMovement = movement ;
+                        MemoryProducts.newSqlDataMovement = movement ;
                         movement.id = 1018275;
 
                         SqlDataMovementLine movementLine = SqlDataMovementLine();
@@ -180,7 +262,7 @@ class StorageOnHandCardState extends ConsumerState<StorageOnHandCard> {
                         movementLine.mLocatorToID = ref.read(idempiereLocatorToProvider);
                         movementLine.movementQty = ref.read(quantityToMoveProvider);
                         movementLine.mAttributeSetInstanceID = widget.storage.mAttributeSetInstanceID;
-                        Memory.newSqlDataMovementLines.add(movementLine);
+                        MemoryProducts.newSqlDataMovementLines.add(movementLine);
 
                         print('----------------------------------  ${jsonEncode(movementLine.getInsertJson())}');
                         widget.notifier.createMovement();
@@ -197,5 +279,5 @@ class StorageOnHandCardState extends ConsumerState<StorageOnHandCard> {
         );
       }),
     );
-  }
+  }*/
 }

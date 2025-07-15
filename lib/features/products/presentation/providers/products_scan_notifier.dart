@@ -9,6 +9,7 @@ import 'package:monalisa_app_001/features/products/presentation/providers/produc
 import '../../../shared/data/memory.dart';
 import '../../../shared/data/messages.dart';
 import '../../domain/idempiere/idempiere_product.dart';
+import '../screens/store_on_hand/memory_products.dart';
 import 'movement_provider.dart';
 import 'store_on_hand_provider.dart';
 
@@ -113,7 +114,7 @@ class ProductsScanNotifier  extends StateNotifier<List<IdempiereProduct>>{
   void createMovement(){
     print('----------------------------------start createMovement');
     ref.watch(startedCreateNewPutAwayMovementProvider.notifier).update((state) => true);
-    ref.watch(newSqlDataMovementProvider.notifier).update((state) => Memory.newSqlDataMovement);
+    ref.watch(newSqlDataMovementProvider.notifier).update((state) => MemoryProducts.newSqlDataMovement);
   }
 }
 

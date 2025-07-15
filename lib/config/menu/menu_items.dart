@@ -98,6 +98,13 @@ final appHomeOptionCol3Items = <MenuItem>[
     icon: Icons.inventory,
   ),
   MenuItem(
+    title: Messages.MOVEMENT,
+    subTitle: '',
+    link: AppRouter.PAGE_PRODUCT_HOME,
+    icon: Icons.move_up
+    ,
+  ),
+  MenuItem(
     title: Messages.ADD_UPC,
     subTitle: '',
     link: AppRouter.PAGE_PRODUCT_SEARCH_UPDATE_UPC,

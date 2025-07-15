@@ -14,30 +14,29 @@ import '../../providers/products_scan_notifier.dart';
 import '../../providers/store_on_hand_provider.dart';
 import '../../widget/no_data_card.dart';
 import '../../widget/product_detail_card.dart';
-import 'product_resume_card.dart';
 import '../../widget/scan_product_barcode_button.dart';
-import 'storage_on__hand_card.dart';
+import '../store_on_hand/product_resume_card.dart';
+import '../store_on_hand/storage_on__hand_card.dart';
 
 
-class ProductStoreOnHandScreen extends ConsumerStatefulWidget {
-
-
+class LocatorScreen extends ConsumerStatefulWidget {
   int countScannedCamera =0;
   late ProductsScanNotifier productsNotifier ;
   final int actionTypeInt = Memory.ACTION_FIND_BY_UPC_SKU_FOR_STORE_ON_HAND ;
 
-  ProductStoreOnHandScreen({super.key});
+  LocatorScreen({super.key});
 
   @override
-  ConsumerState<ConsumerStatefulWidget> createState() => _ProductScreenState();
+  ConsumerState<ConsumerStatefulWidget> createState() => LocatorScreenState();
 
 
 }
 
-class _ProductScreenState extends ConsumerState<ProductStoreOnHandScreen> {
+class LocatorScreenState extends ConsumerState<LocatorScreen> {
 
   @override
   Widget build(BuildContext context){
+
     final productAsync = ref.watch(findProductByUPCOrSKUForStoreOnHandProvider);
     final productsStoredAsync = ref.watch(findProductsStoreOnHandProvider);
     widget.productsNotifier = ref.watch(scanStateNotifierProvider.notifier);
@@ -58,24 +57,24 @@ class _ProductScreenState extends ConsumerState<ProductStoreOnHandScreen> {
     } else {
       foreGroundProgressBar = Colors.purple;
     }
-    WidgetsBinding.instance.addPostFrameCallback((_) async {
-      ref.read(isScanningProvider.notifier).update((state) => false);
-    });
+
     //print('Bearer ${Environment.token}');
     return Scaffold(
+
+
       appBar: AppBar(
         title: Text(Messages.PRODUCT),
-          actions: [
+        actions: [
 
-            usePhoneCamera.state ? IconButton(
-              icon: const Icon(Icons.barcode_reader),
-              onPressed: () => {
+          usePhoneCamera.state ? IconButton(
+            icon: const Icon(Icons.barcode_reader),
+            onPressed: () => {
               ref.watch(isDialogShowedProvider.notifier).state = false,
-                usePhoneCamera.state = false},
-            ) :  IconButton(
+              usePhoneCamera.state = false},
+          ) :  IconButton(
             icon: const Icon(Icons.qr_code_scanner),
             onPressed: () => {
-            ref.watch(isDialogShowedProvider.notifier).state = false,
+              ref.watch(isDialogShowedProvider.notifier).state = false,
               usePhoneCamera.state = true},
 
           ),
@@ -89,41 +88,41 @@ class _ProductScreenState extends ConsumerState<ProductStoreOnHandScreen> {
           mainAxisAlignment: MainAxisAlignment.center,
           spacing: 5,
           children: [
-              isScanning
-              ? LinearProgressIndicator(
-            backgroundColor: Colors.cyan,
-            color: foreGroundProgressBar,
-            minHeight: 36,
-          )
-              : getSearchBar(context),
+            isScanning
+                ? LinearProgressIndicator(
+              backgroundColor: Colors.cyan,
+              color: foreGroundProgressBar,
+              minHeight: 36,
+            )
+                : getSearchBar(context),
 
-          SingleChildScrollView(
-            child: Container(
-              width: MediaQuery.of(context).size.width - 30,
-              height: productAsync.when(
-                  data: (products) => products.length <= 1 ? singleProductDetailCardHeight : bodyHeight,
-                  error: (error, stackTrace) => singleProductDetailCardHeight,
-                  loading: () => singleProductDetailCardHeight),
-              margin: EdgeInsets.symmetric(horizontal: 10),
-              decoration: BoxDecoration(
-                color: Colors.grey[200],
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: productAsync.when(
-                data: (products) {
-                   return products.length ==1 ? (products[0].id != null && products[0].id! > 0) ?
+            SingleChildScrollView(
+              child: Container(
+                width: MediaQuery.of(context).size.width - 30,
+                height: productAsync.when(
+                    data: (products) => products.length <= 1 ? singleProductDetailCardHeight : bodyHeight,
+                    error: (error, stackTrace) => singleProductDetailCardHeight,
+                    loading: () => singleProductDetailCardHeight),
+                margin: EdgeInsets.symmetric(horizontal: 10),
+                decoration: BoxDecoration(
+                  color: Colors.grey[200],
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: productAsync.when(
+                  data: (products) {
+                    return products.length ==1 ? (products[0].id != null && products[0].id! > 0) ?
                     ProductDetailCard(productsNotifier: widget.productsNotifier, product: products[0]) : NoDataCard()
-                     : ListView.separated(
-                    separatorBuilder: (context, index) => SizedBox(height: 5,),
-                    shrinkWrap: true, // Important to prevent unbounded height
-                    itemCount: products.length,
-                    itemBuilder: (context, index) => ProductDetailCard(productsNotifier: widget.productsNotifier, product: products[index]),
-                  );
-                },error: (error, stackTrace) => Text('Error: $error'),
-                loading: () => Container(),
+                        : ListView.separated(
+                      separatorBuilder: (context, index) => SizedBox(height: 5,),
+                      shrinkWrap: true, // Important to prevent unbounded height
+                      itemCount: products.length,
+                      itemBuilder: (context, index) => ProductDetailCard(productsNotifier: widget.productsNotifier, product: products[index]),
+                    );
+                  },error: (error, stackTrace) => Text('Error: $error'),
+                  loading: () => Container(),
+                ),
               ),
             ),
-          ),
             Expanded(
                 child: productsStoredAsync.when(
                   data: (storages) {
@@ -157,11 +156,11 @@ class _ProductScreenState extends ConsumerState<ProductStoreOnHandScreen> {
                             error: (error, stackTrace) => {ref.watch(showResultCardProvider.notifier).update((state) => false)},
                             loading: () => {ref.watch(showResultCardProvider.notifier).update((state) => false)}
                         );
-                        //ref.watch(isScanningProvider.notifier).update((state) => false);
+                        ref.watch(isScanningProvider.notifier).update((state) => false);
                       }
-                      //await Future.delayed(Duration(milliseconds: Memory.DELAY_TO_REFRESH_PROVIDER_MILLISECOND));
+                      await Future.delayed(Duration(milliseconds: Memory.DELAY_TO_REFRESH_PROVIDER_MILLISECOND));
 
-
+                      ref.read(isScanningProvider.notifier).update((state) => false);
 
                     });
                     return getStoragesOnHand(storages, width);
@@ -249,20 +248,20 @@ class _ProductScreenState extends ConsumerState<ProductStoreOnHandScreen> {
               borderRadius: BorderRadius.circular(10),
             ),
             child: showResultCard ? ProductResumeCard(storages,width-10) : Container()
-            //child: ProductResumeCard(storages,width-10)
+          //child: ProductResumeCard(storages,width-10)
 
         ),
         isScanning? Container() :
-             Expanded(
-              child: ListView.builder(
-                        itemCount: storages.length,
-                        padding: const EdgeInsets.all(10),
-                        itemBuilder: (context, index) {
+        Expanded(
+          child: ListView.builder(
+            itemCount: storages.length,
+            padding: const EdgeInsets.all(10),
+            itemBuilder: (context, index) {
               final product = storages[index];
               return StorageOnHandCard(widget.productsNotifier, product, index + 1, storages.length, width: width - 10);
-                        },
-                      ),
-            ),
+            },
+          ),
+        ),
       ],
     ) ;
 
@@ -292,7 +291,7 @@ class _ProductScreenState extends ConsumerState<ProductStoreOnHandScreen> {
               ),
             ) ,
             IconButton(onPressed:() async {getBarCode(context,false);},
-              icon: Icon( Icons.search, color:isScanning?Colors.grey: Colors.purple,)),
+                icon: Icon( Icons.search, color:isScanning?Colors.grey: Colors.purple,)),
             IconButton(onPressed:() async {getBarCode(context,true);},
                 icon: Icon( Icons.history, color:isScanning?Colors.grey: Colors.purple,)),
 
@@ -315,58 +314,58 @@ class _ProductScreenState extends ConsumerState<ProductStoreOnHandScreen> {
     bool stateActual = ref.watch(usePhoneCameraToScanProvider.notifier).state;
     ref.watch(usePhoneCameraToScanProvider.notifier).state = true;
     AwesomeDialog(
-      context: context,
-      headerAnimationLoop: false,
-      dialogType: DialogType.noHeader,
-      body: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 40),
-        child: Center(
-          child: Column(
-            spacing: 10,
-            children: [
-              Text(Messages.FIND_PRODUCT_BY_UPC_SKU),
-              TextField(
-                controller: controller,
-                style: const TextStyle(fontStyle: FontStyle.italic),
-                keyboardType: TextInputType.text,
-              ),
-            ],
+        context: context,
+        headerAnimationLoop: false,
+        dialogType: DialogType.noHeader,
+        body: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 40),
+          child: Center(
+            child: Column(
+              spacing: 10,
+              children: [
+                Text(Messages.FIND_PRODUCT_BY_UPC_SKU),
+                TextField(
+                  controller: controller,
+                  style: const TextStyle(fontStyle: FontStyle.italic),
+                  keyboardType: TextInputType.text,
+                ),
+              ],
+            ),
           ),
         ),
-      ),
-      title: Messages.FIND_PRODUCT_BY_UPC_SKU,
-      desc: Messages.FIND_PRODUCT_BY_UPC_SKU,
-      btnCancelText: Messages.CANCEL,
-      btnOkText: Messages.OK,
-      btnOkOnPress: () {
-        ref.watch(usePhoneCameraToScanProvider.notifier).state = stateActual;
-        final result = controller.text;
-        print('-------------------------result $result');
-        if(result==''){
-          AwesomeDialog(
-            context: context,
-            animType: AnimType.scale,
-            dialogType: DialogType.error,
-            body: Center(child: Text(
-              Messages.ERROR_UPC_EMPTY,
-              style: TextStyle(fontStyle: FontStyle.italic),
-            ),), // correct here
-            title: Messages.ERROR_UPC_EMPTY,
-            desc:   '',
-            autoHide: const Duration(seconds: 3),
-            btnOkOnPress: () {},
-            btnOkColor: Colors.amber,
-            btnCancelText: Messages.CANCEL,
-            btnOkText: Messages.OK,
-          ).show();
-          return;
+        title: Messages.FIND_PRODUCT_BY_UPC_SKU,
+        desc: Messages.FIND_PRODUCT_BY_UPC_SKU,
+        btnCancelText: Messages.CANCEL,
+        btnOkText: Messages.OK,
+        btnOkOnPress: () {
+          ref.watch(usePhoneCameraToScanProvider.notifier).state = stateActual;
+          final result = controller.text;
+          print('-------------------------result $result');
+          if(result==''){
+            AwesomeDialog(
+              context: context,
+              animType: AnimType.scale,
+              dialogType: DialogType.error,
+              body: Center(child: Text(
+                Messages.ERROR_UPC_EMPTY,
+                style: TextStyle(fontStyle: FontStyle.italic),
+              ),), // correct here
+              title: Messages.ERROR_UPC_EMPTY,
+              desc:   '',
+              autoHide: const Duration(seconds: 3),
+              btnOkOnPress: () {},
+              btnOkColor: Colors.amber,
+              btnCancelText: Messages.CANCEL,
+              btnOkText: Messages.OK,
+            ).show();
+            return;
+          }
+          widget.productsNotifier.addBarcodeByUPCOrSKUForStoreOnHande(result);
+        },
+        btnCancelOnPress: (){
+          ref.watch(usePhoneCameraToScanProvider.notifier).state = stateActual;
+          return ;
         }
-        widget.productsNotifier.addBarcodeByUPCOrSKUForStoreOnHande(result);
-      },
-      btnCancelOnPress: (){
-        ref.watch(usePhoneCameraToScanProvider.notifier).state = stateActual;
-        return ;
-      }
     ).show();
 
   }

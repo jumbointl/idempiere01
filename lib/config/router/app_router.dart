@@ -8,9 +8,13 @@ import 'package:monalisa_app_001/features/auth/auth.dart';
 import 'package:monalisa_app_001/features/auth/presentation/providers/auth_provider.dart';
 import 'package:monalisa_app_001/features/home/presentation/screens/home_screen.dart';
 import 'package:monalisa_app_001/features/m_inout/presentation/screens/m_in_out_screen.dart';
+import 'package:monalisa_app_001/features/products/presentation/screens/store_on_hand/memory_products.dart';
 import '../../features/auth/presentation/screens/auth_data_screen.dart';
+import '../../features/products/presentation/providers/products_scan_notifier.dart';
 import '../../features/products/presentation/screens/search/product_search_screen.dart';
 import '../../features/products/presentation/screens/store_on_hand/product_store_on_hand_screen.dart';
+import '../../features/products/presentation/screens/store_on_hand/select_locator_screen.dart';
+import '../../features/products/presentation/screens/store_on_hand/unsorted_storage_on__hand_screen.dart';
 import '../../features/products/presentation/screens/update_upc/update_product_upc_screen3.dart';
 import '../../features/products/presentation/screens/update_upc/update_product_upc_screen4.dart';
 
@@ -22,6 +26,18 @@ class AppRouter {
   static const String PAGE_PRODUCT_SEARCH = '/product/search';
   static const String PAGE_PRODUCT_STORE_ON_HAND = '/product/storeOnHand';
   static const String PAGE_PRODUCT_SEARCH_UPDATE_UPC = '/product/searchUpdateProductUPC';
+  static const String PAGE_LOGIN = '/login';
+  static const String PAGE_AUTH_DATA = '/authData';
+  static const String PAGE_SPLASH = '/splash';
+  static const String PAGE_M_IN_OUT = '/mInOut';
+  static const String PAGE_M_IN_OUT_SHIPMENT = '/mInOut/shipment';
+  static const String PAGE_M_IN_OUT_RETURN = '/mInOut/return';
+  static const String PAGE_M_IN_OUT_TRANSFER = '/mInOut/transfer';
+  static const String PAGE_M_IN_OUT_PICKING = '/mInOut/picking';
+  static const String PAGE_M_IN_OUT_INVENTORY = '/mInOut/inventory';
+  static const String PAGE_UNSORTED_STORAGE_ON_HAND = '/product/unsortedStorageOnHand';
+  static const String PAGE_PRODUCT_HOME = '/product/home';
+  static const String PAGE_SELECT_LOCATOR = '/movement/selectLocator';
 }
 
 
@@ -70,11 +86,14 @@ final goRouterProvider = Provider((ref) {
         path: AppRouter.PAGE_PRODUCT_STORE_ON_HAND,
         builder: (context, state) => RolesApp.hasStockPrivilege() ? ProductStoreOnHandScreen() : const HomeScreen(),
       ),
-      ///* MInOut Routes
-      /*GoRoute(
-        path: '/products/scan',
-        builder: (context, state) => RolesApp.hasStockPrivilege()? ProductScreen() : const HomeScreen(),
-      ),*/
+      GoRoute(
+        path: AppRouter.PAGE_SELECT_LOCATOR,
+        builder: (context, state) => RolesApp.hasStockPrivilege() ?
+        SelectLocatorScreen(index: MemoryProducts.index, storage: MemoryProducts.storage,
+          notifier:state.extra as ProductsScanNotifier, width: MemoryProducts.width,)
+            : const HomeScreen(),
+      ),
+
       GoRoute(
         path: AppRouter.PAGE_PRODUCT_SEARCH,
         builder: (context, state) => RolesApp.hasStockPrivilege() ? ProductSearchScreen() : const HomeScreen(),
@@ -82,6 +101,17 @@ final goRouterProvider = Provider((ref) {
       GoRoute(
         path: AppRouter.PAGE_PRODUCT_SEARCH_UPDATE_UPC,
         builder: (context, state) => RolesApp.hasStockPrivilege() ? UpdateProductUpcScreen4() : const HomeScreen(),
+      ),
+      GoRoute(
+        path: AppRouter.PAGE_UNSORTED_STORAGE_ON_HAND,
+        builder: (context, state) {
+          {
+            if(!RolesApp.hasStockPrivilege()){
+              return const HomeScreen();
+            }
+            return UnsortedStorageOnHandScreen(notifier: state.extra as ProductsScanNotifier,index:MemoryProducts.index, storage: MemoryProducts.storage,width: MemoryProducts.width,);
+          }
+        },
       ),
       GoRoute(
         path: AppRouter.PAGE_UPDATE_PRODUCT_UPC,

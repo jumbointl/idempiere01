@@ -1,3 +1,4 @@
+
 import 'package:awesome_dialog/awesome_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -14,10 +15,12 @@ import '../../../../shared/data/memory.dart';
 import '../../../../shared/data/messages.dart';
 import '../../../domain/idempiere/idempiere_storage_on_hande.dart';
 import '../../../domain/idempiere/idempiere_warehouse.dart';
+import '../../../domain/sql/sql_data_movement.dart';
+import '../../../domain/sql/sql_data_movement_line.dart';
 import '../../providers/movement_provider.dart';
 import '../../widget/no_data_card.dart';
 import 'memory_products.dart';
-class UnsortedStorageOnHandCard extends ConsumerStatefulWidget {
+class UnsortedStorageOnHandScreen extends ConsumerStatefulWidget {
 
   final IdempiereStorageOnHande storage;
   final int index;
@@ -27,14 +30,14 @@ class UnsortedStorageOnHandCard extends ConsumerStatefulWidget {
 
   ProductsScanNotifier notifier;
 
-  UnsortedStorageOnHandCard(this.notifier, this.storage, this.index, {required this.width, super.key});
+  UnsortedStorageOnHandScreen({required this.index, required this.storage, required this.notifier, required this.width, super.key});
 
 
   @override
-  ConsumerState<UnsortedStorageOnHandCard> createState() =>_UnsortedStorageOnHandCardState();
+  ConsumerState<UnsortedStorageOnHandScreen> createState() =>UnsortedStorageOnHandScreenState();
 }
 
-class _UnsortedStorageOnHandCardState extends ConsumerState<UnsortedStorageOnHandCard> {
+class UnsortedStorageOnHandScreenState extends ConsumerState<UnsortedStorageOnHandScreen> {
   late List<IdempiereStorageOnHande> unsortedStorageList = [];
   late List<IdempiereStorageOnHande> storageList = [];
   late double widthLarge ;
@@ -91,12 +94,18 @@ class _UnsortedStorageOnHandCardState extends ConsumerState<UnsortedStorageOnHan
       appBar: AppBar(
         title: Text(Messages.MOVEMENT),
 
+
       ),
+
       body: PopScope(
         onPopInvokedWithResult: (bool didPop, Object? result) async {
           if (didPop) {
             ref.read(isDialogShowedProvider.notifier).update((state) => false);
             ref.read(isScanningFromDialogProvider.notifier).update((state) => false);
+            ref.read(scannedLocatorToProvider.notifier).update((state) => '');
+            ref.read(quantityToMoveProvider.notifier).update((state) => 0);
+            ref.read(newSqlDataMovementProvider.notifier).update((state) => SqlDataMovement(id: -1,name: Messages.EMPTY));
+
             return;
           }
         },
@@ -166,15 +175,7 @@ class _UnsortedStorageOnHandCardState extends ConsumerState<UnsortedStorageOnHan
                                 fontWeight: FontWeight.bold,
                                 color: Colors.purple,
                                 ),),
-                            /*Text(ref.read(scannedLocatorToProvider.notifier).state == '' ? Messages.DESTINATION
-                                : ref.read(scannedLocatorToProvider.notifier).state,
-                              style: TextStyle(
-                                fontSize: fontSizeMedium,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.purple,
-                              ),),*/
                             findLocatorTo.when(data: (data){
-          
                                 return Text(ref.read(idempiereLocatorToProvider.notifier).state.value != null
                                     ? ref.read(idempiereLocatorToProvider.notifier).state.value!
                                     : Messages.DESTINATION,style: TextStyle(
@@ -200,7 +201,7 @@ class _UnsortedStorageOnHandCardState extends ConsumerState<UnsortedStorageOnHan
                 ),
                 if(usePhoneCamera.state) _buttonScanWithPhone(context, ref) ,
           
-                startedCreateNewPutAwayMovement.state == null ?  SizedBox(height:dialogHeight/2,
+                startedCreateNewPutAwayMovement.state == null ?  SizedBox(height:dialogHeight/2-20,
                   child: ListView.separated(
                     itemCount: storageList.length,
                     itemBuilder: (context, index) {
@@ -216,6 +217,57 @@ class _UnsortedStorageOnHandCardState extends ConsumerState<UnsortedStorageOnHan
                     }
                   ,error: (error, stackTrace) => Text('Error: $error'),
                   loading: () => LinearProgressIndicator(),
+                ),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: <Widget>[
+                    Expanded(
+                      child: TextButton(
+                        style: TextButton.styleFrom(
+                          backgroundColor: Colors.red,
+                        ),
+                        child: Text(Messages.CANCEL, style: TextStyle(color: Colors.white),),
+                        onPressed: () async {
+                          ref.read(isDialogShowedProvider.notifier).update((state) => false);
+                          Navigator.of(context).pop();
+                        },
+                      ),
+                    ),
+                    const SizedBox(width: 8), // Add some spacing between buttons
+                    Expanded(
+                      child: TextButton(
+                        style: TextButton.styleFrom(
+                          backgroundColor: Colors.green,
+                        ),
+                        child: Text(Messages.CREATE, style: TextStyle(color: Colors.white),),
+                        onPressed: () {
+                          if (locatorTo.value != null && locatorTo.value!.isNotEmpty) {
+                            // Perform the movement logic here
+                            // For example, call a function from your notifier:
+                            SqlDataMovement movement = SqlDataMovement();
+                            Memory.sqlUsersData.copyToSqlData(movement);
+                            //In this case locatorTo and  locatorFrom are the same warehouse
+                            if(movement.mWarehouseID != null && movement.mWarehouseID!.id != null){
+                              movement.setIdempiereWarehouseTo(movement.mWarehouseID!.id!);
+                            }
+                            // creado para borrar
+                            MemoryProducts.newSqlDataMovement = movement ;
+                            SqlDataMovementLine movementLine = SqlDataMovementLine();
+                            Memory.sqlUsersData.copyToSqlData(movementLine);
+                            movementLine.mMovementID = movement;
+                            movementLine.mLocatorID = widget.storage.mLocatorID;
+                            movementLine.mProductID = widget.storage.mProductID;
+                            movementLine.mLocatorToID = ref.read(idempiereLocatorToProvider);
+                            movementLine.movementQty = ref.read(quantityToMoveProvider);
+                            movementLine.mAttributeSetInstanceID = widget.storage.mAttributeSetInstanceID;
+                            MemoryProducts.newSqlDataMovementLines.add(movementLine);
+                            widget.notifier.createMovement();
+
+                          }
+                        },
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
@@ -247,7 +299,7 @@ class _UnsortedStorageOnHandCardState extends ConsumerState<UnsortedStorageOnHan
         });
         FocusScope.of(context).unfocus();
         _getQuantityToMoveDialog(context, ref, index);
-        print('Card tapped: ${storage.mProductID?.identifier}, isSelected: ${isCardsSelected[index]} index $index');
+        //print('Card tapped: ${storage.mProductID?.identifier}, isSelected: ${isCardsSelected[index]} index $index');
       },
       child: Container(
         //margin: EdgeInsets.all(5),
@@ -356,23 +408,27 @@ class _UnsortedStorageOnHandCardState extends ConsumerState<UnsortedStorageOnHan
     ).show();
     return;
   }
-  Widget _numberButtons(BuildContext context, WidgetRef ref,TextEditingController quantityController){
-    double widthButton = 20 ;
-    return Container(
 
-      margin: EdgeInsets.only(left: 10, right: 10,),
+
+
+  Widget _numberButtons(BuildContext context, WidgetRef ref,TextEditingController quantityController){
+    double widthButton = 40 ;
+    return Center(
+
+      //margin: EdgeInsets.only(left: 10, right: 10,),
       child: Column(
         children: [
           Row(
-            spacing: 5,
-            mainAxisAlignment: MainAxisAlignment.center,
+            spacing: 4,
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              ElevatedButton(
+              TextButton(
                 onPressed: () => addQuantityText(context,ref,quantityController,0),
-                style: ElevatedButton.styleFrom(
+                style: TextButton.styleFrom(
                     backgroundColor: Colors.white,
                     minimumSize: Size(widthButton, 37),
                     shape: RoundedRectangleBorder(
+                      side: BorderSide(color: Colors.black),
                       borderRadius: BorderRadius.circular(5),
 
                     )
@@ -385,12 +441,13 @@ class _UnsortedStorageOnHandCardState extends ConsumerState<UnsortedStorageOnHan
                   ),
                 ),
               ),
-              ElevatedButton(
+              TextButton(
                 onPressed: () => addQuantityText(context,ref,quantityController,1),
-                style: ElevatedButton.styleFrom(
+                style: TextButton.styleFrom(
                     backgroundColor: Colors.white,
                     minimumSize: Size(widthButton, 37),
                     shape: RoundedRectangleBorder(
+                      side: BorderSide(color: Colors.black),
                       borderRadius: BorderRadius.circular(5),
 
                     )
@@ -403,12 +460,14 @@ class _UnsortedStorageOnHandCardState extends ConsumerState<UnsortedStorageOnHan
                   ),
                 ),
               ),
-              ElevatedButton(
+              TextButton(
                 onPressed: () => addQuantityText(context,ref,quantityController,2),
-                style: ElevatedButton.styleFrom(
+                style: TextButton.styleFrom(
                     backgroundColor: Colors.white,
                     minimumSize: Size(widthButton, 37),
                     shape: RoundedRectangleBorder(
+                      side: BorderSide(color: Colors.black),
+
                       borderRadius: BorderRadius.circular(5),
 
                     )
@@ -421,12 +480,13 @@ class _UnsortedStorageOnHandCardState extends ConsumerState<UnsortedStorageOnHan
                   ),
                 ),
               ),
-              ElevatedButton(
+              TextButton(
                 onPressed: () => addQuantityText(context,ref,quantityController,3),
-                style: ElevatedButton.styleFrom(
+                style: TextButton.styleFrom(
                     backgroundColor: Colors.white,
                     minimumSize: Size(widthButton, 37),
                     shape: RoundedRectangleBorder(
+                      side: BorderSide(color: Colors.black),
                       borderRadius: BorderRadius.circular(5),
 
                     )
@@ -439,20 +499,13 @@ class _UnsortedStorageOnHandCardState extends ConsumerState<UnsortedStorageOnHan
                   ),
                 ),
               ),
-
-
-            ],
-          ),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            spacing: 5,
-            children: [
-              ElevatedButton(
+              TextButton(
                 onPressed: () => addQuantityText(context,ref,quantityController,4),
-                style: ElevatedButton.styleFrom(
+                style: TextButton.styleFrom(
                     backgroundColor: Colors.white,
                     minimumSize: Size(widthButton, 37),
                     shape: RoundedRectangleBorder(
+                      side: BorderSide(color: Colors.black),
                       borderRadius: BorderRadius.circular(5),
 
                     )
@@ -466,13 +519,21 @@ class _UnsortedStorageOnHandCardState extends ConsumerState<UnsortedStorageOnHan
                 ),
               ),
 
+            ],
+          ),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            spacing: 4,
+            children: [
 
-              ElevatedButton(
+
+              TextButton(
                 onPressed: () => addQuantityText(context,ref,quantityController,5),
-                style: ElevatedButton.styleFrom(
+                style: TextButton.styleFrom(
                     backgroundColor: Colors.white,
                     minimumSize: Size(widthButton, 37),
                     shape: RoundedRectangleBorder(
+                      side: BorderSide(color: Colors.black),
                       borderRadius: BorderRadius.circular(5),
 
                     )
@@ -485,12 +546,13 @@ class _UnsortedStorageOnHandCardState extends ConsumerState<UnsortedStorageOnHan
                   ),
                 ),
               ),
-              ElevatedButton(
+              TextButton(
                 onPressed: () => addQuantityText(context,ref,quantityController,6),
-                style: ElevatedButton.styleFrom(
+                style: TextButton.styleFrom(
                     backgroundColor: Colors.white,
                     minimumSize: Size(widthButton, 37),
                     shape: RoundedRectangleBorder(
+                      side: BorderSide(color: Colors.black),
                       borderRadius: BorderRadius.circular(5),
 
                     )
@@ -503,12 +565,13 @@ class _UnsortedStorageOnHandCardState extends ConsumerState<UnsortedStorageOnHan
                   ),
                 ),
               ),
-              ElevatedButton(
+              TextButton(
                 onPressed: () => addQuantityText(context,ref,quantityController,7),
-                style: ElevatedButton.styleFrom(
+                style: TextButton.styleFrom(
                     backgroundColor: Colors.white,
                     minimumSize: Size(widthButton, 37),
                     shape: RoundedRectangleBorder(
+                      side: BorderSide(color: Colors.black),
                       borderRadius: BorderRadius.circular(5),
 
                     )
@@ -521,21 +584,13 @@ class _UnsortedStorageOnHandCardState extends ConsumerState<UnsortedStorageOnHan
                   ),
                 ),
               ),
-            ],
-          ),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            spacing: 5,
-            children: [
-
-
-
-              ElevatedButton(
-                onPressed: () => addQuantityText(context,ref,quantityController,8),
-                style: ElevatedButton.styleFrom(
+              TextButton(
+                onPressed: () => addQuantityText(context,ref,quantityController,4),
+                style: TextButton.styleFrom(
                     backgroundColor: Colors.white,
                     minimumSize: Size(widthButton, 37),
                     shape: RoundedRectangleBorder(
+                      side: BorderSide(color: Colors.black),
                       borderRadius: BorderRadius.circular(5),
 
                     )
@@ -548,12 +603,14 @@ class _UnsortedStorageOnHandCardState extends ConsumerState<UnsortedStorageOnHan
                   ),
                 ),
               ),
-              ElevatedButton(
+
+              TextButton(
                 onPressed: () => addQuantityText(context,ref,quantityController,9),
-                style: ElevatedButton.styleFrom(
+                style: TextButton.styleFrom(
                     backgroundColor: Colors.white,
                     minimumSize: Size(widthButton, 37),
                     shape: RoundedRectangleBorder(
+                      side: BorderSide(color: Colors.black),
                       borderRadius: BorderRadius.circular(5),
 
                     )
@@ -566,28 +623,33 @@ class _UnsortedStorageOnHandCardState extends ConsumerState<UnsortedStorageOnHan
                   ),
                 ),
               ),
-              Expanded(
-                child: ElevatedButton(
-                  onPressed: () => addQuantityText(context,ref,quantityController,-1),
-                  style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.white,
-                      minimumSize: Size(widthButton, 37),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(5),
-
-                      )
-                  ),
-                  child: Text(
-                    Messages.CLEAR,
-                    style: TextStyle(
-                        color: Colors.black,
-                        fontSize: fontSizeMedium
-                    ),
-                  ),
-                ),
-              ),
 
             ],
+          ),
+          SizedBox(height: 20,),
+          SizedBox(
+            width: widthButton*5 + 4*4,
+            height: 37,
+            child: TextButton(
+              onPressed: () => addQuantityText(context,ref,quantityController,-1),
+              style: TextButton.styleFrom(
+                  backgroundColor: Colors.white,
+                  minimumSize: Size(widthButton*5 + 4*4, 37), // width of 5 buttons + 4 spacing
+                  shape: RoundedRectangleBorder(
+                    side: BorderSide(color: Colors.black),
+                    borderRadius: BorderRadius.circular(5),
+
+                  )
+              ),
+
+              child: Text(
+                Messages.CLEAR,
+                style: TextStyle(
+                    color: Colors.black,
+                    fontSize: fontSizeMedium
+                ),
+              ),
+            ),
           ),
 
         ],
@@ -596,7 +658,82 @@ class _UnsortedStorageOnHandCardState extends ConsumerState<UnsortedStorageOnHan
 
 
   }
-  Future<Future<String?>> _getQuantityToMoveDialog(BuildContext context, WidgetRef ref,int index) async {
+  Future<void> _getQuantityToMoveDialog(BuildContext context, WidgetRef ref,int index) async {
+    TextEditingController quantityController = TextEditingController();
+    double qtyOnHand = storageList[index].qtyOnHand ?? 0;
+    quantityController.text = Memory.numberFormatter0Digit.format(storageList[index].qtyOnHand);
+    AwesomeDialog(
+      context: context,
+      animType: AnimType.scale,
+      dialogType: DialogType.noHeader,
+      body: SizedBox(
+        height: 260,
+        width: 350,//Set the desired height for the AlertDialog
+        child: Column(
+          spacing: 5,
+          children: [
+            Text(Messages.QUANTITY_TO_MOVE,style: TextStyle(
+              fontSize: fontSizeLarge,
+              fontWeight: FontWeight.bold,
+            ),),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 30.0),
+              child: TextField(
+                autofocus: false,
+                enabled: false,
+                controller: quantityController,
+                textAlign: TextAlign.end,
+                style: TextStyle(
+                  fontSize: fontSizeLarge,
+                  color: Colors.purple,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+            SizedBox(height: 10,),
+            _numberButtons(context, ref,quantityController),
+          ],
+        ),
+      ),
+      title:  Messages.QUANTITY_TO_MOVE,
+      desc:   '',
+      btnOkOnPress: () {
+        String quantity = quantityController.text;
+        if(quantity.isEmpty){
+          String message =  '${Messages.ERROR_QUANTITY} ${Messages.EMPTY}';
+          showErrorMessage(context, ref, message);
+          return;
+        }
+
+        int? aux = int.tryParse(quantity);
+        if(aux!=null && aux>0){
+          if(aux<=qtyOnHand){
+            ref.read(quantityToMoveProvider.notifier).state = aux;
+          } else {
+            String message =  aux>0 ? '${Messages.ERROR_QUANTITY} ${Memory.numberFormatter0Digit.format(aux)}>${Memory.numberFormatter0Digit.format(qtyOnHand)}' :
+            '${Messages.ERROR_QUANTITY} $quantity';
+            showErrorMessage(context, ref, message);
+            quantityController.text = Memory.numberFormatter0Digit.format(qtyOnHand);
+            return;
+          }
+        } else {
+          String message =  '${Messages.ERROR_QUANTITY} ${aux==null ? Messages.EMPTY : quantity}';
+          showErrorMessage(context, ref, message);
+          return;
+        }
+
+      },
+      btnOkColor: Colors.green,
+      buttonsTextStyle: const TextStyle(color: Colors.white),
+      btnCancelText: Messages.CANCEL,
+      btnCancelOnPress: (){
+        ref.read(quantityToMoveProvider.notifier).state = 0;
+      },
+      btnCancelColor: Colors.red,
+      btnOkText: Messages.OK,
+    ).show();
+  }
+  /*Future<Future<String?>> _getQuantityToMoveDialog2(BuildContext context, WidgetRef ref,int index) async {
 
     return showDialog<String>(
       context: context,
@@ -615,8 +752,8 @@ class _UnsortedStorageOnHandCardState extends ConsumerState<UnsortedStorageOnHan
               ),),
           ),
           content: SizedBox(
-            height: 220,
-            width: dialogWidth,// Set the desired height for the AlertDialog
+            height: 250,
+            width: 350,//Set the desired height for the AlertDialog
             child: Column(
               spacing: 5,
               children: [
@@ -631,6 +768,7 @@ class _UnsortedStorageOnHandCardState extends ConsumerState<UnsortedStorageOnHan
                       style: TextStyle(
                         fontSize: fontSizeLarge,
                         fontWeight: FontWeight.bold,
+                        color: Colors.black,
                       ),
                   ),
                     ),
@@ -681,7 +819,7 @@ class _UnsortedStorageOnHandCardState extends ConsumerState<UnsortedStorageOnHan
         );
       }),
     );
-  }
+  }*/
   Future<void> getBarcode(BuildContext context, WidgetRef ref) async {
     ref.read(isScanningFromDialogProvider.notifier).update((state) => true);
     String? scanBarcode = await SimpleBarcodeScanner.scanBarcode(

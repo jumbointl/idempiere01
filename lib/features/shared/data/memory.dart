@@ -4,8 +4,6 @@ import 'package:intl/intl.dart';
 import 'package:monalisa_app_001/features/products/domain/idempiere/idempiere_product.dart';
 import 'package:monalisa_app_001/features/products/domain/sql/sql_users_data.dart';
 
-import '../../products/domain/sql/sql_data_movement.dart';
-import '../../products/domain/sql/sql_data_movement_line.dart';
 import 'messages.dart';
 
 class Memory {
@@ -16,8 +14,7 @@ class Memory {
   static bool isUseCameraToScan = false ;
   static String userName ='';
   static SqlUsersData sqlUsersData = SqlUsersData();
-  static List<SqlDataMovementLine> newSqlDataMovementLines = <SqlDataMovementLine>[];
-  static SqlDataMovement newSqlDataMovement = SqlDataMovement();
+
 
   static final numberFormatter2Digit = NumberFormat.decimalPatternDigits
     (locale: 'es_PY',decimalDigits: 2);
@@ -48,13 +45,6 @@ class Memory {
   static const int ACTION_CALL_UPDATE_PRODUCT_UPC_PAGE =3;
   static const int ACTION_FIND_BY_UPC_SKU_FOR_STORE_ON_HAND = 4;
   static const int ACTION_GET_LOCATOR_TO_VALUE = 5;
-/*  // app routes
-  static const String PAGE_UPDATE_PRODUCT_UPC = '/product/updateProductUPC';
-  static const String PAGE_HOME = '/home';
-  static const String PAGE_PRODUCT_SEARCH = '/product/search';
-  static const String PAGE_PRODUCT_STORE_ON_HAND = '/product/storeOnHand';
-  static const String PAGE_PRODUCT_SEARCH_UPDATE_UPC = '/product/searchUpdateProductUPC';*/
-  //
   static const int UPC_EXITS = -1;
 
 
