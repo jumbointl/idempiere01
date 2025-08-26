@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:monalisa_app_001/features/products/presentation/screens/movement/products_home_provider.dart';
 import 'package:monalisa_app_001/features/products/presentation/screens/store_on_hand/memory_products.dart';
 
 import '../../../../../config/router/app_router.dart';
@@ -11,9 +12,10 @@ import '../../../../shared/data/memory.dart';
 import '../../../../shared/data/messages.dart';
 import '../../../domain/idempiere/idempiere_storage_on_hande.dart';
 import '../../../domain/idempiere/idempiere_warehouse.dart';
+import '../../providers/locator_provider.dart';
+import '../../providers/movement_provider.dart';
 import '../../providers/product_provider_common.dart';
 import '../../providers/products_scan_notifier.dart';
-import '../../providers/store_on_hand_provider.dart';
 class StorageOnHandCard extends ConsumerStatefulWidget {
   final ProductsScanNotifier notifier;
   final IdempiereStorageOnHande storage;
@@ -23,7 +25,7 @@ class StorageOnHandCard extends ConsumerStatefulWidget {
   final Color colorDifferentWarehouse = themeColorGrayLight;
   final double width;
 
-  const StorageOnHandCard(this.notifier, this.storage, this.index, this.listLength, {required this.width, super.key});
+  const StorageOnHandCard(this.notifier, this.storage, this.index, this.listLength, {required this.width, super.key,});
 
 
   @override
@@ -34,16 +36,34 @@ class StorageOnHandCardState extends ConsumerState<StorageOnHandCard> {
   late var usePhoneCamera ;
   late var isScanning ;
   late var locatorTo;
+  late var allowedLocatorId;
 
   @override
   Widget build(BuildContext context) {
     usePhoneCamera = ref.watch(usePhoneCameraToScanProvider.notifier);
     isScanning = ref.watch(isScanningProvider.notifier);
     locatorTo = ref.watch(scannedLocatorToProvider);
+    allowedLocatorId = ref.watch(allowedLocatorFromIdProvider.notifier);
     final warehouse = ref.read(authProvider).selectedWarehouse;
     int warehouseID = warehouse?.id ?? 0;
     IdempiereWarehouse? warehouseStorage = widget.storage.mLocatorID?.mWarehouseID;
-    Color background = warehouseStorage?.id == warehouseID ? widget.colorSameWarehouse : widget.colorDifferentWarehouse;
+    bool canMove = false ;
+    Color background = widget.colorDifferentWarehouse;
+
+    if(allowedLocatorId.state != null && allowedLocatorId.state! > 0){
+      if(widget.storage.mLocatorID?.id != allowedLocatorId){
+        background = widget.colorDifferentWarehouse;
+      } else {
+        background = widget.colorSameWarehouse;
+        canMove = true;
+      }
+
+    } else {
+      if(warehouseStorage?.id == warehouseID){
+        background = widget.colorSameWarehouse;
+        canMove = true;
+      }
+    }
     double widthLarge = (widget.width-15)/3*2;
     double widthSmall = (widget.width-15)/3;
     String warehouseName = warehouseStorage?.identifier ?? '--';
@@ -51,7 +71,7 @@ class StorageOnHandCardState extends ConsumerState<StorageOnHandCard> {
     String quantity = Memory.numberFormatter0Digit.format(qtyOnHand) ;
     return GestureDetector(
       onTap: () async {
-        if(warehouseStorage?.id != warehouseID){
+        if(!canMove){
           return;
         }
         ref.read(isDialogShowedProvider.notifier).update((state)=>true);
@@ -117,167 +137,15 @@ class StorageOnHandCardState extends ConsumerState<StorageOnHandCard> {
     MemoryProducts.storage = widget.storage;
     MemoryProducts.width = widget.width;
     MemoryProducts.createNewMovement = true;
+    if(widget.storage.mLocatorID != null){
+      MemoryProducts.locatorFrom = widget.storage.mLocatorID!;
+      ref.read(selectedLocatorFromProvider.notifier).update((state) => widget.storage.mLocatorID!);
+      ref.read(actionScanProvider.notifier).update((state) => Memory.ACTION_GET_LOCATOR_TO_VALUE);
+      ref.read(productsHomeCurrentIndexProvider.notifier).state = Memory.PAGE_INDEX_UNSORTED_STORAGE_ON_HAND;
+      context.push(AppRouter.PAGE_UNSORTED_STORAGE_ON_HAND,extra:widget.notifier);
+    }
 
-
-    /*showDialog<String>(
-      context: context,
-      barrierDismissible: false, // user must tap button!
-      builder:  (BuildContext context) =>Consumer(builder: (_, ref, __) {
-
-        return AlertDialog(
-          backgroundColor:Colors.grey[200],
-          content: Container(
-            decoration: BoxDecoration(
-              color: Colors.grey[200], // Change background color based on isSelected
-              borderRadius: BorderRadius.circular(10),
-            ),
-            height: MediaQuery.of(context).size.height,
-            width: MediaQuery.of(context).size.width,
-            child: UnsortedStorageOnHandCard(widget.notifier, widget.storage, widget.index, width: widget.width,),
-
-          ),
-          actions: <Widget>[
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              spacing: 5,
-              children: <Widget>[
-                if(MemoryProducts.newSqlDataMovement.id!=null && MemoryProducts.newSqlDataMovement.id!>0)Expanded(
-                  child: TextButton(
-                    style: TextButton.styleFrom(
-                      backgroundColor: Colors.red[300],
-                    ),
-                    child: Text(Messages.CONTINUE),
-                    onPressed: () async {
-                      MemoryProducts.createNewMovement = false;
-                      ref.read(isDialogShowedProvider.notifier).update((state)=>true);
-                      ref.read(scannedLocatorToProvider.notifier).update((state)=>'');
-                      Navigator.of(context).pop();
-                      context.push(AppRouter.PAGE_SELECT_LOCATOR,extra:widget.notifier);
-                    },
-                  ),
-                ),
-                Expanded(
-                  child: TextButton(
-                    style: TextButton.styleFrom(
-                      backgroundColor: Colors.red[300],
-                    ),
-                    child: Text(Messages.CANCEL),
-                    onPressed: () async {
-                      ref.read(isDialogShowedProvider.notifier).update((state) => false);
-                      Navigator.of(context).pop();
-                    },
-                  ),
-                ),
-                Expanded(
-                  child: TextButton(
-                    style: TextButton.styleFrom(
-                      backgroundColor: Colors.green[300],
-                    ),
-                    child: Text(Messages.CREATE),
-                    onPressed: () {
-                      MemoryProducts.createNewMovement = true;
-                      ref.read(isDialogShowedProvider.notifier).update((state)=>true);
-                      ref.read(scannedLocatorToProvider.notifier).update((state)=>'');
-                      Navigator.of(context).pop();
-                      context.push(AppRouter.PAGE_SELECT_LOCATOR,extra:widget.notifier);
-                    },
-                  ),
-                ),
-              ],
-            ),
-          ],
-          actionsAlignment: MainAxisAlignment.center,
-          actionsPadding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-        );
-      }),
-    );*/
-
-    context.push(AppRouter.PAGE_SELECT_LOCATOR,extra:widget.notifier);
   }
 
 
-  /*Future<Future<String?>> _createMovementDialog(BuildContext context, WidgetRef ref) async {
-    ref.read(scannedLocatorToProvider.notifier).update((state)=>'');
-    ref.read(isDialogShowedProvider.notifier).update((state)=>true);
-    return showDialog<String>(
-      context: context,
-      barrierDismissible: false, // user must tap button!
-      builder:  (BuildContext context) =>Consumer(builder: (_, ref, __) {
-
-        return AlertDialog(
-          backgroundColor:Colors.grey[200],
-          content: Container(
-            decoration: BoxDecoration(
-              color: Colors.grey[200], // Change background color based on isSelected
-              borderRadius: BorderRadius.circular(10),
-            ),
-            height: MediaQuery.of(context).size.height,
-            width: MediaQuery.of(context).size.width,
-            child: UnsortedStorageOnHandCard(widget.notifier, widget.storage, widget.index, width: widget.width,),
-
-          ),
-          actions: <Widget>[
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: <Widget>[
-                Expanded(
-                  child: TextButton(
-                    style: TextButton.styleFrom(
-                      backgroundColor: Colors.red[300],
-                    ),
-                    child: Text(Messages.CANCEL),
-                    onPressed: () async {
-                      ref.read(isDialogShowedProvider.notifier).update((state) => false);
-                      Navigator.of(context).pop();
-                    },
-                  ),
-                ),
-                const SizedBox(width: 8), // Add some spacing between buttons
-                Expanded(
-                  child: TextButton(
-                    style: TextButton.styleFrom(
-                      backgroundColor: Colors.green[300],
-                    ),
-                    child: Text(Messages.CREATE),
-                    onPressed: () {
-                      if (locatorTo.isNotEmpty) {
-                        // Perform the movement logic here
-                        // For example, call a function from your notifier:
-                        SqlDataMovement movement = SqlDataMovement();
-                        Memory.sqlUsersData.copyToSqlData(movement);
-                        //In this case locatorTo and  locatorFrom are the same warehouse
-                        if(movement.mWarehouseID != null && movement.mWarehouseID!.id != null){
-                          movement.setIdempiereWarehouseTo(movement.mWarehouseID!.id!);
-                        }
-                        print('---------------------------------- ${jsonEncode(movement.getInsertJson())}');
-                        // creado para borrar
-                        MemoryProducts.newSqlDataMovement = movement ;
-                        movement.id = 1018275;
-
-                        SqlDataMovementLine movementLine = SqlDataMovementLine();
-                        Memory.sqlUsersData.copyToSqlData(movementLine);
-                        movementLine.mMovementID = movement;
-                        movementLine.mLocatorID = widget.storage.mLocatorID;
-                        movementLine.mProductID = widget.storage.mProductID;
-                        movementLine.mLocatorToID = ref.read(idempiereLocatorToProvider);
-                        movementLine.movementQty = ref.read(quantityToMoveProvider);
-                        movementLine.mAttributeSetInstanceID = widget.storage.mAttributeSetInstanceID;
-                        MemoryProducts.newSqlDataMovementLines.add(movementLine);
-
-                        print('----------------------------------  ${jsonEncode(movementLine.getInsertJson())}');
-                        widget.notifier.createMovement();
-
-                      }
-                    },
-                  ),
-                ),
-              ],
-            ),
-          ],
-          actionsAlignment: MainAxisAlignment.center,
-          actionsPadding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-        );
-      }),
-    );
-  }*/
 }

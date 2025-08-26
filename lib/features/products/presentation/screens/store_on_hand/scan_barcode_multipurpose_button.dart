@@ -10,18 +10,20 @@ import '../../providers/product_provider_common.dart';
 import '../../providers/products_scan_notifier.dart';
 class ScanBarcodeMultipurposeButton extends ConsumerStatefulWidget {
   final ProductsScanNotifier notifier;
-  final int actionTypeInt;
 
   String scannedData = "";
-  ScanBarcodeMultipurposeButton(this.notifier,{ required this.actionTypeInt, super.key});
-  void handleResult(WidgetRef ref, String data) {
+  ScanBarcodeMultipurposeButton(this.notifier,{super.key});
+  void handleResult(WidgetRef ref, String data,int actionTypeInt) {
     if (data.isNotEmpty) {
       switch (actionTypeInt) {
         case Memory.ACTION_GET_LOCATOR_TO_VALUE:
           Memory.awesomeDialog?.dismiss();
           notifier.setLocatorToValue(data);
           break;
-
+        case Memory.ACTION_GET_LOCATOR_FROM_VALUE:
+          Memory.awesomeDialog?.dismiss();
+          notifier.setLocatorFromValue(data);
+          break;
       }
       scannedData = "";
     }
@@ -59,7 +61,7 @@ class _ScanBarcodeMultipurposeButtonState extends ConsumerState<ScanBarcodeMulti
     print('--x--scannedData ${widget.scannedData}');
 
     if (event.logicalKey == LogicalKeyboardKey.enter) {
-      widget.handleResult(ref, widget.scannedData);
+      widget.handleResult(ref, widget.scannedData,ref.read(actionScanProvider.notifier).state);
       widget.scannedData ="";
       return;
     }
@@ -73,23 +75,17 @@ class _ScanBarcodeMultipurposeButtonState extends ConsumerState<ScanBarcodeMulti
 
   @override
   Widget build(BuildContext context) {
+
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
 
-
-      print('focusnode ${_focusNode.hasFocus}');
       if (mounted) {
 
         if (ref.read(isScanningProvider.notifier).state) {
           _focusNode.unfocus();
         } else {
           _focusNode.requestFocus();
-          if (!_focusNode.hasFocus) {
-            Future.delayed(const Duration(milliseconds: 100), () {
-              _focusNode.requestFocus();
-              print('focusnode ${_focusNode.hasFocus}');
 
-            });
-          }
         }
       }
     });
@@ -103,7 +99,6 @@ class _ScanBarcodeMultipurposeButtonState extends ConsumerState<ScanBarcodeMulti
           width: double.infinity,
           decoration: BoxDecoration(
             color: _focusNode.hasFocus ? themeColorPrimary : Colors.grey,
-            //borderRadius: BorderRadius.circular(themeBorderRadius),
           ),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,

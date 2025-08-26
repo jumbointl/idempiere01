@@ -50,7 +50,7 @@ class Messages{
     static String SELECT_AN_OPTION = 'SELECCIONAR UNA OPCION';
     static String SELECT_A_CATEGORY = 'SELECCIONAR UNA CATEGORIA';
     static String SELECT_A_STATUS = 'SELECCIONAR UN STATUS';
-    static String CAMARA = 'CAMARA';
+    static String CAMERA = 'CAMARA';
     static String GALERIA ='GALERIA';
     static String CROPPER ='RECORTADOR DE IMAGEN';
     static String UPDATE_DATAS ='ACTUALIZAR DATOS';
@@ -179,6 +179,7 @@ class Messages{
   static String NO_PRODUCT_ADDED_YET='NO HAY NINGUN PRODUCTO AGEGADO AUN.';
   static String CONFIRM_ORDER='CONFIRMAR PEDIDO';
   static String CONFIRM='CONFIRMAR';
+  static String CONFIRM_SHORT='CONFIR';
 
   static String TOTAL_CN ='總計';
   static String DATE_CN ='日期';
@@ -611,4 +612,70 @@ class Messages{
   static String FIND_LOCATOR='BUSCAR LOCALIZADOR';
 
   static String SELECT_LOCATOR_TO='SELECCIONAR LOCALIZADOR DE DESTINO';
+
+  static String CHAR_DOTS='GRAFICOS';
+
+  static String WALLET='BILLETERA';
+
+  static String PROFILE='PERFIL';
+
+  static String OUT='SALIDA';
+
+  static String NOT_IMPLEMENTED='NO IMPLEMENTADO';
+
+  static String NEW='NUEVO';
+
+  static String LAST='ULTIMO';
+
+  static String WAREHOUSE_FROM_SHORT='DE ALM.';
+  static String WAREHOUSE_TO_SHORT='A ALM.';
+
+  static String CREATE_OR_FIND_A_MOVEMENT='CREAR O ENCONTRAR UN MOVIMIENTO';
+
+  static String SCAN_TO_GET_LOCATOR_TO='ESCANEAR PARA OBTENER LOCATOR DE DESTINO';
+
+  static String SKU='SKU';
+
+  static String FIND_BY_ID='BUSCAR POR ID';
+
+  static String SCAN_SHORT='SCAN';
+
+  static String COMPLETED='COMPLETADO';
+
+  static String ERROR_SAME_LOCATOR='ERROR LOCALIZADOR IGUAL';
+
+  static var TOO_MUCH_RECORDS='MUCHOS REGISTROS';
+
+  static String MOVEMENT_LINE='LINEA DE MOVIMIENTO';
+
+  static String LOCATOR_FROM='LOC DE ORIGEN';
+
+  static String ERROR_LOCATOR_FROM='ERROR LOCALIZADOR ORIGEN';
+
+  static String ERROR_LOCATOR_TO='ERROR LOCALIZADOR DESTINO';
+
+  static String INPUT_DIALOG_TITLE='INGRESAR DATOS';
+
+  static String DEFAULT_WAREHOUSES_LOCATOR='LOC DE ALMACES PREDETERMINADO';
+
+  static String FIND_LOCATOR_FROM='BUSCAR LOC DE ORIGEN';
+
+  static String TOUCH_TO_FIND='TOQUE PARA BUSCAR';
+
+  static String SEARCH_BY_LOCATOR_VALUE='BUSCAR POR VALUE DE LOC.';
+  static String SEARCH_BY_WAREHOUSE_VALUE='BUSCAR POR VALUE DE ALM';
+  static String ZERO_FOR_ALL ="INGRESAR '0' PARA TODOS";
+
+  static String NO_DATA_AVAILABLE='NO HAY DATOS DISPONIBLES';
+
+  static String ADD_MOVEMENT_LINE='AGREGAR LINEA DE MOVIMIENTO';
+
+  static String RESET='RESET';
+
+  static String BY='POR';
+
+  static String FIND_MOVEMENT_BY_ID='BUSCAR MOVIMIENTO POR ID';
+
+  static String FIND_MOVEMENT='BUSCAR MOVIMIENTO';
+
 }

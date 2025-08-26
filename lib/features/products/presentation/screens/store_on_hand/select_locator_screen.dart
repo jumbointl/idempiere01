@@ -3,11 +3,10 @@ import 'package:awesome_dialog/awesome_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:monalisa_app_001/features/products/domain/idempiere/idempiere_movement.dart';
 import 'package:monalisa_app_001/features/products/presentation/providers/products_providers.dart';
 import 'package:monalisa_app_001/features/products/presentation/providers/products_scan_notifier.dart';
-import 'package:monalisa_app_001/features/products/presentation/screens/store_on_hand/scan_barcode_multipurpose_button.dart';
-import 'package:monalisa_app_001/features/products/presentation/widget/movement_card.dart';
-import 'package:monalisa_app_001/features/products/presentation/widget/movement_line_card.dart';
+import 'package:monalisa_app_001/features/products/presentation/widget/movement_card2.dart';
 import 'package:simple_barcode_scanner/simple_barcode_scanner.dart';
 
 import '../../../../../config/router/app_router.dart';
@@ -17,6 +16,7 @@ import '../../../../shared/data/memory.dart';
 import '../../../../shared/data/messages.dart';
 import '../../../domain/idempiere/idempiere_storage_on_hande.dart';
 import '../../../domain/idempiere/idempiere_warehouse.dart';
+import '../../providers/locator_provider.dart';
 import '../../providers/movement_provider.dart';
 import '../../widget/no_data_card.dart';
 import 'memory_products.dart';
@@ -56,20 +56,19 @@ class SelectLocatorScreenState extends ConsumerState<SelectLocatorScreen> {
   double fontSizeLarge = 22;
   late Widget buttonScan;
   late AsyncValue createMovement;
-  late var startedCreateNewPutAwayMovement;
-
+  late IdempiereMovement movement;
   @override
   Widget build(BuildContext context) {
     createMovement = ref.watch(newPutAwayMovementProvider);
-    startedCreateNewPutAwayMovement = ref.watch(startedCreateNewPutAwayMovementProvider.notifier);
-
+    movement = ref.watch(resultOfSqlQueryMovementProvider.notifier).state;
+    ref.read(actionScanProvider.notifier).update((state) => Memory.ACTION_GET_LOCATOR_TO_VALUE);
     findLocatorTo = ref.watch(findLocatorToProvider);
     widget.width = MediaQuery.of(context).size.width;
     quantityToMove = ref.watch(quantityToMoveProvider);
     usePhoneCamera = ref.watch(usePhoneCameraToScanProvider.notifier);
     WidgetsBinding.instance.addPostFrameCallback((_) => isScanningFromDialog.state = false);
     isScanningFromDialog = ref.watch(isScanningFromDialogProvider.notifier);
-    locatorTo = ref.watch(idempiereLocatorToProvider);
+    locatorTo = ref.watch(selectedLocatorToProvider);
     scannedLocatorTo = ref.watch(scannedLocatorToProvider.notifier);
     widthLarge = widget.width/3*2;
     widthSmall = widget.width/3;
@@ -100,13 +99,13 @@ class SelectLocatorScreenState extends ConsumerState<SelectLocatorScreen> {
       body: PopScope(
         onPopInvokedWithResult: (bool didPop, Object? result) async {
           if (didPop) {
-            ref.read(isDialogShowedProvider.notifier).update((state) => false);
-            ref.read(isScanningFromDialogProvider.notifier).update((state) => false);
-            ref.read(scannedLocatorToProvider.notifier).update((state) => '');
-            ref.read(quantityToMoveProvider.notifier).update((state) => 0);
-
-            return;
+             return;
           }
+          ref.read(isDialogShowedProvider.notifier).update((state) => false);
+          ref.read(isScanningFromDialogProvider.notifier).update((state) => false);
+          ref.read(scannedLocatorToProvider.notifier).update((state) => '');
+          ref.read(quantityToMoveProvider.notifier).update((state) => 0);
+          Navigator.pop(context);
         },
         child: SingleChildScrollView(
           child: Container(
@@ -121,8 +120,7 @@ class SelectLocatorScreenState extends ConsumerState<SelectLocatorScreen> {
             child: Column(
               spacing:  5 ,
               children: [
-                if(!usePhoneCamera.state) ScanBarcodeMultipurposeButton(widget.notifier,
-                    actionTypeInt: Memory.ACTION_GET_LOCATOR_TO_VALUE),
+                getMovementCard(context, ref),
                 Padding(
                   padding: const EdgeInsets.all(8.0),
                   child: Row(
@@ -135,19 +133,6 @@ class SelectLocatorScreenState extends ConsumerState<SelectLocatorScreen> {
                           spacing: 5,
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(Messages.WAREHOUSE_SHORT,style: TextStyle(
-                            fontSize: fontSizeMedium,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.black,),),
-                            Text(Messages.FROM,style: TextStyle(
-                              fontSize: fontSizeMedium,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.black,),),
-                            Text(Messages.TO
-                              ,style: TextStyle(
-                              fontSize: fontSizeMedium,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.black,),),
                             Text(Messages.QUANTITY_SHORT,style: TextStyle(
                               fontSize: fontSizeMedium,
                               fontWeight: FontWeight.bold,
@@ -161,29 +146,6 @@ class SelectLocatorScreenState extends ConsumerState<SelectLocatorScreen> {
                           spacing: 5,
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text( warehouseStorage?.identifier ?? '',
-                              overflow: TextOverflow.ellipsis,
-                              style: TextStyle(
-                              fontSize: fontSizeMedium,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.purple,
-                            ),),
-                            Text(widget.storage.mLocatorID?.value ?? '--', overflow: TextOverflow.ellipsis,
-                              style: TextStyle(
-                                fontSize: fontSizeMedium,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.purple,
-                                ),),
-                            findLocatorTo.when(data: (data){
-                                return Text(ref.read(idempiereLocatorToProvider.notifier).state.value != null
-                                    ? ref.read(idempiereLocatorToProvider.notifier).state.value!
-                                    : Messages.DESTINATION,style: TextStyle(
-                                fontSize: fontSizeMedium,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.purple,),);
-                               },
-                                error:(Object error, StackTrace stackTrace) => Text('Error: $error')
-                                , loading: ()=>LinearProgressIndicator(minHeight: 22,)),
                             Text(Memory.numberFormatter0Digit.format(quantityToMove),
                               style: TextStyle(
                               fontSize: fontSizeMedium,
@@ -198,9 +160,7 @@ class SelectLocatorScreenState extends ConsumerState<SelectLocatorScreen> {
                     ],
                   ),
                 ),
-                if(usePhoneCamera.state) _buttonScanWithPhone(context, ref) ,
-          
-                startedCreateNewPutAwayMovement.state == null ?  SizedBox(height:dialogHeight/2-20,
+                SizedBox(height:dialogHeight/2-20,
                   child: ListView.separated(
                     itemCount: storageList.length,
                     itemBuilder: (context, index) {
@@ -210,13 +170,7 @@ class SelectLocatorScreenState extends ConsumerState<SelectLocatorScreen> {
                       return const SizedBox(height: 10);
                     },
                   ),
-                ) : createMovement.when(
-                    data: (data){
-                      return getMovementCard(context, ref, data);
-                    }
-                  ,error: (error, stackTrace) => Text('Error: $error'),
-                  loading: () => LinearProgressIndicator(),
-                ),
+                ) ,
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   spacing: 5,
@@ -232,7 +186,7 @@ class SelectLocatorScreenState extends ConsumerState<SelectLocatorScreen> {
                               color: Colors.white
                           ),),
                         onPressed: () async {
-                          if(MemoryProducts.newSqlDataMovement.id!=null && MemoryProducts.newSqlDataMovement.id!>0){
+                          if(MemoryProducts.newSqlDataMovementToCreate.id!=null && MemoryProducts.newSqlDataMovementToCreate.id!>0){
                             MemoryProducts.createNewMovement = false;
                             ref.read(isDialogShowedProvider.notifier).update((state)=>true);
                             ref.read(scannedLocatorToProvider.notifier).update((state)=>'');
@@ -717,7 +671,7 @@ class SelectLocatorScreenState extends ConsumerState<SelectLocatorScreen> {
           return;
         }
 
-        int? aux = int.tryParse(quantity);
+        double? aux = double.tryParse(quantity);
         if(aux!=null && aux>0){
           if(aux<=qtyOnHand){
             ref.read(quantityToMoveProvider.notifier).state = aux;
@@ -906,38 +860,21 @@ class SelectLocatorScreenState extends ConsumerState<SelectLocatorScreen> {
     );
   }
 
-  Widget getMovementCard(BuildContext context, WidgetRef ref, data) {
 
-    if(data==null){
+  Widget getMovementCard(BuildContext context, WidgetRef ref) {
+
+    if(movement.id==null || movement.id!<=0){
       return NoDataCard();
     } else {
-      final movement = MemoryProducts.newSqlDataMovement;
-      final movementLines = MemoryProducts.newSqlDataMovementLines;
       return Container(
-        decoration: BoxDecoration(
-          color: Colors.grey[200], // Change background color based on isSelected
-          borderRadius: BorderRadius.circular(10),
-        ),
-        padding: const EdgeInsets.all(8.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          spacing: 5,
-          children: [
-            MovementCard(productsNotifier: widget.notifier, movement: movement, width: widget.width-30),
-            SizedBox(
-              height: dialogHeight / 3, // Adjust height as needed
-              child: ListView.separated(
-                itemCount: movementLines.length,
-                itemBuilder: (context, index) {
-                  return MovementLineCard(movementLine: movementLines[index], productsNotifier: widget.notifier,);
-                },
-                separatorBuilder: (BuildContext context, int index) => const SizedBox(height: 10),
-              ),
-            ),
 
-
-        ],
-      ));
+          decoration: BoxDecoration(
+            color: Colors.black, // Change background color based on isSelected
+            borderRadius: BorderRadius.circular(10),
+          ),
+          padding: const EdgeInsets.all(8.0),
+          child: MovementCard2(productsNotifier: widget.notifier, movement: movement,
+            width: widget.width-30, isDarkMode: true,));
     }
 
 

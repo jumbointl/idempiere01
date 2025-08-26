@@ -7,6 +7,7 @@ import 'package:monalisa_app_001/features/products/presentation/screens/update_u
 import 'package:simple_barcode_scanner/simple_barcode_scanner.dart';
 
 import '../../../../../config/router/app_router.dart';
+import '../movement/products_home_provider.dart';
 import '../../../../shared/data/memory.dart';
 import '../../../../shared/data/messages.dart';
 import '../../../domain/idempiere/idempiere_product.dart';
@@ -22,6 +23,7 @@ class UpdateProductUpcScreen4 extends ConsumerStatefulWidget {
   int countScannedCamera =0;
   late ProductsUpdateNotifier productsNotifier ;
   final int actionTypeInt = Memory.ACTION_UPDATE_UPC ;
+  final pageIndex = Memory.PAGE_INDEX_UPDATE_UPC_SCREEN;
 
   UpdateProductUpcScreen4({super.key});
 
@@ -82,7 +84,9 @@ class UpdateProductUpcScreen4State extends ConsumerState<UpdateProductUpcScreen4
             onPressed: () => {
               FocusScope.of(context).unfocus(),
               dialog?.dismiss(),
-              context.go(AppRouter.PAGE_HOME)},
+              //ref.read(productsHomeCurrentIndexProvider.notifier).state = 3;
+              context.go(AppRouter.PAGE_MOVEMENTS_HOME)
+            },
           ),
           actions: [
 
@@ -99,64 +103,75 @@ class UpdateProductUpcScreen4State extends ConsumerState<UpdateProductUpcScreen4
 
       ),
 
-      body: SingleChildScrollView(
-        child: SizedBox(
-          height: bodyHeight,
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            spacing: 5,
-            children: [
-                isScanning
-                ? LinearProgressIndicator(
-              backgroundColor: Colors.cyan,
-              color: foreGroundProgressBar,
-              minHeight: 36,
-            )
-                : getSearchBar(context),
-        
-            Expanded(
-              child: Container(
-                width: width,
-                height: singleProductDetailCardHeight,
-                margin: EdgeInsets.symmetric(horizontal: 10),
-                decoration: BoxDecoration(
-                  color: Colors.grey[200],
-                  borderRadius: BorderRadius.circular(10),
+      body: PopScope(
+        onPopInvokedWithResult: (bool didPop, Object? result) async {
+          if (didPop) {
+            //context.pop();
+            //context.go(AppRouter.PAGE_PRODUCT_HOME);
+
+            return;
+          }
+
+          dialog?.dismiss();
+          context.pop();
+        },
+        child: SingleChildScrollView(
+          child: SizedBox(
+            height: bodyHeight,
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              spacing: 5,
+              children: [
+                  isScanning
+                  ? LinearProgressIndicator(
+                backgroundColor: Colors.cyan,
+                color: foreGroundProgressBar,
+                minHeight: 36,
+              )
+                  : getSearchBar(context),
+
+              Container(
+                  width: width,
+                  height: singleProductDetailCardHeight*2,
+                  margin: EdgeInsets.symmetric(horizontal: 10),
+                  decoration: BoxDecoration(
+                    color: Colors.grey[200],
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: dataToUpdateUPC.state.length==2 ? updateAsync.when(
+                    data: (product) {
+                      WidgetsBinding.instance.addPostFrameCallback((_) async {
+                        ref.read(isScanningProvider.notifier).state = false;
+                      });
+                      return getProductDetailCard(productsNotifier: widget.productsNotifier,
+                          product: product) ;
+
+                    },error: (error, stackTrace) => Text('Error: $error'),
+                    loading: () => LinearProgressIndicator(),
+                  ) : searchAsync.when(
+                    data: (product) {
+                      WidgetsBinding.instance.addPostFrameCallback((_) async {
+                        ref.read(isScanningProvider.notifier).state = false;
+                      });
+                      int id = product.id ?? 0;
+                      String? upc =product.uPC;
+                      return  SingleChildScrollView(
+                        child: upc == null ? _getUpdateUPCCard(context, product)
+                         : ProductDetailWithPhotoCard(product: product, actionTypeInt: widget.actionTypeInt,) ,
+                      );
+                    },error: (error, stackTrace) => Text('Error: $error'),
+                    loading: () => LinearProgressIndicator(),
+                  )
+
                 ),
-                child: dataToUpdateUPC.state.length==2 ? updateAsync.when(
-                  data: (product) {
-                    WidgetsBinding.instance.addPostFrameCallback((_) async {
-                      ref.read(isScanningProvider.notifier).state = false;
-                    });
-                    return getProductDetailCard(productsNotifier: widget.productsNotifier,
-                        product: product) ;
-
-                  },error: (error, stackTrace) => Text('Error: $error'),
-                  loading: () => LinearProgressIndicator(),
-                ) : searchAsync.when(
-                  data: (product) {
-                    WidgetsBinding.instance.addPostFrameCallback((_) async {
-                      ref.read(isScanningProvider.notifier).state = false;
-                    });
-                    int id = product.id ?? 0;
-                    String? upc =product.uPC;
-                    return  SingleChildScrollView(
-                      child: upc == null ? _getUpdateUPCCard(context, product)
-                       : ProductDetailWithPhotoCard(product: product, actionTypeInt: widget.actionTypeInt,) ,
-                    );
-                  },error: (error, stackTrace) => Text('Error: $error'),
-                  loading: () => LinearProgressIndicator(),
-                )
-
-              ),
+              SizedBox(height: 50,),
+              if(ref.read(productsHomeCurrentIndexProvider.notifier).state==widget.pageIndex)  PreferredSize(
+                    preferredSize: Size(double.infinity,30),
+                    child: SizedBox(width: MediaQuery.of(context).size.width, child:
+                    ref.watch(usePhoneCameraToScanProvider) ? _buttonScanWithPhone(context, ref):
+                    ScanBarcodeForUpdateUpcButton(widget.productsNotifier, actionTypeInt: widget.actionTypeInt,))),
+              ],
             ),
-        
-              PreferredSize(
-                  preferredSize: Size(double.infinity,30),
-                  child: SizedBox(width: MediaQuery.of(context).size.width, child:
-                  ref.watch(usePhoneCameraToScanProvider) ? _buttonScanWithPhone(context, ref):
-                  ScanBarcodeForUpdateUpcButton(widget.productsNotifier, actionTypeInt: widget.actionTypeInt,))),
-            ],
           ),
         ),
       ),

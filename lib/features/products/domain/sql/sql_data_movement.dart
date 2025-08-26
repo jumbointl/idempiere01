@@ -12,6 +12,8 @@ import '../idempiere/idempiere_user.dart';
 import '../idempiere/idempiere_warehouse.dart';
 
 class SqlDataMovement extends IdempiereMovement implements SqlData {
+  int? locatorFromId;
+
   SqlDataMovement(
       {
         super.uid,
@@ -49,6 +51,7 @@ class SqlDataMovement extends IdempiereMovement implements SqlData {
         super.mOLIFsMessage,
         super.mOLIFiscalDocumentNo,
         super.mOLIFsPaused,
+        this.locatorFromId
       });
 
 

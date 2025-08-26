@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import 'package:monalisa_app_001/features/products/domain/idempiere/idempiere_product.dart';
 import 'package:monalisa_app_001/features/products/domain/sql/sql_users_data.dart';
 
+import '../../products/domain/idempiere/idempiere_movement.dart';
 import 'messages.dart';
 
 class Memory {
@@ -14,6 +15,18 @@ class Memory {
   static bool isUseCameraToScan = false ;
   static String userName ='';
   static SqlUsersData sqlUsersData = SqlUsersData();
+
+  //HANDLING SQL QUERY RESULT
+  //RETURN IDEMPIERE OBJECT(id: x, name: Messages.y)
+  //CAN DO SWITCH(resultObject.id)
+  //INITIAL PROVIDER, THE STATE OBSERVER DOES NOTHING
+  static const int INITIAL_STATE_ID = -1;
+  //NOT FOUND, SUCCESSFUL SQL QUERY BUT NO DATA FOUND,
+  static const int NOT_FOUND_ID = 0;
+  //ERROR, SUCCESSFUL SQL QUERY BUT HTTP RESPONSE UNSUCCESSFUL, LIKE UNAUTHORIZED,
+  static const int ERROR_ID = -2;
+  //FOUND MORE THAN 1, SUCCESSFUL SQL QUERY BUT TOO MUCH RECORDS,
+  static var TOO_MUCH_RECORDS_ID=-3;
 
 
   static final numberFormatter2Digit = NumberFormat.decimalPatternDigits
@@ -45,6 +58,11 @@ class Memory {
   static const int ACTION_CALL_UPDATE_PRODUCT_UPC_PAGE =3;
   static const int ACTION_FIND_BY_UPC_SKU_FOR_STORE_ON_HAND = 4;
   static const int ACTION_GET_LOCATOR_TO_VALUE = 5;
+  static const int ACTION_FIND_MOVEMENT_BY_ID=6;
+  static const int ACTION_GET_LOCATOR_FROM_VALUE=7;
+
+
+
   static const int UPC_EXITS = -1;
 
 
@@ -54,6 +72,65 @@ class Memory {
   static const String KEY_PRODUCT = 'product';
 
   static String KEY_SCAN_ACTION='scan_action';
+
+  static const String IDEMPIERE_DOC_TYPE_DRAFT = 'DR';
+
+  static const int TYPE_DIALOG_SEARCH = 1;
+  static const int TYPE_DIALOG_HISTOY = 2;
+
+  static const String COMMAND_TO_GET_ALL_WAREHOUSES='0';
+
+  static const int PAGE_INDEX_MULTIPLE =201;
+  static const int PAGE_INDEX_SEARCH=2;
+  static const int PAGE_INDEX_HEARDER_VIEW=1;
+  static const int PAGE_INDEX_STORE_ON_HAND=0;
+
+  static const int PAGE_INDEX_CREATE_STORE_ON_HAND = 13;
+  static const int PAGE_INDEX_STORE_ON_HAND_2=14;
+  static const int PAGE_INDEX_MOVEMENTE_CREATE_SCREEN=15;
+  static const int PAGE_INDEX_FIND_LOCATOR_SCREEN=16;
+  static const int PAGE_INDEX_FIEND_LOCATOR_BY_DEFAULT_WAREHOUSE_SCREEN=17;
+  static const int PAGE_INDEX_UPDATE_UPC_SCREEN = 18;
+  static const int PAGE_INDEX_MOVEMENTE_SCREEN=0;
+  static const int PAGE_INDEX_NO_REQUERED_SCAN_SCREEN=200;
+  static const int PAGE_INDEX_UNSORTED_STORAGE_ON_HAND=20;
+
+
+
+
+  static int pageFromIndex =0;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  static bool canConformMovement(IdempiereMovement movement){
+    if(movement.docStatus!= null && movement.docStatus!.id !=null
+        && movement.docStatus!.id?.toUpperCase() == Memory.IDEMPIERE_DOC_TYPE_DRAFT){
+      return true ;
+    }
+    return false;
+  }
+
+
+
+
+
+
+
 
   static void setImageSize(BuildContext context) {
     double h = MediaQuery.of(context).size.height;

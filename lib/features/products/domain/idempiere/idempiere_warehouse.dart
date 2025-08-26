@@ -52,6 +52,7 @@ class IdempiereWarehouse extends IdempiereObject  {
     id = json['id'];
     uid = json['uid'];
     name = json['Name'];
+    //print('---------------------------------------2');
     cLocationID = json['C_Location_ID'] != null
         ? IdempiereLocation.fromJson(json['C_Location_ID'])
         : null;

@@ -54,40 +54,29 @@ class UpdateProductUpcViewState extends ConsumerState<UpdateProductUpcView> {
     });
     return Scaffold(
 
-
-      body: SingleChildScrollView(
-        child: Container(
-          color: Colors.white,
-          height: bodyHeight,
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            spacing: 5,
-            children: [
-                isScanning
-                ? LinearProgressIndicator(
-              backgroundColor: Colors.cyan,
-              color: foreGroundProgressBar,
-              minHeight: 36,
-            )
-                : Text(Messages.UPDATE_IMAGE),
-        
-            Expanded(
-              child: Container(
-                width: width,
-                height: singleProductDetailCardHeight,
-                margin: EdgeInsets.symmetric(horizontal: 10),
-                decoration: BoxDecoration(
-                  color: Colors.grey[200],
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: (product.state.id!=null && product.state.id! > 0) ?
-                  _getUpdateUPCCard(context,
-                     product.state.copyWith(imageURL: imageUrl,uPC: null)) : NoDataCard(),
-                ),
-              ),
-            ],
+      body: ListView(
+        children: [
+            isScanning
+            ? LinearProgressIndicator(
+          backgroundColor: Colors.cyan,
+          color: foreGroundProgressBar,
+          minHeight: 36,
+        )
+            : Center(child: Text(Messages.UPDATE_IMAGE)),
+        SizedBox(height: 5,),
+        Container(
+          width: width,
+          //height: singleProductDetailCardHeight,
+          margin: EdgeInsets.symmetric(horizontal: 10),
+          decoration: BoxDecoration(
+            color: Colors.grey[200],
+            borderRadius: BorderRadius.circular(10),
           ),
-        ),
+          child: (product.state.id!=null && product.state.id! > 0) ?
+            _getUpdateUPCCard(context,
+               product.state.copyWith(imageURL: imageUrl,uPC: null)) : NoDataCard(),
+          ),
+        ],
       ),
     );
   }
@@ -151,7 +140,7 @@ class UpdateProductUpcViewState extends ConsumerState<UpdateProductUpcView> {
               'M_SKU: ${product.mOLIConfigurableSKU ?? '--'}',
               style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
             ),
-
+            SizedBox(height: 20),
             SizedBox(
               width: double.infinity,
               child: TextButton(

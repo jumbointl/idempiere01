@@ -3,17 +3,25 @@
 import 'package:awesome_dialog/awesome_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:monalisa_app_001/features/products/domain/sql/sql_data_movement.dart';
 import 'package:monalisa_app_001/features/products/presentation/providers/product_provider_common.dart';
 import 'package:monalisa_app_001/features/products/presentation/providers/product_search_provider.dart';
 import 'package:monalisa_app_001/features/products/presentation/providers/product_update_upc_provider.dart';
 import '../../../shared/data/memory.dart';
 import '../../../shared/data/messages.dart';
 import '../../domain/idempiere/idempiere_product.dart';
+import '../../domain/sql/sql_data_movement_line.dart';
 import '../screens/store_on_hand/memory_products.dart';
+import 'locator_provider.dart';
 import 'movement_provider.dart';
 import 'store_on_hand_provider.dart';
 
 class ProductsScanNotifier  extends StateNotifier<List<IdempiereProduct>>{
+  static const int SQL_QUERY_CREATE =1;
+  static const int SQL_QUERY_UPDATE =2;
+  static const int SQL_QUERY_DELETE =3;
+  static const int SQL_QUERY_SELECT =4;
+
   ProductsScanNotifier(this.ref) : super([]);
   final Ref ref;
   // override addBarcode method when the scannedCodeProvider changes
@@ -103,18 +111,42 @@ class ProductsScanNotifier  extends StateNotifier<List<IdempiereProduct>>{
   void setLocatorToValue(String data) {
     ref.watch(isScanningFromDialogProvider.notifier).update((state) => true);
     ref.watch(scannedLocatorToProvider.notifier).update((state) => data);
-
-
+  }
+  void setLocatorFromValue(String data) {
+    ref.watch(isScanningFromDialogProvider.notifier).update((state) => true);
+    ref.watch(scannedLocatorFromProvider.notifier).update((state) => data);
   }
 
 
   void dialogDispose() {
     ref.watch(isDialogShowedProvider.notifier).update((state) =>false);
   }
-  void createMovement(){
+  void createMovement(SqlDataMovement sqlData){
     print('----------------------------------start createMovement');
+    ref.watch(newSqlDataMovementProvider.notifier).update((state) => sqlData);
+  }
+  void createMovementLine(SqlDataMovementLine sqlData){
+    print('----------------------------------start createMovementLine');
+    ref.watch(newSqlDataMovementLineProvider.notifier).update((state) => sqlData);
+  }
+
+  void createPutAwayMovement(){
+    print('----------------------------------start createPutAwayMovement');
     ref.watch(startedCreateNewPutAwayMovementProvider.notifier).update((state) => true);
-    ref.watch(newSqlDataMovementProvider.notifier).update((state) => MemoryProducts.newSqlDataMovement);
+    ref.watch(newSqlDataPutAwayMovementProvider.notifier).update((state) => MemoryProducts.newSqlDataMovementToCreate);
+  }
+
+  void addBarcodeToSearchMovement(String result) {
+    ref.watch(isScanningProvider.notifier).update((state) => true);
+    ref.watch(scannedMovementIdForSearchProvider.notifier).update((state) => result);
+
+  }
+
+  void searchMovementById(String result) {
+    print('----------------------------------start searchMovementById');
+    ref.watch(isScanningProvider.notifier).update((state) => true);
+    ref.watch(scannedMovementIdForSearchProvider.notifier).update((state) => result);
+
   }
 }
 

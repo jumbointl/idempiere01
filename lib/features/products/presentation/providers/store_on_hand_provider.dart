@@ -217,9 +217,7 @@ final searchByMOLIConfigurableSKUProvider = StateProvider.autoDispose<bool>((ref
 });
 
 
-final scannedLocatorToProvider = StateProvider.autoDispose<String>((ref) {
-  return '';
-});
+
 
 
 final scannerInputField = StateProvider.autoDispose<int>((ref) {
@@ -235,7 +233,7 @@ final usePhoneCameraToScanStoreOnHandeProvider = StateProvider.autoDispose<bool>
   return false;
 });
 
-final quantityToMoveProvider = StateProvider.autoDispose<int>((ref) {
+final quantityToMoveProvider = StateProvider.autoDispose<double>((ref) {
   return 0;
 });
 

@@ -1,12 +1,10 @@
 import 'package:awesome_dialog/awesome_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:monalisa_app_001/features/products/presentation/screens/update_upc/product_result_with_photo_card.dart';
 import 'package:monalisa_app_001/features/products/presentation/screens/update_upc/scan_barcode_for_update_upc_button.dart';
 import 'package:simple_barcode_scanner/simple_barcode_scanner.dart';
 
-import '../../../../../config/router/app_router.dart';
 import '../../../../shared/data/memory.dart';
 import '../../../../shared/data/messages.dart';
 import '../../../domain/idempiere/idempiere_product.dart';
@@ -78,7 +76,8 @@ class UpdateProductUpcScreen3State extends ConsumerState<UpdateProductUpcScreen3
             onPressed: () => {
               FocusScope.of(context).unfocus(),
               dialog?.dismiss(),
-              context.go(AppRouter.PAGE_PRODUCT_SEARCH_UPDATE_UPC)},
+              Navigator.of(context).pop()
+             },
           ),
           actions: [
 
@@ -95,55 +94,41 @@ class UpdateProductUpcScreen3State extends ConsumerState<UpdateProductUpcScreen3
 
       ),
 
-      body: SingleChildScrollView(
-        child: SizedBox(
-          height: bodyHeight,
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            spacing: 5,
-            children: [
-                isScanning
-                ? LinearProgressIndicator(
-              backgroundColor: Colors.cyan,
-              color: foreGroundProgressBar,
-              minHeight: 36,
-            )
-                : getSearchBar(context),
-        
-            Expanded(
-              child: Container(
-                width: width,
-                height: singleProductDetailCardHeight,
-                margin: EdgeInsets.symmetric(horizontal: 10),
-                decoration: BoxDecoration(
-                  color: Colors.grey[200],
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: dataToUpdateUPC.state.length==2 ? updateAsync.when(
-                  data: (product) {
-                    WidgetsBinding.instance.addPostFrameCallback((_) async {
-                      ref.read(isScanningProvider.notifier).state = false;
-                    });
-                    return getProductDetailCard(productsNotifier: widget.productsNotifier,
-                        product: product) ;
+      body: SizedBox(
+        height: bodyHeight,
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          spacing: 5,
+          children: [
+              isScanning
+              ? LinearProgressIndicator(
+            backgroundColor: Colors.cyan,
+            color: foreGroundProgressBar,
+            minHeight: 36,
+          )
+              : getSearchBar(context),
 
-                  },error: (error, stackTrace) => Text('Error: $error'),
-                  loading: () => LinearProgressIndicator(),
-                ) :
-                SingleChildScrollView(
-                  child: _getUpdateUPCCard(context, product),
-                  )
+          Expanded(
+            child: dataToUpdateUPC.state.length==2 ? updateAsync.when(
+              data: (product) {
+                WidgetsBinding.instance.addPostFrameCallback((_) async {
+                  ref.read(isScanningProvider.notifier).state = false;
+                });
+                return getProductDetailCard(productsNotifier: widget.productsNotifier,
+                    product: product) ;
 
-              ),
-            ),
-        
-              PreferredSize(
-                  preferredSize: Size(double.infinity,30),
-                  child: SizedBox(width: MediaQuery.of(context).size.width, child:
-                  ref.watch(usePhoneCameraToScanProvider) ? _buttonScanWithPhone(context, ref):
-                  ScanBarcodeForUpdateUpcButton(widget.productsNotifier, actionTypeInt: widget.actionTypeInt,))),
-            ],
+              },error: (error, stackTrace) => Text('Error: $error'),
+              loading: () => LinearProgressIndicator(),
+            ) :
+            _getUpdateUPCCard(context, product),
           ),
+
+            PreferredSize(
+                preferredSize: Size(double.infinity,30),
+                child: SizedBox(width: MediaQuery.of(context).size.width, child:
+                ref.watch(usePhoneCameraToScanProvider) ? _buttonScanWithPhone(context, ref):
+                ScanBarcodeForUpdateUpcButton(widget.productsNotifier, actionTypeInt: widget.actionTypeInt,))),
+          ],
         ),
       ),
     );
@@ -178,7 +163,6 @@ class UpdateProductUpcScreen3State extends ConsumerState<UpdateProductUpcScreen3
         if(result!=null){
           print('-----------------------------add new upc code $result');
           ref.read(scanStateNotifierProvider.notifier).addNewUPCCode(result);
-          //widget.productsNotifier.addBarcodeByUPCOrSKUForSearch(result);
         }
 
       },

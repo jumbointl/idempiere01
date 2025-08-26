@@ -43,6 +43,7 @@ class ProductDetailCardState extends ConsumerState<NoDataCard> {
     (count.isEven) ? image ='assets/images/no_data1.png' : image ='assets/images/no_data2.png';
     if(count == 0) image ='assets/images/barcode_scan.png';
     return Container(
+      width: MediaQuery.of(context).size.width-30,
       decoration: BoxDecoration(
         color: color,
         borderRadius: BorderRadius.circular(10),

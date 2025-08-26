@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:monalisa_app_001/config/config.dart';
 
+import '../screens/movement/products_home_provider.dart';
 import '../../../shared/data/memory.dart';
 import '../../../shared/data/messages.dart';
 import '../providers/product_provider_common.dart';
@@ -11,9 +12,10 @@ import '../providers/products_scan_notifier.dart';
 class ScanProductBarcodeButton extends ConsumerStatefulWidget {
   final ProductsScanNotifier notifier;
   int actionTypeInt;
+  final int pageIndex;
 
   String scannedData = "";
-  ScanProductBarcodeButton(this.notifier,{required this.actionTypeInt,super.key});
+  ScanProductBarcodeButton(this.notifier,{required this.pageIndex, required this.actionTypeInt,super.key});
   void handleResult(WidgetRef ref, String data) {
     print('----------------------------SCANNED $actionTypeInt');
     if (data.isNotEmpty) {
@@ -30,6 +32,17 @@ class ScanProductBarcodeButton extends ConsumerStatefulWidget {
         case Memory.ACTION_FIND_BY_UPC_SKU_FOR_STORE_ON_HAND:
           notifier.addBarcodeByUPCOrSKUForStoreOnHande(data);
           break;
+        case Memory.ACTION_GET_LOCATOR_TO_VALUE:
+          Memory.awesomeDialog?.dismiss();
+          notifier.setLocatorToValue(data);
+          break;
+        case Memory.ACTION_GET_LOCATOR_FROM_VALUE:
+          Memory.awesomeDialog?.dismiss();
+          notifier.setLocatorFromValue(data);
+          break;
+        case Memory.ACTION_FIND_MOVEMENT_BY_ID:
+          notifier.searchMovementById(data);
+          break;
         default:
           notifier.addBarcodeByUPCOrSKUForSearch(data);
           break;
@@ -39,11 +52,11 @@ class ScanProductBarcodeButton extends ConsumerStatefulWidget {
     }
   }
   @override
-  ConsumerState<ScanProductBarcodeButton> createState() => _ScanProductBarcodeButtonState();
+  ConsumerState<ScanProductBarcodeButton> createState() => ScanProductBarcodeButtonState();
 }
 
 
-class _ScanProductBarcodeButtonState extends ConsumerState<ScanProductBarcodeButton> {
+class ScanProductBarcodeButtonState extends ConsumerState<ScanProductBarcodeButton> {
   final FocusNode _focusNode = FocusNode();
 
   int scannedTimes = 0;
@@ -87,21 +100,30 @@ class _ScanProductBarcodeButtonState extends ConsumerState<ScanProductBarcodeBut
   @override
   Widget build(BuildContext context) {
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      bool show = false;
+      print('----------------------current----index ${ref.read(productsHomeCurrentIndexProvider.notifier).state}');
+      print('----------------------page----index ${widget.pageIndex}');
+      if(ref.read(productsHomeCurrentIndexProvider.notifier).state==widget.pageIndex){
+      show = true ;
+      }
       if (mounted) {
-        if (ref.watch(isScanningProvider)) {
+        if (ref.watch(isScanningProvider) || !show) {
           _focusNode.unfocus();
         } else {
           _focusNode.requestFocus();
         }
       }
-
       _focusNode.requestFocus();
+
     });
     return KeyboardListener(
       focusNode: _focusNode,
       onKeyEvent: ref.watch(isScanningProvider) ? null : _handleKeyEvent,
       child: GestureDetector(
-        onTap: (){},
+        onTap: (){
+
+
+        },
         /*onTap: () async {
           await Future.delayed(const Duration(seconds: 1));
           addBarcode();
@@ -121,12 +143,10 @@ class _ScanProductBarcodeButtonState extends ConsumerState<ScanProductBarcodeBut
               SizedBox(width: 10),
               Flexible(
                 child: Text( // Use ref.watch here to react to state changes
-                  ref.watch(isScanningProvider) ? Messages.SCANNING :
+
                    _focusNode.hasFocus
-                      ? widget.scannedData.isNotEmpty
-                          ? widget.scannedData
-                          : Messages.READY_TO_SCAN
-                      : Messages.PRESS_TO_SCAN
+                      ? Messages.PRESS_TO_SCAN
+                      : Messages.READY_TO_SCAN
                   ,
                   style: TextStyle(
                       color: Colors.white, fontSize: themeFontSizeLarge),

@@ -3,11 +3,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:monalisa_app_001/features/products/presentation/screens/search/product_detail_with_photo_card.dart';
+import 'package:monalisa_app_001/features/products/presentation/screens/update_upc/update_product_upc_screen3.dart';
 import 'package:monalisa_app_001/features/products/presentation/screens/update_upc/update_product_upc_view.dart';
 import 'package:simple_barcode_scanner/simple_barcode_scanner.dart';
 
 import '../../../../../config/router/app_router.dart';
 import '../../../../../config/theme/app_theme.dart';
+import '../movement/products_home_provider.dart';
+import '../../../../../src/pages/common/scan_button.dart';
+import '../../../../../src/pages/common/scanner.dart';
 import '../../../../shared/data/memory.dart';
 import '../../../../shared/data/messages.dart';
 import '../../providers/product_provider_common.dart';
@@ -15,24 +19,40 @@ import '../../providers/product_search_provider.dart';
 import '../../providers/products_scan_notifier.dart';
 import '../../widget/no_data_card.dart';
 import '../../widget/scan_product_barcode_button.dart';
-import '../../../../shared/data/data_utils.dart';
 
 
-class ProductSearchScreen extends ConsumerStatefulWidget {
+class ProductSearchScreen extends ConsumerStatefulWidget implements Scanner {
   int countScannedCamera =0;
   late ProductsScanNotifier productsNotifier ;
   final int actionTypeInt = Memory.ACTION_FIND_BY_UPC_SKU ;
+  int scanAction = ScanButton.SCAN_TO_SEARCH;
+  late bool usePhoneCamera = false;
+  final int pageIndex = Memory.PAGE_INDEX_SEARCH;
 
   ProductSearchScreen({super.key});
 
   @override
   ConsumerState<ConsumerStatefulWidget> createState() => _ProductSearchScreenState();
 
+  @override
+  void inputFromScanner(String scannedData) {
+    // TODO: implement inputFromScanner
+  }
+
+  @override
+  void scanButtonPressed(BuildContext context, WidgetRef ref) {
+    ref.read(usePhoneCameraToScanProvider.notifier).update((state) => !state);
+  }
+
 
 }
 
 class _ProductSearchScreenState extends ConsumerState<ProductSearchScreen> {
-
+  @override
+  void initState() {
+    widget.usePhoneCamera = ref.read(usePhoneCameraToScanProvider.notifier).state;
+    super.initState();
+  }
   @override
   Widget build(BuildContext context){
 
@@ -43,6 +63,7 @@ class _ProductSearchScreenState extends ConsumerState<ProductSearchScreen> {
     final isScanning = ref.watch(isScanningProvider);
     double singleProductDetailCardHeight = Memory.SIZE_PRODUCT_IMAGE_HEIGHT*2+20;
     final usePhoneCamera = ref.watch(usePhoneCameraToScanProvider.notifier);
+
 
     String imageUrl =Memory.IMAGE_HTTP_SAMPLE_1; // Example image URL
     widget.countScannedCamera = ref.watch(scannedCodeTimesProvider.notifier).state;
@@ -61,10 +82,13 @@ class _ProductSearchScreenState extends ConsumerState<ProductSearchScreen> {
           resizeToAvoidBottomInset : false,
 
           appBar: AppBar(
+            automaticallyImplyLeading: false,
             leading:IconButton(
               icon: const Icon(Icons.arrow_back),
               onPressed: () => {
                 FocusScope.of(context).unfocus(),
+                //ref.read(productsHomeCurrentIndexProvider.notifier).state = 0,
+
                 context.go(AppRouter.PAGE_HOME)},
             ),
             title: Row(
@@ -72,7 +96,7 @@ class _ProductSearchScreenState extends ConsumerState<ProductSearchScreen> {
                 TabBar(
                   tabs: [
                     Tab(text: Messages.FIND),
-                    Tab(text: Messages.UPDATE),
+                    Tab(text: Messages.IMAGE),
                   ],
                   isScrollable: true,
                   indicatorWeight: 4,
@@ -86,6 +110,11 @@ class _ProductSearchScreenState extends ConsumerState<ProductSearchScreen> {
                   unselectedLabelStyle: TextStyle(fontSize: themeFontSizeLarge),
                 ),
                 Spacer(),
+
+                /*usePhoneCamera.state ? UnfocusedScanButton(scanner: widget) :
+                    ScanButton(notifier: widget.productsNotifier, scanner: widget,scanAction: widget.scanAction,),
+                */
+
                 IconButton(onPressed: (){
                   if(usePhoneCamera.state){
                     usePhoneCamera.state = false;
@@ -99,77 +128,96 @@ class _ProductSearchScreenState extends ConsumerState<ProductSearchScreen> {
             ),
 
           ),
+          bottomNavigationBar: PreferredSize(
+            preferredSize: Size.fromHeight(kToolbarHeight), // Adjust height as needed
+            child: getScanButton(context),
+          ),
+          body: PopScope(
+            onPopInvokedWithResult: (bool didPop, Object? result) async {
+              if (didPop) {
+                return;
+              }
+              ref.read(usePhoneCameraToScanProvider.notifier).state = widget.usePhoneCamera;
+              context.go(AppRouter.PAGE_HOME);
+              Navigator.pop(context);
+            },
+            child: TabBarView(
 
-          body: TabBarView(
+              children: [
 
-            children: [
-              SizedBox(
-                height: bodyHeight,
-                child: SingleChildScrollView(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    //spacing: 5,
-                    children: [
-                        isScanning
-                        ? LinearProgressIndicator(
-                      backgroundColor: Colors.cyan,
-                      color: foreGroundProgressBar,
-                      minHeight: 36,
-                    )
-                        : getSearchBar(context),
-
-                    Container(
-                        width: width,
-                        height: singleProductDetailCardHeight,
-                        margin: EdgeInsets.symmetric(horizontal: 10),
-                        decoration: BoxDecoration(
-                          color: Colors.grey[200],
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: productAsync.when(
-                          data: (products) {
-                            WidgetsBinding.instance.addPostFrameCallback((_) async {
-                              ref.read(isScanningProvider.notifier).state = false;
-                            });
-                             return  (products.id != null && products.id! > 0) ?
-                             getProductDetailCard(productsNotifier: widget.productsNotifier,
-                                 product: products.copyWith(imageURL: imageUrl,uPC: null)) : NoDataCard();
-
-                          },error: (error, stackTrace) => Text('Error: $error'),
-                          loading: () =>  LinearProgressIndicator(),
-                        ),
-                      ),
-                      if(isCanEditUPC() )PreferredSize(
-                        preferredSize: Size(double.infinity,30),
-                            child: SizedBox(
-                              width: MediaQuery.of(context).size.width,
-                              child: TextButton(
-                            style: TextButton.styleFrom(
-                              backgroundColor: Colors.purple,
-                              foregroundColor: Colors.white,
+                SizedBox(
+                  height: bodyHeight,
+                  child: ListView.separated(
+                    itemCount: 6, // Adjust the number of items as needed
+                    separatorBuilder: (context, index) => SizedBox(height: 5), // Spacing between items
+                    itemBuilder: (context, index) {
+                      if (index == 0) {
+                        //return getScanButton(context);
+                        return Container();
+                      } else if (index == 1) {
+                        return isScanning
+                            ? LinearProgressIndicator(
+                          backgroundColor: Colors.cyan,
+                          color: foreGroundProgressBar,
+                          minHeight: 36,
+                        )
+                            : getSearchBar(context);
+                      }
+                      else if (index == 2) {
+                        return Container(
+                            width: width,
+                            //height: singleProductDetailCardHeight,
+                            margin: EdgeInsets.symmetric(horizontal: 10),
+                            decoration: BoxDecoration(
+                              color: Colors.grey[200],
+                              borderRadius: BorderRadius.circular(10),
                             ),
-                            onPressed: (){
-                              // ACTUALOZAR UPC
-                              FocusScope.of(context).unfocus();
-                              DataUtils.saveIdempiereProduct(ref.read(productForUpcUpdateProvider));
-                              context.go(AppRouter.PAGE_UPDATE_PRODUCT_UPC);
+                            child: productAsync.when(
+                              data: (products) {
+                                WidgetsBinding.instance.addPostFrameCallback((_) async {
+                                  ref.read(isScanningProvider.notifier).state = false;
+                                });
+                                 return  (products.id != null && products.id! > 0) ?
+                                 getProductDetailCard(productsNotifier: widget.productsNotifier,
+                                     product: products.copyWith(imageURL: imageUrl,uPC: null)) : NoDataCard();
 
-                            },
-                            child: Text(Messages.UPDATE_UPC)),
-                      ),),
+                              },error: (error, stackTrace) => Text('Error: $error'),
+                              loading: () =>  LinearProgressIndicator(),
+                            ),
+                          );
+                      } else if (index == 3) {
+                        return isCanEditUPC() ? Padding(
+                                padding: const EdgeInsets.all(20.0),
+                                child: SizedBox(
+                                  width: MediaQuery.of(context).size.width,
+                                  child: TextButton(
+                                style: TextButton.styleFrom(
+                                  backgroundColor: Colors.purple,
+                                  foregroundColor: Colors.white,
+                                ),
+                                onPressed: (){
+                                    Navigator.of(context).push(MaterialPageRoute(builder: (context) => UpdateProductUpcScreen3()));
+                                },
+                                child: Text(Messages.UPDATE_UPC)),
+                          )): Container();
+                      } else if (index == 4) {
+                        return SizedBox(height: 40);
+                      }
 
-                      PreferredSize(
-                          preferredSize: Size(double.infinity,30),
-                          child: SizedBox(width: MediaQuery.of(context).size.width, child:
-                          ref.watch(usePhoneCameraToScanProvider) ?_buttonScanWithPhone(context, ref):
-                          ScanProductBarcodeButton(widget.productsNotifier, actionTypeInt: widget.actionTypeInt,))),
-                    ],
+                      /*else if (index == 5) {
+                        return ref.watch(usePhoneCameraToScanProvider) ?_buttonScanWithPhone(context, ref):
+                               Container() ;
+                      }*/
+
+                      return SizedBox.shrink(); // Should not happen with proper itemCount
+                    },
+
                   ),
                 ),
-              ),
-              // Add more TabBarView children if you have more tabs
-              UpdateProductUpcView(),
-            ],
+                // Add more TabBarView children if you have more tabs
+                UpdateProductUpcView(),
+              ],
+            ),
           ),
         ),
       ),
@@ -214,6 +262,7 @@ class _ProductSearchScreenState extends ConsumerState<ProductSearchScreen> {
 
 
   Widget getSearchBar(BuildContext context){
+
 
     var isScanning = ref.watch(isScanningProvider);
     var usePhoneCamera = ref.watch(usePhoneCameraToScanProvider.notifier);
@@ -352,5 +401,84 @@ class _ProductSearchScreenState extends ConsumerState<ProductSearchScreen> {
     return false;
 
   }
+  void showUpdateUPCDialog(BuildContext context,WidgetRef ref){
+    showDialog<String>(
+      context: context,
+      barrierDismissible: false, // user must tap button!
+      builder:  (BuildContext context) =>Consumer(builder: (_, ref, __) {
 
+        return AlertDialog(
+          backgroundColor:Colors.grey[200],
+          content: Container(
+            decoration: BoxDecoration(
+              color: Colors.grey[200], // Change background color based on isSelected
+              borderRadius: BorderRadius.circular(10),
+            ),
+            height: MediaQuery.of(context).size.height,
+            width: MediaQuery.of(context).size.width,
+            child: UpdateProductUpcScreen3(),
+
+          ),
+          actions: <Widget>[
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              spacing: 5,
+              children: <Widget>[
+                  TextButton(
+                    style: TextButton.styleFrom(
+                      backgroundColor: Colors.red[300],
+                    ),
+                    child: Text(Messages.CONTINUE),
+                    onPressed: () async {
+
+                      Navigator.of(context).pop();
+
+                    },
+                  ),
+
+                Expanded(
+                  child: TextButton(
+                    style: TextButton.styleFrom(
+                      backgroundColor: Colors.red[300],
+                    ),
+                    child: Text(Messages.CANCEL),
+                    onPressed: () async {
+                      ref.read(isDialogShowedProvider.notifier).update((state) => false);
+                      Navigator.of(context).pop();
+                    },
+                  ),
+                ),
+                Expanded(
+                  child: TextButton(
+                    style: TextButton.styleFrom(
+                      backgroundColor: Colors.green[300],
+                    ),
+                    child: Text(Messages.CREATE),
+                    onPressed: () {
+                      Navigator.of(context).pop();
+                    },
+                  ),
+                ),
+              ],
+            ),
+          ],
+          actionsAlignment: MainAxisAlignment.center,
+          actionsPadding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+        );
+      }),
+    );
+  }
+  Widget getScanButton(BuildContext context) {
+
+    if(ref.read(productsHomeCurrentIndexProvider.notifier).state==widget.pageIndex){
+      return PreferredSize(
+          preferredSize: Size(double.infinity,30),
+          child: SizedBox(width: MediaQuery.of(context).size.width, child:
+          ref.watch(isDialogShowedProvider)? Container() :
+          ref.watch(usePhoneCameraToScanProvider) ?_buttonScanWithPhone(context, ref):
+          ScanProductBarcodeButton(widget.productsNotifier, actionTypeInt: widget.actionTypeInt,pageIndex: widget.pageIndex)));
+    } else {
+      return Container();
+    }
+  }
 }

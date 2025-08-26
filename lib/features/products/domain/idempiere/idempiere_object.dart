@@ -123,4 +123,15 @@ class IdempiereObject implements CommonSqlData {
   Map<String, dynamic> getUpdateDocStatusJson(String status) {
     return {"doc-action": status};
   }
+
+  bool? getBoolFromJson(var data){
+    if(data==null) return null;
+    if(data is bool) return data;
+    if(data is String) {
+      if(data.toLowerCase()=='true') return true;
+      if(data.toLowerCase()=='false') return false;
+    }
+
+    return null;
+  }
 }

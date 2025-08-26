@@ -22,13 +22,13 @@ class IdempiereMovementLine extends IdempiereObject {
   IdempiereLocator? mLocatorID;
   IdempiereLocator? mLocatorToID;
   IdempiereProduct? mProductID;
-  int? movementQty;
+  double? movementQty;
   String? description;
-  int? line;
+  double? line;
   IdempiereAttributeSetInstance? mAttributeSetInstanceID;
-  int? confirmedQty;
-  int? targetQty;
-  int? scrappedQty;
+  double? confirmedQty;
+  double? targetQty;
+  double? scrappedQty;
   bool? processed;
   String? value;
   double? priceEntered;
@@ -118,7 +118,7 @@ class IdempiereMovementLine extends IdempiereObject {
         : null;
     confirmedQty = json['ConfirmedQty'];
     targetQty = json['TargetQty'];
-    scrappedQty = json['ScrappedQty'];
+    scrappedQty = json['ScrappedQty']!=null ? double.tryParse(json['ScrappedQty'].toString()) : null;
     processed = json['Processed'];
     value = json['Value'];
     priceEntered = json['PriceEntered']!= null ? double.tryParse(json['PriceEntered'].toString()) : null;

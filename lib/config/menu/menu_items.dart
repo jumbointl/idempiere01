@@ -97,10 +97,11 @@ final appHomeOptionCol3Items = <MenuItem>[
     link: AppRouter.PAGE_PRODUCT_STORE_ON_HAND,
     icon: Icons.inventory,
   ),
+
   MenuItem(
     title: Messages.MOVEMENT,
     subTitle: '',
-    link: AppRouter.PAGE_PRODUCT_HOME,
+    link: AppRouter.PAGE_MOVEMENTS_SEARCH,
     icon: Icons.move_up
     ,
   ),

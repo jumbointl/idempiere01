@@ -4,7 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:monalisa_app_001/features/products/presentation/providers/products_providers.dart';
 import 'package:monalisa_app_001/features/products/presentation/providers/products_scan_notifier.dart';
 import 'package:monalisa_app_001/features/products/presentation/screens/store_on_hand/scan_barcode_multipurpose_button.dart';
-import 'package:monalisa_app_001/features/products/presentation/widget/movement_card.dart';
+import 'package:monalisa_app_001/features/products/presentation/widget/movement_card2.dart';
 import 'package:monalisa_app_001/features/products/presentation/widget/movement_line_card.dart';
 import 'package:simple_barcode_scanner/simple_barcode_scanner.dart';
 
@@ -14,6 +14,7 @@ import '../../../../shared/data/memory.dart';
 import '../../../../shared/data/messages.dart';
 import '../../../domain/idempiere/idempiere_storage_on_hande.dart';
 import '../../../domain/idempiere/idempiere_warehouse.dart';
+import '../../providers/locator_provider.dart';
 import '../../providers/movement_provider.dart';
 import '../../widget/no_data_card.dart';
 import 'memory_products.dart';
@@ -59,14 +60,14 @@ class _UnsortedStorageOnHandCardState extends ConsumerState<UnsortedStorageOnHan
   Widget build(BuildContext context) {
     createMovement = ref.watch(newPutAwayMovementProvider);
     startedCreateNewPutAwayMovement = ref.watch(startedCreateNewPutAwayMovementProvider.notifier);
-
+    ref.read(actionScanProvider.notifier).update((state) => Memory.ACTION_GET_LOCATOR_TO_VALUE);
     findLocatorTo = ref.watch(findLocatorToProvider);
     widget.width = MediaQuery.of(context).size.width;
     quantityToMove = ref.watch(quantityToMoveProvider);
     usePhoneCamera = ref.watch(usePhoneCameraToScanProvider.notifier);
     WidgetsBinding.instance.addPostFrameCallback((_) => isScanningFromDialog.state = false);
     isScanningFromDialog = ref.watch(isScanningFromDialogProvider.notifier);
-    locatorTo = ref.watch(idempiereLocatorToProvider);
+    locatorTo = ref.watch(selectedLocatorToProvider);
     scannedLocatorTo = ref.watch(scannedLocatorToProvider.notifier);
     widthLarge = widget.width/3*2;
     widthSmall = widget.width/3;
@@ -95,10 +96,12 @@ class _UnsortedStorageOnHandCardState extends ConsumerState<UnsortedStorageOnHan
       body: PopScope(
         onPopInvokedWithResult: (bool didPop, Object? result) async {
           if (didPop) {
-            ref.read(isDialogShowedProvider.notifier).update((state) => false);
-            ref.read(isScanningFromDialogProvider.notifier).update((state) => false);
+
             return;
           }
+          ref.read(isDialogShowedProvider.notifier).update((state) => false);
+          ref.read(isScanningFromDialogProvider.notifier).update((state) => false);
+          Navigator.pop(context);
         },
         child: SingleChildScrollView(
           child: Container(
@@ -113,8 +116,7 @@ class _UnsortedStorageOnHandCardState extends ConsumerState<UnsortedStorageOnHan
             child: Column(
               spacing:  5 ,
               children: [
-                if(!usePhoneCamera.state) ScanBarcodeMultipurposeButton(widget.notifier,
-                    actionTypeInt: Memory.ACTION_GET_LOCATOR_TO_VALUE),
+                if(!usePhoneCamera.state) ScanBarcodeMultipurposeButton(widget.notifier,),
                 Padding(
                   padding: const EdgeInsets.all(8.0),
                   child: Row(
@@ -166,17 +168,10 @@ class _UnsortedStorageOnHandCardState extends ConsumerState<UnsortedStorageOnHan
                                 fontWeight: FontWeight.bold,
                                 color: Colors.purple,
                                 ),),
-                            /*Text(ref.read(scannedLocatorToProvider.notifier).state == '' ? Messages.DESTINATION
-                                : ref.read(scannedLocatorToProvider.notifier).state,
-                              style: TextStyle(
-                                fontSize: fontSizeMedium,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.purple,
-                              ),),*/
                             findLocatorTo.when(data: (data){
           
-                                return Text(ref.read(idempiereLocatorToProvider.notifier).state.value != null
-                                    ? ref.read(idempiereLocatorToProvider.notifier).state.value!
+                                return Text(ref.read(selectedLocatorToProvider.notifier).state.value != null
+                                    ? ref.read(selectedLocatorToProvider.notifier).state.value!
                                     : Messages.DESTINATION,style: TextStyle(
                                 fontSize: fontSizeMedium,
                                 fontWeight: FontWeight.bold,
@@ -658,7 +653,7 @@ class _UnsortedStorageOnHandCardState extends ConsumerState<UnsortedStorageOnHan
                   return;
                 }
 
-                int? aux = int.tryParse(quantity);
+                double? aux = double.tryParse(quantity);
                 if(aux!=null && aux>0){
                   if(aux<=qtyOnHand){
                     ref.read(quantityToMoveProvider.notifier).state = aux;
@@ -761,8 +756,8 @@ class _UnsortedStorageOnHandCardState extends ConsumerState<UnsortedStorageOnHan
     if(data==null){
       return NoDataCard();
     } else {
-      final movement = MemoryProducts.newSqlDataMovement;
-      final movementLines = MemoryProducts.newSqlDataMovementLines;
+      final movement = MemoryProducts.newSqlDataMovementToCreate;
+      final movementLines = MemoryProducts.newSqlDataMovementLinesToCreate;
       return Container(
         decoration: BoxDecoration(
           color: Colors.grey[200], // Change background color based on isSelected
@@ -773,13 +768,15 @@ class _UnsortedStorageOnHandCardState extends ConsumerState<UnsortedStorageOnHan
           crossAxisAlignment: CrossAxisAlignment.start,
           spacing: 5,
           children: [
-            MovementCard(productsNotifier: widget.notifier, movement: movement, width: widget.width-30),
+            MovementCard2(productsNotifier: widget.notifier, movement: movement, width: widget.width-30),
             SizedBox(
               height: dialogHeight / 3, // Adjust height as needed
               child: ListView.separated(
                 itemCount: movementLines.length,
                 itemBuilder: (context, index) {
-                  return MovementLineCard(movementLine: movementLines[index], productsNotifier: widget.notifier,);
+                  return MovementLineCard(movementLine: movementLines[index],
+                    productsNotifier: widget.notifier, width: widget.width-30,
+                  index: index,totalLength: movementLines.length,);
                 },
                 separatorBuilder: (BuildContext context, int index) => const SizedBox(height: 10),
               ),

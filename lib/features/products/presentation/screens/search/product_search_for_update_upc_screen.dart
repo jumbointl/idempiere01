@@ -21,6 +21,7 @@ class ProductSearchForUpdateUpcScreen extends ConsumerStatefulWidget {
   late ProductsScanNotifier productsNotifier ;
   final int actionTypeInt = Memory.ACTION_UPDATE_UPC ;
   late IdempiereProduct product ;
+  late bool usePhoneCamera = false;
 
   ProductSearchForUpdateUpcScreen({super.key});
 
@@ -47,8 +48,13 @@ class _ProductSearchForUpdateUpcScreenState extends ConsumerState<ProductSearchF
     }
   }
   @override
+  void initState() {
+    super.initState();
+    widget.usePhoneCamera = ref.read(usePhoneCameraToScanProvider.notifier).state;
+  }
+  @override
   void dispose() {
-    // TODO: implement dispose
+
     super.dispose();
     dialog?.dismiss();
   }
@@ -93,64 +99,75 @@ class _ProductSearchForUpdateUpcScreenState extends ConsumerState<ProductSearchF
         ],
       ),
 
-      body: Container(
-        color: Colors.white,
-        height: bodyHeight,
-        child: SingleChildScrollView(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            //spacing: 5,
-            children: [
+      body: PopScope(
+        onPopInvokedWithResult: (bool didPop, Object? result) async {
+          if (didPop) {
+            return;
+          }
+          ref.read(usePhoneCameraToScanProvider.notifier).state = widget.usePhoneCamera;
+          Navigator.pop(context);
+        },
+        child: Container(
+          color: Colors.white,
+          height: bodyHeight,
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              //spacing: 5,
+              children: [
 
-                isScanning
-                ? LinearProgressIndicator(
-              backgroundColor: Colors.cyan,
-              color: foreGroundProgressBar,
-              minHeight: 36,
-            )
-                : Text(Messages.FIND_PRODUCT_BY_SKU),
+                  isScanning
+                  ? LinearProgressIndicator(
+                backgroundColor: Colors.cyan,
+                color: foreGroundProgressBar,
+                minHeight: 36,
+              )
+                  : Text(Messages.FIND_PRODUCT_BY_SKU),
 
-            Container(
-                width: width,
-                height: singleProductDetailCardHeight,
-                margin: EdgeInsets.symmetric(horizontal: 10),
-                decoration: BoxDecoration(
-                  //color: Colors.grey[200],
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(10),
+              Container(
+                  width: width,
+                  height: singleProductDetailCardHeight,
+                  margin: EdgeInsets.symmetric(horizontal: 10),
+                  decoration: BoxDecoration(
+                    //color: Colors.grey[200],
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: productAsync.when(
+                    data: (products) {
+                      WidgetsBinding.instance.addPostFrameCallback((_) async {
+                        ref.read(isScanningProvider.notifier).state = false;
+
+                      });
+                       return  (products.id != null && products.id! > 0) ?
+                       getProductDetailCard(productsNotifier: widget.productsNotifier,
+                           product: products.copyWith(imageURL: imageUrl,uPC: null)) : NoDataCard();
+
+                    },error: (error, stackTrace) => Text('Error: $error'),
+                    loading: () => LinearProgressIndicator(),
+                  ),
                 ),
-                child: productAsync.when(
-                  data: (products) {
-                    WidgetsBinding.instance.addPostFrameCallback((_) async {
-                      ref.read(isScanningProvider.notifier).state = false;
+                if(isCanEditUPC() )PreferredSize(
+                  preferredSize: Size(double.infinity,30),
+                      child: SizedBox(
+                        width: MediaQuery.of(context).size.width,
+                        child: TextButton(
+                      style: TextButton.styleFrom(
+                        backgroundColor: Colors.purple,
+                        foregroundColor: Colors.white,
+                      ),
+                      onPressed: (){
+                        FocusScope.of(context).unfocus();
+                        DataUtils.saveIdempiereProduct(ref.read(productForUpcUpdateProvider));
+                        print('----------------------------ACTION_UPDATE_UPC UPC> make dialog');
 
-                    });
-                     return  (products.id != null && products.id! > 0) ?
-                     getProductDetailCard(productsNotifier: widget.productsNotifier,
-                         product: products.copyWith(imageURL: imageUrl,uPC: null)) : NoDataCard();
+                        context.push(AppRouter.PAGE_UPDATE_PRODUCT_UPC);
+                      },
+                      child: Text(Messages.UPDATE_UPC)),
+                ),),
 
-                  },error: (error, stackTrace) => Text('Error: $error'),
-                  loading: () => LinearProgressIndicator(),
-                ),
-              ),
-              if(isCanEditUPC() )PreferredSize(
-                preferredSize: Size(double.infinity,30),
-                    child: SizedBox(
-                      width: MediaQuery.of(context).size.width,
-                      child: TextButton(
-                    style: TextButton.styleFrom(
-                      backgroundColor: Colors.purple,
-                      foregroundColor: Colors.white,
-                    ),
-                    onPressed: (){
-                      FocusScope.of(context).unfocus();
-                      DataUtils.saveIdempiereProduct(ref.read(productForUpcUpdateProvider));
-                      context.go(AppRouter.PAGE_UPDATE_PRODUCT_UPC);
-                    },
-                    child: Text(Messages.UPDATE_UPC)),
-              ),),
-
-            ],
+              ],
+            ),
           ),
         ),
       ),
@@ -159,6 +176,7 @@ class _ProductSearchForUpdateUpcScreenState extends ConsumerState<ProductSearchF
 
 
   Future<void> getBarCode(BuildContext context, bool history) async{
+    ref.read(usePhoneCameraToScanProvider.notifier).state = true;
     TextEditingController controller = TextEditingController();
     if(history){
       String lastSearch = Memory.lastSearch;
@@ -215,12 +233,14 @@ class _ProductSearchForUpdateUpcScreenState extends ConsumerState<ProductSearchF
             btnCancelText: Messages.CANCEL,
             btnOkText: Messages.OK,
           ).show();
+          ref.read(usePhoneCameraToScanProvider.notifier).state = false;
           return;
         }
         Memory.lastSearch = result;
         widget.productsNotifier.addBarcodeByUPCOrSKUForSearch(result);
       },
       btnCancelOnPress: (){
+        ref.read(usePhoneCameraToScanProvider.notifier).state = false;
         dialog?.dismiss();
         return ;
       }

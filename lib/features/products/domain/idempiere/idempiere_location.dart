@@ -59,15 +59,35 @@ class IdempiereLocation extends IdempiereObject {
     aDOrgID = json['AD_Org_ID'] != null
         ? IdempiereOrganization.fromJson(json['AD_Org_ID'])
         : null;
-    isActive = json['IsActive'];
+    isActive = getBoolFromJson(json['IsActive']);
     created = json['Created'];
-    createdBy = json['CreatedBy'] != null
-        ? IdempiereUser.fromJson(json['CreatedBy'])
-        : null;
+    if(json['CreatedBy'] !=null){
+     if(json['CreatedBy'] is Map<String, dynamic>){
+       createdBy = IdempiereUser.fromJson(json['CreatedBy']);
+     } else if(json['CreatedBy'] is String){
+       int? aux = int.tryParse(json['CreatedBy']);
+       if(aux!=null){
+         createdBy = IdempiereUser(id: aux,propertyLabel: "Created By",name: '');
+       }
+     } else if(json['CreatedBy'] is int){
+       createdBy = IdempiereUser(id: json['CreatedBy'],propertyLabel: "Created By",name: '');
+     }
+    }
+
     updated = json['Updated'];
-    updatedBy = json['UpdatedBy'] != null
-        ? IdempiereUser.fromJson(json['UpdatedBy'])
-        : null;
+    if(json['UpdatedBy'] !=null){
+      if(json['UpdatedBy'] is Map<String, dynamic>){
+        updatedBy = IdempiereUser.fromJson(json['UpdatedBy']);
+      } else if(json['UpdatedBy'] is String){
+        int? aux = int.tryParse(json['UpdatedBy']);
+        if(aux!=null){
+          updatedBy = IdempiereUser(id: aux,propertyLabel: "Updated By",identifier: '');
+        }
+      } else if(json['UpdatedBy'] is int){
+        updatedBy = IdempiereUser(id: json['UpdatedBy'],propertyLabel: "Updated By",identifier: '');
+      }
+    }
+
     address1 = json['Address1'];
     city = json['City'];
     cCountryID = json['C_Country_ID'] != null
@@ -77,7 +97,7 @@ class IdempiereLocation extends IdempiereObject {
         ? IdempiereRegion.fromJson(json['C_Region_ID'])
         : null;
     postal = json['Postal'];
-    isValid = json['IsValid'];
+    isValid = getBoolFromJson(json['IsValid']);
     modelName = json['model-name'];
     active = json['active'];
     category = json['category'];

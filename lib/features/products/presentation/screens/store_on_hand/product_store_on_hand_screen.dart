@@ -1,10 +1,14 @@
 import 'package:awesome_dialog/awesome_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:monalisa_app_001/features/products/domain/idempiere/idempiere_storage_on_hande.dart';
 import 'package:monalisa_app_001/features/products/presentation/widget/no_records_card.dart';
 import 'package:simple_barcode_scanner/simple_barcode_scanner.dart';
 
+import '../../../../../config/router/app_router.dart';
+import '../../providers/locator_provider.dart';
+import '../movement/products_home_provider.dart';
 import '../../../../auth/domain/entities/warehouse.dart';
 import '../../../../auth/presentation/providers/auth_provider.dart';
 import '../../../../shared/data/memory.dart';
@@ -25,16 +29,20 @@ class ProductStoreOnHandScreen extends ConsumerStatefulWidget {
   int countScannedCamera =0;
   late ProductsScanNotifier productsNotifier ;
   final int actionTypeInt = Memory.ACTION_FIND_BY_UPC_SKU_FOR_STORE_ON_HAND ;
+  late var allowedLocatorId;
+  final int pageIndex = Memory.PAGE_INDEX_STORE_ON_HAND;
 
   ProductStoreOnHandScreen({super.key});
 
   @override
-  ConsumerState<ConsumerStatefulWidget> createState() => _ProductScreenState();
+  ConsumerState<ConsumerStatefulWidget> createState() => ProductStoreOnHandScreenState();
 
 
 }
 
-class _ProductScreenState extends ConsumerState<ProductStoreOnHandScreen> {
+class ProductStoreOnHandScreenState extends ConsumerState<ProductStoreOnHandScreen> {
+  late ScanProductBarcodeButton scanButton;
+
 
   @override
   Widget build(BuildContext context){
@@ -49,7 +57,6 @@ class _ProductScreenState extends ConsumerState<ProductStoreOnHandScreen> {
     String userWarehouseName = userWarehouse?.name ?? '';
     final isScanning = ref.watch(isScanningProvider);
     final usePhoneCamera = ref.watch(usePhoneCameraToScanProvider.notifier);
-    final isDialogShowed = ref.watch(isDialogShowedProvider.notifier);
     final searchByMOLIConfigurableSKU = ref.watch(searchByMOLIConfigurableSKUProvider.notifier);
     final double singleProductDetailCardHeight = 145;
     Color foreGroundProgressBar = Colors.purple;
@@ -58,12 +65,25 @@ class _ProductScreenState extends ConsumerState<ProductStoreOnHandScreen> {
     } else {
       foreGroundProgressBar = Colors.purple;
     }
+    scanButton = ScanProductBarcodeButton(widget.productsNotifier, actionTypeInt: widget.actionTypeInt,pageIndex: widget.pageIndex);
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       ref.read(isScanningProvider.notifier).update((state) => false);
     });
     //print('Bearer ${Environment.token}');
     return Scaffold(
       appBar: AppBar(
+        automaticallyImplyLeading: true,
+        leading:IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () =>
+          {
+            ref.read(productsHomeCurrentIndexProvider.notifier).state = 0,
+            ref.invalidate(selectedLocatorToProvider),
+            ref.invalidate(selectedLocatorFromProvider),
+            context.go(AppRouter.PAGE_HOME),
+          }
+            //
+        ),
         title: Text(Messages.PRODUCT),
           actions: [
 
@@ -84,104 +104,113 @@ class _ProductScreenState extends ConsumerState<ProductStoreOnHandScreen> {
 
       ),
 
-      body: Container(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          spacing: 5,
-          children: [
-              isScanning
-              ? LinearProgressIndicator(
-            backgroundColor: Colors.cyan,
-            color: foreGroundProgressBar,
-            minHeight: 36,
-          )
-              : getSearchBar(context),
-
-          SingleChildScrollView(
-            child: Container(
-              width: MediaQuery.of(context).size.width - 30,
-              height: productAsync.when(
-                  data: (products) => products.length <= 1 ? singleProductDetailCardHeight : bodyHeight,
-                  error: (error, stackTrace) => singleProductDetailCardHeight,
-                  loading: () => singleProductDetailCardHeight),
-              margin: EdgeInsets.symmetric(horizontal: 10),
-              decoration: BoxDecoration(
-                color: Colors.grey[200],
-                borderRadius: BorderRadius.circular(10),
+      body: SafeArea(
+        child: PopScope(
+          onPopInvokedWithResult: (bool didPop, Object? result) async {
+            if (didPop) {
+              return;
+            }
+            ref.invalidate(selectedLocatorToProvider);
+            ref.invalidate(selectedLocatorFromProvider);
+            ref.read(productsHomeCurrentIndexProvider.notifier).state = 0;
+            context.go(AppRouter.PAGE_HOME);
+          },
+          child: Container(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              spacing: 5,
+              children: [
+                  isScanning
+                  ? LinearProgressIndicator(
+                backgroundColor: Colors.cyan,
+                color: foreGroundProgressBar,
+                minHeight: 36,
+              )
+                  : getSearchBar(context),
+        
+              SingleChildScrollView(
+                child: Container(
+                  width: MediaQuery.of(context).size.width - 30,
+                  height: productAsync.when(
+                      data: (products) => products.length <= 1 ? singleProductDetailCardHeight : bodyHeight,
+                      error: (error, stackTrace) => singleProductDetailCardHeight,
+                      loading: () => singleProductDetailCardHeight),
+                  margin: EdgeInsets.symmetric(horizontal: 10),
+                  decoration: BoxDecoration(
+                    color: Colors.grey[200],
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: productAsync.when(
+                    data: (products) {
+                       return products.length ==1 ? (products[0].id != null && products[0].id! > 0) ?
+                        ProductDetailCard(productsNotifier: widget.productsNotifier, product: products[0]) : NoDataCard()
+                         : ListView.separated(
+                        separatorBuilder: (context, index) => SizedBox(height: 5,),
+                        shrinkWrap: true, // Important to prevent unbounded height
+                        itemCount: products.length,
+                        itemBuilder: (context, index) => ProductDetailCard(productsNotifier: widget.productsNotifier, product: products[index]),
+                      );
+                    },error: (error, stackTrace) => Text('Error: $error'),
+                    loading: () => Container(),
+                  ),
+                ),
               ),
-              child: productAsync.when(
-                data: (products) {
-                   return products.length ==1 ? (products[0].id != null && products[0].id! > 0) ?
-                    ProductDetailCard(productsNotifier: widget.productsNotifier, product: products[0]) : NoDataCard()
-                     : ListView.separated(
-                    separatorBuilder: (context, index) => SizedBox(height: 5,),
-                    shrinkWrap: true, // Important to prevent unbounded height
-                    itemCount: products.length,
-                    itemBuilder: (context, index) => ProductDetailCard(productsNotifier: widget.productsNotifier, product: products[index]),
-                  );
-                },error: (error, stackTrace) => Text('Error: $error'),
-                loading: () => Container(),
-              ),
+                Expanded(
+                    child: productsStoredAsync.when(
+                      data: (storages) {
+                        WidgetsBinding.instance.addPostFrameCallback((_) async {
+                          // deley 1 secund
+        
+        
+                          double quantity = 0;
+                          for (var data in storages) {
+                            int warehouseID = data.mLocatorID?.mWarehouseID?.id ?? 0;
+        
+                            if (warehouseID == userWarehouseId) {
+                              quantity += data.qtyOnHand ?? 0;
+                            }
+                          }
+        
+                          String aux = Memory.numberFormatter0Digit.format(quantity);
+                          resultOfSameWarehouse.update((state) =>  [aux,userWarehouseName]);
+                          if(ref.read(searchByMOLIConfigurableSKUProvider.notifier).state){
+                            ref.read(showResultCardProvider.notifier).state = false;
+                          } else {
+                            final productAsync = ref.watch(findProductByUPCOrSKUForStoreOnHandProvider);
+                            productAsync.when(
+                                data: (products) {
+                                  if(products.isNotEmpty && products[0].id != null && products[0].id! > 0){
+                                    ref.watch(showResultCardProvider.notifier).update((state) => true);
+                                  } else {
+                                    ref.watch(showResultCardProvider.notifier).update((state) => false);
+                                  }
+                                },
+                                error: (error, stackTrace) => {ref.watch(showResultCardProvider.notifier).update((state) => false)},
+                                loading: () => {ref.watch(showResultCardProvider.notifier).update((state) => false)}
+                            );
+                            //ref.watch(isScanningProvider.notifier).update((state) => false);
+                          }
+                          //await Future.delayed(Duration(milliseconds: Memory.DELAY_TO_REFRESH_PROVIDER_MILLISECOND));
+        
+        
+        
+                        });
+                        return getStoragesOnHand(storages, width);
+                      },
+                      error: (error, stackTrace) => Text('Error: $error'),
+                      loading: () => const LinearProgressIndicator(),
+                    )),
+                getScanButton(context),
+        
+              ],
             ),
           ),
-            Expanded(
-                child: productsStoredAsync.when(
-                  data: (storages) {
-                    WidgetsBinding.instance.addPostFrameCallback((_) async {
-                      // deley 1 secund
-
-
-                      double quantity = 0;
-                      for (var data in storages) {
-                        int warehouseID = data.mLocatorID?.mWarehouseID?.id ?? 0;
-
-                        if (warehouseID == userWarehouseId) {
-                          quantity += data.qtyOnHand ?? 0;
-                        }
-                      }
-
-                      String aux = Memory.numberFormatter0Digit.format(quantity);
-                      resultOfSameWarehouse.update((state) =>  [aux,userWarehouseName]);
-                      if(ref.read(searchByMOLIConfigurableSKUProvider.notifier).state){
-                        ref.read(showResultCardProvider.notifier).state = false;
-                      } else {
-                        final productAsync = ref.watch(findProductByUPCOrSKUForStoreOnHandProvider);
-                        productAsync.when(
-                            data: (products) {
-                              if(products.isNotEmpty && products[0].id != null && products[0].id! > 0){
-                                ref.watch(showResultCardProvider.notifier).update((state) => true);
-                              } else {
-                                ref.watch(showResultCardProvider.notifier).update((state) => false);
-                              }
-                            },
-                            error: (error, stackTrace) => {ref.watch(showResultCardProvider.notifier).update((state) => false)},
-                            loading: () => {ref.watch(showResultCardProvider.notifier).update((state) => false)}
-                        );
-                        //ref.watch(isScanningProvider.notifier).update((state) => false);
-                      }
-                      //await Future.delayed(Duration(milliseconds: Memory.DELAY_TO_REFRESH_PROVIDER_MILLISECOND));
-
-
-
-                    });
-                    return getStoragesOnHand(storages, width);
-                  },
-                  error: (error, stackTrace) => Text('Error: $error'),
-                  loading: () => const LinearProgressIndicator(),
-                )),
-
-            PreferredSize(
-                preferredSize: Size(double.infinity,30),
-                child: SizedBox(width: MediaQuery.of(context).size.width, child:
-                ref.watch(usePhoneCameraToScanProvider) ?_buttonScanWithPhone(context, ref):
-                ref.watch(isDialogShowedProvider)? Container() :ScanProductBarcodeButton(widget.productsNotifier, actionTypeInt: widget.actionTypeInt,))),
-          ],
         ),
       ),
     );
   }
 
-  Widget _buttonScanWithPhone(BuildContext context,WidgetRef ref) {
+  Widget buttonScanWithPhone(BuildContext context,WidgetRef ref) {
     bool isScanning = ref.watch(isScanningProvider);
     return TextButton(
 
@@ -370,6 +399,24 @@ class _ProductScreenState extends ConsumerState<ProductStoreOnHandScreen> {
     ).show();
 
   }
+
+  Widget getScanButton(BuildContext context) {
+    if(ref.read(productsHomeCurrentIndexProvider.notifier).state==widget.pageIndex){
+      return PreferredSize(
+          preferredSize: Size(double.infinity,30),
+          child: SizedBox(width: MediaQuery.of(context).size.width, child:
+
+          ref.watch(usePhoneCameraToScanProvider) ?buttonScanWithPhone(context, ref):
+          //ScanBarcodeMultipurposeButton(widget.productsNotifier)));
+          scanButton));
+    } else {
+      return Container();
+    }
+
+
+  }
+
+
 
 
 }
