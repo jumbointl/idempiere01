@@ -5,7 +5,6 @@ import 'package:flutter_addons/flutter_addons.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:monalisa_app_001/features/products/domain/idempiere/idempiere_movement_line.dart';
 import 'package:monalisa_app_001/features/shared/data/messages.dart';
-import 'package:monalisa_app_001/src/core/constants/app_constants.dart';
 
 import '../../../../shared/data/memory.dart';
 
@@ -32,7 +31,6 @@ class _MovementLineCardState extends ConsumerState<MovementLineCard> {
     Icon icon = Icon(Icons.send, color: Colors.amber, size: 22.sp);
     return Container(
       width:double.infinity,
-      padding: kPadding.p,
       decoration: BoxDecoration(
         color: context.cardBackground.withValues(alpha: .85),
         borderRadius: BorderRadius.circular(widget.radius),

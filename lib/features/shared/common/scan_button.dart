@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:monalisa_app_001/features/products/presentation/providers/products_scan_notifier.dart';
-import 'package:monalisa_app_001/src/pages/common/scanner.dart';
+import 'scanner.dart';
 
 import '../../../features/products/presentation/providers/product_provider_common.dart';
 class ScanButton extends ConsumerStatefulWidget {

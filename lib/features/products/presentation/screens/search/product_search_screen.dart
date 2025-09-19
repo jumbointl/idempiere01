@@ -9,9 +9,9 @@ import 'package:simple_barcode_scanner/simple_barcode_scanner.dart';
 
 import '../../../../../config/router/app_router.dart';
 import '../../../../../config/theme/app_theme.dart';
+import '../../../../shared/common/scan_button.dart';
+import '../../../../shared/common/scanner.dart';
 import '../movement/products_home_provider.dart';
-import '../../../../../src/pages/common/scan_button.dart';
-import '../../../../../src/pages/common/scanner.dart';
 import '../../../../shared/data/memory.dart';
 import '../../../../shared/data/messages.dart';
 import '../../providers/product_provider_common.dart';
