@@ -21,7 +21,6 @@ import '../../features/products/presentation/screens/store_on_hand/select_locato
 import '../../features/products/presentation/screens/store_on_hand/unsorted_storage_on__hand_screen.dart';
 import '../../features/products/presentation/screens/update_upc/update_product_upc_screen3.dart';
 import '../../features/products/presentation/screens/update_upc/update_product_upc_screen4.dart';
-import '../../src/core/routes/route_export.dart';
 
 
 class AppRouter {

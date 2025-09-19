@@ -5,7 +5,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_svg_provider/flutter_svg_provider.dart';
 import 'package:monalisa_app_001/features/products/domain/idempiere/idempiere_movement.dart';
 
-import 'package:monalisa_app_001/src/core/resource/app_resources.dart';
 
 import '../../../../../config/theme/app_theme.dart';
 import '../../../../shared/data/memory.dart';
@@ -72,7 +71,7 @@ class MovementHeaderCardState2 extends ConsumerState<MovementCard> {
           decoration: BoxDecoration(
             color: widget.bgColor,
             image: DecorationImage(
-              image: Svg(AssetSvgs.splashBGLight),
+              image: AssetImage('assets/images/supply-chain.png'),
               fit: BoxFit.cover,
               alignment: Alignment.topRight,
             ),
