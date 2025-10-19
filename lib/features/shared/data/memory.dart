@@ -1,7 +1,11 @@
+import 'dart:convert';
+
 import 'package:awesome_dialog/awesome_dialog.dart';
 import 'package:flutter/material.dart';
+import 'package:get_storage/get_storage.dart';
 import 'package:intl/intl.dart';
 import 'package:monalisa_app_001/features/products/domain/idempiere/idempiere_product.dart';
+import 'package:monalisa_app_001/features/products/domain/idempiere/movement_and_lines.dart';
 import 'package:monalisa_app_001/features/products/domain/sql/sql_users_data.dart';
 
 import '../../products/domain/idempiere/idempiere_movement.dart';
@@ -60,7 +64,8 @@ class Memory {
   static const int ACTION_GET_LOCATOR_TO_VALUE = 5;
   static const int ACTION_FIND_MOVEMENT_BY_ID=6;
   static const int ACTION_GET_LOCATOR_FROM_VALUE=7;
-
+  static const int ACTION_GO_TO_STORAGE_ON_HAND_PAGE_WITH_UPC=8;
+  static const int ACTION_GO_TO_MOVEMENT_EDIT_PAGE_WITH_ID=9;
 
 
   static const int UPC_EXITS = -1;
@@ -83,34 +88,42 @@ class Memory {
   static const int PAGE_INDEX_MULTIPLE =201;
   static const int PAGE_INDEX_SEARCH=2;
   static const int PAGE_INDEX_HEARDER_VIEW=1;
-  static const int PAGE_INDEX_STORE_ON_HAND=0;
+
 
   static const int PAGE_INDEX_CREATE_STORE_ON_HAND = 13;
   static const int PAGE_INDEX_STORE_ON_HAND_2=14;
-  static const int PAGE_INDEX_MOVEMENTE_CREATE_SCREEN=15;
+
   static const int PAGE_INDEX_FIND_LOCATOR_SCREEN=16;
   static const int PAGE_INDEX_FIEND_LOCATOR_BY_DEFAULT_WAREHOUSE_SCREEN=17;
   static const int PAGE_INDEX_UPDATE_UPC_SCREEN = 18;
-  static const int PAGE_INDEX_MOVEMENTE_SCREEN=0;
-  static const int PAGE_INDEX_NO_REQUERED_SCAN_SCREEN=200;
-  static const int PAGE_INDEX_UNSORTED_STORAGE_ON_HAND=20;
+  // when no need to switch between page and dialog index ==0
+  static const int PAGE_INDEX_MOVEMENTE_EDIT_SCREEN =20;
+  static const int PAGE_INDEX_STORE_ON_HAND=22;
+  static const int PAGE_INDEX_UNSORTED_STORAGE_ON_HAND=24;
+  static const int PAGE_INDEX_MOVEMENTE_SCREEN=31;
+  static const int PAGE_INDEX_MOVEMENTE_CREATE_SCREEN=32;
+  static const int PAGE_INDEX_MOVEMENTE_LINE_SCREEN =33;
 
+
+
+  static const int PAGE_INDEX_NO_REQUERED_SCAN_SCREEN=200;
 
 
 
   static int pageFromIndex =0;
 
+  static double BOTTOM_BAR_HEIGHT = 60;
 
+  static const String FORCE_TO_SEARCH_STRING='*';
 
+  static String SELECTED_LOCATOR_FROM='selected_locator_from';
+  static String SELECTED_LOCATOR_TO='selected_locator_to';
+  static const String KEY_SELECTED_LOCATOR_FROM='key_selected_locator_from';
+  static const String KEY_SELECTED_LOCATOR_TO='key_selected_locator_to';
+  static const String KEY_SELECTED_PRODUCT_UPC='key_selected_product_upc';
+  static const String KEY_MOVEMENT_AND_LINES='key_movement_and_lines';
 
-
-
-
-
-
-
-
-
+  static String lastSearchMovement ='';
 
 
 
@@ -124,13 +137,6 @@ class Memory {
     }
     return false;
   }
-
-
-
-
-
-
-
 
   static void setImageSize(BuildContext context) {
     double h = MediaQuery.of(context).size.height;
@@ -153,9 +159,5 @@ class Memory {
 
 
 
-
-
-
-
-
 }
+

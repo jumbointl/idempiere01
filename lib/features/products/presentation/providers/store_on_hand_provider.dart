@@ -2,8 +2,10 @@
 
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/legacy.dart';
 import 'package:monalisa_app_001/features/products/presentation/providers/product_provider_common.dart';
 import 'package:monalisa_app_001/features/products/presentation/providers/product_search_provider.dart';
+import 'package:monalisa_app_001/features/products/presentation/screens/store_on_hand/memory_products.dart';
 import 'package:monalisa_app_001/features/shared/data/messages.dart';
 
 import '../../../../config/http/dio_client.dart';
@@ -18,8 +20,14 @@ final scannedCodeForStoredOnHandProvider = StateProvider.autoDispose<String?>((r
   return '';
 });
 
+final scrollToUpProvider = StateProvider.autoDispose<bool>((ref) {
+  return false;
+});
+
 final findProductByUPCOrSKUForStoreOnHandProvider = FutureProvider.autoDispose<List<IdempiereProduct>>((ref) async {
+  print('---------------------findProductByUPCOrSKUForStoreOnHandProvider---');
   final String? scannedCode = ref.watch(scannedCodeForStoredOnHandProvider)?.toUpperCase();
+
   if(scannedCode==null || scannedCode=='') return [IdempiereProduct(id:0)];
   int? aux = int.tryParse(scannedCode);
   String searchField ='upc';
@@ -30,11 +38,12 @@ final findProductByUPCOrSKUForStoreOnHandProvider = FutureProvider.autoDispose<L
     searchField = 'MOLI_ConfigurableSKU';
   }
   Dio dio = await DioClient.create();
+  ref.read(showResultCardProvider.notifier).state = true;
   try {
     String url =
         "/api/v1/models/m_product?\$filter=$searchField eq '$scannedCode'";
     url = url.replaceAll(' ', '%20');
-
+    print(url);
     final response = await dio.get(url);
 
     if (response.statusCode == 200) {
@@ -43,17 +52,18 @@ final findProductByUPCOrSKUForStoreOnHandProvider = FutureProvider.autoDispose<L
 
       if (responseApi.records != null && responseApi.records!.isNotEmpty) {
         final productsList = responseApi.records!;
-        if(productsList.length==1){
+        /*if(productsList.length==1){
           ref.watch(productIdProvider.notifier).state = productsList[0].id!;
         } else {
           ref.watch(productIdProvider.notifier).state = 0;
-        }
+        }*/
 
-
+        ref.read(productIdProvider.notifier).state = productsList[0].id!;
+        print('200---------------------findProductByUPCOrSKUForStoreOnHandProvider---');
         return productsList;
 
       } else {
-        ref.watch(productIdProvider.notifier).state = 0;
+        print('EMPTY---------------------findProductByUPCOrSKUForStoreOnHandProvider---');
         return [IdempiereProduct(name: Messages.NOT_FOUND, uPC: scannedCode,id: 0)];
       }
     } else {
@@ -65,6 +75,8 @@ final findProductByUPCOrSKUForStoreOnHandProvider = FutureProvider.autoDispose<L
     throw CustomErrorDioException(e, authDataNotifier);
   } catch (e) {
     throw Exception(e.toString());
+  }  finally {
+    ref.read(isScanningProvider.notifier).state = false;
   }
 
 });
@@ -102,6 +114,8 @@ final findProductsByMOLIConfigurableSKUProvider = FutureProvider.autoDispose<Lis
     throw CustomErrorDioException(e, authDataNotifier);
   } catch (e) {
     throw Exception(e.toString());
+  } finally {
+    ref.read(isScanningProvider.notifier).state = false;
   }
 
 });
@@ -110,9 +124,9 @@ final findProductsByMOLIConfigurableSKUProvider = FutureProvider.autoDispose<Lis
 final findProductsStoreOnHandProvider = FutureProvider.autoDispose<List<IdempiereStorageOnHande>>((ref) async {
 
   final productId = ref.watch(productIdProvider);
-  //final product = ref.watch(futureProvider).value;
-  //int productId = product?.id ?? 0;
-  if(productId== 0){
+  //final productId = 0 ;
+  print('------------h---------findProductsStoreOnHandProvider---$productId');
+  if(productId<= 0){
 
     return [];
   }
@@ -121,12 +135,23 @@ final findProductsStoreOnHandProvider = FutureProvider.autoDispose<List<Idempier
   try {
     String url = "/api/v1/models/m_storageonhand?\$expand=M_Locator_ID&\$IsActive=true"
         "&\$filter=QtyOnHand%20neq%200%20AND%20M_Product_ID%20eq%20$productId";
+    if(MemoryProducts.movementAndLines.hasLastLocatorFrom){
+      url = '$url%20AND%20M_Locator_ID%20eq%20${MemoryProducts.movementAndLines.lastLocatorFrom!.id!}';
+    }
+    print(url);
     final response = await dio.get(url);
+    print(response.statusCode);
+
+
     if (response.statusCode == 200) {
+
       final responseApi =
       ResponseApi<IdempiereStorageOnHande>.fromJson(response.data, IdempiereStorageOnHande.fromJson);
-
+      //print(response.data);
+      print(responseApi.records?.length ?? 'null');
       if (responseApi.records != null && responseApi.records!.isNotEmpty) {
+        ref.watch(showResultCardProvider.notifier).update((state) =>true);
+
         final productsListRaw = responseApi.records!;
         ref.watch(unsortedStoreOnHandListProvider.notifier).state = productsListRaw;
         Map<String, IdempiereStorageOnHande> groupedProducts = {};
@@ -179,6 +204,7 @@ final findProductsStoreOnHandProvider = FutureProvider.autoDispose<List<Idempier
         for (var warehouseID in sortedWarehouseIDs) {
           sortedProductsList.addAll(groupedByWarehouse[warehouseID]!.where((product) => product.qtyOnHand != 0));
         }
+
         return sortedProductsList;
       } else {
         return [];
@@ -203,13 +229,13 @@ final resultOfSameWarehouseProvider = StateProvider.autoDispose<List<String>>((r
   return [];
 });
 
-final unsortedStoreOnHandListProvider = StateProvider.autoDispose<List<IdempiereStorageOnHande>>((ref) {
+final unsortedStoreOnHandListProvider = StateProvider<List<IdempiereStorageOnHande>>((ref) {
   return [];
 });
 
 
 final showResultCardProvider = StateProvider.autoDispose<bool>((ref) {
-  return false;
+  return true;
 });
 
 final searchByMOLIConfigurableSKUProvider = StateProvider.autoDispose<bool>((ref) {
@@ -233,22 +259,17 @@ final usePhoneCameraToScanStoreOnHandeProvider = StateProvider.autoDispose<bool>
   return false;
 });
 
-final quantityToMoveProvider = StateProvider.autoDispose<double>((ref) {
-  return 0;
-});
+
 
 
 final findProductsStoreOnHandProvider2 = FutureProvider.autoDispose<List<IdempiereStorageOnHande>>((ref) async {
   //from ProductHomeScreen (copy from) ProductSearchScreen
-  print('findProductsStoreOnHandProvider2');
-  print('-------------------------------------1');
   final productId = ref.watch(productForUpcUpdateProvider.notifier).state.id ?? 0;
   //final productId = ref.watch(productIdProvider2);
   if(productId== 0){
 
     return [];
   }
-  print('-------------------------------------2');
   Dio dio = await DioClient.create();
   try {
     String url = "/api/v1/models/m_storageonhand?\$expand=M_Locator_ID&\$IsActive=true"
@@ -283,7 +304,6 @@ final findProductsStoreOnHandProvider2 = FutureProvider.autoDispose<List<Idempie
             }
           }
         }
-        print('-------------------------------------3');
         List<IdempiereStorageOnHande> productsList = groupedProducts.values.toList();
 
         // Group products by warehouse

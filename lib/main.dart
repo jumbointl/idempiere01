@@ -1,14 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:get_storage/get_storage.dart';
 import 'package:monalisa_app_001/config/config.dart';
 
 import 'features/shared/data/memory.dart';
 
 void main() async {
   await Environment.initEnvironment();
+  await GetStorage.init();
 
   runApp(
-    const ProviderScope(
+
+    ProviderScope(
+
       child: MainApp(),
     ),
   );

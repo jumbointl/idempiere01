@@ -141,6 +141,17 @@ class IdempiereMovement extends IdempiereObject {
         : null;
   }
 
+  bool get canComplete  {
+    if(docStatus== null ){
+      return false;
+    }
+    if(docStatus?.id == 'DR'){
+      return true;
+    } else {
+    return false;
+    }
+  }
+
   @override
   Map<String, dynamic> toJson() {
     final Map<String, dynamic> data =  <String, dynamic>{};

@@ -45,7 +45,7 @@ class ProductStoreOnHandScreenState2 extends ConsumerState<ProductStoreOnHandScr
   Widget build(BuildContext context){
     final productAsync = ref.watch(findProductByUPCOrSKUForStoreOnHandProvider);
     final productsStoredAsync = ref.watch(findProductsStoreOnHandProvider);
-    widget.productsNotifier = ref.watch(scanStateNotifierProvider.notifier);
+    widget.productsNotifier = ref.watch(scanHandleNotifierProvider.notifier);
     final double width = MediaQuery.of(context).size.width - 30;
     final double bodyHeight = MediaQuery.of(context).size.height - 200;
     final resultOfSameWarehouse = ref.watch(resultOfSameWarehouseProvider.notifier);
@@ -66,7 +66,6 @@ class ProductStoreOnHandScreenState2 extends ConsumerState<ProductStoreOnHandScr
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       ref.read(isScanningProvider.notifier).update((state) => false);
     });
-    //print('Bearer ${Environment.token}');
     return Scaffold(
       appBar: AppBar(
         automaticallyImplyLeading: true,
@@ -229,7 +228,7 @@ class ProductStoreOnHandScreenState2 extends ConsumerState<ProductStoreOnHandScr
         );
         if(result!=null){
 
-          ref.read(scanStateNotifierProvider.notifier).addBarcodeByUPCOrSKUForStoreOnHande(result);
+          ref.read(scanHandleNotifierProvider.notifier).addBarcodeByUPCOrSKUForStoreOnHande(result);
           //ref.read(scannedCodeProvider.notifier).state = result;
         }
 
@@ -279,7 +278,8 @@ class ProductStoreOnHandScreenState2 extends ConsumerState<ProductStoreOnHandScr
                         padding: const EdgeInsets.all(10),
                         itemBuilder: (context, index) {
               final product = storages[index];
-              return StorageOnHandCard(widget.productsNotifier, product, index + 1, storages.length, width: width - 10);
+              return StorageOnHandCard(widget.productsNotifier, product, index + 1,
+                  storages.length, width: width - 10,);
                         },
                       ),
             ),
@@ -361,7 +361,6 @@ class ProductStoreOnHandScreenState2 extends ConsumerState<ProductStoreOnHandScr
       btnOkOnPress: () {
         ref.watch(usePhoneCameraToScanProvider.notifier).state = stateActual;
         final result = controller.text;
-        print('-------------------------result $result');
         if(result==''){
           AwesomeDialog(
             context: context,
@@ -399,7 +398,9 @@ class ProductStoreOnHandScreenState2 extends ConsumerState<ProductStoreOnHandScr
           ref.watch(isDialogShowedProvider)? Container() :
           ref.watch(usePhoneCameraToScanProvider) ?buttonScanWithPhone(context, ref):
           //ScanBarcodeMultipurposeButton(widget.productsNotifier)));
-          ScanProductBarcodeButton(widget.productsNotifier, actionTypeInt: widget.actionTypeInt,pageIndex: widget.pageIndex),
+          ScanProductBarcodeButton(
+              notifier: widget.productsNotifier,
+              actionTypeInt: widget.actionTypeInt,pageIndex: widget.pageIndex),
           ));
 
   }

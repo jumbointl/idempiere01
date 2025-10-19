@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/legacy.dart';
 import 'package:monalisa_app_001/features/m_inout/domain/entities/line.dart';
 import 'package:monalisa_app_001/features/m_inout/domain/entities/m_in_out.dart';
 import 'package:monalisa_app_001/features/m_inout/domain/entities/m_in_out_confirm.dart';
@@ -144,7 +145,7 @@ class MInOutNotifier extends StateNotifier<MInOutStatus> {
     }
   }
 
-  cargarLista(WidgetRef ref) async {
+  Future<void> cargarLista(WidgetRef ref) async {
     if (state.mInOutType == MInOutType.move ||
         state.mInOutType == MInOutType.moveConfirm) {
       await getMovementList(ref);

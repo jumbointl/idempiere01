@@ -130,5 +130,14 @@ class IdempiereStorageOnHande extends IdempiereObject{
     
     return data;
   }
+
+  static List<IdempiereStorageOnHande>? fromJsonList(json) {
+
+    if (json is List) {
+      return json.map((item) => IdempiereStorageOnHande.fromJson(item)).toList();
+    } else {
+      return null ;
+    }
+  }
 }
 

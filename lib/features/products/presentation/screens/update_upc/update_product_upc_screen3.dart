@@ -65,7 +65,6 @@ class UpdateProductUpcScreen3State extends ConsumerState<UpdateProductUpcScreen3
     }
     Color foreGroundProgressBar = Colors.amber[600]!;
 
-    //print('Bearer ${Environment.token}');
     return Scaffold(
 
 
@@ -161,8 +160,7 @@ class UpdateProductUpcScreen3State extends ConsumerState<UpdateProductUpcScreen3
           cameraFace: CameraFace.back,
         );
         if(result!=null){
-          print('-----------------------------add new upc code $result');
-          ref.read(scanStateNotifierProvider.notifier).addNewUPCCode(result);
+          ref.read(scanHandleNotifierProvider.notifier).addNewUPCCode(result);
         }
 
       },
@@ -285,7 +283,6 @@ class UpdateProductUpcScreen3State extends ConsumerState<UpdateProductUpcScreen3
                        return;
                      }
                      dataToUpdateUPC = true ;
-                     print('----------------------------ACTION_UPDATE_UPC UPC> ${ref.read(newUPCToUpdateProvider)}');
                      String id = ref.read(productForUpcUpdateProvider.notifier).state.id!.toString();
                      String newUPC = ref.read(newUPCToUpdateProvider.notifier).state;
 
@@ -314,7 +311,6 @@ class UpdateProductUpcScreen3State extends ConsumerState<UpdateProductUpcScreen3
                      //ref.watch(isScanningProvider.notifier).update((state) => true);
 
                      ref.read(dataToUpdateUPCProvider.notifier).update((state) => updateData);
-                     print('dataToUpdateUPCProvider.notifier send with: ${ref.read(dataToUpdateUPCProvider.notifier).state}');
                    },
                    child: Text(hinTextUpdateUPC)),
              ),
@@ -360,7 +356,6 @@ class UpdateProductUpcScreen3State extends ConsumerState<UpdateProductUpcScreen3
          btnOkOnPress: () {
            ref.watch(usePhoneCameraToScanProvider.notifier).state = stateActual;
            final result = controller.text;
-           print('-------------------------result $result');
            if(result==''){
              AwesomeDialog(
                context: context,
@@ -387,7 +382,7 @@ class UpdateProductUpcScreen3State extends ConsumerState<UpdateProductUpcScreen3
          }
      ).show();
    }
-   isCanEditUPC() {
+   bool isCanEditUPC() {
      if(ref.read(productForUpcUpdateProvider).id==null || ref.read(productForUpcUpdateProvider).id==0){
        return false ;
 

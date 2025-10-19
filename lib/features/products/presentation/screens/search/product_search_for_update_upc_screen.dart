@@ -62,7 +62,7 @@ class _ProductSearchForUpdateUpcScreenState extends ConsumerState<ProductSearchF
   Widget build(BuildContext context){
 
     final productAsync = ref.watch(findProductByUPCOrSKUProvider);
-    widget.productsNotifier = ref.watch(scanStateNotifierProvider.notifier);
+    widget.productsNotifier = ref.watch(scanHandleNotifierProvider.notifier);
     final double width = MediaQuery.of(context).size.width - 30;
     final double bodyHeight = MediaQuery.of(context).size.height - 100;
     final isScanning = ref.watch(isScanningProvider);
@@ -79,7 +79,6 @@ class _ProductSearchForUpdateUpcScreenState extends ConsumerState<ProductSearchF
       imageUrl = Memory.IMAGE_HTTP_SAMPLE_1;
     }
     Color foreGroundProgressBar = Colors.purple;
-    //print('Bearer ${Environment.token}');
     return Scaffold(
       resizeToAvoidBottomInset : false,
 
@@ -159,7 +158,6 @@ class _ProductSearchForUpdateUpcScreenState extends ConsumerState<ProductSearchF
                       onPressed: (){
                         FocusScope.of(context).unfocus();
                         DataUtils.saveIdempiereProduct(ref.read(productForUpcUpdateProvider));
-                        print('----------------------------ACTION_UPDATE_UPC UPC> make dialog');
 
                         context.push(AppRouter.PAGE_UPDATE_PRODUCT_UPC);
                       },
@@ -262,7 +260,7 @@ class _ProductSearchForUpdateUpcScreenState extends ConsumerState<ProductSearchF
 
   }
 
-  isCanEditUPC() {
+  bool isCanEditUPC() {
     if(ref.read(productForUpcUpdateProvider).id==null || ref.read(productForUpcUpdateProvider).id==0){
       return false ;
 

@@ -30,7 +30,7 @@ class UpdateProductUpcViewState extends ConsumerState<UpdateProductUpcView> {
   @override
   Widget build(BuildContext context){
 
-    widget.productsNotifier = ref.watch(scanStateNotifierProvider.notifier);
+    widget.productsNotifier = ref.watch(scanHandleNotifierProvider.notifier);
     final double width = MediaQuery.of(context).size.width - 30;
     final double bodyHeight = MediaQuery.of(context).size.height - 200;
     final isScanning = ref.watch(isScanningProvider);
@@ -150,7 +150,6 @@ class UpdateProductUpcViewState extends ConsumerState<UpdateProductUpcView> {
                   ),
                   onPressed: (){
                     // ACTUALOZAR UPC
-                    print('----------------------------ACTION_UPDATE_UPC UPC> ${ref.read(newUPCToUpdateProvider)}');
 
                   },
                   child: Text(Messages.UPDATE_IMAGE)),
@@ -197,7 +196,6 @@ class UpdateProductUpcViewState extends ConsumerState<UpdateProductUpcView> {
         btnOkOnPress: () {
           ref.watch(usePhoneCameraToScanProvider.notifier).state = stateActual;
           final result = controller.text;
-          print('-------------------------result $result');
           if(result==''){
             AwesomeDialog(
               context: context,

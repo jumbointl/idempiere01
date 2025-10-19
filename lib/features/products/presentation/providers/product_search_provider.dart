@@ -1,5 +1,7 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/legacy.dart';
+import 'package:monalisa_app_001/features/products/presentation/providers/product_provider_common.dart';
 
 import '../../../../config/http/dio_client.dart';
 import '../../../auth/presentation/providers/auth_provider.dart';
@@ -13,12 +15,12 @@ final productForUpcUpdateProvider = StateProvider.autoDispose<IdempiereProduct>(
   return IdempiereProduct(id:0);
 });
 
-final scannedCodeForSearchProvider = StateProvider.autoDispose<String?>((ref) {
+final scannedCodeForSearchByUPCOrSKUProvider = StateProvider.autoDispose<String?>((ref) {
   return '';
 });
 final findProductByUPCOrSKUProvider = FutureProvider.autoDispose<IdempiereProduct>((ref) async {
-  final String? scannedCode = ref.watch(scannedCodeForSearchProvider)?.toUpperCase();
-
+  final String? scannedCode = ref.watch(scannedCodeForSearchByUPCOrSKUProvider)?.toUpperCase();
+  print('-----------------------------------search addBarcodeByUPCOrSKUForSearch $scannedCode');
   if(scannedCode==null || scannedCode=='') return IdempiereProduct(id:0);
   int? aux = int.tryParse(scannedCode);
   String searchField ='upc';
@@ -31,26 +33,27 @@ final findProductByUPCOrSKUProvider = FutureProvider.autoDispose<IdempiereProduc
     String url =
         "/api/v1/models/m_product?\$filter=$searchField eq '$scannedCode'";
     url = url.replaceAll(' ', '%20');
-
+    print(url);
     final response = await dio.get(url);
-
+    print(response.statusCode);
     if (response.statusCode == 200) {
       final responseApi =
       ResponseApi<IdempiereProduct>.fromJson(response.data, IdempiereProduct.fromJson);
 
       if (responseApi.records != null && responseApi.records!.isNotEmpty) {
         final productsList = responseApi.records!;
+        print(responseApi.records![0].toJson());
         if(productsList.length==1){
-          ref.watch(productForUpcUpdateProvider.notifier).state = productsList[0];
+          ref.read(productIdProvider.notifier).state = productsList[0].id ?? 0;
         } else {
-          ref.watch(productForUpcUpdateProvider.notifier).state = IdempiereProduct(id:0);
+          ref.read(productIdProvider.notifier).state = productsList[0].id ?? 0;
         }
-
+        print(ref.read(productIdProvider.notifier).state);
 
         return productsList[0];
 
       } else {
-        ref.watch(productForUpcUpdateProvider.notifier).state = IdempiereProduct(id:0);
+        ref.read(productIdProvider.notifier).state =  0;
         return IdempiereProduct(name: Messages.NOT_FOUND, uPC: scannedCode,id: 0);
       }
     } else {

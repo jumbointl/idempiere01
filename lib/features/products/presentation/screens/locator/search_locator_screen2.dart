@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/legacy.dart';
 import 'package:monalisa_app_001/features/products/presentation/providers/locator_provider.dart';
 
 import '../movement/products_home_provider.dart';
@@ -7,7 +8,7 @@ import '../../../../shared/data/memory.dart';
 import '../../../../shared/data/messages.dart';
 import '../../providers/product_provider_common.dart';
 import '../../widget/input_string_dialog.dart';
-import '../../widget/locator_card.dart';
+import 'locator_card.dart';
 
 
 class SearchLocatorScreen extends ConsumerStatefulWidget {
@@ -16,7 +17,7 @@ class SearchLocatorScreen extends ConsumerStatefulWidget {
   // send result to state provider to display selection
   final StateProvider resultStateProvider;
   // send text to future provider watched state provider, to activate search
-  final AutoDisposeStateProvider textToSearchStateProvider;
+  final StateProvider textToSearchStateProvider;
   String? title;
   final int typeOfDialog;
 
@@ -80,8 +81,6 @@ class SearchLocatorScreenState extends ConsumerState<SearchLocatorScreen> {
           onPressed: () => {
             FocusScope.of(context).unfocus(),
             ref.read(productsHomeCurrentIndexProvider.notifier).state = Memory.pageFromIndex,
-            ref.read(isLocatorScreenShowedProvider.notifier).state = false,
-            print('------------------ memory pagefrom ${Memory.pageFromIndex}'),
             Navigator.pop(context),
             //dispose(),
           },
@@ -104,9 +103,7 @@ class SearchLocatorScreenState extends ConsumerState<SearchLocatorScreen> {
 
             return;
           }
-          print('------------------ memory pagefrom ${Memory.pageFromIndex}');
           ref.read(productsHomeCurrentIndexProvider.notifier).state = Memory.pageFromIndex;
-          ref.read(isLocatorScreenShowedProvider.notifier).state = false;
           Navigator.pop(context);
         },
         child: Container(
@@ -130,6 +127,7 @@ class SearchLocatorScreenState extends ConsumerState<SearchLocatorScreen> {
                       itemBuilder: (context, index) =>Center(
                         child: Center(
                           child: LocatorCard(
+                              forCreateLine: false,
                               searchLocatorFrom: false,
                               data: locators[index],width: width,
                               index: index),

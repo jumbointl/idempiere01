@@ -1,10 +1,20 @@
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/legacy.dart';
 import 'package:monalisa_app_001/features/products/presentation/providers/products_scan_notifier.dart';
+import 'package:monalisa_app_001/features/products/presentation/providers/products_scan_notifier_for_line.dart';
 
 import '../../domain/idempiere/idempiere_product.dart';
+import 'movement_confirm_state_notifier.dart';
 
-final scanStateNotifierProvider = StateNotifierProvider.autoDispose<ProductsScanNotifier, List<IdempiereProduct>>((ref) {
+final scanHandleNotifierProvider = StateNotifierProvider.autoDispose<ProductsScanNotifier, List<IdempiereProduct>>((ref) {
   return ProductsScanNotifier(ref);
+
+});
+final scanStateNotifierForLineProvider = StateNotifierProvider.autoDispose<ProductsScanNotifierForLine, List<IdempiereProduct>>((ref) {
+  return ProductsScanNotifierForLine(ref);
+
+});
+final movementConfirmStateNotifierProvider = StateNotifierProvider.autoDispose<MovementConfirmStateNotifier, List<IdempiereProduct>>((ref) {
+  return MovementConfirmStateNotifier(ref);
 
 });
 
@@ -24,12 +34,21 @@ final searchStringProvider = StateProvider.autoDispose<String>((ref) {
 final isScanningProvider = StateProvider.autoDispose<bool>((ref) {
   return false;
 });
+final isScanningForLineProvider = StateProvider.autoDispose<bool>((ref) {
+  return false;
+});
+
+
 final isScanningFromDialogProvider = StateProvider.autoDispose<bool>((ref) {
   return false;
 });
 final usePhoneCameraToScanProvider = StateProvider.autoDispose<bool>((ref) {
   return false;
 });
+final usePhoneCameraToScanForLineProvider = StateProvider.autoDispose<bool>((ref) {
+  return false;
+});
+
 final usePhoneCameraToScanProvider2 = StateProvider.autoDispose<bool>((ref) {
   return false;
 });

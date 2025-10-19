@@ -18,30 +18,32 @@ class LoginScreen extends StatelessWidget {
         backgroundColor: Colors.white,
         body: SizedBox(
           height: MediaQuery.of(context).size.height-10,
-          child: ListView(
-            shrinkWrap: true,
-            children: [
-              SizedBox(
-                height: MediaQuery.of(context).size.height - 385-20,
-                child: Center(
-                  child: Image.asset(
-                    'assets/images/logo-monalisa.jpg',
-                    fit: BoxFit.contain,
+          child: SingleChildScrollView(
+            child: ListView(
+              shrinkWrap: true,
+              children: [
+                SizedBox(
+                  height: MediaQuery.of(context).size.height - 385-20,
+                  child: Center(
+                    child: Image.asset(
+                      'assets/images/logo-monalisa.jpg',
+                      fit: BoxFit.contain,
+                    ),
                   ),
                 ),
-              ),
-              Container(
-                height: 365,
-                decoration: BoxDecoration(
-                  color: themeColorGrayLight,
-                  borderRadius: const BorderRadius.only(
-                    topLeft: Radius.circular(30),
-                    topRight: Radius.circular(30),
+                Container(
+                  height: 365,
+                  decoration: BoxDecoration(
+                    color: themeColorGrayLight,
+                    borderRadius: const BorderRadius.only(
+                      topLeft: Radius.circular(30),
+                      topRight: Radius.circular(30),
+                    ),
                   ),
+                  child: const _LoginForm(),
                 ),
-                child: const _LoginForm(),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),

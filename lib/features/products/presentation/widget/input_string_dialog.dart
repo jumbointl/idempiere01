@@ -1,20 +1,54 @@
 import 'package:awesome_dialog/awesome_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/legacy.dart';
+import 'package:monalisa_app_001/features/products/common/input_dialog.dart';
 
+import '../../common/input_data_processor.dart';
 import '../providers/product_provider_common.dart';
 import '../../../shared/data/memory.dart';
 import '../../../shared/data/messages.dart';
-class InputStringDialog extends ConsumerStatefulWidget {
+class InputStringDialog extends ConsumerStatefulWidget implements InputDataProcessor {
   int dialogType = Memory.TYPE_DIALOG_SEARCH;
   String title = Messages.INPUT_DIALOG_TITLE;
-  final AutoDisposeStateProvider textStateProvider;
+  final StateProvider textStateProvider;
   InputStringDialog({required this.title, required this.textStateProvider,
     required this.dialogType, super.key});
 
 
   @override
   ConsumerState<InputStringDialog> createState() => InputStringDialogState();
+
+  @override
+  void addQuantityText(BuildContext context, WidgetRef ref, TextEditingController quantityController, int i) {
+    // TODO: implement addQuantityText
+  }
+
+  @override
+  Future<void> handleInputString(BuildContext context, WidgetRef ref, String result) async {
+    if (result == '') {
+      AwesomeDialog(
+        context: context,
+        animType: AnimType.scale,
+        dialogType: DialogType.error,
+        body: Center(child: Text(
+          Messages.ERROR_LOCATOR_EMPTY,
+        ),),
+        // correct here
+        title: Messages.ERROR_LOCATOR_EMPTY,
+        desc: '',
+        autoHide: const Duration(seconds: 3),
+        btnOkOnPress: () {},
+        btnOkColor: Colors.amber,
+        btnCancelText: Messages.CANCEL,
+        btnOkText: Messages.OK,
+      ).show();
+    } else {
+      var textState = ref.read(textStateProvider.notifier);
+      textState.update((state) => result);
+    }
+  }
+
 }
 
 class InputStringDialogState extends ConsumerState<InputStringDialog> {
@@ -22,7 +56,7 @@ class InputStringDialogState extends ConsumerState<InputStringDialog> {
 
   @override
   Widget build(BuildContext context) {
-     textState = ref.watch(widget.textStateProvider.notifier);
+
      switch(widget.dialogType){
        case Memory.TYPE_DIALOG_SEARCH: // Barcode input dialog
          return IconButton(
@@ -51,7 +85,6 @@ class InputStringDialogState extends ConsumerState<InputStringDialog> {
   }
   Future<void> getInputText(BuildContext context, WidgetRef ref) async{
     TextEditingController controller = TextEditingController();
-    print("IconButton pressed, dialogType: ${widget.dialogType}");
     // You would typically show a dialog here using showDialog or a similar method.
     // Example:
     if(widget.dialogType == Memory.TYPE_DIALOG_HISTOY){
@@ -63,8 +96,14 @@ class InputStringDialogState extends ConsumerState<InputStringDialog> {
       }
 
     }
-    bool stateActual = ref.watch(usePhoneCameraToScanProvider.notifier).state;
+    openInputDialog(context, ref, false, widget);
+
+
+
+    /*
+     bool stateActual = ref.watch(usePhoneCameraToScanProvider.notifier).state;
     ref.watch(usePhoneCameraToScanProvider.notifier).state = true;
+
     AwesomeDialog(
         context: context,
         headerAnimationLoop: false,
@@ -92,7 +131,6 @@ class InputStringDialogState extends ConsumerState<InputStringDialog> {
         btnOkOnPress: () {
           ref.watch(usePhoneCameraToScanProvider.notifier).state = stateActual;
           final result = controller.text;
-          print('-------------------------result $result');
           Memory.lastSearch = result;
           if(result==''){
             AwesomeDialog(
@@ -118,7 +156,7 @@ class InputStringDialogState extends ConsumerState<InputStringDialog> {
           ref.watch(usePhoneCameraToScanProvider.notifier).state = stateActual;
           return ;
         }
-    ).show();
+    ).show();*/
 
   }
 }

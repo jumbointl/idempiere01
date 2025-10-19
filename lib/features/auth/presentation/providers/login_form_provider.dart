@@ -1,4 +1,4 @@
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/legacy.dart';
 import 'package:formz/formz.dart';
 import 'package:monalisa_app_001/features/auth/presentation/providers/auth_provider.dart';
 import 'package:monalisa_app_001/features/shared/shared.dart';
@@ -17,21 +17,21 @@ class LoginFormNotifier extends StateNotifier<LoginFormState> {
     required this.loginUserCallback,
   }) : super(LoginFormState());
 
-  onUserNameChange(String value) {
+  void onUserNameChange(String value) {
     final newUserName = Title.dirty(value);
     state = state.copyWith(
         userName: newUserName,
         isValid: Formz.validate([newUserName, state.password]));
   }
 
-  onPasswordChanged(String value) {
+  void onPasswordChanged(String value) {
     final newPassword = Password.dirty(value);
     state = state.copyWith(
         password: newPassword,
         isValid: Formz.validate([newPassword, state.userName]));
   }
 
-  onFormSubmit() async {
+  Future<void> onFormSubmit() async {
     _touchEveryField();
     if (!state.isValid) return;
     state = state.copyWith(isPosting: true);
@@ -39,7 +39,7 @@ class LoginFormNotifier extends StateNotifier<LoginFormState> {
     state = state.copyWith(isPosting: false);
   }
 
-  _touchEveryField() {
+  void _touchEveryField() {
     final userName = Title.dirty(state.userName.value);
     final password = Password.dirty(state.password.value);
     state = state.copyWith(

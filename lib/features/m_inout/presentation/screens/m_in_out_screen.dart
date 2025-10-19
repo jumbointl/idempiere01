@@ -1298,7 +1298,7 @@ class _MInOutView extends ConsumerWidget {
     );
   }
 
-  _buildListOver(BuildContext context, List<Barcode> barcodeList,
+  Column _buildListOver(BuildContext context, List<Barcode> barcodeList,
       MInOutNotifier mInOutNotifier) {
     return Column(
       children: [

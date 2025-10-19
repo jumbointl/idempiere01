@@ -3,7 +3,7 @@ class Environment {
   static String token = '';
   static bool validateCertificate = false;
 
-  static initEnvironment() async {
+  static Future<void> initEnvironment() async {
     // await dotenv.load(fileName: '.env');
   }
 

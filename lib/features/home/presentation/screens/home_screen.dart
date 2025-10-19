@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:monalisa_app_001/config/config.dart';
+import 'package:monalisa_app_001/features/products/presentation/screens/store_on_hand/memory_products.dart';
 import 'package:monalisa_app_001/features/shared/shared.dart';
 
 import '../../../shared/presentation/widgets/side_menu.dart';
@@ -10,6 +11,7 @@ class HomeScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    MemoryProducts.width =  MediaQuery.of(context).size.width;
     final scaffoldKey = GlobalKey<ScaffoldState>();
     return Scaffold(
       drawer: SideMenu(scaffoldKey: scaffoldKey),

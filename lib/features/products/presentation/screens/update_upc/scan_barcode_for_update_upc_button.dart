@@ -15,7 +15,6 @@ class ScanBarcodeForUpdateUpcButton extends ConsumerStatefulWidget {
   ScanBarcodeForUpdateUpcButton(this.notifier,{ required this.actionTypeInt,super.key});
   void handleResult(WidgetRef ref, String data) {
     if (data.isNotEmpty) {
-      print('----------------------addNewUPCCode------SCANNED $actionTypeInt');
       notifier.addNewUPCCode(data);
       scannedData = "";
     }
@@ -47,10 +46,6 @@ class _ScanBarcodeForUpdateUpcButtonState extends ConsumerState<ScanBarcodeForUp
 
   void _handleKeyEvent(KeyEvent event) async {
 
-    print('--x--event.character ${event.character}');
-    print('--x--event.logicalKey ${event.logicalKey.keyLabel}');
-    print('--x--event.keyName ${event.logicalKey.keyId}');
-    print('--x--scannedData ${widget.scannedData}');
 
     if (event.logicalKey == LogicalKeyboardKey.enter) {
       widget.handleResult(ref, widget.scannedData);
@@ -70,7 +65,6 @@ class _ScanBarcodeForUpdateUpcButtonState extends ConsumerState<ScanBarcodeForUp
     WidgetsBinding.instance.addPostFrameCallback((_) {
 
 
-      print('focusnode ${_focusNode.hasFocus}');
       if (mounted) {
 
         if (ref.read(isScanningProvider.notifier).state) {
@@ -80,7 +74,6 @@ class _ScanBarcodeForUpdateUpcButtonState extends ConsumerState<ScanBarcodeForUp
           if (!_focusNode.hasFocus) {
             Future.delayed(const Duration(milliseconds: 100), () {
               _focusNode.requestFocus();
-              print('focusnode ${_focusNode.hasFocus}');
 
             });
           }

@@ -92,20 +92,28 @@ final appHomeOptionCol3Items = <MenuItem>[
     icon: Icons.swap_horiz,
   ),
   MenuItem(
-    title: Messages.STORE_ON_HAND,
+    title: Messages.MOVEMENT_CREATE,
     subTitle: '',
-    link: AppRouter.PAGE_PRODUCT_STORE_ON_HAND,
+    link: '${AppRouter.PAGE_PRODUCT_STORE_ON_HAND}/-1',
     icon: Icons.inventory,
   ),
 
-  MenuItem(
-    title: Messages.MOVEMENT,
+  /*MenuItem(
+    title: Messages.MOVEMENT_CREATE,
     subTitle: '',
-    link: AppRouter.PAGE_MOVEMENTS_SEARCH,
+    link: '${AppRouter.NEW_PAGE_STORAGE_ON_HANGE}/-1',
+    icon: Icons.move_up
+    ,
+  ),*/
+  MenuItem(
+    title: Messages.MOVEMENT_EDIT,
+    subTitle: '',
+    //link: '${AppRouter.PAGE_MOVEMENTS_SEARCH}/:movementId',
+    link: '${AppRouter.PAGE_MOVEMENTS_SEARCH}/:movementId',
     icon: Icons.move_up
     ,
   ),
-  MenuItem(
+  /*MenuItem(
     title: Messages.ADD_UPC,
     subTitle: '',
     link: AppRouter.PAGE_PRODUCT_SEARCH_UPDATE_UPC,
@@ -116,7 +124,7 @@ final appHomeOptionCol3Items = <MenuItem>[
     subTitle: '',
     link: AppRouter.PAGE_PRODUCT_SEARCH,
     icon: Icons.search,
-  ),
+  ),*/
 ];
 
 const appTemplateMenuItems = <MenuItem>[

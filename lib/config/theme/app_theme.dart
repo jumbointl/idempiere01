@@ -5,6 +5,8 @@ import 'package:google_fonts/google_fonts.dart';
 const themeColorPrimary = Color.fromRGBO(31, 44, 80, 1);
 const themeColorPrimaryLight = Color.fromRGBO(140, 150, 255, 1);
 const themeColorPrimaryLight2 = Color.fromRGBO(173, 180, 246, 1.0);
+Color themeColorPrimaryGreen800 =  Colors.green[800]!;
+Color themeColorPrimaryBlue800 =  Colors.blue[800]!;
 const themeColorPrimaryDark = Color.fromRGBO(13, 13, 16, 1.0);
 
 const themeBackgroundColor = Colors.white;
@@ -53,7 +55,7 @@ class AppTheme {
 
       ///* AppBar
       appBarTheme: AppBarTheme(
-        color: themeBackgroundColor,
+        backgroundColor: themeBackgroundColor,
         centerTitle: true,
         titleTextStyle: GoogleFonts.roboto().copyWith(
             fontSize: themeFontSizeTitle, fontWeight: FontWeight.bold, color: themeColorPrimary),

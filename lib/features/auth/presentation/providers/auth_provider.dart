@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'dart:developer';
 
 import 'package:flutter/widgets.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/legacy.dart';
 import 'package:monalisa_app_001/config/config.dart';
 import 'package:monalisa_app_001/features/auth/infrastructure/infrastructure.dart';
 import 'package:monalisa_app_001/features/shared/infrastructure/errors/custom_error.dart';

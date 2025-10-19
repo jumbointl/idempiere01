@@ -1,105 +1,87 @@
-// ignore_for_file: public_member_api_docs, sort_constructors_first
 import 'package:flutter/material.dart';
-import 'package:flutter_addons/flutter_addons.dart';
-
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:monalisa_app_001/features/products/domain/idempiere/idempiere_movement_line.dart';
-import 'package:monalisa_app_001/features/shared/data/messages.dart';
-
+import '../../../../../config/theme/app_theme.dart';
 import '../../../../shared/data/memory.dart';
-
+import '../../../../shared/data/messages.dart';
+import '../../../domain/idempiere/idempiere_movement_line.dart';
+import '../../providers/products_scan_notifier.dart';
 class MovementLineCard extends ConsumerStatefulWidget {
-  final double radius;
-  final double width;
   final IdempiereMovementLine movementLine;
-  const MovementLineCard({super.key, this.radius = 16, required this.movementLine, required this.width});
+  final ProductsScanNotifier productsNotifier ;
+  final double width;
+  final int index;
+  final int totalLength;
+  bool? showLocators = false;
+  MovementLineCard( {required this.width,required this.productsNotifier, required this.movementLine, super.key,
+    required this.index, required this.totalLength, this.showLocators});
+
 
   @override
-  ConsumerState<MovementLineCard> createState() => _MovementLineCardState();
+  ConsumerState<MovementLineCard> createState() => MovementLineCardState();
 }
 
-class _MovementLineCardState extends ConsumerState<MovementLineCard> {
+class MovementLineCardState extends ConsumerState<MovementLineCard> {
+
+  double? height =200;
   @override
   Widget build(BuildContext context) {
-    String id = widget.movementLine.id?.toString() ?? '';
+    if(widget.showLocators??false){
+      height = 210;
+    } else {
+      height = 160;
+    }
     String quantity = Memory.numberFormatter0Digit.format(widget.movementLine.movementQty ?? 0);
-    String name = widget.movementLine.productName ?? '';
-    String uPC = widget.movementLine.uPC ?? '';
-    String sKU = widget.movementLine.sKU ?? '';
-    String locatorFom=widget.movementLine.mLocatorID?.identifier ?? '';
-    String locatorTo=widget.movementLine.mLocatorToID?.identifier ?? '';
-    Icon icon = Icon(Icons.send, color: Colors.amber, size: 22.sp);
+    Color backGroundColor = Colors.cyan[800]!;
+    TextStyle textStyleTitle = TextStyle(fontSize: themeFontSizeLarge, color: Colors.white,fontWeight: FontWeight.bold);
+    TextStyle textStyle = TextStyle(fontSize: themeFontSizeNormal, color: Colors.white,fontWeight: FontWeight.bold);
     return Container(
-      width:double.infinity,
+      height: height,
+      width: widget.width,
       decoration: BoxDecoration(
-        color: context.cardBackground.withValues(alpha: .85),
-        borderRadius: BorderRadius.circular(widget.radius),
+        color: backGroundColor,
+        borderRadius: BorderRadius.circular(10),
       ),
-      child: Row(
+      padding: const EdgeInsets.all(10),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        spacing: 5,
         children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          Text(widget.movementLine.productName ?? '--',style: textStyle,),
+          Row(
+            spacing: 5,
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              SizedBox(
+                width: widget.width / 5,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      '${Messages.ID} $id',
-                      style: context.bodyMedium.bold.copyWith(
-                        color: context.secondaryContent,
-                      ),
-                    ),
-                    Text(
-                      quantity,
-                      style: context.bodyMedium.bold.copyWith(
-                        color: Colors.purple,
-                      ),
-                    ),
+                    Text(Messages.ID,style: textStyleTitle),
+                    Text(Messages.QUANTITY_SHORT,style: textStyleTitle),
+                    Text(Messages.UPC,style: textStyleTitle),
+                    Text(Messages.SKU,style: textStyleTitle),
+                    if(widget.showLocators ?? false)Text(Messages.FROM,style: textStyleTitle),
+                    if(widget.showLocators ?? false)Text(Messages.TO,style: textStyleTitle),
                   ],
                 ),
-                Text(
-                  '${Messages.FROM} : ${Messages.LOCATOR} : $locatorFom',
-                  style: context.bodyMedium.bold.copyWith(
-                    color: context.secondaryContent,
-                  ),
+              ),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('${widget.movementLine.id ?? '--'}',style: textStyleTitle),
+                    Text(quantity,style: textStyleTitle),
+                    Text(widget.movementLine.uPC ?? '--',style: textStyleTitle),
+                    Text(widget.movementLine.sKU ?? '--',style: textStyleTitle),
+                    if(widget.showLocators ?? false)Text(widget.movementLine.mLocatorID?.identifier ?? '--',style: textStyleTitle),
+                    if(widget.showLocators ?? false)Text(widget.movementLine.mLocatorToID?.identifier ?? '--',style: textStyleTitle),
+                  ],
                 ),
-                Text(
-                  '${Messages.TO} : ${Messages.LOCATOR} : $locatorTo',
-                  style: context.bodyMedium.bold.copyWith(
-                    color: Colors.purple,
-                  ),
-                ),
-                Text(name, style: context.bodyMedium.bold),
-                SizedBox(height: 4.h),
-                Text(
-                  '${Messages.UPC} $uPC',
-                  style: context.bodyMedium.copyWith(
-                    color: context.secondaryContent,
-                  ),),
-                Text(
-                  '${Messages.SKU} $sKU',
-                  style: context.bodyMedium.copyWith(
-                    color: context.secondaryContent,
-                  ),),
-
-              ],
-            ),
+              ),
+            ],
           ),
-          SizedBox(width: 14.w),
-          Container(
-            width: 48.w,
-            height: 48.w,
-            decoration: BoxDecoration(
-              color: Colors.white, //tx.backgroundColor.withValues(alpha: .1),
-              borderRadius: BorderRadius.circular(14.r),
-            ),
-            child: icon,
-          ),
-
         ],
-      )
+      ),
     );
   }
 }
-

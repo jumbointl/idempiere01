@@ -9,12 +9,14 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  ai_barcode_scanner: ^7.0.0
   dio: ^5.7.0
   dotenv: ^4.2.0
-  flutter_dotenv: ^5.2.1
-  flutter_riverpod: ^2.6.1
+  flutter_dotenv: ^6.0.0
+  material_symbols_icons: ^4.2873.0
+  flutter_riverpod: ^3.0.0
   formz: ^0.8.0
-  go_router: ^14.6.2
+  go_router: ^16.2.4
   google_fonts: ^6.2.1
   http_parser: ^4.1.2
   idempiere_rest: ^1.0.2
@@ -22,26 +24,30 @@ dependencies:
   shared_preferences: ^2.5.3
   webview_flutter: ^4.10.0
   flutter_launcher_icons: ^0.14.3
+  flutter_onscreen_keyboard: ^0.4.0+1
   intl: ^0.20.2
   input_dialog: ^0.1.1
   simple_barcode_scanner: ^0.3.0
   change_app_package_name: ^1.5.0
   awesome_dialog: ^3.2.1
-  flutter_addons: 2.1.2
-  fl_chart: ^0.70.2
+  flutter_addons: ^2.5.0
+  fl_chart: ^1.1.1
   pin_code_fields: ^8.0.1
   card_swiper: ^3.0.1
-  flutter_svg: ^2.1.0
-  flutter_svg_provider: ^1.0.7
   country_picker: ^2.0.27
   pinput: ^5.0.1
-  mobile_scanner: ^7.0.0
+  mobile_scanner: ^7.1.2
   flutter_tabler_icons: ^1.43.0
   riverpod: any
+  slide_to_confirm: ^1.1.0
+  get_storage: ^2.1.1
+  printing: ^5.14.2
+  pdf: ^3.11.3
+  flutter_net_printer: ^1.0.4
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  flutter_lints: ^5.0.0
+  flutter_lints: ^6.0.0
 
 flutter:
   uses-material-design: true
@@ -54,7 +60,6 @@ flutter:
     - google_fonts/
     - assets/loaders/
     - google_fonts/montserrat_alternates/
-    - assets/svgs/
 
   fonts:
     - family: Poppins

@@ -1,22 +1,34 @@
 
 
+import 'dart:convert';
+
 import 'package:awesome_dialog/awesome_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/legacy.dart';
+import 'package:get_storage/get_storage.dart';
+import 'package:go_router/go_router.dart';
+import 'package:monalisa_app_001/features/products/domain/idempiere/put_away_movement.dart';
 import 'package:monalisa_app_001/features/products/domain/sql/sql_data_movement.dart';
 import 'package:monalisa_app_001/features/products/presentation/providers/product_provider_common.dart';
 import 'package:monalisa_app_001/features/products/presentation/providers/product_search_provider.dart';
 import 'package:monalisa_app_001/features/products/presentation/providers/product_update_upc_provider.dart';
+import 'package:monalisa_app_001/features/products/presentation/providers/store_on_hand_for_put_away_movement.dart';
+import '../../../../config/router/app_router.dart';
 import '../../../shared/data/memory.dart';
 import '../../../shared/data/messages.dart';
+import '../../common/input_data_processor.dart';
 import '../../domain/idempiere/idempiere_product.dart';
+import '../../domain/idempiere/movement_and_lines.dart';
 import '../../domain/sql/sql_data_movement_line.dart';
+import '../screens/movement/provider/new_movement_provider.dart';
 import '../screens/store_on_hand/memory_products.dart';
 import 'locator_provider.dart';
-import 'movement_provider.dart';
+import 'movement_provider_old.dart';
+import 'movement_provider_for_line.dart';
 import 'store_on_hand_provider.dart';
 
-class ProductsScanNotifier  extends StateNotifier<List<IdempiereProduct>>{
+class ProductsScanNotifier  extends StateNotifier<List<IdempiereProduct>> implements InputDataProcessor{
   static const int SQL_QUERY_CREATE =1;
   static const int SQL_QUERY_UPDATE =2;
   static const int SQL_QUERY_DELETE =3;
@@ -26,13 +38,14 @@ class ProductsScanNotifier  extends StateNotifier<List<IdempiereProduct>>{
   final Ref ref;
   // override addBarcode method when the scannedCodeProvider changes
   void addBarcodeByUPCOrSKUForStoreOnHande(String scannedData) {
-    ref.watch(searchByMOLIConfigurableSKUProvider.notifier).state = false;
+    print('findProductByUPCOrSKUForStoreOnHandProvider $scannedData');
+    ref.read(searchByMOLIConfigurableSKUProvider.notifier).state = false;
     Memory.lastSearch = scannedData;
     _addBarcode(scannedData);
 
   }
   void addBarcodeByMOLISKU(String scannedData) {
-    ref.watch(searchByMOLIConfigurableSKUProvider.notifier).state = true;
+    ref.read(searchByMOLIConfigurableSKUProvider.notifier).state = true;
 
     _addBarcode(scannedData);
 
@@ -41,10 +54,9 @@ class ProductsScanNotifier  extends StateNotifier<List<IdempiereProduct>>{
     if(scannedData.length==12){
       scannedData='0$scannedData';
     }
-    ref.watch(resultOfSameWarehouseProvider.notifier).state = [];
-    ref.watch(scannedCodeForStoredOnHandProvider.notifier).update((state) => scannedData);
-    ref.watch(scannedCodeTimesProvider.notifier).update((state) => state+1);
-    ref.watch(isScanningProvider.notifier).update((state) => true);
+    ref.read(scannedCodeForPutAwayMovementProvider.notifier).update((state) => scannedData);
+    ref.read(scannedCodeTimesProvider.notifier).update((state) => state+1);
+    ref.read(isScanningProvider.notifier).update((state) => true);
 
   }
   bool getIsScanning(){
@@ -53,13 +65,13 @@ class ProductsScanNotifier  extends StateNotifier<List<IdempiereProduct>>{
 
   void updateIsScanning(bool bool) {
 
-    ref.watch(isScanningProvider.notifier).update((state) => bool);
+    ref.read(isScanningProvider.notifier).update((state) => bool);
   }
 
   void addNewUPCCode(String scannedData){
-    ref.watch(newUPCToUpdateProvider.notifier).update((state) => scannedData);
-    ref.watch(scannedCodeTimesProvider.notifier).update((state) => state+1);
-    ref.watch(isScanningProvider.notifier).update((state) => false);
+    ref.read(newUPCToUpdateProvider.notifier).update((state) => scannedData);
+    ref.read(scannedCodeTimesProvider.notifier).update((state) => state+1);
+    ref.read(isScanningProvider.notifier).update((state) => false);
   }
 
   void updateProductUPC(BuildContext context) async {
@@ -88,65 +100,193 @@ class ProductsScanNotifier  extends StateNotifier<List<IdempiereProduct>>{
       return;
     }
     List<String> updateData =[id,newUPC];
-      //ref.watch(isScanningProvider.notifier).update((state) => true);
-
       ref.read(dataToUpdateUPCProvider.notifier).update((state) => updateData);
-      print('dataToUpdateUPCProvider.notifier send with: ${ref.read(dataToUpdateUPCProvider.notifier).state}');
-
-
-
-
-
   }
 
   void addBarcodeByUPCOrSKUForSearch(String data) {
-    ref.watch(isScanningProvider.notifier).update((state) => true);
-    ref.watch(dataToUpdateUPCProvider.notifier).state = [];
+    ref.read(isScanningProvider.notifier).update((state) => true);
+    ref.read(dataToUpdateUPCProvider.notifier).state = [];
     Memory.lastSearch = data;
-    ref.watch(scannedCodeForSearchProvider.notifier).update((state) => data);
-    ref.watch(scannedCodeTimesProvider.notifier).update((state) => state+1);
+    ref.read(scannedCodeForSearchByUPCOrSKUProvider.notifier).update((state) => data);
+    ref.read(scannedCodeTimesProvider.notifier).update((state) => state+1);
 
   }
 
-  void setLocatorToValue(String data) {
-    ref.watch(isScanningFromDialogProvider.notifier).update((state) => true);
-    ref.watch(scannedLocatorToProvider.notifier).update((state) => data);
+  void findLocatorToByValue(WidgetRef ref, String data) {
+    ref.read(isScanningFromDialogProvider.notifier).update((state) => true);
+    ref.read(isScanningLocatorToProvider.notifier).update((state) => true);
+    ref.read(scannedLocatorToProvider.notifier).update((state) => data);
+
   }
-  void setLocatorFromValue(String data) {
-    ref.watch(isScanningFromDialogProvider.notifier).update((state) => true);
-    ref.watch(scannedLocatorFromProvider.notifier).update((state) => data);
+  void findLocatorFromByValue(WidgetRef ref, String data) {
+    ref.read(isScanningFromDialogProvider.notifier).update((state) => true);
+    ref.read(scannedLocatorFromProvider.notifier).update((state) => data);
   }
 
 
   void dialogDispose() {
-    ref.watch(isDialogShowedProvider.notifier).update((state) =>false);
+    ref.read(isDialogShowedProvider.notifier).update((state) =>false);
   }
   void createMovement(SqlDataMovement sqlData){
-    print('----------------------------------start createMovement');
-    ref.watch(newSqlDataMovementProvider.notifier).update((state) => sqlData);
+    ref.read(newSqlDataMovementProvider.notifier).update((state) => sqlData);
   }
   void createMovementLine(SqlDataMovementLine sqlData){
-    print('----------------------------------start createMovementLine');
-    ref.watch(newSqlDataMovementLineProvider.notifier).update((state) => sqlData);
+    ref.read(newSqlDataMovementLineProvider.notifier).update((state) => sqlData);
   }
 
-  void createPutAwayMovement(){
-    print('----------------------------------start createPutAwayMovement');
-    ref.watch(startedCreateNewPutAwayMovementProvider.notifier).update((state) => true);
-    ref.watch(newSqlDataPutAwayMovementProvider.notifier).update((state) => MemoryProducts.newSqlDataMovementToCreate);
-  }
 
   void addBarcodeToSearchMovement(String result) {
-    ref.watch(isScanningProvider.notifier).update((state) => true);
-    ref.watch(scannedMovementIdForSearchProvider.notifier).update((state) => result);
+    print('----------------------------------start searchMovementByIdOrDocumentNo $result');
+    //ref.read(isScanningProvider.notifier).update((state) => true);
+    ref.read(scannedMovementIdForSearchProvider.notifier).update((state) => result);
+  }
+
+  void confirmMovement(int? id) {
+    ref.read(movementIdForConfirmProvider.notifier).update((state) => id ?? -1);
+  }
+  void showErrorMessage(BuildContext context, WidgetRef ref, String message) {
+    if (!context.mounted) {
+      Future.delayed(const Duration(milliseconds: 500));
+      if(!context.mounted) return;
+    }
+    AwesomeDialog(
+      context: context,
+      animType: AnimType.scale,
+      dialogType: DialogType.error,
+      body: Center(child: Column(
+        children: [
+          Text(message,
+            style: TextStyle(fontStyle: FontStyle.italic),
+          ),
+        ],
+      ),),
+      title:  message,
+      desc:   '',
+      autoHide: const Duration(seconds: 5),
+      btnOkOnPress: () {},
+      btnOkColor: Colors.amber,
+      btnCancelText: Messages.CANCEL,
+      btnOkText: Messages.OK,
+    ).show();
+    return;
+  }
+  void createPutAwayMovement(WidgetRef ref,PutAwayMovement movement){
+    ref.read(startedCreateNewPutAwayMovementProvider.notifier).update((state) => true);
+    print('----------------------------------newSqlDataPutAwayMovementProvider.notifier');
+    ref.read(putAwayMovementCreateProvider.notifier).update((state) => movement);
+    /*ref.read(newSqlDataPutAwayMovementProvider.notifier).update((state) =>
+    MemoryProducts.newSqlDataMovementToCreate);*/
+  }
+  void prepareToCreatePutawayMovement(WidgetRef ref,PutAwayMovement putAwayMovement){
+    int check = putAwayMovement.canCreatePutAwayMovement();
+    print('----------------------------------ERROR = $check');
+    switch (check) {
+      case PutAwayMovement.ERROR_START_CREATE:
+        showErrorMessage(ref.context, ref, Messages.ERROR_START_CREATE);
+        return;
+      case PutAwayMovement.ERROR_LOCATOR_TO:
+        showErrorMessage(ref.context, ref, Messages.ERROR_LOCATOR_TO);
+        return;
+      case PutAwayMovement.ERROR_LOCATOR_FROM:
+        showErrorMessage(ref.context, ref, Messages.ERROR_LOCATOR_FROM);
+        return;
+      case PutAwayMovement.ERROR_SAME_LOCATOR:
+        showErrorMessage(ref.context, ref, Messages.ERROR_SAME_LOCATOR);
+        return;
+      case PutAwayMovement.ERROR_QUANTITY:
+        showErrorMessage(ref.context, ref, Messages.ERROR_QUANTITY);
+        return;
+      case PutAwayMovement.ERROR_WAREHOUSE_FROM:
+        showErrorMessage(ref.context, ref, Messages.ERROR_WAREHOUSE_FROM);
+        return;
+      case PutAwayMovement.ERROR_WAREHOUSE_TO:
+        showErrorMessage(ref.context, ref, Messages.ERROR_WAREHOUSE_TO);
+        return;
+      case PutAwayMovement.ERROR_PRODUCT:
+        showErrorMessage(ref.context, ref, Messages.ERROR_PRODUCT);
+        return;
+      case PutAwayMovement.ERROR_MOVEMENT:
+        showErrorMessage(ref.context, ref, Messages.ERROR_MOVEMENT);
+        return;
+      case PutAwayMovement.ERROR_MOVEMENT_LINE:
+        showErrorMessage(ref.context, ref, Messages.ERROR_MOVEMENT_LINE);
+        return;
+      case PutAwayMovement.SUCCESS:
+        break;
+      default:
+        showErrorMessage(ref.context, ref, Messages.ERROR);
+        return;
+
+    }
+
+    GoRouter.of(ref.context).go(AppRouter.PAGE_CREATE_PUT_AWAY_MOVEMENT,
+        extra: putAwayMovement);
 
   }
 
-  void searchMovementById(String result) {
-    print('----------------------------------start searchMovementById');
-    ref.watch(isScanningProvider.notifier).update((state) => true);
-    ref.watch(scannedMovementIdForSearchProvider.notifier).update((state) => result);
+  @override
+  Future<void> handleInputString(BuildContext context, WidgetRef ref, String data) async {
+    int actionTypeInt = ref.read(actionScanProvider.notifier).state;
 
+    if (data.isNotEmpty) {
+      switch(actionTypeInt){
+        case Memory.ACTION_UPDATE_UPC:
+          addNewUPCCode(data);
+          break;
+        case Memory.ACTION_CALL_UPDATE_PRODUCT_UPC_PAGE:
+          addBarcodeByUPCOrSKUForSearch(data);
+          break;
+        case Memory.ACTION_FIND_BY_UPC_SKU:
+          addBarcodeByUPCOrSKUForSearch(data);
+          break;
+        case Memory.ACTION_FIND_BY_UPC_SKU_FOR_STORE_ON_HAND:
+          addBarcodeByUPCOrSKUForStoreOnHande(data);
+          break;
+        case Memory.ACTION_GET_LOCATOR_TO_VALUE:
+          Memory.awesomeDialog?.dismiss();
+          findLocatorToByValue(ref,data);
+          break;
+        case Memory.ACTION_GET_LOCATOR_FROM_VALUE:
+          Memory.awesomeDialog?.dismiss();
+          findLocatorFromByValue(ref,data);
+          break;
+        case Memory.ACTION_FIND_MOVEMENT_BY_ID:
+          addBarcodeToSearchMovement(data);
+          break;
+        case Memory.ACTION_GO_TO_STORAGE_ON_HAND_PAGE_WITH_UPC:
+          MemoryProducts.movementAndLines.nextProductIdUPC = data;
+          MovementAndLines movementAndLines = MovementAndLines();
+          movementAndLines.cloneMovementAndLines(MemoryProducts.movementAndLines);
+          await GetStorage().write(Memory.KEY_MOVEMENT_AND_LINES, movementAndLines);
+          int? movementId = movementAndLines.id ?? -1;
+          if(movementId <= 0){
+            if(context.mounted) showErrorMessage(context, ref, Messages.ERROR_MOVEMENT_NOT_FOUND);
+            return;
+          }
+          movementAndLines.nextProductIdUPC = data;
+          ref.read(actionScanProvider.notifier).update((state) => Memory.ACTION_FIND_BY_UPC_SKU_FOR_STORE_ON_HAND);
+          if(context.mounted) {
+            ref.context.go(
+                '${AppRouter.PAGE_PRODUCT_STORE_ON_HAND_FOR_LINE}/$data',
+                extra: movementAndLines);
+          }
+          break;
+        default:
+          addBarcodeByUPCOrSKUForSearch(data);
+          break;
+
+      }
+
+      data = "";
+    }
   }
+
+  @override
+  void addQuantityText(BuildContext context, WidgetRef ref, TextEditingController quantityController, int i) {
+    // TODO: implement addQuantityText
+  }
+
+
 }
+
 

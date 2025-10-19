@@ -11,10 +11,10 @@ class NoDataCard extends ConsumerStatefulWidget {
 
 
   @override
-  ConsumerState<NoDataCard> createState() => ProductDetailCardState();
+  ConsumerState<NoDataCard> createState() => NoDataCardState();
 }
 
-class ProductDetailCardState extends ConsumerState<NoDataCard> {
+class NoDataCardState extends ConsumerState<NoDataCard> {
 
   @override
   Widget build(BuildContext context) {
@@ -27,7 +27,7 @@ class ProductDetailCardState extends ConsumerState<NoDataCard> {
     } else {
       int? aux = int.tryParse(scannedCode);
       if(aux==null){
-        searchText = 'SKU: scannedCode';
+        searchText = 'SKU: $scannedCode';
       }
     }
 
@@ -39,27 +39,35 @@ class ProductDetailCardState extends ConsumerState<NoDataCard> {
       hideText = true;
     }
     Color color = themeColorGrayLight;
+    Color textColor = Colors.white;
+    count.isEven ? color = Colors.orangeAccent : color = Colors.redAccent;
     String image ='assets/images/not-found.png';
     (count.isEven) ? image ='assets/images/no_data1.png' : image ='assets/images/no_data2.png';
     if(count == 0) image ='assets/images/barcode_scan.png';
+    IconData icon = Icons.warning;
     return Container(
       width: MediaQuery.of(context).size.width-30,
+      height: 130,
       decoration: BoxDecoration(
         color: color,
         borderRadius: BorderRadius.circular(10),
       ),
       padding: const EdgeInsets.symmetric(vertical: 10,horizontal: 10),
-      child:  hideText ?  IconButton(onPressed: ()=>{}, icon: Image.asset(image)) : Row(
-        spacing: 5,
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
+      child:  hideText ?  IconButton(onPressed: ()=>{}, icon: Image.asset(image, width: 60, height: 60,))
+            : SizedBox(
+              width: MediaQuery.of(context).size.width-30,
+              height: 120,
+              child: Column(
+                      spacing: 5,
+                      children: [
+                        Text(searchText, style: TextStyle(fontSize: themeFontSizeLarge,
+                            fontWeight: FontWeight.bold,color: textColor),),
+                        IconButton(onPressed: ()=>{},
+                            icon: Icon(icon, size: 60, color: textColor,))
 
-          (count.isEven) ? Expanded(child: Text(searchText, style: const TextStyle(fontSize: themeFontSizeTitle),))
-              : IconButton(onPressed: ()=>{}, icon: Image.asset(image)) ,
-          (count.isEven) ? IconButton(onPressed: ()=>{}, icon: Image.asset(image))
-              : Expanded(child: Text(searchText, style: const TextStyle(fontSize: themeFontSizeTitle),)),
-        ],
-      ),
+                      ],
+                    ),
+            ),
     );
   }
 }

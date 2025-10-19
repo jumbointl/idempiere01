@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:monalisa_app_001/features/products/presentation/providers/locator_provider.dart';
 import 'package:monalisa_app_001/features/products/presentation/screens/locator/search_locator_by_locator_body.dart';
 import 'package:monalisa_app_001/features/products/presentation/screens/locator/search_locator_by_warehouse_body.dart';
 
 import '../../../../../config/theme/app_theme.dart';
+import '../../../common/input_data_processor.dart';
 import '../movement/products_home_provider.dart';
 import '../../../../shared/data/memory.dart';
 import '../../../../shared/data/messages.dart';
@@ -14,8 +14,10 @@ import '../../providers/product_provider_common.dart';
 class SearchLocatorScreen extends ConsumerStatefulWidget {
   String? title;
   final bool searchLocatorFrom;
+  final bool forCreateLine;
 
-  SearchLocatorScreen( {required this.searchLocatorFrom,this.title, super.key});
+  SearchLocatorScreen( {required this.searchLocatorFrom,
+    required this.forCreateLine,this.title, super.key});
 
   @override
   ConsumerState<ConsumerStatefulWidget> createState() => SearchLocatorScreenState();
@@ -37,14 +39,6 @@ class SearchLocatorScreenState extends ConsumerState<SearchLocatorScreen> {
      } else {
        //ref.read(actionScanProvider.notifier).update((state) => Memory.ACTION_GET_LOCATOR_TO_VALUE);
      }
-    WidgetsBinding.instance.addPostFrameCallback((_) async {
-      // Optionally, add a delay before calling DefaultTabController.of(context)?.animateTo
-        /*if(defaultTabIndex>0){
-          Future.delayed(Duration(milliseconds: 100), () {
-            DefaultTabController.of(context).animateTo(defaultTabIndex);
-          });
-        }*/
-    });
 
     return DefaultTabController(
       length: 2,
@@ -56,8 +50,6 @@ class SearchLocatorScreenState extends ConsumerState<SearchLocatorScreen> {
             onPressed: () {
               FocusScope.of(context).unfocus();
 
-              ref.read(isLocatorScreenShowedProvider.notifier).state = false;
-              print('------------------ memory pagefrom ${Memory.pageFromIndex}');
               if(widget.searchLocatorFrom){
                 ref.read(actionScanProvider.notifier).update((state) =>Memory.ACTION_GET_LOCATOR_FROM_VALUE);
               } else {
@@ -100,17 +92,17 @@ class SearchLocatorScreenState extends ConsumerState<SearchLocatorScreen> {
 
               return;
             }
-            print('------------------ memory pagefrom ${Memory.pageFromIndex}');
             ref.read(productsHomeCurrentIndexProvider.notifier).state = Memory.pageFromIndex;
-            ref.read(isLocatorScreenShowedProvider.notifier).state = false;
             Navigator.pop(context);
           },
           child: TabBarView(
             children: [
               SearchLocatorByWarehouseBody(
+                forCreateLine: widget.forCreateLine,
                 searchLocatorFrom: widget.searchLocatorFrom),
               //Center(child: Text(Messages.NOT_IMPLEMENTED)),
               SearchLocatorByLocatorBody(
+                forCreateLine: widget.forCreateLine,
                 searchLocatorFrom: widget.searchLocatorFrom,
                 ),
 

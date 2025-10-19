@@ -126,6 +126,66 @@ class SqlDataMovementLine extends IdempiereMovementLine implements SqlData {
 
       return data;
   }
+  @override
+  Map<String, dynamic> toJson() {
+    final Map<String, dynamic> data =  <String, dynamic>{};
+    data['id'] = id;
+    data['uid'] = uid;
+    if (aDClientID != null) {
+      data['AD_Client_ID'] = aDClientID!.toJson();
+    }
+    if (aDOrgID != null) {
+      data['AD_Org_ID'] = aDOrgID!.toJson();
+    }
+    data['IsActive'] = isActive;
+    data['Created'] = created;
+    if (createdBy != null) {
+      data['CreatedBy'] = createdBy!.toJson();
+    }
+    data['Updated'] = updated;
+    if (updatedBy != null) {
+      data['UpdatedBy'] = updatedBy!.toJson();
+    }
+    if (mMovementID != null) {
+      data['M_Movement_ID'] = mMovementID!.toJson();
+    }
+    if (mLocatorID != null) {
+      data['M_Locator_ID'] = mLocatorID!.toJson();
+    }
+    if (mLocatorToID != null) {
+      data['M_LocatorTo_ID'] = mLocatorToID!.toJson();
+    }
+    if (mProductID != null) {
+      data['M_Product_ID'] = mProductID!.toJson();
+    }
+    data['MovementQty'] = movementQty;
+    data['Description'] = description;
+    data['Line'] = line;
+    if (mAttributeSetInstanceID != null) {
+      data['M_AttributeSetInstance_ID'] =
+          mAttributeSetInstanceID!.toJson();
+    }
+    data['ConfirmedQty'] = confirmedQty;
+    data['TargetQty'] = targetQty;
+    data['ScrappedQty'] = scrappedQty;
+    data['Processed'] = processed;
+    data['Value'] = value;
+    data['PriceEntered'] = priceEntered;
+    data['PriceList'] = priceList;
+    data['PriceActual'] = priceActual;
+    data['ProductName'] = productName;
+    data['LineNetAmt'] = lineNetAmt;
+    data['model-name'] = modelName;
+    data['active'] = active;
+    data['propertyLabel'] = propertyLabel;
+    data['identifier'] = identifier;
+    data['image'] = image;
+    data['category'] = category;
+    data['name'] = name;
+    data['SKU'] = sKU;
+    data['UPC'] = uPC;
+    return data;
+  }
   SqlDataMovementLine.fromJson(Map<String, dynamic> json) {
     id = json['id'];
     uid = json['uid'];

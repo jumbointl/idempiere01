@@ -3,6 +3,7 @@
 import 'package:awesome_dialog/awesome_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/legacy.dart';
 import 'package:monalisa_app_001/features/products/presentation/providers/product_provider_common.dart';
 import 'package:monalisa_app_001/features/products/presentation/providers/product_search_provider.dart';
 import 'package:monalisa_app_001/features/products/presentation/providers/product_update_upc_provider.dart';
@@ -15,10 +16,8 @@ class ProductsUpdateNotifier  extends StateNotifier<List<IdempiereProduct>>{
   final Ref ref;
 
   void addNewUPCCode(String scannedData){
-    print('--provider--scannedData $scannedData');
     ref.watch(newUPCToUpdateProvider.notifier).update((state) => scannedData);
     Future.delayed(const Duration(milliseconds: 500), () {
-      print('state ${ref.read(newUPCToUpdateProvider.notifier).state}');
     });
 
     ref.watch(scannedCodeTimesProvider.notifier).update((state) => state+1);
@@ -53,7 +52,6 @@ class ProductsUpdateNotifier  extends StateNotifier<List<IdempiereProduct>>{
     List<String> updateData =[id,newUPC];
       //ref.watch(isScanningProvider.notifier).update((state) => true);
       ref.read(dataToUpdateUPCProvider.notifier).update((state) => updateData);
-      print('dataToUpdateUPCProvider.notifier send with: ${ref.read(dataToUpdateUPCProvider.notifier).state}');
 
   }
 
@@ -62,7 +60,7 @@ class ProductsUpdateNotifier  extends StateNotifier<List<IdempiereProduct>>{
     ref.watch(dataToUpdateUPCProvider.notifier).state = [];
     ref.watch(newUPCToUpdateProvider.notifier).update((state) => '');
     Memory.lastSearch = data;
-    ref.watch(scannedCodeForSearchProvider.notifier).update((state) => data);
+    ref.watch(scannedCodeForSearchByUPCOrSKUProvider.notifier).update((state) => data);
     ref.watch(scannedCodeTimesProvider.notifier).update((state) => state+1);
 
   }

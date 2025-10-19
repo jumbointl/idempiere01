@@ -129,7 +129,7 @@ class SqlDataMovement extends IdempiereMovement implements SqlData {
       data['ChargeAmt'] = chargeAmt;
       data['FreightAmt'] = freightAmt;*/
 
-
+      print(data);
       return data;
   }
 

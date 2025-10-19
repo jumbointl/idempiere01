@@ -1,21 +1,24 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:monalisa_app_001/features/products/common/input_data_processor.dart';
 import 'package:monalisa_app_001/features/products/presentation/providers/locator_provider.dart';
 
 import '../../../../shared/data/memory.dart';
 import '../../../../shared/data/messages.dart';
 import '../../providers/product_provider_common.dart';
 import '../../widget/input_string_dialog.dart';
-import '../../widget/locator_card.dart';
+import 'locator_card.dart';
 
 
 class SearchLocatorByLocatorBody extends ConsumerStatefulWidget {
   final bool searchLocatorFrom;
-  const SearchLocatorByLocatorBody( {required this.searchLocatorFrom, super.key });
+  final bool forCreateLine;
+  const SearchLocatorByLocatorBody( {
+    required this.forCreateLine,
+    required this.searchLocatorFrom, super.key });
 
   @override
   ConsumerState<ConsumerStatefulWidget> createState() => SearchLocatorByLocatorBodyState();
-
 
 }
 
@@ -28,14 +31,14 @@ class SearchLocatorByLocatorBodyState extends ConsumerState<SearchLocatorByLocat
     searchTip = Messages.SEARCH_BY_LOCATOR_VALUE;
     locatorListAsync = ref.watch(findLocatorsListProvider);
 
-    final double width = MediaQuery.of(context).size.width - 30;
-    final double bodyHeight = MediaQuery.of(context).size.height - 200;
+    final double width = double.infinity;
     return Scaffold(
 
       body: Container(
-        margin: const EdgeInsets.symmetric(horizontal: 15),
+        //margin: const EdgeInsets.symmetric(horizontal: 15),
+        padding: const EdgeInsets.all(10),
+        color: Colors.grey[200],
         width: width,
-        height: bodyHeight,
         child: Column(
           children: [
             getSearchBar(context),
@@ -52,7 +55,9 @@ class SearchLocatorByLocatorBodyState extends ConsumerState<SearchLocatorByLocat
                     itemCount: locators.length,
                     itemBuilder: (context, index) =>Center(
                       child: Center(
-                        child: LocatorCard( searchLocatorFrom: widget.searchLocatorFrom,
+                        child: LocatorCard(
+                            forCreateLine: widget.forCreateLine,
+                            searchLocatorFrom: widget.searchLocatorFrom,
                             data: locators[index],width: width,
                             index: index),
                       ),

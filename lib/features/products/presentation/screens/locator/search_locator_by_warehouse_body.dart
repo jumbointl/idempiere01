@@ -6,16 +6,17 @@ import '../../../../shared/data/memory.dart';
 import '../../../../shared/data/messages.dart';
 import '../../providers/product_provider_common.dart';
 import '../../widget/input_string_dialog.dart';
-import '../../widget/locator_card.dart';
+import 'locator_card.dart';
 
 
 class SearchLocatorByWarehouseBody extends ConsumerStatefulWidget {
   // send result to state provider to display selection
   String? title;
   final bool searchLocatorFrom;
-
+  final bool forCreateLine;
   SearchLocatorByWarehouseBody( {
     required this.searchLocatorFrom,
+    required this.forCreateLine,
     this.title,
     super.key});
 
@@ -40,14 +41,15 @@ class SearchLocatorByWarehouseBodyState extends ConsumerState<SearchLocatorByWar
     isSearchWarehouseDefaultLocator = true;
     locatorAsync = ref.watch(findDefaultLocatorOfWarehouseByWarehouseNameProvider);
 
-    final double width = MediaQuery.of(context).size.width - 30;
-    final double bodyHeight = MediaQuery.of(context).size.height - 200;
+    final double width = MediaQuery.of(context).size.width;
+    final double bodyHeight = MediaQuery.of(context).size.height - 100;
     return Scaffold(
 
       body: Container(
-        margin: const EdgeInsets.symmetric(horizontal: 15),
+        //margin: const EdgeInsets.symmetric(horizontal: 15),
         width: width,
         height: bodyHeight,
+        padding: EdgeInsets.all(10),
         child: Column(
           children: [
             getSearchBar(context),
@@ -64,7 +66,9 @@ class SearchLocatorByWarehouseBodyState extends ConsumerState<SearchLocatorByWar
                     itemCount: locators.length,
                     itemBuilder: (context, index) =>Center(
                       child: Center(
-                        child: LocatorCard( searchLocatorFrom: widget.searchLocatorFrom,
+                        child: LocatorCard(
+                            forCreateLine: widget.forCreateLine,
+                            searchLocatorFrom: widget.searchLocatorFrom,
                             data: locators[index],width: width,
                             index: index),
                       ),
@@ -86,8 +90,8 @@ class SearchLocatorByWarehouseBodyState extends ConsumerState<SearchLocatorByWar
 
   Widget getSearchBar(BuildContext context){
     return  SizedBox(
-        //width: double.infinity,
-        width: MediaQuery.of(context).size.width - 30,
+        width: double.infinity,
+        //width: MediaQuery.of(context).size.width - 25,
         height: 36,
             child: Row(
               mainAxisAlignment: MainAxisAlignment.end,

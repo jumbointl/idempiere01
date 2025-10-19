@@ -1,5 +1,5 @@
 import 'package:flutter/src/widgets/framework.dart';
-import 'package:flutter_riverpod/src/consumer.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 abstract class Scanner{
   void inputFromScanner(String scannedData);

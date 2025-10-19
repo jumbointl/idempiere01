@@ -19,11 +19,11 @@ class PhoneScanMultipurposeButton extends ConsumerStatefulWidget {
       switch (actionTypeInt) {
         case Memory.ACTION_GET_LOCATOR_TO_VALUE:
           Memory.awesomeDialog?.dismiss();
-          notifier.setLocatorToValue(data);
+          notifier.findLocatorToByValue(ref,data);
           break;
         case Memory.ACTION_GET_LOCATOR_FROM_VALUE:
           Memory.awesomeDialog?.dismiss();
-          notifier.setLocatorFromValue(data);
+          notifier.findLocatorFromByValue(ref,data);
           break;
       }
       scannedData = "";
@@ -56,10 +56,6 @@ class _PhoneScanMultipurposeButtonState extends ConsumerState<PhoneScanMultipurp
 
   void _handleKeyEvent(KeyEvent event) async {
 
-    print('--x--event.character ${event.character}');
-    print('--x--event.logicalKey ${event.logicalKey.keyLabel}');
-    print('--x--event.keyName ${event.logicalKey.keyId}');
-    print('--x--scannedData ${widget.scannedData}');
 
     if (event.logicalKey == LogicalKeyboardKey.enter) {
       widget.handleResult(ref, widget.scannedData,ref.read(actionScanProvider.notifier).state);

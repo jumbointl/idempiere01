@@ -27,7 +27,7 @@ class ProductSearchScreen extends ConsumerStatefulWidget implements Scanner {
   final int actionTypeInt = Memory.ACTION_FIND_BY_UPC_SKU ;
   int scanAction = ScanButton.SCAN_TO_SEARCH;
   late bool usePhoneCamera = false;
-  final int pageIndex = Memory.PAGE_INDEX_SEARCH;
+  late int pageIndex = Memory.PAGE_INDEX_SEARCH;
 
   ProductSearchScreen({super.key});
 
@@ -55,9 +55,9 @@ class _ProductSearchScreenState extends ConsumerState<ProductSearchScreen> {
   }
   @override
   Widget build(BuildContext context){
-
+    widget.pageIndex = ref.read(productsHomeCurrentIndexProvider.notifier).state;
     final productAsync = ref.watch(findProductByUPCOrSKUProvider);
-    widget.productsNotifier = ref.watch(scanStateNotifierProvider.notifier);
+    widget.productsNotifier = ref.watch(scanHandleNotifierProvider.notifier);
     final double width = MediaQuery.of(context).size.width - 30;
     final double bodyHeight = MediaQuery.of(context).size.height - 200;
     final isScanning = ref.watch(isScanningProvider);
@@ -73,7 +73,6 @@ class _ProductSearchScreenState extends ConsumerState<ProductSearchScreen> {
       imageUrl = Memory.IMAGE_HTTP_SAMPLE_1;
     }
     Color foreGroundProgressBar = Colors.purple;
-    //print('Bearer ${Environment.token}');
     return GestureDetector(
       onTap: () => FocusScope.of(context).unfocus(),
       child: DefaultTabController(
@@ -128,8 +127,9 @@ class _ProductSearchScreenState extends ConsumerState<ProductSearchScreen> {
             ),
 
           ),
-          bottomNavigationBar: PreferredSize(
-            preferredSize: Size.fromHeight(kToolbarHeight), // Adjust height as needed
+          bottomNavigationBar: BottomAppBar(
+            color: themeColorPrimary,
+            height: Memory.BOTTOM_BAR_HEIGHT,
             child: getScanButton(context),
           ),
           body: PopScope(
@@ -226,16 +226,8 @@ class _ProductSearchScreenState extends ConsumerState<ProductSearchScreen> {
 
   Widget _buttonScanWithPhone(BuildContext context,WidgetRef ref) {
     bool isScanning = ref.watch(isScanningProvider);
-    return TextButton(
-
-      style: TextButton.styleFrom(
-        backgroundColor: isScanning ? Colors.grey : Colors.cyan[200],
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(0),
-        ),
-
-                    ),
-      onPressed: isScanning ? null :  () async {
+    return GestureDetector(
+      onTap: isScanning ? null :  () async {
         ref.watch(isScanningProvider.notifier).state = true;
 
         String? result= await SimpleBarcodeScanner.scanBarcode(
@@ -252,12 +244,20 @@ class _ProductSearchScreenState extends ConsumerState<ProductSearchScreen> {
         );
         if(result!=null){
 
-          ref.read(scanStateNotifierProvider.notifier).addBarcodeByUPCOrSKUForSearch(result);
+          ref.read(scanHandleNotifierProvider.notifier).addBarcodeByUPCOrSKUForSearch(result);
         }
 
       },
-      child: Text(Messages.OPEN_CAMERA),
-    );
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        spacing: 10,
+        children: [
+          Icon(Icons.camera, color: isScanning ? Colors.grey : Colors.white),
+          Text(Messages.OPEN_CAMERA,style: TextStyle(color: Colors.white,
+              fontSize: themeFontSizeLarge,),
+              ),
+        ],
+      ));
   }
 
 
@@ -343,7 +343,6 @@ class _ProductSearchScreenState extends ConsumerState<ProductSearchScreen> {
       btnOkOnPress: () {
         ref.watch(usePhoneCameraToScanProvider.notifier).state = stateActual;
         final result = controller.text;
-        print('-------------------------result $result');
         if(result==''){
           AwesomeDialog(
             context: context,
@@ -390,7 +389,7 @@ class _ProductSearchScreenState extends ConsumerState<ProductSearchScreen> {
 
   }
 
-  isCanEditUPC() {
+  bool isCanEditUPC() {
     if(ref.read(productForUpcUpdateProvider).id==null || ref.read(productForUpcUpdateProvider).id==0){
       return false ;
 
@@ -471,12 +470,11 @@ class _ProductSearchScreenState extends ConsumerState<ProductSearchScreen> {
   Widget getScanButton(BuildContext context) {
 
     if(ref.read(productsHomeCurrentIndexProvider.notifier).state==widget.pageIndex){
-      return PreferredSize(
-          preferredSize: Size(double.infinity,30),
-          child: SizedBox(width: MediaQuery.of(context).size.width, child:
-          ref.watch(isDialogShowedProvider)? Container() :
-          ref.watch(usePhoneCameraToScanProvider) ?_buttonScanWithPhone(context, ref):
-          ScanProductBarcodeButton(widget.productsNotifier, actionTypeInt: widget.actionTypeInt,pageIndex: widget.pageIndex)));
+      return ref.watch(isDialogShowedProvider)? Container() :
+      ref.watch(usePhoneCameraToScanProvider) ?_buttonScanWithPhone(context, ref):
+      ScanProductBarcodeButton(
+          notifier: widget.productsNotifier,
+          actionTypeInt: widget.actionTypeInt,pageIndex: widget.pageIndex);
     } else {
       return Container();
     }

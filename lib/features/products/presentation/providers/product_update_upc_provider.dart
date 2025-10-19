@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/legacy.dart';
 import 'package:monalisa_app_001/features/products/presentation/providers/product_search_provider.dart';
 import 'package:monalisa_app_001/features/products/presentation/providers/products_update_notifier.dart';
 import 'package:monalisa_app_001/features/shared/data/memory.dart';
@@ -48,7 +49,6 @@ final updateProductUPCProvider = FutureProvider.autoDispose<IdempiereProduct>((r
     String url =
         "/api/v1/models/m_product?\$filter=upc eq '$newUPC'";
     url = url.replaceAll(' ', '%20');
-    print('url: $url');
     final responseAux = await dio.get(url);
     if (responseAux.statusCode == 200) {
       final responseApi =
@@ -61,7 +61,6 @@ final updateProductUPCProvider = FutureProvider.autoDispose<IdempiereProduct>((r
     url =
         "/api/v1/models/m_product/$id";
     final body = {'UPC': newUPC};
-    print('url: $url');
     final response = await dio.put(url, data: body);
     if (response.statusCode == 200) {
       if (response.data != null) {

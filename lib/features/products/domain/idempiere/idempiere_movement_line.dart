@@ -109,15 +109,15 @@ class IdempiereMovementLine extends IdempiereObject {
     mProductID = json['M_Product_ID'] != null
         ?  IdempiereProduct.fromJson(json['M_Product_ID'])
         : null;
-    movementQty = json['MovementQty'];
+    movementQty = json['MovementQty'] != null ? double.tryParse(json['MovementQty'].toString()) : null;
     description = json['Description'];
-    line = json['Line'];
+    line = json['Line']!= null ? double.tryParse(json['Line'].toString()) : null;
     mAttributeSetInstanceID = json['M_AttributeSetInstance_ID'] != null
         ?  IdempiereAttributeSetInstance.fromJson(
         json['M_AttributeSetInstance_ID'])
         : null;
-    confirmedQty = json['ConfirmedQty'];
-    targetQty = json['TargetQty'];
+    confirmedQty = json['ConfirmedQty']!=null ? double.tryParse(json['ConfirmedQty'].toString()) : null;
+    targetQty = json['TargetQty']!=null ? double.tryParse(json['TargetQty'].toString()) : null;
     scrappedQty = json['ScrappedQty']!=null ? double.tryParse(json['ScrappedQty'].toString()) : null;
     processed = json['Processed'];
     value = json['Value'];
@@ -197,14 +197,14 @@ class IdempiereMovementLine extends IdempiereObject {
     data['UPC'] = uPC;
     return data;
   }
-  static List<IdempiereMovement> fromJsonList(List<dynamic> list){
-    List<IdempiereMovement> result =[];
+  static List<IdempiereMovementLine> fromJsonList(List<dynamic> list){
+    List<IdempiereMovementLine> result =[];
     for (var item in list) {
-      if(item is IdempiereMovement){
+      if(item is IdempiereMovementLine){
         result.add(item);
       } else if(item is Map<String, dynamic>){
-        IdempiereMovement idempiereMovement = IdempiereMovement.fromJson(item);
-        result.add(idempiereMovement);
+        IdempiereMovementLine idempiereMovementLine = IdempiereMovementLine.fromJson(item);
+        result.add(idempiereMovementLine);
       }
 
     }

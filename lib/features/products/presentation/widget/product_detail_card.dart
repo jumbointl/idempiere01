@@ -7,6 +7,7 @@ import '../../../shared/data/messages.dart';
 import '../../domain/idempiere/idempiere_product.dart';
 import '../providers/products_scan_notifier.dart';
 import '../providers/store_on_hand_provider.dart';
+import '../screens/store_on_hand/memory_products.dart';
 class ProductDetailCard extends ConsumerStatefulWidget {
   final IdempiereProduct product;
   final ProductsScanNotifier productsNotifier ;
@@ -18,7 +19,9 @@ class ProductDetailCard extends ConsumerStatefulWidget {
 }
 
 class ProductDetailCardState extends ConsumerState<ProductDetailCard> {
-
+  TextStyle textStyle = const TextStyle(fontWeight: FontWeight.bold,
+      fontSize: themeFontSizeNormal
+    ,color: Colors.white);
 
   @override
   Widget build(BuildContext context) {
@@ -26,67 +29,69 @@ class ProductDetailCardState extends ConsumerState<ProductDetailCard> {
     if(att==''){
       att = '${Messages.ATTRIBUET_INSTANCE}: ${widget.product.mAttributeSetInstanceID?.identifier  ?? '--'}';
     }
-    Color backGroundColor = themeColorPrimaryLight2;
+    Color backGroundColor = Colors.cyan[800]!;
     bool canSearch = true ;
-    if(widget.product.mOLIConfigurableSKU == null || widget.product.mOLIConfigurableSKU == '') {
-      canSearch = false;
-      backGroundColor = Colors.amber[200]!;
+    if(MemoryProducts.movementAndLines == null || MemoryProducts.movementAndLines!.id ==null || MemoryProducts.movementAndLines!.id! <= 0){
+      if(widget.product.mOLIConfigurableSKU == null || widget.product.mOLIConfigurableSKU == '') {
+        canSearch = false;
+        backGroundColor = Colors.amber[800]!;
 
-    }
-    if(ref.watch(searchByMOLIConfigurableSKUProvider.notifier).state){
-      backGroundColor = Colors.amber[200]!;
-    } else {
-      backGroundColor = themeColorPrimaryLight2;
-    }
-    return GestureDetector(
-      onTap: () {
-        if(!ref.watch(searchByMOLIConfigurableSKUProvider.notifier).state){
+      }
+      if(ref.watch(searchByMOLIConfigurableSKUProvider.notifier).state){
+        backGroundColor = Colors.amber[800]!;
+      } else {
+        backGroundColor = themeColorPrimary;
+      }
+      return GestureDetector(
+        onTap: () {
+          if(!ref.watch(searchByMOLIConfigurableSKUProvider.notifier).state){
 
-          if(!canSearch){
-            AwesomeDialog(
-              context: context,
-              animType: AnimType.scale,
-              body: Center(child: Text(
-                Messages.SKU_NULL,
-                style: TextStyle(fontStyle: FontStyle.italic),
-              ),),
-              dialogType: DialogType.info, // correct here
-              title: Messages.SKU_EQUAL_MOLI_SKU,
-              desc:   '',
-              btnOkOnPress: () {},
-              btnOkColor: Colors.amber,
-            ).show();
-            return;
+            if(!canSearch){
+              AwesomeDialog(
+                context: context,
+                animType: AnimType.scale,
+                body: Center(child: Text(
+                  Messages.SKU_NULL,
+                  style: TextStyle(fontStyle: FontStyle.italic),
+                ),),
+                dialogType: DialogType.info, // correct here
+                title: Messages.SKU_EQUAL_MOLI_SKU,
+                desc:   '',
+                btnOkOnPress: () {},
+                btnOkColor: Colors.amber,
+              ).show();
+              return;
+            }
+            widget.productsNotifier.addBarcodeByMOLISKU(widget.product.mOLIConfigurableSKU ?? '');
+          } else {
+            String upc = widget.product.uPC ?? '';
+            if(upc == ''){
+              AwesomeDialog(
+                context: context,
+                animType: AnimType.scale,
+                dialogType: DialogType.error,
+                body: Center(child: Text(
+                  Messages.ERROR_UPC_EMPTY,
+                  style: TextStyle(fontStyle: FontStyle.italic),
+                ),), // correct here
+                title: Messages.ERROR_UPC_EMPTY,
+                desc:   '',
+                btnOkOnPress: () {},
+                btnOkColor: Colors.amber,
+              ).show();
+              return;
+            }
+
+            widget.productsNotifier.addBarcodeByUPCOrSKUForStoreOnHande(upc);
           }
-          widget.productsNotifier.addBarcodeByMOLISKU(widget.product.mOLIConfigurableSKU ?? '');
-        } else {
-          String upc = widget.product.uPC ?? '';
-          if(upc == ''){
-            AwesomeDialog(
-              context: context,
-              animType: AnimType.scale,
-              dialogType: DialogType.error,
-              body: Center(child: Text(
-                Messages.ERROR_UPC_EMPTY,
-                style: TextStyle(fontStyle: FontStyle.italic),
-              ),), // correct here
-              title: Messages.ERROR_UPC_EMPTY,
-              desc:   '',
-              btnOkOnPress: () {},
-              btnOkColor: Colors.amber,
-            ).show();
-            return;
-          }
-
-          widget.productsNotifier.addBarcodeByUPCOrSKUForStoreOnHande(upc);
-        }
 
 
-      },
-      child: SingleChildScrollView(
+        },
         child: Container(
+          width: double.infinity,
           decoration: BoxDecoration(
             color: backGroundColor,
+            border: Border.all(color:backGroundColor, width: 2),
             borderRadius: BorderRadius.circular(10),
           ),
           padding: const EdgeInsets.all(10),
@@ -94,15 +99,38 @@ class ProductDetailCardState extends ConsumerState<ProductDetailCard> {
             crossAxisAlignment: CrossAxisAlignment.start,
             spacing: 5,
             children: [
-              Text(widget.product.name ?? '${Messages.NAME}--'),
-              Text('UPC: ${widget.product.uPC ?? 'UPC--'}'),
-              Text('SKU: ${widget.product.sKU ?? 'SKU--'}'),
-              Text('M_SKU: ${widget.product.mOLIConfigurableSKU ?? 'M_SKU--'}'),
+              Text(widget.product.name ?? '${Messages.NAME}--',style: textStyle,),
+              Text('UPC: ${widget.product.uPC ?? 'UPC--'}',style: textStyle,),
+              Text('SKU: ${widget.product.sKU ?? 'SKU--'}',style: textStyle,),
+              Text('M_SKU: ${widget.product.mOLIConfigurableSKU ?? 'M_SKU--'}',style: textStyle,),
               Text(att),
-        
+
             ],
           ),
         ),
+      );
+
+    }
+
+    return Container(
+      width: double.infinity,
+      decoration: BoxDecoration(
+        color: backGroundColor,
+        border: Border.all(color: Colors.blue, width: 2),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      padding: const EdgeInsets.all(10),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        spacing: 5,
+        children: [
+          Text(widget.product.name ?? '${Messages.NAME}--',style: textStyle,),
+          Text('UPC: ${widget.product.uPC ?? 'UPC--'}',style: textStyle,),
+          Text('SKU: ${widget.product.sKU ?? 'SKU--'}',style: textStyle,),
+          Text('M_SKU: ${widget.product.mOLIConfigurableSKU ?? 'M_SKU--'}',style: textStyle,),
+          Text(att,style: textStyle,),
+
+        ],
       ),
     );
   }
