@@ -32,6 +32,7 @@ class _ProductDetailWithPhotoCardState extends ConsumerState<ProductDetailWithPh
     if(att==''){
       att = '${Messages.ATTRIBUET_INSTANCE}: ${widget.product.mAttributeSetInstanceID?.identifier  ?? '--'}';
     }
+    String category = widget.product.mProductCategoryID?.identifier  ?? '--';
     String imageUrl = widget.product.imageURL ?? '' ;
     if(Memory.isTestMode){
       imageUrl = Memory.IMAGE_HTTP_SAMPLE_1; // Example image URL
@@ -88,7 +89,11 @@ class _ProductDetailWithPhotoCardState extends ConsumerState<ProductDetailWithPh
               att,
               style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
             ),
-      
+            Text(
+              category,
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            ),
+
           ],
         ),
       ),

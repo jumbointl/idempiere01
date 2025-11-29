@@ -1,11 +1,8 @@
-import 'dart:convert';
 
 import 'package:awesome_dialog/awesome_dialog.dart';
 import 'package:flutter/material.dart';
-import 'package:get_storage/get_storage.dart';
 import 'package:intl/intl.dart';
 import 'package:monalisa_app_001/features/products/domain/idempiere/idempiere_product.dart';
-import 'package:monalisa_app_001/features/products/domain/idempiere/movement_and_lines.dart';
 import 'package:monalisa_app_001/features/products/domain/sql/sql_users_data.dart';
 
 import '../../products/domain/idempiere/idempiere_movement.dart';
@@ -66,7 +63,7 @@ class Memory {
   static const int ACTION_GET_LOCATOR_FROM_VALUE=7;
   static const int ACTION_GO_TO_STORAGE_ON_HAND_PAGE_WITH_UPC=8;
   static const int ACTION_GO_TO_MOVEMENT_EDIT_PAGE_WITH_ID=9;
-
+  static const int ACTION_FIND_PRINTER_BY_QR = 10;
 
   static const int UPC_EXITS = -1;
 
@@ -103,6 +100,8 @@ class Memory {
   static const int PAGE_INDEX_MOVEMENTE_SCREEN=31;
   static const int PAGE_INDEX_MOVEMENTE_CREATE_SCREEN=32;
   static const int PAGE_INDEX_MOVEMENTE_LINE_SCREEN =33;
+  static const int PAGE_INDEX_MOVEMENT_PRINTER_SETUP = 34;
+
 
 
 
@@ -124,6 +123,29 @@ class Memory {
   static const String KEY_MOVEMENT_AND_LINES='key_movement_and_lines';
 
   static String lastSearchMovement ='';
+
+
+
+  static String URL_CUPS_SERVER ='http://192.168.188.108:3100/print';
+
+  static String VERSIONS='1.01.021';
+
+  static String getUrlCupsServerWithPrinter(String ip,String port,String printerName){
+    if(ip.startsWith('http')) return '$ip:$port/print';
+    // Si no comienza con 'http', agrega 'http://'
+    return 'http://$ip:$port/printers/$printerName';
+  }
+  static String getUrlNodeCupsServer(String ip,String port){
+    if(ip.startsWith('http')) return '$ip:$port/printers';
+    // Si no comienza con 'http', agrega 'http://'
+    return 'http://$ip:$port/printers';
+  }
+
+
+
+
+
+
 
 
 

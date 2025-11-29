@@ -15,7 +15,7 @@ import '../../providers/product_provider_common.dart';
 import '../../providers/products_scan_notifier.dart';
 import '../../providers/store_on_hand_provider.dart';
 import '../../widget/no_data_card.dart';
-import '../../widget/product_detail_card.dart';
+import 'product_detail_card.dart';
 import 'product_resume_card.dart';
 import '../../widget/scan_product_barcode_button.dart';
 import 'storage_on__hand_card.dart';

@@ -1,3 +1,4 @@
+import '../../../shared/data/memory.dart';
 import 'idempiere_locator.dart';
 import 'idempiere_movement.dart';
 import 'idempiere_product.dart';
@@ -136,6 +137,17 @@ class IdempiereMovementLine extends IdempiereObject {
     sKU = json['SKU'];
     uPC = json['UPC'];
   }
+
+  String get locatorToName => mLocatorToID?.value ?? mLocatorToID?.identifier ?? '';
+  String get locatorFromName => mLocatorID?.value ?? mLocatorID?.identifier ?? '';
+
+  String get productNameWithLine => '#$lineWithoutDigit ${productName ?? '--'}';
+  String get lineWithoutDigit => Memory.numberFormatter0Digit.format(line);
+
+  String? get attributeName => mAttributeSetInstanceID?.identifier;
+
+  String get movementQtyString => Memory.numberFormatter0Digit.format(movementQty);
+
 
   @override
   Map<String, dynamic> toJson() {

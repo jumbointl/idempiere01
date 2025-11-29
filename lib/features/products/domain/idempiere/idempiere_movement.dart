@@ -1,4 +1,6 @@
 
+import 'package:monalisa_app_001/features/products/domain/idempiere/idempiere_business_partner.dart';
+import 'package:monalisa_app_001/features/products/domain/idempiere/idempiere_business_partner_location.dart';
 import 'package:monalisa_app_001/features/products/domain/idempiere/idempiere_warehouse.dart';
 
 import 'idempiere_document_status.dart';
@@ -42,7 +44,8 @@ class IdempiereMovement extends IdempiereObject {
   String? mOLIFsMessage;
   String? mOLIFiscalDocumentNo;
   IdempiereDocumentStatus? mOLIFsPaused;
-
+  IdempiereBusinessPartner? cBPartnerID;
+  IdempiereBusinessPartnerLocation? cBPartnerLocationID;
   IdempiereMovement(
       {
         this.uid,
@@ -80,6 +83,9 @@ class IdempiereMovement extends IdempiereObject {
         this.mOLIFsMessage,
         this.mOLIFiscalDocumentNo,
         this.mOLIFsPaused,
+        this.cBPartnerID,
+        this.cBPartnerLocationID,
+
       });
 
   IdempiereMovement.fromJson(Map<String, dynamic> json) {
@@ -139,6 +145,11 @@ class IdempiereMovement extends IdempiereObject {
     mOLIFsPaused = json['MOLI_FsPaused'] != null
         ? IdempiereDocumentStatus.fromJson(json['MOLI_FsPaused'])
         : null;
+    cBPartnerID = json['C_BPartner_ID'] != null ?
+        IdempiereBusinessPartner.fromJson(json['C_BPartner_ID']) : null;
+    cBPartnerLocationID = json['C_BPartner_Location_ID'] != null ?
+        IdempiereBusinessPartnerLocation.fromJson(json['C_BPartner_Location_ID']) : null;
+
   }
 
   bool get canComplete  {
@@ -211,6 +222,8 @@ class IdempiereMovement extends IdempiereObject {
     data['MOLI_FiscalDocumentNo'] = mOLIFiscalDocumentNo;
     data['ChargeAmt'] = chargeAmt;
     data['FreightAmt'] = freightAmt;
+    data['C_BPartner_ID'] = cBPartnerID?.toJson();
+    data['C_BPartner_Location_ID'] = cBPartnerLocationID?.toJson();
     return data;
   }
   static List<IdempiereMovement> fromJsonList(List<dynamic> list){

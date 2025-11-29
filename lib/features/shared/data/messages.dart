@@ -833,4 +833,66 @@ class Messages{
   static String ERROR_PAGE_NOT_FOUND='ERROR PAGINA NO ENCONTRADA';
 
   static String ERROR_PRINTER='ERROR IMPRESORA';
+
+  static String ERROR_QR_FORMAT='ERROR FORMATO QR';
+
+  static String ERROR_QR_VALUE='ERROR VALOR QR';
+
+  static String ERROR_CAMERA_PERMISSION = 'ERROR PERMISO DE CAMARA';
+
+  static String PRINT_SUCCESS='IMPRESION EXITOSA';
+
+  static String PRINT_FAILED='IMPRESION FALLIDA';
+
+  static String ERROR_SCAN='ERROR ESCANEO';
+
+  static String ERROR_SCAN_FAILED='ERROR ESCANEO FALLIDO';
+
+  static String NETWORK_ERROR ='ERROR DE RED';
+
+  static String TYPE='TIPO';
+
+  static String SAVE_PRINTER='GUARDAR IMPRESORA';
+
+  static String PRINT_TO_LAST_PRINTER='IMPRIMIR A LA ULTIMA IMPRESORA';
+
+  static String ERROR_SAVE_PRINTER='ERROR AL GUARDAR IMPRESORA';
+
+  static String ERROR_PRINT_TO_LAST_PRINTER='ERROR AL IMPRIMIR A LA ULTIMA IMPRESORA';
+
+  static String ERROR_EMPTY_FIELDS='CAMPOS VACIOS';
+
+  static String RE_PRINT='RE-IMPRIMIR';
+
+  static String ERROR_RE_PRINT='ERROR RE-IMPRIMIR';
+
+  static String IN_PROGRESS='EN PROCESO';
+
+  static String NEW_MOVEMENT='NUEVO MOVIMIENTO';
+
+  static String MOVEMENT_SEARCH='BUSCAR MOVIMIENTO';
+
+  static String ERROR_MOVEMENT_SEARCH='ERROR BUSQUEDA MOVIMIENTO';
+
+  static String EXIT_WARNING='SALIR DE LA APP';
+
+  static String LEAVE_APP='SALIR DE APP';
+
+  static String READY_TO_EXIT='REALMENTE QUIERE SALIR DE LA APP';
+
+  static String EXIT='SALIR';
+
+  static String TODAY='HOY';
+
+  static String RECORDS='REGISTROS';
+
+  static String MOVEMENT_LIST='Movement List';
+
+  static String MOVEMENT_LIST_DR='Movement List DR';
+
+  static String ALL='TODOS';
+
+
+
+
 }

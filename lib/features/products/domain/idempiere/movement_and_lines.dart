@@ -1,12 +1,16 @@
+import 'package:monalisa_app_001/features/products/domain/idempiere/idempiere_business_partner.dart';
 import 'package:monalisa_app_001/features/products/domain/idempiere/idempiere_locator.dart';
 import 'package:monalisa_app_001/features/products/domain/idempiere/idempiere_movement.dart';
 import 'package:monalisa_app_001/features/products/domain/idempiere/idempiere_warehouse.dart';
 import 'package:monalisa_app_001/features/products/domain/sql/sql_data_movement_line.dart';
+import 'package:monalisa_app_001/features/products/presentation/screens/store_on_hand/memory_products.dart';
 
 import '../../../shared/data/memory.dart';
 import '../sql/sql_users_data.dart';
+import 'idempiere_business_partner_location.dart';
 import 'idempiere_document_status.dart';
 import 'idempiere_document_type.dart';
+import 'idempiere_movement_confirm.dart';
 import 'idempiere_movement_line.dart';
 import 'idempiere_organization.dart';
 import 'idempiere_price_list.dart';
@@ -23,7 +27,7 @@ class MovementAndLines extends IdempiereMovement {
   IdempiereWarehouse? get warehouseTo => mWarehouseToID;
   bool get hasWarehouseFrom => warehouseFrom != null && warehouseFrom!.id != null && warehouseFrom!.id!>0;
   bool get hasWarehouseTo => warehouseTo != null && warehouseTo!.id != null && warehouseTo!.id!>0;
-  IdempiereMovementLine? get lastMovementLine => movementLines?.last ;
+  IdempiereMovementLine? get lastMovementLine => movementLines!=null &&  movementLines!.isNotEmpty ? movementLines?.last : null;
   IdempiereLocator? get lastLocatorFrom => lastMovementLine?.mLocatorID;
   IdempiereLocator? get lastLocatorTo => lastMovementLine?.mLocatorToID;
   bool get hasLastLocatorFrom => lastLocatorFrom != null && lastLocatorFrom!.id != null && lastLocatorFrom!.id!>0;
@@ -32,6 +36,10 @@ class MovementAndLines extends IdempiereMovement {
   IdempiereLocator? get locatorFromForMovementLineCreate => movementLineToCreate?.mLocatorID;
   IdempiereLocator? get locatorToForMovementLineCreate => movementLineToCreate?.mLocatorToID;
   String? nextProductIdUPC;
+  List<IdempiereMovementConfirm>? movementConfirms;
+
+
+  String get documentNumber => documentNo ?? '';
   bool get hasNextProductIdUPC => nextProductIdUPC != null && nextProductIdUPC!='-1';
   MovementAndLines({
     super.id,
@@ -69,6 +77,9 @@ class MovementAndLines extends IdempiereMovement {
     super.isApproved,
     super.processedOn,
     super.mPriceListID,
+    this.movementConfirms,
+    super.cBPartnerID,
+    super.cBPartnerLocationID,
     this.user,
     this.movementLines,
     this.movementLineToCreate,
@@ -143,6 +154,12 @@ class MovementAndLines extends IdempiereMovement {
     nextProductIdUPC = json['next_product_id_upc'];
     movementLineToCreate = json['movement_line_to_create'] != null ?
         SqlDataMovementLine.fromJson(json['movement_line_to_create']) : null;
+    movementConfirms = json['movement_confirms'] != null
+        ? IdempiereMovementConfirm.fromJsonList(json['movement_confirms']) : null;
+    cBPartnerID = json['C_BPartner_ID'] != null ?
+    IdempiereBusinessPartner.fromJson(json['C_BPartner_ID']) : null;
+    cBPartnerLocationID = json['C_BPartner_Location_ID'] != null ?
+    IdempiereBusinessPartnerLocation.fromJson(json['C_BPartner_Location_ID']) : null;
 
 
 
@@ -209,6 +226,9 @@ class MovementAndLines extends IdempiereMovement {
     data['movement_lines'] =  movementLines?.map((x) => x.toJson()).toList();
     data['next_product_id_upc'] = nextProductIdUPC;
     data['movement_line_to_create'] = movementLineToCreate?.toJson();
+    data['movement_confirms']= movementConfirms?.map((x) => x.toJson()).toList();
+    data['C_BPartner_ID'] = cBPartnerID?.toJson();
+    data['C_BPartner_Location_ID'] = cBPartnerLocationID?.toJson();
     return data;
   }
   bool canCreateMovementLine() {
@@ -280,6 +300,9 @@ class MovementAndLines extends IdempiereMovement {
     isApproved= movement.isApproved;
     processedOn= movement.processedOn;
     mPriceListID= movement.mPriceListID;
+    cBPartnerID= movement.cBPartnerID;
+    cBPartnerLocationID= movement.cBPartnerLocationID;
+
   }
   void cloneMovementAndLines(MovementAndLines movementAndLines) {
     id = movementAndLines.id;
@@ -321,6 +344,9 @@ class MovementAndLines extends IdempiereMovement {
     movementLineToCreate = movementAndLines.movementLineToCreate;
     nextProductIdUPC = movementAndLines.nextProductIdUPC;
     user = movementAndLines.user;
+    movementConfirms = movementAndLines.movementConfirms;
+    cBPartnerID= movementAndLines.cBPartnerID;
+    cBPartnerLocationID= movementAndLines.cBPartnerLocationID;
 
   }
   set movementQuantityForMovementLineToCreate(double value) {
@@ -358,6 +384,16 @@ class MovementAndLines extends IdempiereMovement {
   bool get allCreated => id != null && id!>0 && movementLines != null && movementLines!.isNotEmpty;
   bool get nothingCreated => id == null || id!<=0 && movementLines == null && movementLines!.isEmpty;
   bool get onlyMovementCreated => id!=null && id!>0 && (movementLines == null || movementLines!.isEmpty);
+
+  String get movementIcon => 'assets/images/monalisa_logo_movement.jpg';
+
+  String get documentMovementTitle => cDocTypeID?.identifier ?? '';
+
+  String get documentStatus =>  MemoryProducts.getDocumentStatusById(docStatus?.id ?? '');
+
+  String? get documentMovementOrganizationName => cBPartnerID?.identifier ?? aDOrgID?.identifier;
+  String? get documentMovementOrganizationAddress => cBPartnerLocationID?.identifier;
+
 
 
 }

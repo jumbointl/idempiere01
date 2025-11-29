@@ -6,8 +6,9 @@ import '../../../shared/data/messages.dart';
 import '../providers/product_provider_common.dart';
 import '../providers/store_on_hand_provider.dart';
 class NoDataCard extends ConsumerStatefulWidget {
+  Color? backgroundColor;
 
-  const NoDataCard({super.key});
+  NoDataCard({super.key,this.backgroundColor});
 
 
   @override

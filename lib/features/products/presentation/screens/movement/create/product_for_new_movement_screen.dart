@@ -4,7 +4,6 @@ import 'package:go_router/go_router.dart';
 import 'package:monalisa_app_001/features/products/common/common_screen_state.dart';
 import 'package:monalisa_app_001/features/products/domain/idempiere/idempiere_storage_on_hande.dart';
 import 'package:monalisa_app_001/features/products/presentation/screens/movement/products_home_provider.dart';
-import 'package:monalisa_app_001/features/products/presentation/screens/store_on_hand/memory_products.dart';
 import 'package:monalisa_app_001/features/products/presentation/widget/no_records_card.dart';
 
 import '../../../../../../config/router/app_router.dart';
@@ -12,14 +11,12 @@ import '../../../../../auth/domain/entities/warehouse.dart';
 import '../../../../../auth/presentation/providers/auth_provider.dart';
 import '../../../../../shared/data/memory.dart';
 import '../../../../../shared/data/messages.dart';
-import '../../../../domain/idempiere/idempiere_warehouse.dart';
-import '../../../../domain/idempiere/movement_and_lines.dart';
 import '../../../providers/common_provider.dart';
 import '../../../providers/persitent_provider.dart';
 import '../../../providers/product_provider_common.dart';
 import '../../../providers/store_on_hand_provider.dart';
 import '../../../widget/no_data_card.dart';
-import '../../../widget/product_detail_card.dart';
+import '../../store_on_hand/product_detail_card.dart';
 import '../../store_on_hand/product_resume_card.dart';
 import 'mevement_storage_on__hand_card.dart';
 
@@ -165,7 +162,6 @@ class ProductForMovementScreenState extends CommonConsumerState<ProductForNewMov
     );
   }
 
-  @override
   Widget getMainDataList(BuildContext context, WidgetRef ref) {
     int userWarehouseId = 0;
     String userWarehouseName = '';
@@ -176,7 +172,6 @@ class ProductForMovementScreenState extends CommonConsumerState<ProductForNewMov
      return mainDataListAsync.when(
 
       data: (storages) {
-        print('-----------------find-----mainDataAsync------------find--');
 
         if(storages==null || storages.isEmpty){
           return Container();
@@ -202,7 +197,6 @@ class ProductForMovementScreenState extends CommonConsumerState<ProductForNewMov
           resultOfSameWarehouse.update((state) =>  [aux,userWarehouseName]);
 
         });
-        print('----------------getStoragesOnHand ${storages.length} ');
         return getStoragesOnHand(storages, getWidth());
 
       },
@@ -213,7 +207,6 @@ class ProductForMovementScreenState extends CommonConsumerState<ProductForNewMov
     );
   }
 
-  @override
   AsyncValue get mainDataListAsync => ref.watch(findProductsStoreOnHandProvider);
 
 
@@ -253,35 +246,35 @@ class ProductForMovementScreenState extends CommonConsumerState<ProductForNewMov
 
   @override
   void iconBackPressed(BuildContext context, WidgetRef ref) {
-    if(widget.productUPC!=null && widget.productUPC!='-1'){
+    context.go(AppRouter.PAGE_HOME);
+    /*if(widget.productUPC!=null && widget.productUPC!='-1'){
       ref.read(actionScanProvider.notifier).update((state) =>
       Memory.ACTION_FIND_MOVEMENT_BY_ID);
       ref.read(productsHomeCurrentIndexProvider.notifier).update((state) =>
       Memory.PAGE_INDEX_MOVEMENTE_EDIT_SCREEN);
-
-      Navigator.pop(context);
+      context.go(AppRouter.PAGE_HOME);
     } else {
-    context.go(AppRouter.PAGE_HOME);
-    }
+      context.go(AppRouter.PAGE_HOME);
+    }*/
   }
 
   @override
   void popScopeAction(BuildContext context, WidgetRef ref) {
-    if(widget.productUPC!=null && widget.productUPC!='-1'){
+    context.go(AppRouter.PAGE_HOME);
+   /* if(widget.productUPC!=null && widget.productUPC!='-1'){
       ref.read(actionScanProvider.notifier).update((state) =>
       Memory.ACTION_FIND_MOVEMENT_BY_ID);
       ref.read(productsHomeCurrentIndexProvider.notifier).update((state) =>
       Memory.PAGE_INDEX_MOVEMENTE_EDIT_SCREEN);
-
-      Navigator.pop(context);
+      context.go(AppRouter.PAGE_HOME);
     } else {
-    context.go(AppRouter.PAGE_HOME);
-    }
+      context.go(AppRouter.PAGE_HOME);
+    }*/
   }
 
   @override
   Widget? getAppBarTitle(BuildContext context, WidgetRef ref) {
-    return Text(Messages.STORE_ON_HAND,style: textStyleTitle);
+    return Text('${Messages.STORE_ON_HAND} 11/01',style: textStyleTitle);
   }
 
   @override

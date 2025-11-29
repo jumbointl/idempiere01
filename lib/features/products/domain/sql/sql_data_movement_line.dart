@@ -333,5 +333,7 @@ class SqlDataMovementLine extends IdempiereMovementLine implements SqlData {
   void setIdempiereProduct(int id) {
     mProductID = IdempiereProduct(id: id);
   }
-
+  Map<String, dynamic> getUpdateMovementQuantityJson() {
+    return {"MovementQty": movementQty};
+  }
 }

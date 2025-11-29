@@ -4,17 +4,14 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
-import 'package:monalisa_app_001/features/products/domain/idempiere/idempiere_locator.dart';
 import 'package:monalisa_app_001/features/products/domain/idempiere/movement_and_lines.dart';
 import 'package:monalisa_app_001/features/products/domain/sql/sql_data_movement.dart';
-import 'package:monalisa_app_001/features/products/presentation/providers/products_providers.dart';
 import 'package:monalisa_app_001/features/products/presentation/providers/products_scan_notifier.dart';
 
 import '../../../../config/http/dio_client.dart';
 import '../../../auth/presentation/providers/auth_provider.dart';
 import '../../../shared/data/memory.dart';
 import '../../../shared/data/messages.dart';
-import '../../../shared/infrastructure/errors/custom_error.dart';
 import '../../domain/idempiere/idempiere_movement.dart';
 import '../../domain/idempiere/idempiere_movement_line.dart';
 import '../../domain/sql/common_sql_data.dart';

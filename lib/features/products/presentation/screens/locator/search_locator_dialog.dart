@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:monalisa_app_001/features/products/common/input_data_processor.dart';
 import 'package:monalisa_app_001/features/products/presentation/screens/locator/search_locator_by_locator_body.dart';
 import 'package:monalisa_app_001/features/products/presentation/screens/locator/search_locator_by_warehouse_body.dart';
 import 'package:monalisa_app_001/features/products/presentation/screens/store_on_hand/memory_products.dart';
@@ -48,17 +47,7 @@ class SearchLocatorDialogState extends ConsumerState<SearchLocatorDialog> {
           leading:IconButton(
             icon: const Icon(Icons.arrow_back),
             onPressed: () {
-              FocusScope.of(context).unfocus();
-
-              if(widget.searchLocatorFrom){
-                ref.read(actionScanProvider.notifier).update((state) =>Memory.ACTION_GET_LOCATOR_FROM_VALUE);
-              } else {
-                ref.read(actionScanProvider.notifier).update((state) =>Memory.ACTION_GET_LOCATOR_TO_VALUE);
-              }
-              ref.read(usePhoneCameraToScanForLineProvider.notifier).state = MemoryProducts.lastUsePhoneCameraState ;
-              ref.read(productsHomeCurrentIndexProvider.notifier).state = Memory.PAGE_INDEX_UNSORTED_STORAGE_ON_HAND;
-              Navigator.pop(context);
-
+              popScopeAction(context, ref);
             },
           ),
           bottom: PreferredSize(
@@ -88,14 +77,15 @@ class SearchLocatorDialogState extends ConsumerState<SearchLocatorDialog> {
 
         ),
         body: PopScope(
+          canPop: false,
           onPopInvokedWithResult: (bool didPop, Object? result) async {
+
             if (didPop) {
 
               return;
             }
-            ref.read(productsHomeCurrentIndexProvider.notifier).state = Memory.pageFromIndex;
-            ref.read(usePhoneCameraToScanForLineProvider.notifier).state = MemoryProducts.lastUsePhoneCameraState ;
-            Navigator.pop(context);
+            popScopeAction(context, ref);
+
           },
           child: TabBarView(
               children: [
@@ -113,6 +103,20 @@ class SearchLocatorDialogState extends ConsumerState<SearchLocatorDialog> {
         ),
       ),
     );
+  }
+
+  void popScopeAction(BuildContext context, WidgetRef ref) {
+    FocusScope.of(context).unfocus();
+
+    if(widget.searchLocatorFrom){
+      ref.read(actionScanProvider.notifier).update((state) =>Memory.ACTION_GET_LOCATOR_FROM_VALUE);
+    } else {
+      ref.read(actionScanProvider.notifier).update((state) =>Memory.ACTION_GET_LOCATOR_TO_VALUE);
+    }
+
+    ref.read(usePhoneCameraToScanForLineProvider.notifier).state = MemoryProducts.lastUsePhoneCameraState ;
+    ref.read(productsHomeCurrentIndexProvider.notifier).state = Memory.PAGE_INDEX_UNSORTED_STORAGE_ON_HAND;
+    Navigator.pop(context);
   }
 
 

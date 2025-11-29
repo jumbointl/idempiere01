@@ -95,7 +95,9 @@ class MovementLinesCreateScreenState extends ConsumerState<MovementLinesCreateSc
       ),
       body: SafeArea(
         child: PopScope(
+          canPop: false,
           onPopInvokedWithResult: (bool didPop, Object? result) async {
+
             if (didPop) {
               return;
             }

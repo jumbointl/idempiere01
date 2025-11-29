@@ -10,7 +10,6 @@ import '../../../../config/http/dio_client.dart';
 import '../../../shared/data/memory.dart';
 import '../../../shared/data/messages.dart';
 import '../../../shared/domain/entities/response_api.dart';
-import '../../domain/idempiere/idempiere_document_status.dart';
 import '../../domain/idempiere/idempiere_locator.dart';
 import '../../domain/idempiere/idempiere_movement.dart';
 import '../../domain/idempiere/idempiere_movement_line.dart';

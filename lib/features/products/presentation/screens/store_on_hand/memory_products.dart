@@ -1,26 +1,15 @@
-import 'dart:convert';
 import 'dart:ui';
 
 
-import 'package:flutter_riverpod/src/core.dart';
-import 'package:monalisa_app_001/features/products/domain/idempiere/idempiere_locator.dart';
-import 'package:monalisa_app_001/features/products/domain/idempiere/idempiere_movement_line.dart';
 import 'package:monalisa_app_001/features/products/domain/idempiere/movement_and_lines.dart';
 import 'package:monalisa_app_001/features/products/domain/idempiere/product_with_stock.dart';
-import 'package:monalisa_app_001/features/products/presentation/providers/persitent_provider.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../../../config/theme/app_theme.dart';
 import '../../../../shared/data/memory.dart';
 import '../../../../shared/data/messages.dart';
-import '../../../domain/idempiere/idempiere_movement.dart';
 import '../../../domain/idempiere/idempiere_storage_on_hande.dart';
 import '../../../domain/sql/sql_data_movement.dart';
 import '../../../domain/sql/sql_data_movement_line.dart';
-import '../../providers/locator_provider.dart';
-import '../../providers/locator_provider_for_Line.dart';
-import '../../providers/movement_provider_old.dart';
-import '../../providers/movement_provider_for_line.dart';
 
 class MemoryProducts {
   static IdempiereStorageOnHande storage =IdempiereStorageOnHande();
@@ -64,6 +53,9 @@ class MemoryProducts {
       return Messages.DELIVERED;
     } else if (documentStatus == 'DR') {
       return Messages.DRAF;
+    } else if (documentStatus == 'IP') {
+      return Messages.IN_PROGRESS;
+
     } else {
       return documentStatus;
     }

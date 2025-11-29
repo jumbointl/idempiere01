@@ -10,6 +10,7 @@ import 'package:monalisa_app_001/features/products/presentation/providers/produc
 import 'package:monalisa_app_001/features/products/presentation/providers/product_update_upc_provider.dart';
 import '../../../shared/data/memory.dart';
 import '../../../shared/data/messages.dart';
+import '../../common/barcode_utils.dart';
 import '../../domain/idempiere/idempiere_product.dart';
 import '../../domain/sql/sql_data_movement_line.dart';
 import '../screens/store_on_hand/memory_products.dart';
@@ -41,7 +42,10 @@ class ProductsScanNotifier2  extends StateNotifier<List<IdempiereProduct>>{
   }
   void _addBarcode(String scannedData) {
     if(scannedData.length==12){
-      scannedData='0$scannedData';
+      String aux = '0$scannedData';
+      if(isValidEAN13(aux)){
+        scannedData = aux;
+      }
     }
     ref.watch(resultOfSameWarehouseProvider.notifier).state = [];
     ref.watch(scannedCodeForStoredOnHandProvider.notifier).update((state) => scannedData);

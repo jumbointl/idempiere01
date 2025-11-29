@@ -15,7 +15,7 @@ class PutAwayMovement {
     static const int ERROR_MOVEMENT = -8;
     static const int ERROR_MOVEMENT_LINE = -9;
     static const int ERROR_START_CREATE = -10;
-    static const int ERROR_SAME_WAREHOUSE = -11;
+    //static const int ERROR_SAME_WAREHOUSE = -11;
     static const int ERROR_SAME_LOCATOR = -12;
     static const int SUCCESS = 0;
 
@@ -50,7 +50,6 @@ class PutAwayMovement {
     if(movementLineToCreate!.id !=null && movementLineToCreate!.id!>0) return ERROR_MOVEMENT_LINE;
     if(!hasWarehouseFrom) return ERROR_WAREHOUSE_FROM;
     if(!hasWarehouseTo) return ERROR_WAREHOUSE_TO;
-    if(warehouseFrom!.id == warehouseTo!.id) return ERROR_SAME_WAREHOUSE;
     if(movementLineToCreate!.mProductID == null) return ERROR_PRODUCT;
     if(movementLineToCreate!.mLocatorID == null) return ERROR_LOCATOR_FROM;
     if(movementLineToCreate!.mLocatorToID == null) return ERROR_LOCATOR_TO;

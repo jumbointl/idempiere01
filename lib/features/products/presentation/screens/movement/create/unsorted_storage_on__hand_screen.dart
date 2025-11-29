@@ -19,12 +19,10 @@ import '../../../../domain/idempiere/idempiere_locator.dart';
 import '../../../../domain/idempiere/idempiere_storage_on_hande.dart';
 import '../../../../domain/idempiere/idempiere_warehouse.dart';
 import '../../../../domain/idempiere/put_away_movement.dart';
-import '../../../../domain/sql/sql_data_movement_line.dart';
 import '../../../providers/locator_provider.dart';
 import '../../locator/search_locator_dialog.dart';
 import '../products_home_provider.dart';
 import '../provider/new_movement_provider.dart';
-import '../../store_on_hand/memory_products.dart';
 class UnsortedStorageOnHandScreen extends ConsumerStatefulWidget implements InputDataProcessor{
 
   final IdempiereStorageOnHande storage;
@@ -144,7 +142,7 @@ class UnsortedStorageOnHandScreenState extends ConsumerState<UnsortedStorageOnHa
     putAwayMovement!.movementToCreate!.mWarehouseID = locatorFrom.mWarehouseID;
 
     widget.notifier = ref.read(scanHandleNotifierProvider.notifier);
-    locatorFrom = widget.storage.mLocatorID;;
+    locatorFrom = widget.storage.mLocatorID;
     locatorTo = ref.watch(selectedLocatorToProvider.notifier);
     findLocatorTo = ref.watch(findLocatorToProvider);
      actionScan = ref.watch(actionScanProvider.notifier);
@@ -180,13 +178,8 @@ class UnsortedStorageOnHandScreenState extends ConsumerState<UnsortedStorageOnHa
           icon: const Icon(Icons.arrow_back),
           onPressed: () =>
           {
-            FocusScope.of(context).unfocus(),
-            ref.read(isScanningProvider.notifier).update((state) => false),
-            ref.read(quantityToMoveProvider.notifier).update((state) => 0),
-            ref.read(productsHomeCurrentIndexProvider.notifier).update((state) => Memory.PAGE_INDEX_STORE_ON_HAND),
-            ref.read(actionScanProvider.notifier).state = Memory.ACTION_FIND_BY_UPC_SKU_FOR_STORE_ON_HAND,
-            //context.go('${AppRouter.NEW_PAGE_STORAGE_ON_HANGE}/${widget.productUPC?? '-1'}'),
-            context.go('${AppRouter.PAGE_PRODUCT_STORE_ON_HAND}/${widget.productUPC?? '-1'}'),
+            popScopeAction(context,ref),
+
           }
         ),
         actions: [
@@ -249,17 +242,14 @@ class UnsortedStorageOnHandScreenState extends ConsumerState<UnsortedStorageOnHa
         ),
       body: SafeArea(
         child: PopScope(
+          canPop: false,
           onPopInvokedWithResult: (bool didPop, Object? result) async {
             if (didPop) {
 
               return;
             }
-            ref.read(isScanningProvider.notifier).update((state) => false);
-            ref.read(quantityToMoveProvider.notifier).update((state) => 0);
-            ref.read(productsHomeCurrentIndexProvider.notifier).update((state) => Memory.PAGE_INDEX_STORE_ON_HAND);
-            ref.read(actionScanProvider.notifier).state = Memory.ACTION_FIND_BY_UPC_SKU_FOR_STORE_ON_HAND;
-            //context.go('${AppRouter.NEW_PAGE_STORAGE_ON_HANGE}/${widget.productUPC?? '-1'}');
-            context.go('${AppRouter.PAGE_PRODUCT_STORE_ON_HAND}/${widget.productUPC?? '-1'}');
+            popScopeAction(context,ref);
+
           },
           child: Container(
             padding: EdgeInsets.all(10),
@@ -976,10 +966,6 @@ class UnsortedStorageOnHandScreenState extends ConsumerState<UnsortedStorageOnHa
     );
   }
 
-
-
-
-
   Widget getStockList(BuildContext context, WidgetRef ref) {
 
     return SliverPadding(
@@ -992,6 +978,16 @@ class UnsortedStorageOnHandScreenState extends ConsumerState<UnsortedStorageOnHa
         separatorBuilder: (BuildContext context, int index) => const SizedBox(height: 5,),
       ),
     );
+  }
+
+  void popScopeAction(BuildContext context, WidgetRef ref) {
+    FocusScope.of(context).unfocus();
+    ref.read(isScanningProvider.notifier).update((state) => false);
+    ref.read(quantityToMoveProvider.notifier).update((state) => 0);
+    ref.read(productsHomeCurrentIndexProvider.notifier).update((state) => Memory.PAGE_INDEX_STORE_ON_HAND);
+    ref.read(actionScanProvider.notifier).state = Memory.ACTION_FIND_BY_UPC_SKU_FOR_STORE_ON_HAND;
+    context.go('${AppRouter.PAGE_PRODUCT_STORE_ON_HAND}/${widget.productUPC?? '-1'}');
+
   }
 
 }

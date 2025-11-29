@@ -5,6 +5,8 @@ import 'package:flutter_riverpod/legacy.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../screens/movement/printer/mo_printer.dart';
+
 final sharedPreferencesProvider = Provider<SharedPreferences>(
       (ref) => throw UnimplementedError(),
 );
@@ -56,4 +58,15 @@ final textControllerProvider = StateProvider<TextEditingController>((ref) {
   return TextEditingController();
 });
 
+final lastPrinterProvider = StateProvider<MOPrinter?>((ref) {
+  return null;
+});
+
+final directPrintWithLastPrinterProvider = StateProvider<bool>((ref) {
+  return false;
+});
+
+final isPrintingProvider = StateProvider.autoDispose<bool>((ref) {
+  return false;
+});
 

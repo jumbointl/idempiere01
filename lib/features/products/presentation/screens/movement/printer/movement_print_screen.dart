@@ -1,16 +1,12 @@
 import 'dart:convert';
-import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_riverpod/legacy.dart';
 import 'package:monalisa_app_001/features/products/common/messages_dialog.dart';
 import 'package:pdf/pdf.dart';
 import 'package:printing/printing.dart';
 import '../../../../../shared/data/messages.dart';
 import '../../../../domain/idempiere/movement_and_lines.dart';
-import '../../../providers/product_provider_common.dart';
-import '../pdf/movement_and_lines_pdf.dart';
 import 'printer_provider.dart';
 import 'printer_type.dart';
 import 'movement_pdf_generator.dart'; // Tu método para generar el PDF

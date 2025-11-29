@@ -5,7 +5,6 @@ import 'package:flutter_riverpod/legacy.dart';
 import 'package:monalisa_app_001/features/products/common/input_dialog.dart';
 
 import '../../common/input_data_processor.dart';
-import '../providers/product_provider_common.dart';
 import '../../../shared/data/memory.dart';
 import '../../../shared/data/messages.dart';
 class InputStringDialog extends ConsumerStatefulWidget implements InputDataProcessor {

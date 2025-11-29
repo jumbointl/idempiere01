@@ -5,7 +5,67 @@ import 'package:monalisa_app_001/features/auth/presentation/providers/auth_provi
 import 'package:monalisa_app_001/features/auth/presentation/providers/login_form_provider.dart';
 import 'package:monalisa_app_001/features/shared/shared.dart';
 
-class LoginScreen extends StatelessWidget {
+import 'exit_app.dart';
+
+
+class LoginScreen extends ConsumerWidget {
+  const LoginScreen({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final size = MediaQuery.of(context).size;
+
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop,result){
+        if (didPop) {
+          return;
+        }
+        exitApp(context,ref);
+
+      },
+      child: GestureDetector(
+        onTap: () => FocusScope.of(context).unfocus(),
+        child: Scaffold(
+          backgroundColor: Colors.white,
+          body: SizedBox(
+            height: size.height - 10,
+            child: SingleChildScrollView(
+              child: ListView(
+                shrinkWrap: true,
+                children: [
+                  SizedBox(
+                    height: size.height - 405, // mismo cálculo que antes (385 + 20)
+                    child: Center(
+                      child: Image.asset(
+                        'assets/images/logo-monalisa.jpg',
+                        fit: BoxFit.contain,
+                      ),
+                    ),
+                  ),
+                  Container(
+                    height: 365,
+                    decoration: BoxDecoration(
+                      color: themeColorGrayLight,
+                      borderRadius: const BorderRadius.only(
+                        topLeft: Radius.circular(30),
+                        topRight: Radius.circular(30),
+                      ),
+                    ),
+                    child: const _LoginForm(),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+
+/*class LoginScreen extends StatelessWidget {
   const LoginScreen({super.key});
 
   @override
@@ -49,7 +109,7 @@ class LoginScreen extends StatelessWidget {
       ),
     );
   }
-}
+}*/
 
 class _LoginForm extends ConsumerStatefulWidget {
   const _LoginForm();

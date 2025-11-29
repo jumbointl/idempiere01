@@ -4,7 +4,6 @@ import 'package:monalisa_app_001/features/products/presentation/screens/locator/
 import 'package:monalisa_app_001/features/products/presentation/screens/locator/search_locator_by_warehouse_body.dart';
 
 import '../../../../../config/theme/app_theme.dart';
-import '../../../common/input_data_processor.dart';
 import '../movement/products_home_provider.dart';
 import '../../../../shared/data/memory.dart';
 import '../../../../shared/data/messages.dart';

@@ -1,6 +1,5 @@
 
 
-import 'dart:convert';
 
 import 'package:awesome_dialog/awesome_dialog.dart';
 import 'package:flutter/material.dart';
@@ -17,6 +16,7 @@ import 'package:monalisa_app_001/features/products/presentation/providers/produc
 import '../../../../config/router/app_router.dart';
 import '../../../shared/data/memory.dart';
 import '../../../shared/data/messages.dart';
+import '../../common/barcode_utils.dart';
 import '../../common/input_data_processor.dart';
 import '../../domain/idempiere/idempiere_product.dart';
 import '../../domain/sql/sql_data_movement_line.dart';
@@ -46,7 +46,10 @@ class ProductsScanNotifierForLine  extends StateNotifier<List<IdempiereProduct>>
 
   void _addBarcode(String scannedData) {
     if(scannedData.length==12){
-      scannedData='0$scannedData';
+      String aux = '0$scannedData';
+      if(isValidEAN13(aux)){
+        scannedData = aux;
+      }
     }
     ref.read(resultOfSameWarehouseProvider.notifier).state = [];
     print('------------------scannedCodeForStoredOnHandProvider');
@@ -108,6 +111,7 @@ class ProductsScanNotifierForLine  extends StateNotifier<List<IdempiereProduct>>
     ref.read(movementIdForConfirmProvider.notifier).update((state) => id ?? -1);
   }
 
+  @override
   Future<void> handleInputString(BuildContext context,WidgetRef ref, String inputData) async {
 
     int action  = ref.read(actionScanProvider);

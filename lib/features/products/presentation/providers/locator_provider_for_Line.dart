@@ -1,7 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
-import 'package:monalisa_app_001/features/products/presentation/providers/movement_provider_old.dart';
 import 'package:monalisa_app_001/features/products/presentation/providers/persitent_provider.dart';
 import 'package:monalisa_app_001/features/products/presentation/providers/product_provider_common.dart';
 

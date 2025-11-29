@@ -10,8 +10,25 @@ import '../../domain/entities/organization.dart';
 import '../../domain/entities/role.dart';
 import '../../domain/entities/warehouse.dart';
 import '../providers/auth_provider.dart';
+class AuthDataScreen extends ConsumerWidget {
+  const AuthDataScreen({super.key});
 
-class AuthDataScreen extends StatelessWidget {
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return GestureDetector(
+      onTap: () => FocusScope.of(context).unfocus(),
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('Seleccionar Rol'),
+        ),
+        body: const RoleView(),
+      ),
+    );
+  }
+}
+
+
+/*class AuthDataScreen extends StatelessWidget {
   const AuthDataScreen({super.key});
 
   @override
@@ -26,7 +43,7 @@ class AuthDataScreen extends StatelessWidget {
       ),
     );
   }
-}
+}*/
 
 class RoleView extends ConsumerWidget {
   const RoleView({super.key});

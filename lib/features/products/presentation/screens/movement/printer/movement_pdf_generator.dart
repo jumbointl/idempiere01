@@ -1,4 +1,3 @@
-import 'dart:io';
 import 'dart:typed_data';
 import 'package:flutter/services.dart';
 import 'package:monalisa_app_001/features/products/domain/idempiere/movement_and_lines.dart';
@@ -23,7 +22,11 @@ Future<Uint8List> generateMovementDocument(MovementAndLines data, Uint8List imag
 
 // Tu margen en milímetros
   const double marginInMm = 12.0;
-  const double marginInPoint = marginInMm * pointPerMm/3;
+  const double marginInPoint = marginInMm * pointPerMm/2;
+  String title = data.documentMovementTitle ;
+  String company = data.documentMovementOrganizationName ?? '';
+  String address = data.documentMovementOrganizationAddress ?? '';
+
 
 
   // Ancho de las columnas de la tabla (basado en la suma de los flex: 28).
@@ -65,7 +68,7 @@ Future<Uint8List> generateMovementDocument(MovementAndLines data, Uint8List imag
                   // Celda para los títulos
                   pw.Column(
                     children: [
-                      pw.Text('Material Movement', style: pw.TextStyle(fontSize: titleFontSize)),
+                      pw.Text(title, style: pw.TextStyle(fontSize: titleFontSize)),
                       //pw.Text(data.documentNo ?? '', style: pw.TextStyle(fontSize: titleFontSize)),
                     ],
                   ),
@@ -250,7 +253,7 @@ Future<Uint8List> generateMovementDocument(MovementAndLines data, Uint8List imag
               ),
             ],
           );
-        }).toList(),
+        }),
 
         // Fila de totales.
         pw.TableRow(

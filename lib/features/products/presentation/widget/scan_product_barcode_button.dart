@@ -50,8 +50,8 @@ class ScanProductBarcodeButton extends ConsumerStatefulWidget {
           notifier.addBarcodeToSearchMovement(data);
           break;
         case Memory.ACTION_GO_TO_STORAGE_ON_HAND_PAGE_WITH_UPC:
-          if(MemoryProducts.movementAndLines!=null && MemoryProducts.movementAndLines!.id!= null){
-            if(!MemoryProducts.movementAndLines!.canComplete){
+          if(MemoryProducts.movementAndLines.id!= null){
+            if(!MemoryProducts.movementAndLines.canComplete){
               AwesomeDialog(
                 context: ref.context,
                 animType: AnimType.scale,

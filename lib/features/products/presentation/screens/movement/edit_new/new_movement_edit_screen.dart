@@ -2,11 +2,11 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_riverpod/legacy.dart';
 import 'package:go_router/go_router.dart';
 import 'package:monalisa_app_001/features/products/common/common_screen_state.dart';
 import 'package:monalisa_app_001/features/products/domain/idempiere/idempiere_locator.dart';
 import 'package:monalisa_app_001/features/products/domain/idempiere/idempiere_movement.dart';
+import 'package:monalisa_app_001/features/products/domain/idempiere/idempiere_movement_confirm.dart';
 import 'package:monalisa_app_001/features/products/domain/idempiere/movement_and_lines.dart';
 import 'package:monalisa_app_001/features/products/presentation/screens/movement/products_home_provider.dart';
 import 'package:monalisa_app_001/features/products/presentation/screens/movement/provider/new_movement_provider.dart';
@@ -19,14 +19,12 @@ import '../../../../../shared/data/memory.dart';
 import '../../../../../shared/data/messages.dart';
 import '../../../../common/input_dialog.dart';
 import '../../../../common/messages_dialog.dart';
-import '../../../../common/scan_button_by_action.dart';
 import '../../../../domain/idempiere/idempiere_movement_line.dart';
 import '../../../providers/common_provider.dart';
 import '../../../providers/persitent_provider.dart';
 import '../../../providers/product_provider_common.dart';
 import '../../../providers/store_on_hand_provider.dart';
-import '../../../widget/no_data_card.dart';
-import '../edit/scan_product_barcode_button_for_line.dart';
+import '../../../widget/movement_no_data_card.dart';
 import 'new_movement_card_with_locator.dart';
 import 'new_movement_line_card.dart';
 
@@ -73,8 +71,10 @@ class NewMovementEditScreenState extends CommonConsumerState<NewMovementEditScre
   Warehouse? userWarehouse;
   late var movementAndLines ;
   int movementId =-1;
+  @override
   late var isDialogShowed;
 
+  @override
   late var usePhoneCamera;
 
 
@@ -120,20 +120,18 @@ class NewMovementEditScreenState extends CommonConsumerState<NewMovementEditScre
 
         WidgetsBinding.instance.addPostFrameCallback((_) async {
           if(movementAndLines!=null && !movementAndLines.isOnInitialState){
-
             changeMovementAndLineState(ref, movementAndLines);
 
           }
 
         });
         if(movementAndLines==null || movementAndLines.isOnInitialState){
-          return  NoDataCard();
+          return   MovementNoDataCard();
         }
         widget.movementId = movementAndLines.id.toString();
         movementId = movementAndLines.id!;
         String argument = jsonEncode(movementAndLines.toJson());
         List<IdempiereMovementLine>? lines = movementAndLines.movementLines;
-
         return  Column(
           spacing: 10,
           children: [
@@ -146,7 +144,8 @@ class NewMovementEditScreenState extends CommonConsumerState<NewMovementEditScre
               width: double.infinity,
               movementAndLines: MemoryProducts.movementAndLines,
             )
-            : NoDataCard(),
+            : MovementNoDataCard(),
+            if(movementAndLines.movementConfirms!=null && movementAndLines.movementConfirms!.isNotEmpty) getMovementConfirm(movementAndLines.movementConfirms!),
             if(movementAndLines.canCompleteMovement || !movementAndLines.hasMovementLines)
               SizedBox(
                 width: double.infinity,
@@ -174,7 +173,7 @@ class NewMovementEditScreenState extends CommonConsumerState<NewMovementEditScre
           final product = storages[index];
           return NewMovementLineCard(index: index + 1, totalLength:storages.length,
             width: width - 10, movementLine: product,
-          );
+            canEdit: movementAndLines.state.canCompleteMovement , );
         },
         separatorBuilder: (BuildContext context, int index) =>
         const SizedBox(height: 10,)
@@ -273,16 +272,20 @@ class NewMovementEditScreenState extends CommonConsumerState<NewMovementEditScre
   @override
   Widget? getAppBarTitle(BuildContext context, WidgetRef ref) {
     MovementAndLines movementAndLines = MemoryProducts.movementAndLines;
+    late TextStyle style = textStyleLarge;
+    if(movementAndLines.documentNo!=null && movementAndLines.documentNo!.length>20){
+      style = textStyleTitleMore20C;
+    }
     if(widget.movementId!=null && widget.movementId!='-1' && movementAndLines.hasMovement){
       return ListTile(
         title: Text(movementAndLines.documentNo ??'',
-          style: textStyleLarge,
+          style: style,
           ),
         subtitle: Text('${movementAndLines.id ?? ''} ${movementAndLines.docStatus?.id ?? ''}'
           ,style: textStyleLarge,),
       );
     } else {
-      return Text(Messages.MOVEMENT_EDIT,style: textStyleTitle);
+      return Text(Messages.MOVEMENT_SEARCH,style: textStyleTitle);
     }
 
   }
@@ -372,6 +375,29 @@ class NewMovementEditScreenState extends CommonConsumerState<NewMovementEditScre
 
   }
 
+  Widget getMovementConfirm(List<IdempiereMovementConfirm> list) {
+    return ListView.separated(
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
+        itemCount: list.length,
+        itemBuilder: (context, index) {
+          final data = list[index];
+          return Container(
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: Colors.black),
+              ),
+
+              child: ListTile(leading: Text('CO :${index+1}',style: textStyleLarge), title: Text(data.documentNo ??'',style: textStyleLarge)));
+        },
+        separatorBuilder: (BuildContext context, int index) =>
+        const SizedBox(height: 5)
+    );
+  }
+
 
 }
+
+
 

@@ -84,6 +84,7 @@ final appHomeOptionCol3Items = <MenuItem>[
     subTitle: '',
     link: '/mInOut/move',
     icon: Icons.swap_horiz,
+
   ),
   const MenuItem(
     title: 'Move Confirm',
@@ -92,23 +93,22 @@ final appHomeOptionCol3Items = <MenuItem>[
     icon: Icons.swap_horiz,
   ),
   MenuItem(
+    title: Messages.MOVEMENT_LIST_DR,
+    subTitle: '',
+    link: AppRouter.PAGE_MOVEMENTS_LIST,
+    icon: Icons.list
+    ,
+  ),
+  MenuItem(
     title: Messages.MOVEMENT_CREATE,
     subTitle: '',
     link: '${AppRouter.PAGE_PRODUCT_STORE_ON_HAND}/-1',
     icon: Icons.inventory,
   ),
 
-  /*MenuItem(
-    title: Messages.MOVEMENT_CREATE,
-    subTitle: '',
-    link: '${AppRouter.NEW_PAGE_STORAGE_ON_HANGE}/-1',
-    icon: Icons.move_up
-    ,
-  ),*/
   MenuItem(
     title: Messages.MOVEMENT_EDIT,
     subTitle: '',
-    //link: '${AppRouter.PAGE_MOVEMENTS_SEARCH}/:movementId',
     link: '${AppRouter.PAGE_MOVEMENTS_SEARCH}/:movementId',
     icon: Icons.move_up
     ,
@@ -119,12 +119,14 @@ final appHomeOptionCol3Items = <MenuItem>[
     link: AppRouter.PAGE_PRODUCT_SEARCH_UPDATE_UPC,
     icon: Icons.search,
   ),
+
+   */
   MenuItem(
     title: Messages.SEARCH_PRODUCT,
     subTitle: '',
     link: AppRouter.PAGE_PRODUCT_SEARCH,
     icon: Icons.search,
-  ),*/
+  ),
 ];
 
 const appTemplateMenuItems = <MenuItem>[

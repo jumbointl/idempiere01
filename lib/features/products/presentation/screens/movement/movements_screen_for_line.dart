@@ -329,7 +329,7 @@ class MovementsScreenState2 extends ConsumerState<MovementsScreen2> {
 
       ),
       onPressed: isScanning ? null :  () async {
-         if(MemoryProducts.movementAndLines!.id != null && MemoryProducts.movementAndLines!.id!>0){
+         if(MemoryProducts.movementAndLines.id != null && MemoryProducts.movementAndLines.id!>0){
            bool b = isMovementCanEdit(context,ref);
            if(!b) {
              AwesomeDialog(
@@ -478,7 +478,7 @@ class MovementsScreenState2 extends ConsumerState<MovementsScreen2> {
   }
   Future<void> getBarCode(BuildContext context, bool history) async{
     if(movementId.state!=null && movementId.state>0){
-      if(!MemoryProducts.movementAndLines!.canComplete){
+      if(!MemoryProducts.movementAndLines.canComplete){
         AwesomeDialog(
           context: context,
           animType: AnimType.scale,

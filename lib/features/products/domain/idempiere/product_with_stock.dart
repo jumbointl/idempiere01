@@ -16,7 +16,6 @@ import 'idempiere_tenant.dart';
 import 'idempiere_user.dart';
 
 import 'idempiere_attribute_set_instance.dart';
-import 'idempiere_object.dart';
 import 'idempiere_product_type.dart';
 
 class ProductWithStock extends IdempiereProduct {

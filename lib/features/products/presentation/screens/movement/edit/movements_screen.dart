@@ -5,16 +5,13 @@ import 'package:go_router/go_router.dart';
 import 'package:monalisa_app_001/config/config.dart';
 import 'package:monalisa_app_001/features/products/presentation/providers/movement_provider_old.dart'
     hide scannedMovementIdForSearchProvider;
-import 'package:monalisa_app_001/features/products/presentation/providers/persitent_provider.dart';
 import 'package:monalisa_app_001/features/products/presentation/providers/products_scan_notifier_for_line.dart';
 import 'package:monalisa_app_001/features/products/presentation/screens/movement/edit/movement_line_card_for_line.dart';
 import 'package:monalisa_app_001/features/products/presentation/screens/movement/products_home_provider.dart';
 import 'package:simple_barcode_scanner/simple_barcode_scanner.dart';
 
-import '../../../../domain/idempiere/idempiere_locator.dart';
 import '../../../../domain/idempiere/idempiere_movement.dart';
 import '../../../../domain/idempiere/idempiere_movement_line.dart';
-import '../../../providers/locator_provider_for_Line.dart';
 import '../../../providers/movement_provider_for_line.dart';
 import '../../../../../shared/data/memory.dart';
 import '../../../../../shared/data/messages.dart';

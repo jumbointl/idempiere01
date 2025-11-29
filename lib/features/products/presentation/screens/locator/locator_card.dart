@@ -10,7 +10,6 @@ import '../../../../shared/data/memory.dart';
 import '../../../../shared/data/messages.dart';
 import '../../../domain/idempiere/idempiere_locator.dart';
 import '../../providers/locator_provider.dart';
-import '../../providers/movement_provider_old.dart';
 import '../store_on_hand/memory_products.dart';
 class LocatorCard extends ConsumerStatefulWidget {
 

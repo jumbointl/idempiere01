@@ -9,7 +9,6 @@ import '../../../domain/idempiere/idempiere_movement.dart';
 import '../../../domain/idempiere/idempiere_movement_line.dart';
 import '../../../../shared/data/memory.dart';
 import '../../../../shared/data/messages.dart';
-import '../store_on_hand/memory_products.dart';
 import 'movement_line_card_for_create.dart';
 
 

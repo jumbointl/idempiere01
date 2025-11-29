@@ -11,7 +11,6 @@ import 'package:monalisa_app_001/features/products/common/scan_button_by_action.
 import 'package:monalisa_app_001/features/products/domain/idempiere/movement_and_lines.dart';
 import 'package:monalisa_app_001/features/products/presentation/providers/persitent_provider.dart';
 import 'package:monalisa_app_001/features/products/presentation/providers/products_providers.dart';
-import 'package:monalisa_app_001/features/products/presentation/screens/movement/edit_new/movement_error_screen.dart';
 import 'package:simple_barcode_scanner/simple_barcode_scanner.dart';
 import 'package:slide_to_confirm/slide_to_confirm.dart';
 
@@ -29,7 +28,6 @@ import '../../../providers/locator_provider_for_Line.dart';
 import '../../../providers/products_scan_notifier_for_line.dart';
 import '../../locator/search_locator_dialog.dart';
 import '../provider/new_movement_provider.dart';
-import '../edit/scan_product_barcode_button_for_line.dart';
 import '../products_home_provider.dart';
 import '../../store_on_hand/memory_products.dart';
 class UnsortedStorageOnHandScreenForLine extends ConsumerStatefulWidget implements InputDataProcessor{
@@ -134,6 +132,7 @@ class UnsortedStorageOnHandScreenForLineState extends ConsumerState<UnsortedStor
       return widget.movementAndLines;
     }
   }
+  @override
   void initState() {
 
     WidgetsBinding.instance.addPostFrameCallback((_){
@@ -216,16 +215,8 @@ class UnsortedStorageOnHandScreenForLineState extends ConsumerState<UnsortedStor
           leading:IconButton(
             icon: const Icon(Icons.arrow_back),
             onPressed: () => {
-              FocusScope.of(context).unfocus(),
-              ref.read(quantityToMoveProvider.notifier).update((state) => 0),
-              ref.read(productsHomeCurrentIndexProvider.notifier).update(
-                      (state) => Memory.PAGE_INDEX_STORE_ON_HAND),
-              ref.read(actionScanProvider.notifier).update((state) => Memory.ACTION_FIND_BY_UPC_SKU_FOR_STORE_ON_HAND),
+              popScopeAction(context,ref),
 
-
-
-              context.go('${AppRouter.PAGE_PRODUCT_STORE_ON_HAND_FOR_LINE}/${getProductId()}',
-                extra: movementAndLines),
             },
           ),
           actions: [
@@ -293,18 +284,15 @@ class UnsortedStorageOnHandScreenForLineState extends ConsumerState<UnsortedStor
         ),
         body: SafeArea(
           child: PopScope(
+              canPop: false ,
               onPopInvokedWithResult: (bool didPop, Object? result) async {
                 if (didPop) {
 
                   return;
                 }
-                String productId = getProductId();
-                    ref.read(quantityToMoveProvider.notifier).update((state) => 0);
-                    ref.read(productsHomeCurrentIndexProvider.notifier).update((state) => Memory.PAGE_INDEX_STORE_ON_HAND);
-                    ref.read(actionScanProvider.notifier).update((state) => Memory.ACTION_FIND_BY_UPC_SKU_FOR_STORE_ON_HAND);
+                popScopeAction(context,ref);
 
-                    context.go('${AppRouter.PAGE_PRODUCT_STORE_ON_HAND_FOR_LINE}/$productId',
-                        extra: movementAndLines);
+
 
                 },
               child: Container(
@@ -1575,6 +1563,17 @@ class UnsortedStorageOnHandScreenForLineState extends ConsumerState<UnsortedStor
       }
     }
     return productId;
+  }
+
+  void popScopeAction(BuildContext context, WidgetRef ref) {
+    FocusScope.of(context).unfocus();
+    String productId = getProductId();
+    ref.read(quantityToMoveProvider.notifier).update((state) => 0);
+    ref.read(productsHomeCurrentIndexProvider.notifier).update((state) => Memory.PAGE_INDEX_STORE_ON_HAND);
+    ref.read(actionScanProvider.notifier).update((state) => Memory.ACTION_FIND_BY_UPC_SKU_FOR_STORE_ON_HAND);
+    context.go('${AppRouter.PAGE_PRODUCT_STORE_ON_HAND_FOR_LINE}/$productId',
+        extra: movementAndLines);
+
   }
 
 }

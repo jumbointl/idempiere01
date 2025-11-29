@@ -1,25 +1,23 @@
 // Clase de estado abstracta para lógica común
-import 'package:awesome_dialog/awesome_dialog.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/legacy.dart';
 import 'package:get_storage/get_storage.dart';
 import 'package:go_router/go_router.dart';
 import 'package:monalisa_app_001/features/products/common/scan_button_by_action.dart';
-import 'package:monalisa_app_001/features/products/presentation/screens/movement/products_home_provider.dart';
-import 'package:simple_barcode_scanner/simple_barcode_scanner.dart';
 
 import '../../../config/router/app_router.dart';
 import '../../../config/theme/app_theme.dart';
+import '../../home/presentation/screens/home_screen.dart';
 import '../../shared/data/memory.dart';
 import '../../shared/data/messages.dart';
 import '../domain/idempiere/movement_and_lines.dart';
-import '../presentation/providers/product_provider_common.dart';
-import '../presentation/providers/store_on_hand_provider.dart';
 import 'input_data_processor.dart';
 import 'input_dialog.dart';
+import 'package:intl/intl.dart';
 
-abstract class CommonConsumerState<T extends ConsumerStatefulWidget> extends ConsumerState<T> implements InputDataProcessor {
+abstract class CommonConsumerState<T extends ConsumerStatefulWidget> extends ConsumerState<T>
+    implements InputDataProcessor {
 
 
   /*late var isScanning = ref.watch(isScanningProvider.notifier);
@@ -54,6 +52,8 @@ abstract class CommonConsumerState<T extends ConsumerStatefulWidget> extends Con
   Color? get borderColor=>Colors.black;
   late TextStyle textStyleTitle = TextStyle(fontSize: fontSizeTitle,
       color: fontForegroundColor);
+  late TextStyle textStyleTitleMore20C = TextStyle(fontSize: 13,
+      color: fontForegroundColor);
   late TextStyle textStyleLarge = TextStyle(fontSize: fontSizeLarge,
       color: fontForegroundColor);
   late TextStyle textStyleLargeBold = TextStyle(fontSize: fontSizeLarge,
@@ -71,7 +71,7 @@ abstract class CommonConsumerState<T extends ConsumerStatefulWidget> extends Con
   String get hinText;
   double getWidth();
   Color? getAppBarBackgroundColor(BuildContext context,WidgetRef ref);
-
+  bool get showSearchBar => true;
   @override
   void initState() {
     super.initState();
@@ -86,7 +86,7 @@ abstract class CommonConsumerState<T extends ConsumerStatefulWidget> extends Con
     return Scaffold(
 
       appBar: getAppBar(context,ref),
-      floatingActionButton: FloatingActionButton(
+      /*floatingActionButton: FloatingActionButton(
         onPressed: () {
           double positionAdd= scrollController.position.maxScrollExtent;
           if(scrollToTop.state){
@@ -111,7 +111,7 @@ abstract class CommonConsumerState<T extends ConsumerStatefulWidget> extends Con
           );
         },
         child: Icon(scrollToTop.state ? Icons.arrow_upward :Icons.arrow_downward),
-      ),
+      ),*/
       bottomNavigationBar: isDialogShowed.state ? Container(
         height: Memory.BOTTOM_BAR_HEIGHT,
         color: themeColorPrimary,
@@ -124,6 +124,7 @@ abstract class CommonConsumerState<T extends ConsumerStatefulWidget> extends Con
 
       body: SafeArea(
         child: PopScope(
+          canPop: false,
           onPopInvokedWithResult: (bool didPop, Object? result) async {
             if (didPop) {
               return;
@@ -138,7 +139,7 @@ abstract class CommonConsumerState<T extends ConsumerStatefulWidget> extends Con
               child: Column(
                 spacing: 10,
                 children: [
-                  getSearchBar(context,ref,hinText,this),
+                  if(showSearchBar) getSearchBar(context,ref,hinText,this),
                   getMainDataCard(context, ref),
                   //getMainDataList(context, ref),
                 ],
@@ -159,16 +160,16 @@ abstract class CommonConsumerState<T extends ConsumerStatefulWidget> extends Con
 
 
   void iconBackPressed(BuildContext context, WidgetRef ref) {
+    print('iconBackPressed----------------------------');
     Navigator.pop(context);
   }
 
-  void popScopeAction(BuildContext context, WidgetRef ref) {
-    ref.read(isScanningProvider.notifier).update((state) => false);
+  void popScopeAction(BuildContext context, WidgetRef ref) async {
+    /*ref.read(isScanningProvider.notifier).update((state) => false);
     ref.read(actionScanProvider.notifier).update((state)
-    => Memory.ACTION_FIND_MOVEMENT_BY_ID);
-    ref.read(productsHomeCurrentIndexProvider.notifier).update((state)
-    => Memory.PAGE_INDEX_MOVEMENTE_EDIT_SCREEN);
-
+    => Memory.ACTION_FIND_MOVEMENT_BY_ID);*/
+    print('popScopeAction----------------------------');
+    ref.invalidate(homeScreenTitleProvider);
     context.go(AppRouter.PAGE_HOME);
   }
 
@@ -208,31 +209,15 @@ abstract class CommonConsumerState<T extends ConsumerStatefulWidget> extends Con
           icon: const Icon(Icons.arrow_back),
           onPressed: () async =>
           {
-            context.go(AppRouter.PAGE_HOME),
-            //iconBackPressed(context,ref),
+            print('iconBackPressed----------------------------'),
+            popScopeAction(context, ref),
           }
         //
       ),
 
       title: getAppBarTitle(context,ref),
       actions: [
-        usePhoneCamera.state ? IconButton(
-          icon: const Icon(Icons.barcode_reader),
-          onPressed: () => {
-            usePhoneCamera.state = false,
-            isDialogShowed.state = false,
-            setState(() {}),
-          },
-
-        ) :  IconButton(
-          icon: const Icon(Icons.qr_code_scanner),
-          onPressed: () => {
-            usePhoneCamera.state = true,
-            isDialogShowed.state = false,
-            setState(() {}),
-          },
-
-        ),
+        getActionButtons(context,ref),
 
       ],
 
@@ -280,4 +265,175 @@ abstract class CommonConsumerState<T extends ConsumerStatefulWidget> extends Con
 
   }
 
+  void findMovementAfterDate(DateTime date, {required bool isIn}) {}
+
+  Widget getActionButtons(BuildContext context, WidgetRef ref) {
+    return usePhoneCamera.state ? IconButton(
+      icon: const Icon(Icons.barcode_reader),
+      onPressed: () => {
+        usePhoneCamera.state = false,
+        isDialogShowed.state = false,
+        setState(() {}),
+      },
+
+    ) :  IconButton(
+      icon: const Icon(Icons.qr_code_scanner),
+      onPressed: () => {
+        usePhoneCamera.state = true,
+        isDialogShowed.state = false,
+        setState(() {}),
+      },
+
+    );
+  }
+
+
 }
+
+
+/// Helper: subtract business days (skip Saturday/Sunday)
+DateTime subtractBusinessDays(DateTime from, int days) {
+  var date = DateTime(from.year, from.month, from.day); // strip time
+  var remaining = days;
+
+  while (remaining > 0) {
+    date = date.subtract(const Duration(days: 1));
+    if (date.weekday != DateTime.saturday &&
+        date.weekday != DateTime.sunday) {
+      remaining--;
+    }
+  }
+  return date;
+}
+
+/// Initial date = today - 3 business days
+DateTime initialBusinessDate() {
+  final now = DateTime.now();
+  return subtractBusinessDays(now, 3);
+}
+
+/// Riverpod provider to hold the selected date
+final selectedDateProvider = StateProvider<DateTime>((ref) {
+  return initialBusinessDate();
+});
+
+
+/// Widget: date selector with "Hoy" and "OK" in one row
+class MovementDateFilterRow extends ConsumerWidget {
+  const MovementDateFilterRow({
+    super.key,
+    required this.onOk,
+  });
+
+  final void Function(DateTime date, bool? isIn) onOk;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final selectedDate = ref.watch(selectedDateProvider);
+    final isIn = ref.watch(inOutProvider); // bool?
+    final dateText = DateFormat('dd/MM/yyyy').format(selectedDate);
+
+    return Column(
+      children: [
+        Row(
+          children: [
+            OutlinedButton(
+              style: OutlinedButton.styleFrom(
+                backgroundColor: Colors.white,
+              ),
+              onPressed: () async {
+                final picked = await showDatePicker(
+                  context: context,
+                  initialDate: selectedDate,
+                  firstDate: DateTime(2000),
+                  lastDate: DateTime(2100),
+                );
+                if (picked != null) {
+                  ref.read(selectedDateProvider.notifier).state = picked;
+                }
+              },
+              child: Text(dateText, style: TextStyle(color: Colors.purple)),
+              ),
+            const SizedBox(width: 8),
+            OutlinedButton(
+              style: OutlinedButton.styleFrom(
+                backgroundColor: Colors.white,
+              ),
+              onPressed: () {
+                final now = DateTime.now();
+                final today = DateTime(now.year, now.month, now.day);
+                ref.read(selectedDateProvider.notifier).state = today;
+              },
+              child: Text(
+                Messages.TODAY,
+                style: const TextStyle(color: Colors.purple),
+              ),
+            ),
+          ],
+        ),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            // SegmentedButton con 3 opciones: ALL / IN / OUT
+            SegmentedButton<bool?>(
+              segments: <ButtonSegment<bool?>>[
+                ButtonSegment<bool?>(
+                  value: null,
+                  icon: const Icon(Icons.swap_vert, size: 20),
+                  label: Text(Messages.ALL), // crea Messages.ALL = 'ALL' o lo que quieras
+                ),
+                ButtonSegment<bool?>(
+                  value: true,
+                  icon: Icon(Icons.arrow_downward, size: 20),
+                  label: Text(Messages.IN),
+                ),
+                ButtonSegment<bool?>(
+                  value: false,
+                  icon: Icon(Icons.arrow_upward, size: 20),
+                  label: Text(Messages.OUT),
+                ),
+              ],
+              // selected no puede estar vacío, así que siempre metemos el valor actual (aunque sea null)
+              selected: <bool?>{isIn},
+              onSelectionChanged: (newSelection) {
+                // newSelection.first es bool? (null / true / false)
+                ref.read(inOutProvider.notifier).state = newSelection.first;
+              },
+              style: ButtonStyle(
+                visualDensity: VisualDensity.compact,
+                padding: WidgetStateProperty.all(
+                  const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+            IconButton(
+              onPressed: () {
+                final date = ref.read(selectedDateProvider);
+                final isIn = ref.read(inOutProvider); // bool?
+
+                // Cambia la firma de onOk para aceptar bool?
+                // onOk(date, isIn);  // DateTime, bool?
+
+                // Si todavía no cambiaste onOk, puedes mapear a algo:
+                // null = ALL -> por ejemplo, tratar como IN por defecto
+                // onOk(date, isIn ?? true);
+                onOk(date, isIn);
+              },
+              icon: const Icon(
+                Icons.search,
+                color: Colors.purple,
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+}
+/// null = ALL, true = IN, false = OUT
+final inOutProvider = StateProvider<bool?>((ref) => null);
+
+
+

@@ -1,5 +1,4 @@
 // ignore_for_file: public_member_api_docs, sort_constructors_first
-import 'dart:typed_data';
 
 import 'package:awesome_dialog/awesome_dialog.dart';
 import 'package:flutter/material.dart';
@@ -7,18 +6,18 @@ import 'package:flutter/services.dart';
 import 'package:flutter_addons/flutter_addons.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:intl/intl.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
-import 'package:monalisa_app_001/features/products/domain/idempiere/idempiere_movement_line.dart';
 import 'package:monalisa_app_001/features/products/domain/idempiere/movement_and_lines.dart';
 
 
 import '../../../../../../config/router/app_router.dart';
 import '../../../../../../config/theme/app_theme.dart';
+import '../../../../../shared/data/memory.dart';
 import '../../../../../shared/data/messages.dart';
 import '../../../providers/product_provider_common.dart';
+import '../products_home_provider.dart';
 
 class NewMovementCardWithLocator extends ConsumerStatefulWidget {
   Color bgColor;
@@ -114,8 +113,10 @@ class MovementHeaderCardWithLocatorState extends ConsumerState<NewMovementCardWi
                       backgroundColor: Colors.green, // Changed to transparent for IconButton
                     ),
                     onPressed: () {
-                       //printMovementAndLines(context, ref,widget.movementAndLines);
-                      //GoRouterHelper(ref.context).push(AppRouter.PAGE_PDF_MOVEMENT_AND_LINE, extra: widget.movementAndLines);
+                      ref.read(productsHomeCurrentIndexProvider.notifier).state =
+                          Memory.PAGE_INDEX_MOVEMENT_PRINTER_SETUP;
+                      ref.read(actionScanProvider.notifier).state = Memory.ACTION_FIND_MOVEMENT_BY_ID;
+
                       GoRouterHelper(ref.context).go(AppRouter.PAGE_MOVEMENT_PRINTER_SETUP,
                           extra: widget.movementAndLines);
 
@@ -391,7 +392,7 @@ class MovementHeaderCardWithLocatorState extends ConsumerState<NewMovementCardWi
                                   ),
                                 ],
                               );
-                            }).toList(),
+                            }),
                             // **2. Fila de totales al final de la tabla.**
                             pw.TableRow(
                               decoration: pw.BoxDecoration(color: PdfColors.blueGrey100),

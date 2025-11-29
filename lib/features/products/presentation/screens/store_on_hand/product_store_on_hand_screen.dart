@@ -14,6 +14,7 @@ import 'package:simple_barcode_scanner/simple_barcode_scanner.dart';
 
 import '../../../../../config/router/app_router.dart';
 import '../../../../../config/theme/app_theme.dart';
+import '../../../../home/presentation/screens/home_screen.dart';
 import '../../../common/input_dialog.dart';
 import '../../providers/persitent_provider.dart';
 import '../../../../auth/domain/entities/warehouse.dart';
@@ -25,9 +26,8 @@ import '../../providers/products_scan_notifier.dart';
 import '../../providers/store_on_hand_for_put_away_movement.dart';
 import '../../providers/store_on_hand_provider.dart';
 import '../../widget/no_data_card.dart';
-import '../../widget/product_detail_card.dart';
+import 'product_detail_card.dart';
 import 'product_resume_card.dart';
-import '../../widget/scan_product_barcode_button.dart';
 import 'storage_on__hand_card.dart';
 
 
@@ -68,7 +68,11 @@ class ProductStoreOnHandScreenState extends ConsumerState<ProductStoreOnHandScre
 
   double? width;
   Warehouse? userWarehouse;
-
+  void popScopeAction(BuildContext context, WidgetRef ref) async {
+    print('popScopeAction----------------------------');
+    ref.invalidate(homeScreenTitleProvider);
+    context.go(AppRouter.PAGE_HOME);
+  }
 
   @override
   void initState() {
@@ -85,7 +89,17 @@ class ProductStoreOnHandScreenState extends ConsumerState<ProductStoreOnHandScre
     });
     super.initState();
   }
+  /*void _safeGoHome(BuildContext context) {
+    // Cerrar diálogos si hubiera alguno abierto
+    Navigator.of(context, rootNavigator: true).popUntil((r) => r.isFirst);
 
+    // Navegar fuera del ciclo actual (evita deadlocks en Android viejos)
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (context.mounted) {
+        context.go(AppRouter.PAGE_HOME);
+      }
+    });
+  }*/
   @override
   Widget build(BuildContext context){
     ref.invalidate(persistentLocatorToProvider);
@@ -115,8 +129,8 @@ class ProductStoreOnHandScreenState extends ConsumerState<ProductStoreOnHandScre
           icon: const Icon(Icons.arrow_back),
           onPressed: () async =>
           {
-            context.go(AppRouter.PAGE_HOME),
-
+            print('iconBackPressed----------------------------'),
+            popScopeAction(context, ref),
           }
             //
         ),
@@ -181,11 +195,13 @@ class ProductStoreOnHandScreenState extends ConsumerState<ProductStoreOnHandScre
       ) :getScanButton(context),
       body: SafeArea(
         child: PopScope(
-          onPopInvokedWithResult: (bool didPop, Object? result) async {
+          canPop: false, // el back físico no hace pop automático
+          onPopInvokedWithResult: (bool didPop, Object? result) {
             if (didPop) {
+              // Si por alguna razón ya poppeó, no hagas nada.
               return;
             }
-            context.go(AppRouter.PAGE_HOME);
+            popScopeAction(context, ref);
 
           },
           child: Container(
@@ -431,10 +447,6 @@ class ProductStoreOnHandScreenState extends ConsumerState<ProductStoreOnHandScre
          }
          final double width = MediaQuery.of(context).size.width - 30;
 
-
-
-
-         print('--------------find----------------productAsync.when');
          WidgetsBinding.instance.addPostFrameCallback((_) async {
            //ref.read(isScanningProvider.notifier).update((state) => false);
            //ref.read(productIdForPutAwayMovementProvider.notifier).state = products[0].id!;

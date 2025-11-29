@@ -3,6 +3,7 @@ import 'dart:convert';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/legacy.dart';
 import 'package:get_storage/get_storage.dart';
 import 'package:go_router/go_router.dart';
 import 'package:monalisa_app_001/config/config.dart';
@@ -15,18 +16,15 @@ import 'package:monalisa_app_001/features/m_inout/presentation/screens/m_in_out_
 import 'package:monalisa_app_001/features/products/common/scanner_screen.dart';
 import 'package:monalisa_app_001/features/products/domain/idempiere/put_away_movement.dart';
 import 'package:monalisa_app_001/features/products/presentation/screens/locator/search_locator_screen_from_scan.dart';
-import 'package:monalisa_app_001/features/products/presentation/screens/movement/edit_new/movement_error_screen.dart';
+import 'package:monalisa_app_001/features/products/presentation/screens/movement/list/movement_list_screen.dart';
 import 'package:monalisa_app_001/features/products/presentation/screens/movement/printer/movement_print_screen.dart';
 import 'package:monalisa_app_001/features/products/presentation/screens/movement/printer/printer_setup_screen.dart';
 import 'package:monalisa_app_001/features/products/presentation/screens/store_on_hand/memory_products.dart';
 import 'package:monalisa_app_001/features/products/presentation/screens/movement/edit_new/product_store_on_hand_screen_for_line.dart';
 import '../../features/auth/presentation/screens/auth_data_screen.dart';
 import '../../features/products/domain/idempiere/movement_and_lines.dart';
-import '../../features/products/domain/sql/sql_data_movement_line.dart';
 import '../../features/products/presentation/providers/locator_provider.dart';
 import '../../features/products/presentation/providers/product_provider_common.dart';
-import '../../features/products/presentation/providers/products_scan_notifier_for_line.dart';
-import '../../features/products/presentation/providers/store_on_hand_provider.dart';
 import '../../features/products/presentation/screens/locator/search_locator_screen.dart';
 import '../../features/products/presentation/screens/movement/create/product_for_new_movement_screen.dart';
 import '../../features/products/presentation/screens/movement/edit_new/new_movement_edit_screen.dart';
@@ -34,6 +32,7 @@ import '../../features/products/presentation/screens/movement/edit_new/movement_
 import '../../features/products/presentation/screens/movement/edit_new/movement_lines_create_screen.dart';
 import '../../features/products/presentation/screens/movement/edit/movements_screen.dart';
 import '../../features/products/presentation/screens/movement/create/movements_create_screen.dart';
+import '../../features/products/presentation/screens/movement/pos/movement_pos_page.dart';
 import '../../features/products/presentation/screens/movement/products_home_provider.dart';
 import '../../features/products/presentation/screens/movement/provider/new_movement_provider.dart';
 import '../../features/products/presentation/screens/search/product_search_screen.dart';
@@ -44,6 +43,7 @@ import '../../features/products/presentation/screens/movement/edit_new/unsorted_
 import '../../features/products/presentation/screens/update_upc/update_product_upc_screen3.dart';
 import '../../features/products/presentation/widget/barcode_scanner_screen.dart';
 import '../../features/shared/data/memory.dart';
+import '../../features/shared/data/messages.dart';
 
 
 class AppRouter {
@@ -68,6 +68,7 @@ class AppRouter {
   static const String NEW_PAGE_STORAGE_ON_HANGE = '/movement_create';
 
   static const String PAGE_MOVEMENTS_SEARCH = '/movement_search';
+  static const String PAGE_MOVEMENTS_LIST = '/movement_list';
 
   static const String PAGE_SEARCH_LOCATOR_FROM = '/product/movement/createMovement/searchLocatorFrom';
   static const String PAGE_SEARCH_LOCATOR_TO = '/product/movement/createMovement/searchLocatorTo';
@@ -84,10 +85,12 @@ class AppRouter {
   static const String PAGE_UNSORTED_STORAGE_ON_HAND_FOR_LINE = '/unsorted_store_on_hand_for_line';
 
   static String PAGE_MOVEMENT_PRINTER_SETUP='/movement_printer_set_up';
+  static String PAGE_MOVEMENT_PRINT_POS='/movement_print_pos';
 
 
 }
 
+final int transitionTimeMilliseconds = 1000;
 
 final goRouterProvider = Provider((ref) {
 
@@ -118,8 +121,18 @@ final goRouterProvider = Provider((ref) {
 
       ///* Home Routes
       GoRoute(
-        path: AppRouter.PAGE_HOME,
-        builder: (context, state) => const HomeScreen(),
+          path: AppRouter.PAGE_HOME,
+          pageBuilder: (context, state) {
+            return CustomTransitionPage(
+              key: state.pageKey,
+              child: const HomeScreen(),
+              transitionDuration: Duration(milliseconds: transitionTimeMilliseconds ),
+              transitionsBuilder:
+                  (context, animation, secondaryAnimation, child) {
+                return FadeTransition(
+                    opacity: animation, child: child);
+              });
+          }
       ),
 
       ///* MInOut Routes
@@ -132,37 +145,56 @@ final goRouterProvider = Provider((ref) {
       ),
       GoRoute(
         path: '${AppRouter.PAGE_PRODUCT_STORE_ON_HAND}/:productId',
+        pageBuilder: (context, state) {
+          final productId = state.pathParameters['productId'] ?? '';
+          final hasPrivilege = RolesApp.hasStockPrivilege();
 
-        // This allow in app call like
-        // context.push(AppRouter.PAGE_PRODUCT_STORE_ON_HAND+'/100001)
-        // (to pass movementId) when navigate within the app ';
-        builder: (context, state){
-            if( RolesApp.hasStockPrivilege()){
-              Future.delayed(Duration(milliseconds: 10), () {
-                ref.read(productsHomeCurrentIndexProvider.notifier).update((state) =>
-                Memory.PAGE_INDEX_STORE_ON_HAND);
-                ref.read(actionScanProvider.notifier).update((state) =>
-                Memory.ACTION_FIND_BY_UPC_SKU_FOR_STORE_ON_HAND);
-                ref.read(isDialogShowedProvider.notifier).update((state) => false);
-              });
+          if (hasPrivilege) {
+            // Use a FutureBuilder to show a loading indicator for 2 seconds
+            return CustomTransitionPage(
+              key: state.pageKey,
+              child: FutureBuilder(
+                future: Future.delayed(Duration(milliseconds: transitionTimeMilliseconds)),
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.done) {
+                    return ProductStoreOnHandScreen(productId: productId);
+                  }
 
-              final productId = state.pathParameters['productId'] ?? '';
+                  Future.microtask(() async {
 
-              return ProductStoreOnHandScreen(productId: productId);
-
-            } else{
-              return const HomeScreen();
-            }
-        }
-
-
+                    ref.read(homeScreenTitleProvider.notifier).state = Messages.NEW_MOVEMENT;
+                    ref.read(productsHomeCurrentIndexProvider.notifier)
+                        .update((state) => Memory.PAGE_INDEX_STORE_ON_HAND);
+                    ref.read(actionScanProvider.notifier)
+                        .update((state) => Memory.ACTION_FIND_BY_UPC_SKU_FOR_STORE_ON_HAND);
+                    ref.read(isDialogShowedProvider.notifier).update((state) => false);
+                  });
+                  return const Scaffold(
+                    backgroundColor: Colors.white,
+                    body: Center(child: CircularProgressIndicator()),
+                  );
+                },
+              ),
+              transitionDuration: Duration(microseconds: transitionTimeMilliseconds),
+              transitionsBuilder: (context, animation, secondaryAnimation, child) {
+                const begin = Offset(-1.0, 0.0);
+                const end = Offset.zero;
+                final tween = Tween(begin: begin, end: end).chain(CurveTween(curve: Curves.easeInOut));
+                return SlideTransition(position: animation.drive(tween), child: child);
+              },
+            );
+          } else {
+            return const NoTransitionPage(child: HomeScreen());
+          }
+        },
       ),
+
       GoRoute(
           path: '${AppRouter.PAGE_PRODUCT_STORE_ON_HAND_FOR_LINE}/:productUPC',
           builder: (context, state){
             if( RolesApp.hasStockPrivilege()){
               final productUPC = state.pathParameters['productUPC'] ?? '';
-              Future.delayed(Duration(milliseconds: 10), () {
+              Future.delayed(Duration.zero, () {
                 ref.read(productsHomeCurrentIndexProvider.notifier).update((state) =>
                 Memory.PAGE_INDEX_STORE_ON_HAND);
                 ref.read(actionScanProvider.notifier).update((state) =>
@@ -253,34 +285,70 @@ final goRouterProvider = Provider((ref) {
           }
 
       ),
+      GoRoute(
+        path: AppRouter.PAGE_MOVEMENT_PRINT_POS,
+        builder: (ctx, state) {
+          final extra = state.extra as Map<String, dynamic>;
+          return MovementPosPage(
+            ip: extra['ip'] as String,
+            port: extra['port'] as int,
+            data: extra['movementAndLines'] as MovementAndLines,
+          );
+        },
+      ),
+      GoRoute(
+        path: AppRouter.PAGE_MOVEMENTS_LIST,
+        builder: (ctx, state) {
+          return MovementListScreen();
+        },
+      ),
 
       GoRoute(
         path: '${AppRouter.PAGE_MOVEMENTS_SEARCH}/:movementId',
+        pageBuilder: (context, state) {
+          if (RolesApp.hasStockPrivilege()) {
+            String movementId = state.pathParameters['movementId'] ??
+                MovementsScreen.WAIT_FOR_SCAN_MOVEMENT;
+            if (movementId == ':movementId') {
+              movementId = MovementsScreen.WAIT_FOR_SCAN_MOVEMENT;
+            }
 
-        builder: (context,GoRouterState state) {
+            return CustomTransitionPage(
+              key: state.pageKey,
+              child: FutureBuilder(
+                future: Future.delayed(Duration(milliseconds: transitionTimeMilliseconds)),
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.done) {
 
-
-              if(RolesApp.hasStockPrivilege()) {
-                String movementId = state.pathParameters['movementId'] ?? MovementsScreen.WAIT_FOR_SCAN_MOVEMENT;
-                  if(movementId==':movementId'){
-                    movementId = MovementsScreen.WAIT_FOR_SCAN_MOVEMENT;
+                    return NewMovementEditScreen(movementId: movementId);
                   }
+                  Future.delayed(Duration.zero, () async {
 
-                  MemoryProducts.movementAndLines.clearData();
-                GetStorage().remove(Memory.KEY_MOVEMENT_AND_LINES);
-                  Future.delayed(Duration(milliseconds: 50), () {
-                    ref.read(productsHomeCurrentIndexProvider.notifier).update((state) =>
-                    Memory.PAGE_INDEX_MOVEMENTE_EDIT_SCREEN);
-                    ref.read(actionScanProvider.notifier).update((state) =>
-                    Memory.ACTION_FIND_MOVEMENT_BY_ID);
-
+                    ref.read(homeScreenTitleProvider.notifier).state = Messages.MOVEMENT_SEARCH;
+                    MemoryProducts.movementAndLines.clearData();
+                    GetStorage().remove(Memory.KEY_MOVEMENT_AND_LINES);
+                    ref.read(productsHomeCurrentIndexProvider.notifier).update(
+                            (state) => Memory.PAGE_INDEX_MOVEMENTE_EDIT_SCREEN);
+                    ref.read(actionScanProvider.notifier).update(
+                            (state) => Memory.ACTION_FIND_MOVEMENT_BY_ID);
                   });
-
-                  return NewMovementEditScreen(movementId: movementId,)  ;
-              } else {
-                return const HomeScreen();
-              }
-         }
+                  return const Scaffold(
+                    body: Center(child: CircularProgressIndicator()),
+                  );
+                },
+              ),
+              transitionDuration:Duration(microseconds: transitionTimeMilliseconds),
+              transitionsBuilder: (context, animation, secondaryAnimation, child) {
+                const begin = Offset(-1.0, 0.0);
+                const end = Offset.zero;
+                final tween = Tween(begin: begin, end: end).chain(CurveTween(curve: Curves.easeInOut));
+                return SlideTransition(position: animation.drive(tween), child: child);
+              },
+            );
+          } else {
+            return const NoTransitionPage(child: HomeScreen());
+          }
+        },
       ),
 
       GoRoute(
@@ -340,13 +408,14 @@ final goRouterProvider = Provider((ref) {
           if(RolesApp.hasStockPrivilege() ){
 
             String productUPC = state.pathParameters['productUPC'] ?? '-1';
-                Future.delayed(Duration(milliseconds: 50), () {
+                Future.delayed(Duration.zero, () {
               ref.read(productsHomeCurrentIndexProvider.notifier).update((state) =>
               Memory.PAGE_INDEX_STORE_ON_HAND);
               ref.read(actionScanProvider.notifier).update((state) =>
               Memory.ACTION_FIND_BY_UPC_SKU_FOR_STORE_ON_HAND);
               ref.read(isDialogShowedProvider.notifier).update((state) => false);
             });
+
             return ProductForNewMovementScreen(productUPC: productUPC
               );
             } else {
@@ -394,7 +463,7 @@ final goRouterProvider = Provider((ref) {
               return const HomeScreen();
             }
             final productUPC = state.pathParameters['productUPC'] ?? '';
-            Future.delayed(Duration(milliseconds: 50), () {
+            Future.delayed(Duration.zero, () {
               ref.read(isDialogShowedProvider.notifier).update((state) => false);
               ref.read(actionScanProvider.notifier).state =
                   Memory.ACTION_GET_LOCATOR_TO_VALUE;
@@ -422,13 +491,12 @@ final goRouterProvider = Provider((ref) {
             //final argument = state.pathParameters['argument'] ?? '';
             MovementAndLines movementAndLines = state.extra as MovementAndLines;
             String argument = jsonEncode(movementAndLines.toJson());
-            Future.delayed(Duration(milliseconds: 50), () {
+            Future.delayed(Duration.zero, () {
               ref.read(productsHomeCurrentIndexProvider.notifier).update((state) =>
               Memory.PAGE_INDEX_UNSORTED_STORAGE_ON_HAND);
               ref.read(actionScanProvider.notifier).update((state) =>
                   Memory.ACTION_GET_LOCATOR_TO_VALUE);
             });
-
             return UnsortedStorageOnHandScreenForLine(
               argument: argument,
               movementAndLines: movementAndLines,
@@ -448,7 +516,7 @@ final goRouterProvider = Provider((ref) {
             child: RolesApp.hasStockPrivilege()
                 ? UpdateProductUpcScreen3()
                 : const HomeScreen(),
-            transitionDuration: Duration(seconds: 1),
+            transitionDuration: Duration(milliseconds: transitionTimeMilliseconds),
             transitionsBuilder:
                 (context, animation, secondaryAnimation, child) {
               // Change the opacity of the screen using a Curve based on the animation's
@@ -493,8 +561,43 @@ final goRouterProvider = Provider((ref) {
 
 });
 
+// Clipper personalizado
+class CircleRevealClipper extends CustomClipper<Path> {
+  final double revealPercent;
+  CircleRevealClipper(this.revealPercent);
+
+  @override
+  Path getClip(Size size) {
+    final center = Offset(size.width / 2, size.height / 2);
+    final radius = size.longestSide * revealPercent;
+    return Path()..addOval(Rect.fromCircle(center: center, radius: radius));
+  }
+
+  @override
+  bool shouldReclip(covariant CircleRevealClipper oldClipper) =>
+      oldClipper.revealPercent != revealPercent;
+}
 
 
 
 
+// provider que controla el estado de carga
+final loadingProvider =
+StateNotifierProvider<LoadingController, bool>((ref) => LoadingController());
+
+class LoadingController extends StateNotifier<bool> {
+  LoadingController() : super(false);
+
+  /// Muestra el loader por [milliseconds] y luego lo oculta automáticamente.
+  Future<void> showFor({int milliseconds = 1000}) async {
+    if (state) return; // ya activo
+    state = true;
+    await Future.delayed(Duration(milliseconds: milliseconds));
+    state = false;
+  }
+
+  /// Control manual (opcional)
+  void start() => state = true;
+  void stop() => state = false;
+}
 

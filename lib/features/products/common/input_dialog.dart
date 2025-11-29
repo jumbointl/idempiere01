@@ -11,7 +11,6 @@ import '../../shared/data/memory.dart';
 import '../../shared/data/messages.dart';
 import '../presentation/providers/common_provider.dart';
 import '../presentation/providers/product_provider_common.dart';
-import '../presentation/screens/movement/products_home_provider.dart';
 import 'messages_dialog.dart';
 
 double get fontSizeMedium => themeFontSizeNormal;
@@ -61,7 +60,7 @@ Future<void> openInputDialog(BuildContext context, WidgetRef ref,
     context: context,
     builder: (BuildContext context) {
       return FractionallySizedBox(
-        heightFactor: 0.75, // Adjust the height as needed
+        heightFactor: 0.85, // Adjust the height as needed
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 5,vertical: 20),
           child: Center(
@@ -653,6 +652,8 @@ String getTip(int action) {
       return ' (MV)';
     case Memory.ACTION_GO_TO_STORAGE_ON_HAND_PAGE_WITH_UPC:
       return ' (GO UPC)';
+    case Memory.ACTION_FIND_PRINTER_BY_QR:
+      return ' (PRINTER)';
     default:
       return '';
 

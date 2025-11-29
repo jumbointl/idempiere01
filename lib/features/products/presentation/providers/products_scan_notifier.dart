@@ -1,6 +1,5 @@
 
 
-import 'dart:convert';
 
 import 'package:awesome_dialog/awesome_dialog.dart';
 import 'package:flutter/material.dart';
@@ -8,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
 import 'package:get_storage/get_storage.dart';
 import 'package:go_router/go_router.dart';
+import 'package:monalisa_app_001/features/products/common/barcode_utils.dart';
 import 'package:monalisa_app_001/features/products/domain/idempiere/put_away_movement.dart';
 import 'package:monalisa_app_001/features/products/domain/sql/sql_data_movement.dart';
 import 'package:monalisa_app_001/features/products/presentation/providers/product_provider_common.dart';
@@ -52,7 +52,10 @@ class ProductsScanNotifier  extends StateNotifier<List<IdempiereProduct>> implem
   }
   void _addBarcode(String scannedData) {
     if(scannedData.length==12){
-      scannedData='0$scannedData';
+      String aux = '0$scannedData';
+      if(isValidEAN13(aux)){
+        scannedData = aux;
+      }
     }
     ref.read(scannedCodeForPutAwayMovementProvider.notifier).update((state) => scannedData);
     ref.read(scannedCodeTimesProvider.notifier).update((state) => state+1);

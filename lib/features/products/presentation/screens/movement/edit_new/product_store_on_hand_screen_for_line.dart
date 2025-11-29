@@ -3,35 +3,23 @@ import 'dart:convert';
 import 'package:awesome_dialog/awesome_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_riverpod/legacy.dart';
-import 'package:get_storage/get_storage.dart';
 import 'package:go_router/go_router.dart';
 import 'package:monalisa_app_001/features/products/common/input_data_processor.dart';
 import 'package:monalisa_app_001/features/products/common/scan_button_by_action.dart';
-import 'package:monalisa_app_001/features/products/domain/idempiere/idempiere_locator.dart';
-import 'package:monalisa_app_001/features/products/domain/idempiere/idempiere_movement.dart';
 import 'package:monalisa_app_001/features/products/domain/idempiere/idempiere_product.dart';
 import 'package:monalisa_app_001/features/products/domain/idempiere/idempiere_storage_on_hande.dart';
 import 'package:monalisa_app_001/features/products/domain/idempiere/movement_and_lines.dart';
-import 'package:monalisa_app_001/features/products/presentation/providers/persitent_provider.dart';
-import 'package:monalisa_app_001/features/products/presentation/screens/movement/edit_new/movement_error_screen.dart';
-import 'package:monalisa_app_001/features/products/presentation/screens/movement/provider/new_movement_provider.dart';
 import 'package:monalisa_app_001/features/products/presentation/screens/store_on_hand/memory_products.dart';
 import 'package:monalisa_app_001/features/products/presentation/screens/movement/edit_new/storage_on__hand_card_for_line.dart';
 import 'package:monalisa_app_001/features/products/presentation/widget/no_records_card.dart';
 import 'package:monalisa_app_001/features/products/presentation/widget/no_storage_on_hand_records_card.dart';
-import 'package:simple_barcode_scanner/simple_barcode_scanner.dart';
 
 import '../../../../../../config/router/app_router.dart';
 import '../../../../../../config/theme/app_theme.dart';
 import '../../../../common/input_dialog.dart';
 import '../../../../common/messages_dialog.dart';
-import '../../../../domain/idempiere/idempiere_movement_line.dart';
-import '../../../providers/locator_provider_for_Line.dart';
 import '../../../providers/products_scan_notifier_for_line.dart';
-import '../create/scan_movement_product_button_with_processor.dart';
-import '../edit/product_detail_card_for_line.dart';
-import '../edit/scan_product_barcode_button_for_line.dart';
+import 'product_detail_card_for_line.dart';
 import '../products_home_provider.dart';
 import '../../../../../auth/domain/entities/warehouse.dart';
 import '../../../../../auth/presentation/providers/auth_provider.dart';
@@ -130,7 +118,7 @@ class ProductStoreOnHandScreenForLineState
   MovementAndLines get movementAndLines {
 
     if(widget.argument.isNotEmpty && widget.argument!='-1') {
-      return MovementAndLines.fromJson(jsonDecode(widget.argument!));
+      return MovementAndLines.fromJson(jsonDecode(widget.argument));
     } else {
       return widget.movementAndLines;
     }
@@ -229,10 +217,7 @@ class ProductStoreOnHandScreenForLineState
             icon: const Icon(Icons.arrow_back),
             onPressed: () async =>
             {
-              ref.read(productsHomeCurrentIndexProvider.notifier).state =
-              Memory.PAGE_INDEX_MOVEMENTE_EDIT_SCREEN,
-              actionScan.state = Memory.ACTION_FIND_MOVEMENT_BY_ID,
-              context.go('${AppRouter.PAGE_MOVEMENTS_SEARCH}/$movementId')
+              popScopeAction(context, ref),
             }
           //
         ),
@@ -302,14 +287,12 @@ class ProductStoreOnHandScreenForLineState
       ) :bottomAppBar(context),
       body: SafeArea(
         child: PopScope(
+          canPop: false,
           onPopInvokedWithResult: (bool didPop, Object? result) async {
             if (didPop) {
               return;
             }
-            ref.read(productsHomeCurrentIndexProvider.notifier).state =
-                Memory.PAGE_INDEX_MOVEMENTE_EDIT_SCREEN;
-            ref.read(actionScanProvider.notifier).state = Memory.ACTION_FIND_MOVEMENT_BY_ID;
-            context.go('${AppRouter.PAGE_MOVEMENTS_SEARCH}/$movementId');
+            popScopeAction(context, ref);
           },
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 10,vertical: 20),
@@ -531,7 +514,7 @@ class ProductStoreOnHandScreenForLineState
           width: width - 10,
           argument: widget.argument,
           movementAndLines: MovementAndLines.fromJson(jsonDecode(widget.argument)),
-          allowedLocatorFrom: movementAndLines!.lastLocatorFrom,
+          allowedLocatorFrom: movementAndLines.lastLocatorFrom,
         );
       },
     );
@@ -636,6 +619,13 @@ class ProductStoreOnHandScreenForLineState
 
 
 
+  }
+
+  void popScopeAction(BuildContext context, WidgetRef ref) {
+    ref.read(productsHomeCurrentIndexProvider.notifier).state =
+        Memory.PAGE_INDEX_MOVEMENTE_EDIT_SCREEN;
+    ref.read(actionScanProvider.notifier).state = Memory.ACTION_FIND_MOVEMENT_BY_ID;
+    context.go('${AppRouter.PAGE_MOVEMENTS_SEARCH}/$movementId');
   }
 
 

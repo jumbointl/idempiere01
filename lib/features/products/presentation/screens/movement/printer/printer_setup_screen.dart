@@ -1,25 +1,26 @@
 import 'dart:convert';
 
+import 'package:awesome_dialog/awesome_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_riverpod/legacy.dart';
 import 'package:go_router/go_router.dart';
-import 'package:mobile_scanner/mobile_scanner.dart';
-import 'package:monalisa_app_001/features/products/presentation/screens/movement/printer/printer_type.dart';
-import 'package:monalisa_app_001/features/products/presentation/screens/movement/printer/qe_scan_page.dart';
+import 'package:monalisa_app_001/features/products/presentation/screens/movement/printer/mo_printer.dart';
 import 'package:pdf/pdf.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:printing/printing.dart';
+import 'package:simple_barcode_scanner/simple_barcode_scanner.dart';
 
 import '../../../../../../config/router/app_router.dart';
 import '../../../../../shared/data/memory.dart';
 import '../../../../../shared/data/messages.dart';
 import '../../../../common/messages_dialog.dart';
 import '../../../../domain/idempiere/movement_and_lines.dart';
+import '../../../providers/common_provider.dart';
 import '../../../providers/product_provider_common.dart';
 import '../products_home_provider.dart';
 import '../provider/new_movement_provider.dart';
+import 'cups_printer.dart';
 import 'movement_pdf_generator.dart';
 import 'printer_scan_notifier.dart';
 
@@ -42,8 +43,15 @@ class _PrinterSetupScreenState extends ConsumerState<PrinterSetupScreen> {
   final FocusNode _focusNode = FocusNode();
   late MovementAndLines movementAndLines;
   late var actionScan;
-
+  final int actionTypeInt = Memory.ACTION_FIND_PRINTER_BY_QR;
   int movementId = -1;
+  String scannedData='';
+  late var isPrinting;
+
+  String get cupsPrinterName {
+    return 'BR_HL_10003';
+  }
+
 
   @override
   void dispose() {
@@ -55,14 +63,21 @@ class _PrinterSetupScreenState extends ConsumerState<PrinterSetupScreen> {
   KeyEventResult _handleKeyEvent(FocusNode node, KeyEvent event) {
     // Escuchar solo el evento KeyDown para evitar duplicados
     if (event is KeyDownEvent) {
-      // Usar LogicalKeyboardKey.enter
       if (event.logicalKey == LogicalKeyboardKey.enter) {
-        final printerState = ref.read(printerProvider);
-        final qrData = printerState.nameController.text;
-        if (qrData.isNotEmpty) {
-          ref.read(printerProvider.notifier).updateFromScan(qrData);
+        // Cuando se presiona Enter, procesamos los datos acumulados
+        if (scannedData.isNotEmpty) {
+          Future.delayed(const Duration(milliseconds: 100), () {
+            print('Escaneado: $scannedData');
+            ref.read(printerProvider.notifier).updateFromScan(scannedData, ref);
+            // Limpiar los datos escaneados para el próximo escaneo
+            scannedData = '';
+          });
         }
         // Devolver handled para evitar que el evento se propague
+        return KeyEventResult.handled;
+      } else if (event.logicalKey.keyLabel.isNotEmpty && event.character != null) {
+        // Acumular los caracteres de las teclas presionadas
+        scannedData += event.character!;
         return KeyEventResult.handled;
       }
     }
@@ -70,40 +85,61 @@ class _PrinterSetupScreenState extends ConsumerState<PrinterSetupScreen> {
     return KeyEventResult.ignored;
   }
 
+
   // Iniciar escaneo con cámara
   Future<void> _startCameraScan(BuildContext context, WidgetRef ref) async {
     if (await Permission.camera.request().isGranted) {
-      final result = await Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) => const QRScannerPage(),
-        ),
-      );
-      if (result != null) {
-        ref.read(printerProvider.notifier).updateFromScan(result as String);
-      }
+       if(ref.context.mounted){
+         String? result= await SimpleBarcodeScanner.scanBarcode(
+           ref.context,
+           barcodeAppBar: BarcodeAppBar(
+             appBarTitle: Messages.SCANNING,
+             centerTitle: false,
+             enableBackButton: true,
+             backButtonIcon: Icon(Icons.arrow_back_ios),
+           ),
+           isShowFlashIcon: true,
+           delayMillis: 300,
+           cameraFace: CameraFace.back,
+         );
+         if (result != null) {
+           Future.delayed(const Duration(milliseconds: 100), () {
+           });
+           print('Escaneado: $result');
+           ref.read(printerProvider.notifier).updateFromScan(result,ref);
+         } else {
+           if(ref.context.mounted) showWarningMessage(ref.context, ref, Messages.ERROR_SCAN);
+         }
+       }
+
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Permiso de cámara denegado')),
-      );
+      if(ref.context.mounted){
+        showWarningMessage(ref.context, ref, Messages.ERROR_CAMERA_PERMISSION);
+      }
+
     }
   }
 
-  Future<Uint8List> get image async {
-    final ByteData bytes = await rootBundle.load('assets/images/logo-monalisa.jpg');
-    return bytes.buffer.asUint8List();
-  }
+
 
   Future<void> printPdf(WidgetRef ref, {required bool direct}) async {
     MovementAndLines movementAndLines = MovementAndLines.fromJson(jsonDecode(widget.argument));
-    final image = await this.image;
+    final image = await imageLogo;
     final pdfBytes = await generateMovementDocument(movementAndLines, image);
     direct ?  ref.read(printerProvider.notifier).printDirectly(bytes: pdfBytes,ref: ref)
         : await Printing.sharePdf(bytes: pdfBytes, filename: 'documento.pdf');
   }
+/*  Future<void> printPdfToCUPS(WidgetRef ref) async {
+    MovementAndLines movementAndLines = MovementAndLines.fromJson(jsonDecode(widget.argument));
+    final image = await imageLogo;
+    final pdfBytes = await generateMovementDocument(movementAndLines, image);
+    final cupsServiceUrl = Memory.URL_CUPS_SERVER;
+    String printerName = cupsPrinterName;
+    await sendPdfToNode(ref,pdfBytes, cupsServiceUrl,printerName,);
+  }*/
   Future<void> openPrintDialog(WidgetRef ref,) async{
     MovementAndLines movementAndLines = MovementAndLines.fromJson(jsonDecode(widget.argument));
-    final image = await this.image;
+    final image = await imageLogo;
     final pdfBytes = await generateMovementDocument(movementAndLines, image);
     await Printing.layoutPdf(
       onLayout: (PdfPageFormat format) async {
@@ -117,9 +153,7 @@ class _PrinterSetupScreenState extends ConsumerState<PrinterSetupScreen> {
     // TODO: implement initState
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      /*print('widget.argument: ${widget.argument}');
-      print('widget.movementAndLines: ${widget.movementAndLines.documentNo ?? '--null'}');
-      print('movementAndLines: ${movementAndLines.documentNo ?? '--null'}');*/
+      //_focusNode.requestFocus();
       Future.delayed(Duration(milliseconds: 50), () {
         movementAndLines = ref.read(movementAndLinesProvider.notifier).state ;
         print('movementAndLines: ${movementAndLines.documentNo ?? '--null'}');
@@ -127,6 +161,17 @@ class _PrinterSetupScreenState extends ConsumerState<PrinterSetupScreen> {
           widget.movementAndLines = movementAndLines;
 
         }
+
+        /*var printerState = ref.read(printerProvider);
+        String ip = printerState.ipController.text.trim();
+        String port = printerState.portController.text.trim();
+        String type = printerState.typeController.text.trim();
+        String name = printerState.nameController.text.trim();
+        if(ip.isEmpty || port.isEmpty || type.isEmpty || name.isEmpty){
+           return;
+        }
+        MOPrinter printer = MOPrinter(name: name,ip: ip,port: port,type: type);
+        askForPrint(ref,printer);*/
 
       });
     });
@@ -136,6 +181,7 @@ class _PrinterSetupScreenState extends ConsumerState<PrinterSetupScreen> {
   Widget build(BuildContext context) {
     movementAndLines = MovementAndLines.fromJson(jsonDecode(widget.argument));
 
+    isPrinting = ref.watch(isPrintingProvider.notifier);
     actionScan = ref.watch(actionScanProvider.notifier);
     movementId = movementAndLines.id ?? -1;
     final printerState = ref.watch(printerProvider);
@@ -156,26 +202,23 @@ class _PrinterSetupScreenState extends ConsumerState<PrinterSetupScreen> {
               icon: const Icon(Icons.arrow_back),
               onPressed: () async =>
               {
-                ref.read(productsHomeCurrentIndexProvider.notifier).state =
-                    Memory.PAGE_INDEX_MOVEMENTE_EDIT_SCREEN,
-                actionScan.state = Memory.ACTION_FIND_MOVEMENT_BY_ID,
-                context.go('${AppRouter.PAGE_MOVEMENTS_SEARCH}/$movementId')
+                popScopeAction(context, ref),
+
               }
             //
           ),
-          title: Text(Messages.PRINTER_SETUP),
+          title: Text(Messages.SELECT_A_PRINTER),
         ),
         body: PopScope(
+          canPop: false,
           onPopInvokedWithResult: (bool didPop, Object? result) async {
+
             if (didPop) {
               return;
             }
-            ref.read(productsHomeCurrentIndexProvider.notifier).state =
-                Memory.PAGE_INDEX_MOVEMENTE_EDIT_SCREEN;
-            actionScan.state = Memory.ACTION_FIND_MOVEMENT_BY_ID;
-            context.go('${AppRouter.PAGE_MOVEMENTS_SEARCH}/$movementId');
+            popScopeAction(context, ref);
           },
-          child: SingleChildScrollView(
+          child: isPrinting.state ? LinearProgressIndicator() : SingleChildScrollView(
             child: Padding(
               padding: const EdgeInsets.all(16.0),
               child: Column(
@@ -185,41 +228,89 @@ class _PrinterSetupScreenState extends ConsumerState<PrinterSetupScreen> {
                   ElevatedButton.icon(
                     onPressed: () => _startCameraScan(context, ref),
                     icon: const Icon(Icons.qr_code_scanner),
-                    label: const Text('Escanear con Cámara'),
+                    label: Text(Messages.OPEN_CAMERA),
                   ),
                   const SizedBox(height: 20),
-                  TextField(
-                    controller: printerState.nameController,
-                    decoration: const InputDecoration(labelText: 'Nombre'),
+                  Row(
+                    children: [
+                      Flexible(
+                        flex: 2,
+                        child: TextField(
+                          controller: printerState.nameController,
+                          enabled: false,
+                          keyboardType: TextInputType.none,
+                          decoration:  InputDecoration(labelText: Messages.NAME),
+                        ),
+                      ),
+                      Flexible(
+                        flex: 1,
+                        child: TextField(
+                          enabled: false,
+                          keyboardType: TextInputType.none,
+                          controller: printerState.typeController,
+                          decoration: InputDecoration(labelText: Messages.TYPE),
+                        ),
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 10),
-                  TextField(
-                    controller: printerState.ipController,
-                    decoration: const InputDecoration(labelText: 'Dirección IP'),
+                  Row(
+                    children: [
+                      Flexible(
+                        flex: 2,
+                        child: TextField(
+                          controller: printerState.ipController,
+                          enabled: false,
+                          keyboardType: TextInputType.none,
+                          decoration: InputDecoration(labelText: Messages.IP),
+                        ),
+                      ),
+                      Flexible(
+                        flex: 1,
+                        child: TextField(
+                          enabled: false,
+                          keyboardType: TextInputType.none,
+                          controller: printerState.portController,
+                          decoration: InputDecoration(labelText: Messages.PORT),
+                        ),
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 10),
-                  TextField(
-                    controller: printerState.portController,
-                    decoration: const InputDecoration(labelText: 'Puerto'),
-                    keyboardType: TextInputType.number,
-                  ),
-                  const SizedBox(height: 10),
-                  // <--- DropdownButtonFormField en lugar de TextField
-                  DropdownButtonFormField<PrinterType>(
-                    initialValue: printerState.type,
-                    decoration: InputDecoration(
-                      labelText: Messages.PRINTER_TYPE,
-                      border: OutlineInputBorder(),
+
+                  /*ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: ref.read(directPrintWithLastPrinterProvider.notifier).state
+                          ? Colors.green
+                          : null,
                     ),
-                    onChanged: (PrinterType? newValue) {
-                      ref.read(printerProvider.notifier).setType(newValue);
+                    onPressed: () async {
+                       savePrinter(ref);
                     },
-                    items: PrinterType.values.map<DropdownMenuItem<PrinterType>>((PrinterType type) {
-                      return DropdownMenuItem<PrinterType>(
-                        value: type,
-                        child: Text(type.name),
-                      );
-                    }).toList(),
+                    child: Text(Messages.DIRECT_PRINT),
+                  ),*/
+                  const SizedBox(height: 10),
+                  ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: ref.read(lastPrinterProvider.notifier).state != null
+                          ? Colors.green
+                          : null,
+                    ),
+                    onPressed: () async {
+                      String ip = printerState.ipController.text.trim();
+                      String port = printerState.portController.text.trim();
+                      String type = printerState.typeController.text.trim();
+                      String name = printerState.nameController.text.trim();
+                      if(ip.isEmpty || port.isEmpty || type.isEmpty || name.isEmpty){
+                        showWarningMessage(context, ref, Messages.ERROR_SAVE_PRINTER);
+                        return;
+                      }
+
+                      String qrData = '$ip:$port:$type:$name:END';
+                      print('QR Data: $qrData');
+                      ref.read(printerProvider.notifier).updateFromScan(qrData, ref);
+                    },
+                    child: Text(Messages.PRINT),
                   ),
                   const SizedBox(height: 10),
                   ElevatedButton(
@@ -228,14 +319,14 @@ class _PrinterSetupScreenState extends ConsumerState<PrinterSetupScreen> {
                     },
                     child: Text(Messages.SELECT_A_PRINTER),
                   ),
-                  ElevatedButton(
+                  /*ElevatedButton(
                     onPressed: () async {
                       showWarningMessage(context, ref, Messages.NOT_ENABLED);
                       //to do
                       //await printPdf(ref, direct: true);
                     },
                     child: Text('POS/LABEL'),
-                  ),
+                  ),*/
                   const SizedBox(height: 10),
                   ElevatedButton(onPressed: () async { await printPdf(ref, direct: false); },
                       child: Text(Messages.SHARE)),
@@ -247,4 +338,89 @@ class _PrinterSetupScreenState extends ConsumerState<PrinterSetupScreen> {
       ),
     );
   }
+
+  void savePrinter(WidgetRef ref) {
+
+    final printerState = ref.read(printerProvider);
+    if(printerState.nameController.text.isEmpty || printerState.ipController.text.isEmpty
+        || printerState.portController.text.isEmpty || printerState.typeController.text.isEmpty){
+      showWarningMessage(ref.context, ref, Messages.ERROR_SAVE_PRINTER);
+      return;
+    }
+    MOPrinter printer = MOPrinter();
+    printer.name = printerState.nameController.text;
+    printer.ip = printerState.ipController.text;
+    printer.port = printerState.portController.text;
+    printer.type = printerState.typeController.text;
+    ref.read(lastPrinterProvider.notifier).state = printer;
+    ref.read(directPrintWithLastPrinterProvider.notifier).update((state) => !state);
+
+
+  }
+
+  void askForPrint(WidgetRef ref, MOPrinter printer) {
+    if(printer.name==null){
+      return ;
+    }
+    String title = Messages.PRINT_TO_LAST_PRINTER;
+    String message = printer.name!;
+     bool directPrint = true;
+    AwesomeDialog(
+        context: ref.context,
+        headerAnimationLoop: false,
+        dialogType: DialogType.noHeader,
+        body: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 40),
+          child: Center(
+            child: Column(
+              spacing: 10,
+              children: [
+                Text(title, style: TextStyle(
+                    fontSize: 20, fontWeight: FontWeight.bold)),
+                Text(message, style: TextStyle(
+                    fontSize: 16, fontWeight: FontWeight.bold)),
+              ],
+            ),
+          ),
+        ),
+        title: title,
+        desc: message,
+        autoDismiss: true,
+        autoHide: Duration(seconds: 2),
+        btnCancelText: Messages.CANCEL,
+        btnOkText: Messages.OK,
+        btnOkOnPress: () {
+          directPrint = true;
+        },
+        btnCancelOnPress: () {
+          directPrint = false;
+          ref.read(directPrintWithLastPrinterProvider.notifier).state = false;
+          return;
+        }
+    ).show().then((value) {
+      if(!directPrint) return;
+      var printerState = ref.read(printerProvider);
+      String ip = printerState.ipController.text.trim();
+      String port = printerState.portController.text.trim();
+      String type = printerState.typeController.text.trim();
+      String name = printerState.nameController.text.trim();
+      if(ip.isEmpty || port.isEmpty || type.isEmpty || name.isEmpty){
+        showWarningMessage(context, ref, Messages.ERROR_SAVE_PRINTER);
+        return;
+      }
+
+      String qrData = '$ip:$port:$type:$name:END';
+      print('QR Data: $qrData');
+      ref.read(printerProvider.notifier).updateFromScan(qrData, ref);
+    });
+  }
+
+  void popScopeAction(BuildContext context, WidgetRef ref) async {
+    print('popScopeAction----------------------------');
+    ref.read(productsHomeCurrentIndexProvider.notifier).state =
+        Memory.PAGE_INDEX_MOVEMENTE_EDIT_SCREEN;
+    actionScan.state = Memory.ACTION_FIND_MOVEMENT_BY_ID;
+    context.go('${AppRouter.PAGE_MOVEMENTS_SEARCH}/$movementId');
+  }
 }
+
