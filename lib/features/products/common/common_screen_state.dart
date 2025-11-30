@@ -12,6 +12,9 @@ import '../../home/presentation/screens/home_screen.dart';
 import '../../shared/data/memory.dart';
 import '../../shared/data/messages.dart';
 import '../domain/idempiere/movement_and_lines.dart';
+import '../presentation/providers/common_provider.dart';
+import '../presentation/screens/store_on_hand/memory_products.dart';
+import 'app_initializer_overlay.dart';
 import 'input_data_processor.dart';
 import 'input_dialog.dart';
 import 'package:intl/intl.dart';
@@ -83,66 +86,68 @@ abstract class CommonConsumerState<T extends ConsumerStatefulWidget> extends Con
   Widget build(BuildContext context){
     initialSetting(context,ref);
 
-    return Scaffold(
-
-      appBar: getAppBar(context,ref),
-      /*floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          double positionAdd= scrollController.position.maxScrollExtent;
-          if(scrollToTop.state){
-            goToPosition -= positionAdd;
-            if(goToPosition <= 0){
-              goToPosition = 0;
-              ref.read(scrollToUpProvider.notifier).update((state) => !state);
+    return AppInitializerOverlay(
+      child: Scaffold(
+      
+        appBar: getAppBar(context,ref),
+        /*floatingActionButton: FloatingActionButton(
+          onPressed: () {
+            double positionAdd= scrollController.position.maxScrollExtent;
+            if(scrollToTop.state){
+              goToPosition -= positionAdd;
+              if(goToPosition <= 0){
+                goToPosition = 0;
+                ref.read(scrollToUpProvider.notifier).update((state) => !state);
+              }
+            } else {
+              goToPosition+= positionAdd;
+              if(goToPosition >= scrollController.position.maxScrollExtent){
+                goToPosition = scrollController.position.maxScrollExtent;
+                ref.read(scrollToUpProvider.notifier).update((state) => !state);
+              }
             }
-          } else {
-            goToPosition+= positionAdd;
-            if(goToPosition >= scrollController.position.maxScrollExtent){
-              goToPosition = scrollController.position.maxScrollExtent;
-              ref.read(scrollToUpProvider.notifier).update((state) => !state);
-            }
-          }
-
-          setState(() {});
-          scrollController.animateTo(
-            goToPosition,
-            duration: const Duration(milliseconds: 500),
-            curve: Curves.easeInOut,
-          );
-        },
-        child: Icon(scrollToTop.state ? Icons.arrow_upward :Icons.arrow_downward),
-      ),*/
-      bottomNavigationBar: isDialogShowed.state ? Container(
-        height: Memory.BOTTOM_BAR_HEIGHT,
-        color: themeColorPrimary,
-        child: Center(
-          child: Text(Messages.DIALOG_SHOWED,
-            style: TextStyle(color: Colors.white,fontSize: themeFontSizeLarge
-                ,fontWeight: FontWeight.bold),),
-        ),
-      ) : getBottomAppBar(context,ref),
-
-      body: SafeArea(
-        child: PopScope(
-          canPop: false,
-          onPopInvokedWithResult: (bool didPop, Object? result) async {
-            if (didPop) {
-              return;
-            }
-            popScopeAction(context,ref);
-
-
+      
+            setState(() {});
+            scrollController.animateTo(
+              goToPosition,
+              duration: const Duration(milliseconds: 500),
+              curve: Curves.easeInOut,
+            );
           },
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10,vertical: 20),
-            child: SingleChildScrollView(
-              child: Column(
-                spacing: 10,
-                children: [
-                  if(showSearchBar) getSearchBar(context,ref,hinText,this),
-                  getMainDataCard(context, ref),
-                  //getMainDataList(context, ref),
-                ],
+          child: Icon(scrollToTop.state ? Icons.arrow_upward :Icons.arrow_downward),
+        ),*/
+        bottomNavigationBar: isDialogShowed.state ? Container(
+          height: Memory.BOTTOM_BAR_HEIGHT,
+          color: themeColorPrimary,
+          child: Center(
+            child: Text(Messages.DIALOG_SHOWED,
+              style: TextStyle(color: Colors.white,fontSize: themeFontSizeLarge
+                  ,fontWeight: FontWeight.bold),),
+          ),
+        ) : getBottomAppBar(context,ref),
+      
+        body: SafeArea(
+          child: PopScope(
+            canPop: false,
+            onPopInvokedWithResult: (bool didPop, Object? result) async {
+              if (didPop) {
+                return;
+              }
+              popScopeAction(context,ref);
+      
+      
+            },
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10,vertical: 20),
+              child: SingleChildScrollView(
+                child: Column(
+                  spacing: 10,
+                  children: [
+                    if(showSearchBar) getSearchBar(context,ref,hinText,this),
+                    getMainDataCard(context, ref),
+                    //getMainDataList(context, ref),
+                  ],
+                ),
               ),
             ),
           ),
@@ -170,7 +175,9 @@ abstract class CommonConsumerState<T extends ConsumerStatefulWidget> extends Con
     => Memory.ACTION_FIND_MOVEMENT_BY_ID);*/
     print('popScopeAction----------------------------');
     ref.invalidate(homeScreenTitleProvider);
-    context.go(AppRouter.PAGE_HOME);
+    //context.go(AppRouter.PAGE_HOME);
+    Navigator.pop(context);
+
   }
 
   BottomAppBar getBottomAppBar(BuildContext context, WidgetRef ref) {
@@ -286,7 +293,7 @@ abstract class CommonConsumerState<T extends ConsumerStatefulWidget> extends Con
 
     );
   }
-
+  Future<void> setDefaultValues(BuildContext context, WidgetRef ref);
 
 }
 
@@ -431,9 +438,11 @@ class MovementDateFilterRow extends ConsumerWidget {
     );
   }
 
+
 }
-/// null = ALL, true = IN, false = OUT
-final inOutProvider = StateProvider<bool?>((ref) => null);
+
+
+
 
 
 

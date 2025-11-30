@@ -117,31 +117,38 @@ class MovementListScreenState extends CommonConsumerState<MovementListScreen> {
 
         var iconData = isIn == null ? Icons.swap_vert : isIn ? Icons.arrow_downward : Icons.arrow_upward;
         var iconColor = Colors.purple;
-        if(isIn == null){
-          int userWarehouseId = Memory.sqlUsersData.mWarehouseID?.id ?? -1;
-          int warehouseFromId = movement.mWarehouseID?.id ?? -2;
-          int warehouseToId = movement.mWarehouseToID?.id ?? -3;
-          if(userWarehouseId>0 && warehouseFromId>0 && warehouseToId>0){
-            if(warehouseFromId==userWarehouseId){
-              iconData = Icons.swap_vert;
-            } else if(warehouseToId==userWarehouseId){
-              iconData = Icons.arrow_downward ;
-            } else {
-              iconData = Icons.arrow_upward;
-            }
-          }
-        }
+        var textColor = isIn == null ? Colors.black : isIn ? Colors.green : Colors.red;
 
+        int userWarehouseId = Memory.sqlUsersData.mWarehouseID?.id ?? -1;
+        int warehouseFromId = movement.mWarehouseID?.id ?? -2;
+        int warehouseToId = movement.mWarehouseToID?.id ?? -3;
+        if(userWarehouseId>0 && warehouseFromId>0 && warehouseToId>0){
+          if(warehouseFromId==warehouseToId){
+            iconData = Icons.swap_vert;
+            textColor = Colors.black;
+          } else if(warehouseToId==userWarehouseId){
+            iconData = Icons.arrow_downward ;
+            textColor = Colors.green;
+          } else if(warehouseFromId==userWarehouseId){
+            iconData = Icons.arrow_upward;
+            textColor = Colors.red;
+          } else {
+            iconData = Icons.error;
+            textColor = Colors.blueAccent;
+          }
+        } else {
+          iconData = Icons.error;
+        }
 
         return ListTile(
           trailing: movementId > 0
               ? IconButton(
             icon: Icon(iconData,color: iconColor,),
             onPressed: () {
-              context.go('${AppRouter.PAGE_MOVEMENTS_SEARCH}/$movementId');
+              context.push('${AppRouter.PAGE_MOVEMENTS_SEARCH}/$movementId');
             },
           )  : null,
-          title: Text(movement.documentNo ?? '$movementId'),
+          title: Text(movement.documentNo ?? '$movementId',style: TextStyle(color: textColor)),
           subtitle: Text(
             '${Messages.DATE}: ${movement.movementDate ?? ''}',
           ),
@@ -168,8 +175,6 @@ class MovementListScreenState extends CommonConsumerState<MovementListScreen> {
     inputString = ref.watch(inputStringProvider.notifier);
     pageIndexProdiver = ref.watch(productsHomeCurrentIndexProvider.notifier);
     actionScan = ref.read(actionScanProvider.notifier);
-
-
 
   }
 
@@ -297,6 +302,12 @@ class MovementListScreenState extends CommonConsumerState<MovementListScreen> {
       onPressed: () {
       },
     );
+  }
+
+  @override
+  Future<void> setDefaultValues(BuildContext context, WidgetRef ref) {
+    // TODO: implement setDefaultValues
+    throw UnimplementedError();
   }
 
 

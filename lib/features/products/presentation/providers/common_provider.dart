@@ -70,3 +70,6 @@ final isPrintingProvider = StateProvider.autoDispose<bool>((ref) {
   return false;
 });
 
+final initializingProvider = StateProvider<bool>((ref) => false);
+/// null = ALL, true = IN, false = OUT
+final inOutProvider = StateProvider<bool?>((ref) => null);

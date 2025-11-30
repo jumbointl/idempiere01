@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:get_storage/get_storage.dart';
 import 'package:go_router/go_router.dart';
 import 'package:monalisa_app_001/features/products/common/common_screen_state.dart';
 import 'package:monalisa_app_001/features/products/domain/idempiere/idempiere_locator.dart';
@@ -15,6 +16,7 @@ import 'package:monalisa_app_001/features/products/presentation/screens/store_on
 import '../../../../../../config/router/app_router.dart';
 import '../../../../../../config/theme/app_theme.dart';
 import '../../../../../auth/domain/entities/warehouse.dart';
+import '../../../../../home/presentation/screens/home_screen.dart';
 import '../../../../../shared/data/memory.dart';
 import '../../../../../shared/data/messages.dart';
 import '../../../../common/input_dialog.dart';
@@ -38,6 +40,8 @@ class NewMovementEditScreen extends ConsumerStatefulWidget {
   final int pageIndex = Memory.PAGE_INDEX_MOVEMENTE_EDIT_SCREEN;
   String? movementId;
   bool isMovementSearchedShowed = false;
+
+  static const String WAIT_FOR_SCAN_MOVEMENT = '-1';
 
 
   NewMovementEditScreen({
@@ -80,15 +84,17 @@ class NewMovementEditScreenState extends CommonConsumerState<NewMovementEditScre
 
 
   @override
-  void executeAfterShown() {
-    ref.read(isScanningProvider.notifier).update((state) => false);
+  Future<void> executeAfterShown() async {
 
-      if( widget.movementId != null &&  widget.movementId!.isNotEmpty && widget.movementId != '-1'){
-        while(!context.mounted){
-          Future.delayed(Duration(milliseconds: 100), () {});
-        }
-        print('search ${widget.movementId}');
-        widget.productsNotifier.addBarcodeToSearchMovementNew(widget.movementId!);
+
+    await setDefaultValues(context, ref);
+
+    if( widget.movementId != null &&  widget.movementId!.isNotEmpty && widget.movementId != '-1'){
+      while(!context.mounted){
+        Future.delayed(Duration(milliseconds: 100), () {});
+      }
+      print('search ${widget.movementId}');
+      widget.productsNotifier.addBarcodeToSearchMovementNew(widget.movementId!);
     }
 
 
@@ -396,7 +402,22 @@ class NewMovementEditScreenState extends CommonConsumerState<NewMovementEditScre
     );
   }
 
-
+  @override
+  Future<void> setDefaultValues(BuildContext context, WidgetRef ref) async {
+    ref.read(isScanningProvider.notifier).update((state) => false);
+    ref.read(initializingProvider.notifier).state = true;
+    await Future.delayed(Duration.zero);
+    MemoryProducts.movementAndLines.clearData();
+    GetStorage().remove(Memory.KEY_MOVEMENT_AND_LINES);
+    ref.read(homeScreenTitleProvider.notifier).state = Messages.MOVEMENT_SEARCH;
+    MemoryProducts.movementAndLines.clearData();
+    GetStorage().remove(Memory.KEY_MOVEMENT_AND_LINES);
+    ref.read(productsHomeCurrentIndexProvider.notifier).update(
+            (state) => Memory.PAGE_INDEX_MOVEMENTE_EDIT_SCREEN);
+    ref.read(actionScanProvider.notifier).update(
+            (state) => Memory.ACTION_FIND_MOVEMENT_BY_ID);
+    ref.read(initializingProvider.notifier).state = false;
+  }
 }
 
 
