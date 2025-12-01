@@ -13,9 +13,8 @@ import '../../../shared/domain/entities/response_api.dart';
 import '../../domain/idempiere/idempiere_locator.dart';
 import '../../domain/idempiere/idempiere_movement.dart';
 import '../../domain/idempiere/idempiere_movement_line.dart';
-import '../../domain/sql/sql_data_movement_line.dart';
 import '../screens/store_on_hand/memory_products.dart';
-import 'movement_provider_old.dart';
+import 'movement_provider.dart';
 
 
 
@@ -154,71 +153,3 @@ final findMovementLinesByMovementIdProvider = FutureProvider.autoDispose<List<Id
 
 });
 
-final createNewMovementLineProvider = FutureProvider.autoDispose<IdempiereMovementLine?>((ref) async {
-  SqlDataMovementLine newMovementLine = ref.watch(newSqlDataMovementLineProvider);
-
-  if(newMovementLine.id!=null && newMovementLine.id!>0){
-    print('Error id :${newMovementLine.id} ');
-    return null;
-  }
-  if(newMovementLine.mMovementID==null || newMovementLine.mMovementID!.id!<=0) {
-    print('Error movement id :${newMovementLine.mMovementID!.id} ');
-    return null;}
-  if(newMovementLine.mLocatorID ==null || newMovementLine.mLocatorID!.id==null || newMovementLine.mLocatorID!.id!<=0){
-    print('Error mLocatorID id :${newMovementLine.mLocatorID!.id} ');
-    return null;
-  }
-  if(newMovementLine.mLocatorToID==null || newMovementLine.mLocatorToID!.id==null || newMovementLine.mLocatorToID!.id!<=0){
-    print('Error mLocatorToID id :${newMovementLine.mLocatorToID!.id} ');
-    return null;
-  }
-
-
-
-  Dio dio = await DioClient.create();
-  try {
-    String url = newMovementLine.getInsertUrl();
-
-    final response = await dio.post(url, data: newMovementLine.getInsertJson());
-    print(url);
-    print(newMovementLine.getInsertJson());
-    if (response.statusCode == 201) {
-
-      IdempiereMovementLine result =  IdempiereMovementLine.fromJson(response.data);
-      if (result.id != null && result.id! > 0) {
-        newMovementLine.id = result.id;
-        //MemoryProducts.movementAndLinesLine = result;
-        //MemoryProducts.movementAndLines.movementLines?.add(result);
-        newMovementLine.id = result.id;
-        //ref.read(persistentMovementLinesProvider.notifier).state = MemoryProducts.movementAndLines.movementLines?;
-        print('-----lines length  :${MemoryProducts.movementAndLines.movementLines?.length ?? 0}');
-        return result;
-
-      } else {
-        print(response.statusCode);
-        //ref.invalidate(newSqlDataMovementLineProvider);
-        return null;
-      }
-    } else {
-      //ref.invalidate(newSqlDataMovementLineProvider);
-      print(response.statusCode);
-      return null;
-      /*throw Exception(
-          'Error al obtener la lista de $url: ${response.statusCode}');*/
-    }
-  } on DioException {
-    /* final authDataNotifier = ref.read(authProvider.notifier);
-    ref.invalidate(newSqlDataMovementLineProvider);
-    ref.read(isCreatingMovementLineProvider.notifier).state = false;*/
-    print('DioException');
-    return null;
-    //throw CustomErrorDioException(e, authDataNotifier);
-  } catch (e) {
-    //throw Exception(e.toString());
-    /*ref.invalidate(newSqlDataMovementLineProvider);
-    ref.read(isCreatingMovementLineProvider.notifier).state = false;*/
-    print('Exception : ${e.toString()}');
-    return null;
-  }
-
-});

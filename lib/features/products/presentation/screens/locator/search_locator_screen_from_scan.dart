@@ -9,7 +9,7 @@ import '../../../../../config/theme/app_theme.dart';
 import '../../../../shared/data/memory.dart';
 import '../../../../shared/data/messages.dart';
 import '../../providers/locator_provider.dart';
-import '../../providers/movement_provider_old.dart';
+import '../../providers/movement_provider.dart';
 import '../../providers/product_provider_common.dart';
 import '../../providers/products_scan_notifier.dart';
 

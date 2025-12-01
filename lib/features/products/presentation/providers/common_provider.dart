@@ -7,6 +7,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../screens/movement/printer/mo_printer.dart';
 
+final productsHomeCurrentIndexProvider = StateProvider<int>((ref) => 0);
+
 final sharedPreferencesProvider = Provider<SharedPreferences>(
       (ref) => throw UnimplementedError(),
 );
@@ -73,3 +75,4 @@ final isPrintingProvider = StateProvider.autoDispose<bool>((ref) {
 final initializingProvider = StateProvider<bool>((ref) => false);
 /// null = ALL, true = IN, false = OUT
 final inOutProvider = StateProvider<bool?>((ref) => null);
+

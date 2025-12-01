@@ -10,8 +10,8 @@ import 'package:monalisa_app_001/features/products/domain/idempiere/movement_and
 import '../../../../../shared/data/memory.dart';
 import '../../../../../shared/data/messages.dart';
 import '../../../providers/common_provider.dart';
+import '../../../providers/movement_provider.dart';
 import '../pos/movement_direct_print.dart';
-import '../provider/new_movement_provider.dart';
 import 'cups_printer.dart';
 import 'lite_ipp_print.dart';
 import 'mo_printer.dart';

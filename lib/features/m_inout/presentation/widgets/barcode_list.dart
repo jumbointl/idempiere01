@@ -3,7 +3,6 @@ import 'package:monalisa_app_001/config/theme/app_theme.dart';
 import 'package:monalisa_app_001/features/m_inout/domain/entities/barcode.dart';
 import 'package:monalisa_app_001/features/m_inout/presentation/providers/m_in_out_providers.dart';
 
-import '../../domain/entities/line.dart';
 
 class BarcodeList extends StatefulWidget {
   final Barcode barcode;

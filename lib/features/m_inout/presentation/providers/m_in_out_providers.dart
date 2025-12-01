@@ -7,7 +7,6 @@ import 'package:monalisa_app_001/features/m_inout/domain/entities/m_in_out.dart'
 import 'package:monalisa_app_001/features/m_inout/domain/entities/m_in_out_confirm.dart';
 import 'package:monalisa_app_001/features/m_inout/domain/repositories/m_in_out_repositiry.dart';
 import 'package:monalisa_app_001/features/products/common/number_input_panel.dart';
-import 'package:riverpod/src/framework.dart';
 import '../../../../config/constants/roles_app.dart';
 import '../../domain/entities/barcode.dart';
 import '../../domain/entities/line_confirm.dart';

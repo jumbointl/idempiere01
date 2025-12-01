@@ -9,7 +9,6 @@ import 'package:get_storage/get_storage.dart';
 import 'package:go_router/go_router.dart';
 import 'package:monalisa_app_001/features/products/common/barcode_utils.dart';
 import 'package:monalisa_app_001/features/products/domain/idempiere/put_away_movement.dart';
-import 'package:monalisa_app_001/features/products/domain/sql/sql_data_movement.dart';
 import 'package:monalisa_app_001/features/products/presentation/providers/product_provider_common.dart';
 import 'package:monalisa_app_001/features/products/presentation/providers/product_search_provider.dart';
 import 'package:monalisa_app_001/features/products/presentation/providers/product_update_upc_provider.dart';
@@ -20,11 +19,9 @@ import '../../../shared/data/messages.dart';
 import '../../common/input_data_processor.dart';
 import '../../domain/idempiere/idempiere_product.dart';
 import '../../domain/idempiere/movement_and_lines.dart';
-import '../../domain/sql/sql_data_movement_line.dart';
-import '../screens/movement/provider/new_movement_provider.dart';
 import '../screens/store_on_hand/memory_products.dart';
 import 'locator_provider.dart';
-import 'movement_provider_old.dart';
+import 'movement_provider.dart';
 import 'movement_provider_for_line.dart';
 import 'store_on_hand_provider.dart';
 
@@ -130,13 +127,6 @@ class ProductsScanNotifier  extends StateNotifier<List<IdempiereProduct>> implem
   void dialogDispose() {
     ref.read(isDialogShowedProvider.notifier).update((state) =>false);
   }
-  void createMovement(SqlDataMovement sqlData){
-    ref.read(newSqlDataMovementProvider.notifier).update((state) => sqlData);
-  }
-  void createMovementLine(SqlDataMovementLine sqlData){
-    ref.read(newSqlDataMovementLineProvider.notifier).update((state) => sqlData);
-  }
-
 
   void addBarcodeToSearchMovement(String result) {
     print('----------------------------------start searchMovementByIdOrDocumentNo $result');

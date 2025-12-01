@@ -3,15 +3,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:monalisa_app_001/features/products/presentation/screens/search/product_detail_with_photo_card.dart';
-import 'package:monalisa_app_001/features/products/presentation/screens/update_upc/update_product_upc_screen3.dart';
-import 'package:monalisa_app_001/features/products/presentation/screens/update_upc/update_product_upc_view.dart';
+import 'package:monalisa_app_001/features/products/presentation/screens/search/update_product_upc_screen.dart';
+import 'package:monalisa_app_001/features/products/presentation/screens/search/update_product_upc_view.dart';
 import 'package:simple_barcode_scanner/simple_barcode_scanner.dart';
 
 import '../../../../../config/router/app_router.dart';
 import '../../../../../config/theme/app_theme.dart';
 import '../../../../shared/common/scan_button.dart';
 import '../../../../shared/common/scanner.dart';
-import '../movement/products_home_provider.dart';
+import '../../providers/common_provider.dart';
 import '../../../../shared/data/memory.dart';
 import '../../../../shared/data/messages.dart';
 import '../../providers/product_provider_common.dart';
@@ -196,7 +196,7 @@ class _ProductSearchScreenState extends ConsumerState<ProductSearchScreen> {
                                   foregroundColor: Colors.white,
                                 ),
                                 onPressed: (){
-                                    Navigator.of(context).push(MaterialPageRoute(builder: (context) => UpdateProductUpcScreen3()));
+                                    Navigator.of(context).push(MaterialPageRoute(builder: (context) => UpdateProductUpcScreen()));
                                 },
                                 child: Text(Messages.UPDATE_UPC)),
                           )): Container();
@@ -415,7 +415,7 @@ class _ProductSearchScreenState extends ConsumerState<ProductSearchScreen> {
             ),
             height: MediaQuery.of(context).size.height,
             width: MediaQuery.of(context).size.width,
-            child: UpdateProductUpcScreen3(),
+            child: UpdateProductUpcScreen(),
 
           ),
           actions: <Widget>[

@@ -10,15 +10,14 @@ import 'package:monalisa_app_001/features/products/domain/idempiere/idempiere_lo
 import 'package:monalisa_app_001/features/products/domain/idempiere/idempiere_movement.dart';
 import 'package:monalisa_app_001/features/products/domain/idempiere/idempiere_warehouse.dart';
 import 'package:monalisa_app_001/features/products/domain/idempiere/movement_and_lines.dart';
-import 'package:monalisa_app_001/features/products/presentation/screens/movement/products_home_provider.dart';
-
 
 import '../../../../../shared/data/memory.dart';
 import '../../../../../shared/data/messages.dart';
+import '../../../providers/common_provider.dart';
 import '../../../providers/locator_provider.dart';
 import '../../../providers/movement_confirm_state_notifier.dart';
 import '../../../providers/movement_provider_for_line.dart';
-import '../../../providers/movement_provider_old.dart';
+import '../../../providers/movement_provider.dart';
 import '../../../providers/product_provider_common.dart';
 import '../../store_on_hand/memory_products.dart';
 

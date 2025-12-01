@@ -8,7 +8,6 @@ import 'package:go_router/go_router.dart';
 import 'package:monalisa_app_001/features/products/domain/idempiere/idempiere_locator.dart';
 import 'package:monalisa_app_001/features/products/domain/idempiere/idempiere_product.dart';
 import 'package:monalisa_app_001/features/products/domain/idempiere/movement_and_lines.dart';
-import 'package:monalisa_app_001/features/products/presentation/screens/movement/products_home_provider.dart';
 import 'package:monalisa_app_001/features/products/presentation/screens/store_on_hand/memory_products.dart';
 
 import '../../../../../../config/router/app_router.dart';
@@ -19,6 +18,7 @@ import '../../../../../shared/data/messages.dart';
 import '../../../../domain/idempiere/idempiere_movement_line.dart';
 import '../../../../domain/idempiere/idempiere_storage_on_hande.dart';
 import '../../../../domain/idempiere/idempiere_warehouse.dart';
+import '../../../providers/common_provider.dart';
 import '../../../providers/product_provider_common.dart';
 import '../../../providers/products_scan_notifier_for_line.dart';
 class StorageOnHandCardForLine extends ConsumerStatefulWidget {

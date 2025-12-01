@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../config/theme/app_theme.dart';
 import '../../../shared/data/messages.dart';
-import '../providers/movement_provider_old.dart';
+import '../providers/movement_provider.dart';
 class NoDataCreatedCard extends ConsumerStatefulWidget {
   final double width ;
   const NoDataCreatedCard({required this.width,super.key});

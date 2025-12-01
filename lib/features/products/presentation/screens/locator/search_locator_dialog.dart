@@ -7,8 +7,8 @@ import 'package:monalisa_app_001/features/products/presentation/screens/store_on
 import '../../../../../config/theme/app_theme.dart';
 import '../../../../shared/data/memory.dart';
 import '../../../../shared/data/messages.dart';
+import '../../providers/common_provider.dart';
 import '../../providers/product_provider_common.dart';
-import '../movement/products_home_provider.dart';
 
 class SearchLocatorDialog extends ConsumerStatefulWidget {
   String? title;

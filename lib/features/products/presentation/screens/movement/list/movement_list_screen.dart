@@ -6,8 +6,6 @@ import 'package:monalisa_app_001/features/products/common/common_screen_state.da
 import 'package:monalisa_app_001/features/products/domain/idempiere/idempiere_locator.dart';
 import 'package:monalisa_app_001/features/products/domain/idempiere/idempiere_movement.dart';
 import 'package:monalisa_app_001/features/products/domain/idempiere/idempiere_warehouse.dart';
-import 'package:monalisa_app_001/features/products/presentation/screens/movement/products_home_provider.dart';
-import 'package:monalisa_app_001/features/products/presentation/screens/movement/provider/new_movement_provider.dart';
 
 import '../../../../../../config/router/app_router.dart';
 import '../../../../../auth/domain/entities/warehouse.dart';
@@ -15,6 +13,7 @@ import '../../../../../shared/data/memory.dart';
 import '../../../../../shared/data/messages.dart';
 import '../../../../common/messages_dialog.dart';
 import '../../../providers/common_provider.dart';
+import '../../../providers/movement_provider.dart';
 import '../../../providers/persitent_provider.dart';
 import '../../../providers/product_provider_common.dart';
 import '../../../providers/store_on_hand_provider.dart';

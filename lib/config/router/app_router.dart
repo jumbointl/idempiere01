@@ -4,7 +4,6 @@ import 'dart:convert';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/legacy.dart';
-import 'package:get_storage/get_storage.dart';
 import 'package:go_router/go_router.dart';
 import 'package:monalisa_app_001/config/config.dart';
 import 'package:monalisa_app_001/config/constants/roles_app.dart';
@@ -13,8 +12,6 @@ import 'package:monalisa_app_001/features/auth/auth.dart';
 import 'package:monalisa_app_001/features/auth/presentation/providers/auth_provider.dart';
 import 'package:monalisa_app_001/features/home/presentation/screens/home_screen.dart';
 import 'package:monalisa_app_001/features/m_inout/presentation/screens/m_in_out_screen.dart';
-import 'package:monalisa_app_001/features/products/common/scanner_screen.dart';
-import 'package:monalisa_app_001/features/products/domain/idempiere/put_away_movement.dart';
 import 'package:monalisa_app_001/features/products/presentation/screens/locator/search_locator_screen_from_scan.dart';
 import 'package:monalisa_app_001/features/products/presentation/screens/movement/list/movement_list_screen.dart';
 import 'package:monalisa_app_001/features/products/presentation/screens/movement/printer/movement_print_screen.dart';
@@ -23,19 +20,19 @@ import 'package:monalisa_app_001/features/products/presentation/screens/store_on
 import 'package:monalisa_app_001/features/products/presentation/screens/movement/edit_new/product_store_on_hand_screen_for_line.dart';
 import '../../features/auth/presentation/screens/auth_data_screen.dart';
 import '../../features/products/domain/idempiere/movement_and_lines.dart';
+import '../../features/products/presentation/providers/common_provider.dart';
 import '../../features/products/presentation/providers/locator_provider.dart';
+import '../../features/products/presentation/providers/movement_provider.dart';
 import '../../features/products/presentation/providers/product_provider_common.dart';
 import '../../features/products/presentation/screens/locator/search_locator_screen.dart';
 import '../../features/products/presentation/screens/movement/edit_new/new_movement_edit_screen.dart';
 import '../../features/products/presentation/screens/movement/edit_new/movement_confirm_screen.dart';
 import '../../features/products/presentation/screens/movement/pos/movement_pos_page.dart';
-import '../../features/products/presentation/screens/movement/products_home_provider.dart';
-import '../../features/products/presentation/screens/movement/provider/new_movement_provider.dart';
 import '../../features/products/presentation/screens/search/product_search_screen.dart';
 import '../../features/products/presentation/screens/store_on_hand/product_store_on_hand_screen.dart';
 import '../../features/products/presentation/screens/store_on_hand/unsorted_storage_on__hand_screen.dart';
 import '../../features/products/presentation/screens/movement/edit_new/unsorted_storage_on__hand_screen_for_line.dart';
-import '../../features/products/presentation/screens/update_upc/update_product_upc_screen3.dart';
+import '../../features/products/presentation/screens/search/update_product_upc_screen.dart';
 import '../../features/products/presentation/widget/barcode_scanner_screen.dart';
 import '../../features/shared/data/memory.dart';
 import '../../features/shared/data/messages.dart';
@@ -48,7 +45,6 @@ class AppRouter {
   static const String PAGE_HOME = '/home';
   static const String PAGE_PRODUCT_SEARCH = '/product/search';
   static const String PAGE_PRODUCT_STORE_ON_HAND = '/storeOnHand';
-  static const String PAGE_PRODUCT_SEARCH_UPDATE_UPC = '/product/searchUpdateProductUPC';
   static const String PAGE_LOGIN = '/login';
   static const String PAGE_AUTH_DATA = '/authData';
   static const String PAGE_SPLASH = '/splash';
@@ -373,13 +369,6 @@ final goRouterProvider = Provider((ref) {
         builder: (context, state) => RolesApp.hasStockPrivilege() ? ProductSearchScreen() : const HomeScreen(),
       ),
       GoRoute(
-        path: AppRouter.PAGE_PRODUCT_SEARCH_UPDATE_UPC,
-        builder: (context, state) => RolesApp.hasStockPrivilege() ?
-        ScannerScreen()
-        //UpdateProductUpcScreen()
-            : const HomeScreen(),
-      ),
-      GoRoute(
         path: '${AppRouter.PAGE_UNSORTED_STORAGE_ON_HAND}/:productUPC',
         builder: (context, state) {
           {
@@ -438,7 +427,7 @@ final goRouterProvider = Provider((ref) {
           return CustomTransitionPage(
             key: state.pageKey,
             child: RolesApp.hasStockPrivilege()
-                ? UpdateProductUpcScreen3()
+                ? UpdateProductUpcScreen()
                 : const HomeScreen(),
             transitionDuration: Duration(milliseconds: transitionTimeMilliseconds),
             transitionsBuilder:

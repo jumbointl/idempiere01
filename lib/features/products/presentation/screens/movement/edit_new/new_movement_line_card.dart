@@ -8,8 +8,8 @@ import '../../../../../shared/data/messages.dart';
 import '../../../../common/input_dialog.dart';
 import '../../../../common/messages_dialog.dart';
 import '../../../../domain/idempiere/idempiere_movement_line.dart';
+import '../../../providers/movement_provider.dart';
 import '../../../providers/product_provider_common.dart';
-import '../provider/new_movement_provider.dart';
 class NewMovementLineCard extends ConsumerStatefulWidget {
   final IdempiereMovementLine movementLine;
   final double width;

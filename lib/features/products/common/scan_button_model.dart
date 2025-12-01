@@ -6,8 +6,8 @@ import 'package:simple_barcode_scanner/simple_barcode_scanner.dart';
 
 import '../../../config/theme/app_theme.dart';
 import '../../shared/data/messages.dart';
+import '../presentation/providers/common_provider.dart';
 import '../presentation/providers/product_provider_common.dart';
-import '../presentation/screens/movement/products_home_provider.dart';
 import 'input_data_processor.dart';
 
 abstract class ScanButtonModel<T extends ConsumerStatefulWidget> extends ConsumerState<T> {
