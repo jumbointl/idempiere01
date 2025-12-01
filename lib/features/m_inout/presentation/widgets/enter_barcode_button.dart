@@ -32,7 +32,7 @@ class EnterBarcodeButtonState extends State<EnterBarcodeButton> {
 
   void _handleKeyEvent(KeyEvent event) {
     if (event.logicalKey == LogicalKeyboardKey.enter) {
-      addBarcode();
+      addBarcode(context);
       return;
     }
 
@@ -44,13 +44,13 @@ class EnterBarcodeButtonState extends State<EnterBarcodeButton> {
 
   }
 
-  void addBarcode() {
+  void addBarcode(BuildContext context) {
     if (scannedData.isNotEmpty) {
       //UPC TO EAN13
       //if(scannedData.length == 12){
       //  scannedData ='0$scannedData';
       //}
-      widget.mInOutNotifier.addBarcode(scannedData);
+      widget.mInOutNotifier.addBarcode(scannedData, context);
       setState(() {
         scannedData = "";
       });
@@ -64,7 +64,7 @@ class EnterBarcodeButtonState extends State<EnterBarcodeButton> {
       onKeyEvent: _handleKeyEvent,
       child: GestureDetector(
         onTap: () {
-          addBarcode();
+          addBarcode(context);
           _focusNode.requestFocus();
         },
         child: Container(

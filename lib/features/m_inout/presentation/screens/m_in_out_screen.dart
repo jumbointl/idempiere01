@@ -1091,7 +1091,6 @@ class _MInOutView extends ConsumerWidget {
           title: const Text('Detalles de la Línea'),
           content: SingleChildScrollView(
 
-
             child: Column(
               children: [
                 Table(
@@ -1126,6 +1125,21 @@ class _MInOutView extends ConsumerWidget {
             ),
           ),
           actions: <Widget>[
+            if (mInOutState.rolManualQty && (item.verifiedStatus?.contains('manually') ?? false))
+              CustomFilledButton(
+                onPressed: () {
+                  Navigator.of(context).pop();
+                  mInOutNotifier.onManualQuantityChange('${item.manualQty ?? 0}');
+                  mInOutNotifier.onManualScrappedChange('${item.scrappedQty ?? 0}');
+                  _showUpdateManualLine(context, mInOutState, item);
+                },
+                //
+                label: 'Editar',
+                icon: const Icon(Icons.edit),
+                buttonColor: themeColorGray,
+                expand: true,
+                small: true,
+              ),
             if (mInOutState.rolManualQty)
               CustomFilledButton(
                 onPressed: () {
@@ -1140,7 +1154,7 @@ class _MInOutView extends ConsumerWidget {
                 },
                 //
                 label: (item.verifiedStatus?.contains('manually') ?? false)
-                    ? 'Reiniciar'
+                    ? 'Resetear'
                     : 'Manual',
                 icon: const Icon(Icons.touch_app_outlined),
                 buttonColor: themeColorGray,
@@ -1210,7 +1224,62 @@ class _MInOutView extends ConsumerWidget {
           actions: <Widget>[
             CustomFilledButton(
               onPressed: () {
-                mInOutNotifier.confirmManualLine(item);
+                mInOutNotifier.confirmManualLine(context,item);
+                Navigator.of(context).pop();
+              },
+              label: 'Confirmar',
+              icon: const Icon(Icons.check),
+            ),
+            CustomFilledButton(
+              onPressed: () => Navigator.of(context).pop(),
+              label: 'Cancelar',
+              icon: const Icon(Icons.close_rounded),
+              buttonColor: themeColorGray,
+            ),
+          ],
+        );
+      },
+    );
+  }
+  Future<void> _showUpdateManualLine(
+      BuildContext context, MInOutStatus mInOutState, Line item) {
+    return showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(themeBorderRadius),
+          ),
+          title: const Text('Confirmar Manual'),
+          content: Row(
+            children: [
+              Expanded(
+                child: CustomTextFormField(
+                  label: 'Confirmar',
+                  textAlign: TextAlign.center,
+                  initialValue: '${item.manualQty ?? 0}',
+                  onChanged: mInOutNotifier.onManualQuantityChange,
+                  autofocus: true,
+                  keyboardType: TextInputType.number,
+                ),
+              ),
+              if (mInOutState.rolManualScrap) SizedBox(width: 8),
+              if (mInOutState.rolManualScrap)
+                Expanded(
+                  child: CustomTextFormField(
+                    label: 'Desechar',
+                    textAlign: TextAlign.center,
+                    initialValue: '',
+                    onChanged: mInOutNotifier.onManualScrappedChange,
+                    keyboardType: TextInputType.number,
+                  ),
+                ),
+            ],
+          ),
+          actions: <Widget>[
+            CustomFilledButton(
+              onPressed: () {
+                mInOutNotifier.confirmManualLine(context,item);
                 Navigator.of(context).pop();
               },
               label: 'Confirmar',
@@ -1236,9 +1305,9 @@ class _MInOutView extends ConsumerWidget {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(themeBorderRadius),
           ),
-          title: const Text('Reiniciar Manual'),
+          title: const Text('Resetear Manual'),
           content: const Text(
-              '¿Estás seguro de que deseas reiniciar la confirmación manual?'),
+              '¿Estás seguro de que deseas resetear la confirmación manual?'),
           actions: <Widget>[
             CustomFilledButton(
               onPressed: () {
@@ -1300,6 +1369,7 @@ class _MInOutView extends ConsumerWidget {
 
   Column _buildListOver(BuildContext context, List<Barcode> barcodeList,
       MInOutNotifier mInOutNotifier) {
+
     return Column(
       children: [
         SizedBox(height: 32),
@@ -1316,6 +1386,7 @@ class _MInOutView extends ConsumerWidget {
                   _showConfirmDeleteItemOver(context, mInOutNotifier, barcode),
               onPressedrepetitions: () =>
                   mInOutNotifier.selectRepeat(barcode.code),
+              mInOutNotifier: mInOutNotifier,
             );
           }).toList(),
         ),
@@ -1339,7 +1410,7 @@ class _MInOutView extends ConsumerWidget {
           actions: <Widget>[
             CustomFilledButton(
               onPressed: () {
-                mInOutNotifier.removeBarcode(barcode: barcode, isOver: true);
+                mInOutNotifier.removeBarcode(barcode: barcode, isOver: true,context: context);
                 Navigator.of(context).pop();
               },
               label: 'Si',
@@ -1419,7 +1490,7 @@ class _ScanView extends ConsumerWidget {
       child: Column(
         children: [
           SizedBox(height: 4),
-          _buildActionFilterList(mInOutNotifier),
+          _buildActionFilterList(ref,mInOutNotifier),
           SizedBox(height: 8),
           Divider(height: 0),
           _buildBarcodeList(barcodeList, mInOutNotifier),
@@ -1432,7 +1503,9 @@ class _ScanView extends ConsumerWidget {
     );
   }
 
-  Widget _buildActionFilterList(MInOutNotifier mInOutNotifier) {
+  Widget _buildActionFilterList(WidgetRef ref,MInOutNotifier mInOutNotifier) {
+    final adjustScanned = ref.watch(adjustScannedQtyProvider);
+    int qty = quantityOfMovementAndScannedToAllowInputScannedQuantity ;
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
@@ -1448,6 +1521,55 @@ class _ScanView extends ConsumerWidget {
           counting: mInOutNotifier.getUniqueCount().toString(),
           isActive: mInOutNotifier.getUniqueView(),
           onPressed: () => mInOutNotifier.setUniqueView(true),
+        ),
+        SizedBox(width: 8),
+        Row(
+          children: [
+            Checkbox(
+              activeColor: Colors.purple,
+              value: adjustScanned,
+              onChanged: (value) {
+                if (value != null) {
+                  ref.read(adjustScannedQtyProvider.notifier).state = value;
+                }
+              },
+            ),
+            const Text("Ajustar"),
+            IconButton(
+              icon: Icon(Icons.help_outline),
+              onPressed: () {
+                showDialog(
+                  context: ref.context,
+                  builder: (BuildContext context) {
+                    return AlertDialog(
+                      title: const Text('Ajustar Cantidad'),
+                      content: SingleChildScrollView(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('La funcion de ajuste de cantidad se ejecutará cuando:'),
+                            SizedBox(height: 8),
+                            Text('A. Ajustable:', style: TextStyle(fontWeight: FontWeight.bold)),
+                            Text('1. el movementQty > $qty o diferencia entre movementQty y scannedQty > $qty.'),
+                            SizedBox(height: 8),
+                            Text('B. No ajustable(Se muestra siemple):', style: TextStyle(fontWeight: FontWeight.bold)),
+                            Text('1. En caso de contener múltiples lineas con el miso UPC.'),
+                          ],
+                        ),
+                      ),
+                      actions: <Widget>[
+                        TextButton(
+                          child: const Text('Cerrar'),
+                          onPressed: () {
+                            Navigator.of(context).pop();
+                          },),
+                        ],
+                      );
+                    },
+                  );
+              },
+            ),
+          ],
         ),
       ],
     );
@@ -1508,6 +1630,7 @@ class _ScanView extends ConsumerWidget {
                 _showConfirmDeleteItem(context, mInOutNotifier, barcode),
             onPressedrepetitions: () =>
                 mInOutNotifier.selectRepeat(barcode.code),
+            mInOutNotifier: mInOutNotifier,
           );
         },
       ),
@@ -1529,7 +1652,7 @@ class _ScanView extends ConsumerWidget {
           actions: <Widget>[
             CustomFilledButton(
               onPressed: () {
-                mInOutNotifier.removeBarcode(barcode: barcode);
+                mInOutNotifier.removeBarcode(barcode: barcode,context: context);
                 Navigator.of(context).pop();
               },
               label: 'Si',

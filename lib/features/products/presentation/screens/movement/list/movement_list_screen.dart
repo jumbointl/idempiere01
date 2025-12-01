@@ -115,7 +115,7 @@ class MovementListScreenState extends CommonConsumerState<MovementListScreen> {
         final movement = movements[index];
         final movementId = movement.id ?? 0;
 
-        var iconData = isIn == null ? Icons.swap_vert : isIn ? Icons.arrow_downward : Icons.arrow_upward;
+        var iconData = isIn == null ? Icons.swap_horiz : isIn ? Icons.arrow_downward : Icons.arrow_upward;
         var iconColor = Colors.purple;
         var textColor = isIn == null ? Colors.black : isIn ? Colors.green : Colors.red;
 
@@ -124,7 +124,7 @@ class MovementListScreenState extends CommonConsumerState<MovementListScreen> {
         int warehouseToId = movement.mWarehouseToID?.id ?? -3;
         if(userWarehouseId>0 && warehouseFromId>0 && warehouseToId>0){
           if(warehouseFromId==warehouseToId){
-            iconData = Icons.swap_vert;
+            iconData = Icons.swap_horiz;
             textColor = Colors.black;
           } else if(warehouseToId==userWarehouseId){
             iconData = Icons.arrow_downward ;
@@ -296,7 +296,7 @@ class MovementListScreenState extends CommonConsumerState<MovementListScreen> {
 
     return IconButton(
       icon: Icon(
-        isIn ==null ? Icons.swap_vert : isIn ? Icons.arrow_downward : Icons.arrow_upward,
+        isIn ==null ? Icons.swap_horiz : isIn ? Icons.arrow_downward : Icons.arrow_upward,
         color:  isIn ==null ? Colors.black : isIn ? Colors.green : Colors.red,
       ),
       onPressed: () {

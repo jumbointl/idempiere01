@@ -128,7 +128,7 @@ class Memory {
 
   static String URL_CUPS_SERVER ='http://192.168.188.108:3100/print';
 
-  static String VERSIONS='1.01.021';
+  static String VERSIONS='1.01.025';
 
   static String getUrlCupsServerWithPrinter(String ip,String port,String printerName){
     if(ip.startsWith('http')) return '$ip:$port/print';

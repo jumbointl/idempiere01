@@ -1,7 +1,7 @@
 class Barcode {
   final int index;
   final String code;
-  final int repetitions;
+  int repetitions;
   bool coloring = false;
 
   Barcode({

@@ -1,16 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:monalisa_app_001/config/theme/app_theme.dart';
 import 'package:monalisa_app_001/features/m_inout/domain/entities/barcode.dart';
+import 'package:monalisa_app_001/features/m_inout/presentation/providers/m_in_out_providers.dart';
+
+import '../../domain/entities/line.dart';
 
 class BarcodeList extends StatefulWidget {
   final Barcode barcode;
   final VoidCallback onPressedrepetitions;
   final VoidCallback onPressedDelete;
+  final MInOutNotifier mInOutNotifier;
   const BarcodeList({
     super.key,
     required this.barcode,
     required this.onPressedrepetitions,
     required this.onPressedDelete,
+    required this.mInOutNotifier,
   });
 
   @override
@@ -31,6 +36,7 @@ class ScrollingTextWidgetState extends State<BarcodeList> {
 
   @override
   Widget build(BuildContext context) {
+    Icon icon = widget.mInOutNotifier.getBarcodeExpressionIcon(widget.barcode);
     return Column(
       children: [
         Container(
@@ -39,14 +45,23 @@ class ScrollingTextWidgetState extends State<BarcodeList> {
             children: [
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 8, 8, 8),
+                child: icon,
+              ),
+              Text(
+                widget.barcode.index.toString(),
+                style:
+                TextStyle(fontSize: themeFontSizeSmall, color: themeColorGray),
+              ),
+              /*Padding(
+                padding: const EdgeInsets.fromLTRB(16, 8, 8, 8),
                 child: Text(
                   widget.barcode.index.toString(),
                   style:
                       TextStyle(fontSize: themeFontSizeSmall, color: themeColorGray),
                 ),
-              ),
+              ),*/
               Expanded(
-                  child: SingleChildScrollView(
+                child: SingleChildScrollView(
                 controller: _scrollController,
                 scrollDirection: Axis.horizontal,
                 child: Padding(

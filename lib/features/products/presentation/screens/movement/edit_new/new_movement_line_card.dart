@@ -35,9 +35,9 @@ class NewMovementLineCardState extends ConsumerState<NewMovementLineCard> {
   @override
   Widget build(BuildContext context) {
     if(widget.showLocators??false){
-      height = 200;
+      height = 210;
     } else {
-      height = 160;
+      height = 170;
     }
     final int lineId = widget.movementLine.id ?? widget.index;
     quantityAsync = ref.watch(editQuantityToMoveProvider(lineId));

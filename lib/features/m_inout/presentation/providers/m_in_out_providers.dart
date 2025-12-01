@@ -1,14 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
+import 'package:monalisa_app_001/config/config.dart';
 import 'package:monalisa_app_001/features/m_inout/domain/entities/line.dart';
 import 'package:monalisa_app_001/features/m_inout/domain/entities/m_in_out.dart';
 import 'package:monalisa_app_001/features/m_inout/domain/entities/m_in_out_confirm.dart';
 import 'package:monalisa_app_001/features/m_inout/domain/repositories/m_in_out_repositiry.dart';
+import 'package:monalisa_app_001/features/products/common/number_input_panel.dart';
+import 'package:riverpod/src/framework.dart';
 import '../../../../config/constants/roles_app.dart';
 import '../../domain/entities/barcode.dart';
 import '../../domain/entities/line_confirm.dart';
 import '../../infrastructure/repositories/m_in_out_repository_impl.dart';
+
+
+const int quantityOfMovementAndScannedToAllowInputScannedQuantity = 3;
+final adjustScannedQtyProvider = StateProvider<bool>((ref) => true);
 
 final mInOutProvider =
     StateNotifierProvider<MInOutNotifier, MInOutStatus>((ref) {
@@ -441,7 +448,7 @@ class MInOutNotifier extends StateNotifier<MInOutStatus> {
     state = state.copyWith(scrappedQty: parsedValue.toDouble());
   }
 
-  void confirmManualLine(Line line) {
+  void confirmManualLine(BuildContext context, Line line) {
     line = line.copyWith(
       verifiedStatus: 'manually',
     );
@@ -459,6 +466,7 @@ class MInOutNotifier extends StateNotifier<MInOutStatus> {
       updatedMInOutLine('');
     }
   }
+
 
   void resetManualLine(Line line) {
     final List<Line> updatedLines = state.mInOut!.lines;
@@ -630,7 +638,7 @@ class MInOutNotifier extends StateNotifier<MInOutStatus> {
     }
   }
 
-  void addBarcode(String code) {
+  void addBarcode(String code, BuildContext context) {
     if (code.trim().isEmpty) return;
     final List<Barcode> updatedTotalList = [...state.scanBarcodeListTotal];
     final existingBarcodes =
@@ -659,11 +667,12 @@ class MInOutNotifier extends StateNotifier<MInOutStatus> {
       ));
     }
 
-    updatedBarcodeList(updatedTotalList: updatedTotalList, barcode: code);
+    updatedBarcodeList(updatedTotalList: updatedTotalList
+        , barcode: code, context: context);
     moveScrollToBottom();
   }
 
-  void removeBarcode({required Barcode barcode, bool isOver = false}) {
+  void removeBarcode({required Barcode barcode, bool isOver = false, required BuildContext context}) {
     final int index = barcode.index - 1;
     if (index < 0 || index >= state.scanBarcodeListTotal.length) return;
 
@@ -685,12 +694,14 @@ class MInOutNotifier extends StateNotifier<MInOutStatus> {
     final filteredTotalList =
         updatedTotalList.where((barcode) => barcode.repetitions > 0).toList();
     updatedBarcodeList(
-        updatedTotalList: filteredTotalList, barcode: barcode.code);
+        updatedTotalList: filteredTotalList,
+        barcode: barcode.code,
+        context: context);
     moveScrollToBottom();
   }
 
   void updatedBarcodeList(
-      {required List<Barcode> updatedTotalList, required String barcode}) {
+      {required List<Barcode> updatedTotalList, required String barcode, required BuildContext context}) {
     for (int i = 0; i < updatedTotalList.length; i++) {
       updatedTotalList[i] = updatedTotalList[i].copyWith(index: i + 1);
     }
@@ -713,10 +724,287 @@ class MInOutNotifier extends StateNotifier<MInOutStatus> {
       scanBarcodeListTotal: updatedTotalList,
       scanBarcodeListUnique: updatedUniqueList,
     );
-    updatedMInOutLine(barcode);
+    updatedMInOutLine(barcode,context: context);
+  }
+  bool showUpdateScannedQuantity({required int scannedQty, required double totalMovementQty}){
+
+    double dif = totalMovementQty - scannedQty;
+    if(dif<0) return true;
+    if(totalMovementQty>quantityOfMovementAndScannedToAllowInputScannedQuantity) {
+      if(dif<=quantityOfMovementAndScannedToAllowInputScannedQuantity){
+        return false;
+      } else {
+        return true;
+      }
+
+    }
+
+    return false;
+  }
+  Icon getBarcodeExpressionIcon(Barcode barcode){
+    List<Line> lines = state.mInOut!.lines;
+    List<Line> linesWithSameUPC = [];
+    for (int i = 0; i < lines.length; i++) {
+      if ( lines[i].upc == barcode.code) {
+        linesWithSameUPC.add(lines[i]);
+      }
+    }
+    if(linesWithSameUPC.isEmpty) return Icon(Icons.dangerous,color: Colors.red,);
+    Color color = Colors.amber[800]!;
+    int qty = 0;
+    for (int i = 0; i < linesWithSameUPC.length; i++) {
+      qty += linesWithSameUPC[i].movementQty?.toInt() ?? 0;
+    }
+
+    if(qty==barcode.repetitions) {
+      color = Colors.green ;
+      return Icon(Icons.check_circle,color: color,);
+    } else if(qty>barcode.repetitions){
+      color = Colors.amber[800]!;
+      return Icon(Icons.indeterminate_check_box,color: color,);
+    } else {
+      color = Colors.red;
+      return Icon(Icons.add_box,color: color,);
+    }
+
   }
 
-  void updatedMInOutLine(String barcode) {
+  Future<void> updatedMInOutLine(String barcodeString, {BuildContext? context}) async {
+
+    if (state.mInOut != null && state.viewMInOut) {
+      List<Line> lines = state.mInOut!.lines;
+      List<Barcode> linesOver = [];
+      List<Line> linesWithSameUPC = [];
+      List<int> linesIndexWithSameUPC = [];
+      double sumOfOtherLinesWithSameUPC = 0;
+      double totalMovementQty = 0;
+      Barcode? barcode;
+      for(int i = 0; i <state.scanBarcodeListUnique.length; i++) {
+        if (state.scanBarcodeListUnique[i].code == barcodeString) {
+          barcode = state.scanBarcodeListUnique[i];
+          break;
+        }
+      }
+      bool showUpdateDialog = false;
+      int qtyScanned = 0;
+      int lineIndex = -1;
+      for (int i = 0; i < lines.length; i++) {
+        if ( lines[i].upc == barcodeString) {
+          linesWithSameUPC.add(lines[i]);
+          linesIndexWithSameUPC.add(i);
+
+        }
+      }
+
+      if(linesWithSameUPC.length == 1){
+        lineIndex = linesIndexWithSameUPC[0];
+      } else {
+        if(context != null && context.mounted) {
+          lineIndex = await showDialog<int>(
+            context: context,
+            builder: (BuildContext context) {
+              return AlertDialog(
+                title: const Text('Seleccionar Línea'),
+                content: SizedBox(
+                  width: double.maxFinite,
+                  child: ListView.builder(
+                    shrinkWrap: true,
+                    itemCount: linesWithSameUPC.length,
+                    itemBuilder: (BuildContext context, int i) {
+                      final currentLine = linesWithSameUPC[i];
+                      return ListTile(
+                        title: Text('Línea: ${currentLine.line}'),
+                        subtitle: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('Cant. Movement: ${currentLine.movementQty ??
+                                0}'),
+                            Text('Cant. Manual: ${currentLine.manualQty ?? 0}'),
+                            Text('Cant. Escaneada: ${currentLine.scanningQty ??
+                                0}'),
+                            Text(
+                                'Cant. Confirmada: ${currentLine.confirmedQty ??
+                                    0}'),
+                            Text('Cant. Desecho: ${currentLine.scrappedQty ??
+                                0}'),
+                          ],
+                        ),
+                        onTap: () {
+                          Navigator.of(context).pop(linesIndexWithSameUPC[i]);
+                        },
+                      );
+                    },
+                  ),
+                ),
+                actions: <Widget>[
+                  TextButton(
+                    child: const Text('Cancelar'),
+                    onPressed: () {
+                      Navigator.of(context).pop(-1);
+                    },
+                  ),
+                ],
+              );
+            },
+          ) ?? -1;
+          if(lineIndex >= 0) {
+            showUpdateDialog = true ;
+          }
+
+        }
+
+
+      }
+
+      if(lineIndex<0) return ;
+
+      Line line;
+      line = lines[lineIndex];
+      for (int i = 0; i < linesWithSameUPC.length; i++) {
+        totalMovementQty += (linesWithSameUPC[i].movementQty ?? 0);
+        if(line.id != linesWithSameUPC[i].id) {
+          sumOfOtherLinesWithSameUPC += (linesWithSameUPC[i].movementQty ?? 0);
+        }
+      }
+
+      int qty = 0;
+      qty = line.scanningQty ?? 0;
+
+      if(barcode!=null){
+        qty = barcode.repetitions;
+      }
+      if(!showUpdateDialog) {
+        showUpdateDialog = showUpdateScannedQuantity(scannedQty: qty,totalMovementQty: totalMovementQty);
+      }
+      if(linesWithSameUPC.length==1){
+        if (context != null && context.mounted){
+          final container = ProviderScope.containerOf(context, listen: false);
+          final adjustScannedQty = container.read(adjustScannedQtyProvider);
+          if(!adjustScannedQty) showUpdateDialog = false ;
+        }
+      }
+
+      if (context!=null && context.mounted && line.movementQty!=null
+          && showUpdateDialog) {
+        int lastQty = qty-1;
+        final TextEditingController qtyToSumController = TextEditingController(text: '1');
+        final TextEditingController qtyController = TextEditingController(text: qty.toString());
+        qty = await showDialog<int>(context: context, builder: (BuildContext context) {
+          WidgetsBinding.instance.addPostFrameCallback((_) async {
+            if(qty<=1) return ;
+            _sumScannedQty(context,qtyToSumController: qtyToSumController,
+                qtyController: qtyController,
+                line:line,lastQty: lastQty);
+            /*double qtyToSum = await showDialog<double>(context: context, builder: (BuildContext context) {
+              return _showQtyToSumDialog(context, qtyToSumController, line: line,
+                  lastQty: qty);
+            }) ?? 0;
+            qty = qty - 1;
+            qty += qtyToSum.toInt();
+            qtyController.text = qty.toString();*/
+          });
+
+
+          return AlertDialog(
+
+            title: Text('Linea : ${line.line ?? 0}',
+              style: TextStyle(fontWeight:FontWeight.bold,fontSize: themeFontSizeNormal ),),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('UPC: ${line.upc ?? '--'}'),
+                  if(qty>1) Text('Cantidad anterior : $lastQty'),
+                  if(qty>1) Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      SizedBox(
+                        width: MediaQuery.of(context).size.width/2,
+                        child: TextFormField(
+                          textAlign: TextAlign.center,
+                          controller: qtyToSumController,
+                          keyboardType: TextInputType.none,
+                          readOnly: true,
+                          style: const TextStyle(color: Colors.purple,fontSize: themeFontSizeLarge),
+                          decoration: const InputDecoration(
+                          labelText: 'Cantidad a sumar',
+                          alignLabelWithHint: true,
+                          ),
+                        ),
+                      ),
+                      IconButton(onPressed: () async {
+                        _sumScannedQty(context,qtyToSumController: qtyToSumController,
+                        qtyController: qtyController, line:line,lastQty: lastQty);
+                        }, icon: Icon(Icons.edit,color: Colors.purple,)
+                      ),
+                    ],
+                  ),
+                  TextFormField(
+                    textAlign: TextAlign.center,
+                    controller: qtyController,
+                    keyboardType: TextInputType.none,
+                    style: const TextStyle(color: Colors.purple,fontSize: themeFontSizeLarge),
+                    decoration: const InputDecoration(
+                      labelText: 'Cantidad resultado(puede ser modificada)',
+                      alignLabelWithHint: true,
+                    ),
+                  ),
+                  numberInputPanel(context, qtyController),
+                ],
+              ),
+            ),
+            actions: <Widget>[
+              TextButton(child: const Text('Cancelar'), onPressed: () {Navigator.of(context).pop(qty);},),
+              TextButton(child: const Text('Ok'), onPressed: () {Navigator.of(context).pop(int.tryParse(qtyController.text) ?? qty);},),
+            ],
+          );
+        }) ?? qty;
+        if(qty>0) {
+          qtyScanned = qty;
+          if(barcode!=null){
+            barcode.repetitions = qty + sumOfOtherLinesWithSameUPC.toInt();
+            print('------- Repetitions ${barcode.repetitions}');
+          }
+          for(int i = 0; i <state.scanBarcodeListTotal.length; i++) {
+            if (state.scanBarcodeListTotal[i].code == barcodeString) {
+              Barcode barcode = state.scanBarcodeListTotal[i];
+              barcode.repetitions = qty + sumOfOtherLinesWithSameUPC.toInt();
+              print('------- Repetitions Total ${barcode.repetitions}');
+            }
+          }
+
+        }
+      }
+
+      if(qtyScanned <= 0){
+        if(barcode!=null) qtyScanned = barcode.repetitions;
+      }
+      if (lineIndex >= 0) {
+        Line line = lines[lineIndex];
+        line = line.copyWith(
+            manualQty: 0,
+            scanningQty: 0,
+            confirmedQty: 0,
+            scrappedQty: 0,
+            verifiedStatus: 'pending');
+
+        lines[lineIndex] = _verifyLineStatusQty(
+            line,
+            qtyScanned.toDouble(),
+            line.manualQty ?? 0,
+            line.scrappedQty ?? 0);
+      } else {
+        if(barcode!=null){
+          linesOver.add(barcode.copyWith(index: linesOver.length + 1));
+        }
+      }
+      state = state.copyWith(
+          mInOut: state.mInOut!.copyWith(lines: lines), linesOver: linesOver);
+    }
+  }
+
+  void updatedMInOutLineOld(String barcode) {
     if (state.mInOut != null && state.viewMInOut) {
       List<Line> lines = state.mInOut!.lines;
       List<Barcode> linesOver = [];
@@ -846,6 +1134,7 @@ class MInOutNotifier extends StateNotifier<MInOutStatus> {
     }
   }
 
+
   void _sortLinesByStatus(List<Line> lines, String orderBy) {
     final statuses = ['manually-minor', 'manually-over', 'manually-correct'];
     if (orderBy == 'manually') {
@@ -871,6 +1160,58 @@ class MInOutNotifier extends StateNotifier<MInOutStatus> {
         }
       });
     }
+  }
+
+  AlertDialog _showQtyToSumDialog(BuildContext context, TextEditingController qtyToSumController,{
+    required Line line, required int lastQty
+  }) {
+    return AlertDialog(
+      title: Text('Sumar : Linea : ${line.line ?? 0}',
+        style: TextStyle(fontWeight:FontWeight.bold,fontSize: themeFontSizeTitle ),),
+      content: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('UPC: ${line.upc ?? '--'}'),
+            Text('Cantidad anterior: $lastQty',style: TextStyle(color: Colors.purple,),),
+            Text('Cantidad a sumar puede ser negativa',style: TextStyle(color: Colors.black,),),
+
+            TextFormField(
+              textAlign: TextAlign.center,
+              controller: qtyToSumController,
+              keyboardType: TextInputType.none,
+              style: const TextStyle(color: Colors.purple,fontSize: themeFontSizeLarge),
+              decoration: const InputDecoration(
+                labelText: 'Cantidad a sumar al anterior',
+                alignLabelWithHint: true,
+              ),
+            ),
+            numberInputPanel(context, qtyToSumController),
+          ],
+        ),
+      ),
+      actions: <Widget>[
+        TextButton(child: const Text('Cancelar'), onPressed: () {Navigator.of(context).pop(0.0);},),
+        TextButton(child: const Text('Ok'), onPressed: () {
+          String aux = qtyToSumController.text;
+          if(aux.endsWith('.')) aux = aux.substring(0,aux.length-1);
+          Navigator.of(context).pop(double.tryParse(aux) ?? 0);},),
+      ],
+    );
+  }
+
+  Future<void> _sumScannedQty(BuildContext context,
+       {required Line line, required int lastQty,
+        required TextEditingController qtyController,
+        required TextEditingController qtyToSumController,}) async {
+    double qtyToSum = await showDialog<double>(context: context, builder: (BuildContext context) {
+      return _showQtyToSumDialog(context, qtyToSumController, line: line,
+          lastQty: lastQty);
+    }) ?? 0;
+    lastQty += qtyToSum.toInt();
+    qtyController.text = lastQty.toString();
+
   }
 }
 
