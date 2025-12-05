@@ -52,7 +52,6 @@ class ProductStoreOnHandScreen extends ConsumerStatefulWidget {
 
 class ProductStoreOnHandScreenState extends ConsumerState<ProductStoreOnHandScreen> {
   IdempiereMovement? movement ;
-  IdempiereLocator? lastSavedLocatorFrom;
   Color colorBackgroundHasMovementId = Colors.cyan[200]!;
   Color colorBackgroundNoMovementId = Colors.white;
 
@@ -103,20 +102,18 @@ class ProductStoreOnHandScreenState extends ConsumerState<ProductStoreOnHandScre
   @override
   Widget build(BuildContext context){
     ref.invalidate(persistentLocatorToProvider);
-    isDialogShowed = ref.watch(isDialogShowedProvider.notifier);
-    isScanning = ref.watch(isScanningProvider.notifier);
-    //final productAsync = ref.watch(findProductByUPCOrSKUForStoreOnHandProvider);
+    isDialogShowed = ref.watch(isDialogShowedProvider);
+    isScanning = ref.watch(isScanningProvider);
     productAsync = ref.watch(findProductForPutAwayMovementProvider);
-    //final productsStoredAsync = ref.watch(findProductsStoreOnHandProvider);
     productsStoredAsync = ref.watch(findStoreOnHandForPutAwayMovementProvider);
     widget.productsNotifier = ref.watch(scanHandleNotifierProvider.notifier);
     width = MediaQuery.of(context).size.width - 30;
-    resultOfSameWarehouse = ref.watch(resultOfSameWarehouseProvider.notifier);
+    resultOfSameWarehouse = ref.watch(resultOfSameWarehouseProvider);
     userWarehouse = ref.read(authProvider).selectedWarehouse;
 
 
-    final usePhoneCamera = ref.watch(usePhoneCameraToScanProvider.notifier);
-    scrollToTop = ref.watch(scrollToUpProvider.notifier);
+    final usePhoneCamera = ref.watch(usePhoneCameraToScanProvider);
+    scrollToTop = ref.watch(scrollToUpProvider);
 
 
 
@@ -137,31 +134,21 @@ class ProductStoreOnHandScreenState extends ConsumerState<ProductStoreOnHandScre
 
         title: Text(Messages.PRODUCT),
           actions: [
-            usePhoneCamera.state ? IconButton(
-              icon: const Icon(Icons.barcode_reader),
-              onPressed: () => {
-                usePhoneCamera.state = false,
-                isDialogShowed.state = false,
-                setState(() {}),
+              IconButton(
+              icon: Icon(usePhoneCamera ? Icons.barcode_reader : Icons.camera),
+              onPressed: () {
+                // 🧠 Riverpod se encarga del rebuild, sin setState
+                ref.read(usePhoneCameraToScanProvider.notifier).state = !usePhoneCamera;
+                ref.read(isDialogShowedProvider.notifier).state = false;
               },
-
-            ) :  IconButton(
-            icon: const Icon(Icons.qr_code_scanner),
-            onPressed: () => {
-              usePhoneCamera.state = true,
-              isDialogShowed.state = false,
-              setState(() {}),
-            },
-
-          ),
-
+            ),
         ],
 
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () {
           double positionAdd=_scrollController.position.maxScrollExtent;
-          if(scrollToTop.state){
+          if(scrollToTop){
             goToPosition -= positionAdd;
             if(goToPosition <= 0){
               goToPosition = 0;
@@ -182,9 +169,9 @@ class ProductStoreOnHandScreenState extends ConsumerState<ProductStoreOnHandScre
             curve: Curves.easeInOut,
           );
         },
-        child: Icon(scrollToTop.state ? Icons.arrow_upward :Icons.arrow_downward),
+        child: Icon(scrollToTop ? Icons.arrow_upward :Icons.arrow_downward),
       ),
-      bottomNavigationBar: isDialogShowed.state ? Container(
+      bottomNavigationBar: isDialogShowed ? Container(
         height: Memory.BOTTOM_BAR_HEIGHT,
         color: themeColorPrimary,
         child: Center(
@@ -236,7 +223,7 @@ class ProductStoreOnHandScreenState extends ConsumerState<ProductStoreOnHandScre
 
       ),
       onPressed: isScanning ? null :  () async {
-          ref.watch(isScanningProvider.notifier).state = true;
+          ref.read(isScanningProvider.notifier).state = true;
           String? result= await SimpleBarcodeScanner.scanBarcode(
             context,
             barcodeAppBar: BarcodeAppBar(
@@ -252,7 +239,6 @@ class ProductStoreOnHandScreenState extends ConsumerState<ProductStoreOnHandScre
           if(result!=null){
             print('findProductByUPCOrSKUForStoreOnHandProvider $result');
             widget.productsNotifier.addBarcodeByUPCOrSKUForStoreOnHande(result);
-            //ref.read(scannedCodeProvider.notifier).state = result;
           }
         },
       child: Text(Messages.OPEN_CAMERA,style: TextStyle(fontSize: themeFontSizeLarge,
@@ -266,7 +252,7 @@ class ProductStoreOnHandScreenState extends ConsumerState<ProductStoreOnHandScre
 
 
     if(storages== null || storages.isEmpty){
-      return isScanning.state ? Text(Messages.PLEASE_WAIT)
+      return isScanning ? Text(Messages.PLEASE_WAIT)
           : Container(
             width: width,
             decoration: BoxDecoration(
@@ -307,53 +293,6 @@ class ProductStoreOnHandScreenState extends ConsumerState<ProductStoreOnHandScre
       );
 
   }
- /* Widget getSearchBarOld(BuildContext context){
-    var isScanning = ref.watch(isScanningProvider);
-    var usePhoneCamera = ref.watch(usePhoneCameraToScanProvider.notifier);
-    return
-      SizedBox(
-        //width: double.infinity,
-        width: MediaQuery.of(context).size.width - 30,
-        height: 36,
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          spacing: 5,
-          children: [
-            IconButton(onPressed: (){
-              ref.watch(isDialogShowedProvider.notifier).state = false;
-            }, icon: Icon(usePhoneCamera.state?
-            Icons.qr_code_scanner : Icons.barcode_reader, color:
-            ref.watch(isDialogShowedProvider.notifier).state? Colors.red : Colors.purple,)),
-            Expanded(
-              child: Text(
-                Messages.FIND_PRODUCT_BY_UPC_SKU,
-                textAlign: TextAlign.center,
-              ),
-            ) ,
-            IconButton(onPressed:() async {
-                isDialogShowed.state = true;
-                setState(() {});
-                await Future.delayed(const Duration(microseconds: 100));
-                if(context.mounted) {
-                  getBarCode(context, true);
-                }
-              },
-              icon: Icon( Icons.search, color:isScanning?Colors.grey: Colors.purple,)),
-            IconButton(onPressed:() async {
-                isDialogShowed.state = true;
-                setState(() {});
-                await Future.delayed(const Duration(microseconds: 100));
-                if(context.mounted) {
-                  getBarCode(context, true);
-                }
-              },
-                icon: Icon( Icons.history, color:isScanning?Colors.grey: Colors.purple,)),
-
-          ],
-        ),
-      );
-
-  }*/
   Future<void> getBarCode(BuildContext context, bool history) async{
     TextEditingController controller = TextEditingController();
     if(history){
@@ -390,7 +329,7 @@ class ProductStoreOnHandScreenState extends ConsumerState<ProductStoreOnHandScre
       btnCancelText: Messages.CANCEL,
       btnOkText: Messages.OK,
       btnOkOnPress: () async {
-        isDialogShowed.state = false;
+        isDialogShowed = false;
         setState(() {});
 
         final result = controller.text;
@@ -402,7 +341,7 @@ class ProductStoreOnHandScreenState extends ConsumerState<ProductStoreOnHandScre
         widget.productsNotifier.addBarcodeByUPCOrSKUForStoreOnHande(result);
       },
       btnCancelOnPress: (){
-        isDialogShowed.state = false;
+        isDialogShowed = false;
         setState(() {});
         return ;
       }
@@ -449,7 +388,7 @@ class ProductStoreOnHandScreenState extends ConsumerState<ProductStoreOnHandScre
 
          WidgetsBinding.instance.addPostFrameCallback((_) async {
            //ref.read(isScanningProvider.notifier).update((state) => false);
-           //ref.read(productIdForPutAwayMovementProvider.notifier).state = products[0].id!;
+           //ref.read(productIdForPutAwayMovementProvider.notifier) = products[0].id!;
            int userWarehouseId = userWarehouse?.id ?? 0;
            String userWarehouseName = userWarehouse?.name ?? '';
            double quantity = 0;
@@ -478,49 +417,7 @@ class ProductStoreOnHandScreenState extends ConsumerState<ProductStoreOnHandScre
        loading: () => const LinearProgressIndicator(),
      );
 
-    /*productsStoredAsync.when(
-    data: (storages) {
-    print('-----------------find-------------------${storages.length}');
-    WidgetsBinding.instance.addPostFrameCallback((_) async {
-    // deley 1 secund
-    ref.read(isScanningProvider.notifier).update((state) => false);
 
-    double quantity = 0;
-    for (var data in storages) {
-    int warehouseID = data.mLocatorID?.mWarehouseID?.id ?? 0;
-
-    if (warehouseID == userWarehouseId) {
-    quantity += data.qtyOnHand ?? 0;
-    }
-    }
-
-    String aux = Memory.numberFormatter0Digit.format(quantity);
-    resultOfSameWarehouse.update((state) =>  [aux,userWarehouseName]);
-    *//*if(ref.read(searchByMOLIConfigurableSKUProvider.notifier).state){
-                          ref.read(showResultCardProvider.notifier).state = false;
-                        } else {
-                          final productAsync = ref.watch(findProductByUPCOrSKUForStoreOnHandProvider);
-                          productAsync.when(
-                              data: (products) {
-                                if(products.isNotEmpty && products[0].id != null && products[0].id! > 0){
-                                  ref.watch(showResultCardProvider.notifier).update((state) => true);
-                                } else {
-                                  ref.watch(showResultCardProvider.notifier).update((state) => false);
-                                }
-                              },
-                              error: (error, stackTrace) => {ref.watch(showResultCardProvider.notifier).update((state) => false)},
-                              loading: () => {ref.watch(showResultCardProvider.notifier).update((state) => false)}
-                          );
-                        }*//*
-    });
-    return getStoragesOnHand(storages, width);
-
-    },
-    error: (error, stackTrace) => Text('Error: $error'),
-    loading: () => const LinearProgressIndicator(
-    minHeight: 36,
-    ),
-    )*/
   }
 
 

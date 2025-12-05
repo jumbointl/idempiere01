@@ -1,56 +1,70 @@
 
+import 'dart:convert';
+
 import 'package:awesome_dialog/awesome_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/legacy.dart';
 import 'package:go_router/go_router.dart';
 import 'package:monalisa_app_001/features/products/common/input_data_processor.dart';
 import 'package:monalisa_app_001/features/products/common/scan_button_by_action.dart';
+import 'package:monalisa_app_001/features/products/domain/idempiere/movement_and_lines.dart';
+import 'package:monalisa_app_001/features/products/presentation/providers/persitent_provider.dart';
 import 'package:monalisa_app_001/features/products/presentation/providers/products_providers.dart';
 import 'package:simple_barcode_scanner/simple_barcode_scanner.dart';
 import 'package:slide_to_confirm/slide_to_confirm.dart';
 
-import '../../../../../config/router/app_router.dart';
-import '../../../../../config/theme/app_theme.dart';
-import '../../../../auth/presentation/providers/auth_provider.dart';
-import '../../../../shared/data/memory.dart';
-import '../../../../shared/data/messages.dart';
-import '../../../common/messages_dialog.dart';
-import '../../../domain/idempiere/idempiere_locator.dart';
-import '../../../domain/idempiere/idempiere_storage_on_hande.dart';
-import '../../../domain/idempiere/idempiere_warehouse.dart';
-import '../../../domain/idempiere/put_away_movement.dart';
-import '../../providers/common_provider.dart';
-import '../../providers/locator_provider.dart';
-import '../../providers/movement_provider.dart';
-import '../locator/search_locator_dialog.dart';
-class UnsortedStorageOnHandScreen extends ConsumerStatefulWidget implements InputDataProcessor{
+import '../../../../../../config/router/app_router.dart';
+import '../../../../../../config/theme/app_theme.dart';
+import '../../../../../auth/presentation/providers/auth_provider.dart';
+import '../../../../../shared/data/memory.dart';
+import '../../../../../shared/data/messages.dart';
+import '../../../../common/messages_dialog.dart';
+import '../../../../common/scan_button_by_action_fixed.dart';
+import '../../../../domain/idempiere/idempiere_locator.dart';
+import '../../../../domain/idempiere/idempiere_storage_on_hande.dart';
+import '../../../../domain/idempiere/idempiere_warehouse.dart';
+import '../../../../domain/idempiere/put_away_movement.dart';
+import '../../../../domain/sql/sql_data_movement_line.dart';
+import '../../../providers/common_provider.dart';
+import '../../../providers/locator_provider.dart';
+import '../../../providers/products_scan_notifier_for_line.dart';
+import '../../locator/search_locator_dialog.dart';
+import '../../store_on_hand/memory_products.dart';
+import '../products_home_provider.dart';
+import '../provider/new_movement_provider.dart';
+class UnsortedStorageOnHandSelectLocatorScreen extends ConsumerStatefulWidget implements InputDataProcessor{
 
   final IdempiereStorageOnHande storage;
+  final MovementAndLines movementAndLines;
   final int index;
   final Color colorSameWarehouse = themeColorSuccessfulLight;
   final Color colorDifferentWarehouse = themeColorGrayLight;
   double width;
   final int pageIndex = Memory.PAGE_INDEX_UNSORTED_STORAGE_ON_HAND;
-  final int actionScanType = Memory.ACTION_GET_LOCATOR_TO_VALUE;
+  //final int actionScanType = Memory.ACTION_GET_LOCATOR_TO_VALUE; // get 5 isntead of 4
+  final int actionScanType = 5;
   String? productUPC ;
-  late var notifier;
+  String? argument;
 
 
-
-  UnsortedStorageOnHandScreen({
+  UnsortedStorageOnHandSelectLocatorScreen({
     required this.index,
     required this.storage,
     required this.width,
     this.productUPC,
-    super.key});
+    required this.movementAndLines,
+
+    super.key, required String argument});
 
 
   @override
-  ConsumerState<UnsortedStorageOnHandScreen> createState() =>UnsortedStorageOnHandScreenState();
+  ConsumerState<UnsortedStorageOnHandSelectLocatorScreen> createState() =>UnsortedStorageOnHandScreenSelectLocatorState();
 
   @override
   Future<void> handleInputString(BuildContext context, WidgetRef ref, String inputData) async {
-     notifier.handleInputString(context, ref, inputData);
+    final scanHandleNotifier = ref.read(scanHandleNotifierProvider.notifier);
+    scanHandleNotifier.handleInputString(context, ref, inputData);
 
   }
   @override
@@ -88,19 +102,20 @@ class UnsortedStorageOnHandScreen extends ConsumerStatefulWidget implements Inpu
 
 }
 
-class UnsortedStorageOnHandScreenState extends ConsumerState<UnsortedStorageOnHandScreen> {
+class UnsortedStorageOnHandScreenSelectLocatorState extends ConsumerState<UnsortedStorageOnHandSelectLocatorScreen> {
   late List<IdempiereStorageOnHande> unsortedStorageList = [];
   late List<IdempiereStorageOnHande> storageList = [];
   late double widthLarge ;
   late double widthSmall ;
 
   late AsyncValue findLocatorTo ;
-
+  late var isLocatorScreenShowed;
   late var usePhoneCamera ;
   late var quantityToMove;
   late double dialogHeight ;
   late double dialogWidth ;
   List<bool> isCardsSelected = [];
+  double fontSizeSmall = 12;
   double fontSizeMedium = 16;
   double fontSizeLarge = 22;
   late var actionScan ;
@@ -114,63 +129,97 @@ class UnsortedStorageOnHandScreenState extends ConsumerState<UnsortedStorageOnHa
   late var isDialogShowed;
   bool searched = false ;
   double goToPosition =0.0;
-  PutAwayMovement? putAwayMovement;
+  late MovementAndLines movementAndLines;
+  late var lines ;
+  bool showScanButton = false;
+  String? productId ;
+  late var copyLastLocatorTo ;
+  late var documentColor;
 
 
   @override
   void initState() {
-
-
-    WidgetsBinding.instance.addPostFrameCallback((_){
-
-
-
-    });
     super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final copyLast = ref.read(copyLastLocatorToProvider);
+      final from = widget.storage.mLocatorID;
 
+      final int id = from?.id ?? -1;
+      ref.read(actualLocatorFromProvider.notifier).state = id;
+      ref.read(actionScanProvider.notifier).state = 5;
+      ref.read(isDialogShowedProvider.notifier).state = false;
+
+      if (copyLast) {
+        final lastLocatorTo = widget.movementAndLines.lastLocatorTo;
+        if (lastLocatorTo != null) {
+          ref.read(selectedLocatorToProvider.notifier).state = lastLocatorTo;
+        }
+      }
+    });
   }
+  late var linesProvider = StateProvider.autoDispose<double>((ref) {
+    return (((widget.movementAndLines.movementLines?.length ?? 0)+1)*10).toDouble();
+  });
 
+  double trailingWidth = 60;
   @override
   Widget build(BuildContext context) {
+    actionScan = ref.watch(actionScanProvider);
+    copyLastLocatorTo = ref.watch(copyLastLocatorToProvider);
+    movementAndLines = widget.movementAndLines;
+    locatorFrom = widget.storage.mLocatorID ;
+    String title ='${Messages.MOVEMENT} : ${Messages.CREATE}';
+    TextStyle textStyle = TextStyle(fontSize: themeFontSizeLarge);
 
-    putAwayMovement = PutAwayMovement();
-    putAwayMovement!.setUser(Memory.sqlUsersData);
-    putAwayMovement!.movementLineToCreate!.mProductID = widget.storage.mProductID;
-    putAwayMovement!.movementLineToCreate!.mLocatorID = widget.storage.mLocatorID;
-    locatorFrom = widget.storage.mLocatorID;
-    putAwayMovement!.movementToCreate!.locatorFromId = locatorFrom.id;
-    putAwayMovement!.movementToCreate!.mWarehouseID = locatorFrom.mWarehouseID;
+    productId = widget.movementAndLines.nextProductIdUPC ;
 
-    widget.notifier = ref.read(scanHandleNotifierProvider.notifier);
-    locatorFrom = widget.storage.mLocatorID;
-    locatorTo = ref.watch(selectedLocatorToProvider.notifier);
+    lines = ref.watch(linesProvider);
+
     findLocatorTo = ref.watch(findLocatorToProvider);
-     actionScan = ref.watch(actionScanProvider.notifier);
-     isScanning = ref.watch(isScanningLocatorToProvider.notifier);
-     isDialogShowed = ref.watch(isDialogShowedProvider.notifier);
-     widget.width = MediaQuery.of(context).size.width;
-     quantityToMove = ref.watch(quantityToMoveProvider);
-     usePhoneCamera = ref.watch(usePhoneCameraToScanProvider.notifier);
-     scrollToTop = ref.watch(scrollToUpProvider.notifier);
+    locatorTo = ref.watch(selectedLocatorToProvider);
 
+
+    if(movementAndLines.hasMovement){
+      title = movementAndLines.documentNo ?? '' ;
+      if(title.length>20){
+        textStyle = TextStyle(fontSize: themeFontSizeSmall);
+      }
+      Future.delayed(Duration(microseconds: 50),() {
+        ref.read(linesProvider.notifier).state = movementAndLines.movementLines?.length.toDouble() ?? 0.0;
+        int warehouseToID = movementAndLines.mWarehouseToID?.id ?? 0;
+        ref.read(actualWarehouseToProvider.notifier).state = warehouseToID;
+      });
+    }
+
+    isDialogShowed = ref.watch(isDialogShowedProvider);
+    isScanning = ref.watch(isScanningProvider);
+
+    widget.width = MediaQuery.of(context).size.width;
+    quantityToMove = ref.watch(quantityToMoveProvider);
+    usePhoneCamera = ref.watch(usePhoneCameraToScanForLineProvider);
+    scrollToTop = ref.watch(scrollToUpProvider);
 
     widthLarge = widget.width/3*2;
     widthSmall = widget.width/3;
     unsortedStorageList = ref.read(unsortedStoreOnHandListProvider);
+
     dialogHeight = MediaQuery.of(context).size.height;
     dialogWidth = MediaQuery.of(context).size.width;
-
+    isDialogShowed = ref.watch(isDialogShowedProvider);
     storageList = unsortedStorageList
         .where((element) =>
-            element.mLocatorID?.mWarehouseID?.id ==
-            widget.storage.mLocatorID?.mWarehouseID?.id &&
-            element.mProductID?.id == widget.storage.mProductID?.id &&
-            element.mLocatorID?.id == widget.storage.mLocatorID?.id )
+    element.mLocatorID?.mWarehouseID?.id ==
+        widget.storage.mLocatorID?.mWarehouseID?.id &&
+        element.mProductID?.id == widget.storage.mProductID?.id &&
+        element.mLocatorID?.id == widget.storage.mLocatorID?.id )
         .toList();
-    String title ='${Messages.MOVEMENT} : ${Messages.CREATE}';
+
+
     if (isCardsSelected.isEmpty && storageList.isNotEmpty) {
       isCardsSelected = List<bool>.filled(storageList.length, false);
     }
+
+
     return Scaffold(
       appBar: AppBar(
           backgroundColor: Colors.white,
@@ -183,30 +232,25 @@ class UnsortedStorageOnHandScreenState extends ConsumerState<UnsortedStorageOnHa
           }
         ),
         actions: [
-          usePhoneCamera.state ? IconButton(
-            icon: const Icon(Icons.barcode_reader),
-            onPressed: () => {
+          IconButton(
+            icon: Icon(usePhoneCamera ? Icons.barcode_reader : Icons.camera),
+            onPressed: () {
+              // 🧠 Riverpod se encarga del rebuild, sin setState
+              print('usePhoneCamera: $usePhoneCamera');
+              ref
+                  .read(usePhoneCameraToScanForLineProvider.notifier)
+                  .state = !usePhoneCamera;
 
-              usePhoneCamera.state = false,
-              isDialogShowed.state = false,
-              setState(() {}),
+              ref.read(isDialogShowedProvider.notifier).state = false;
             },
-          ) :  IconButton(
-            icon: const Icon(Icons.qr_code_scanner),
-            onPressed: () => {
-              usePhoneCamera.state = true,
-              isDialogShowed.state = false,
-              setState(() {}),
-            },
-
           ),
 
         ],
-        title: Text(title),
+        title: Text(title,style: textStyle,),
 
 
       ),
-        bottomNavigationBar: isDialogShowed.state ? Container(
+        bottomNavigationBar: isDialogShowed ? Container(
           height: Memory.BOTTOM_BAR_HEIGHT,
           color: themeColorPrimary,
           child: Center(
@@ -217,7 +261,7 @@ class UnsortedStorageOnHandScreenState extends ConsumerState<UnsortedStorageOnHa
         floatingActionButton: FloatingActionButton(
           onPressed: () {
             double positionAdd=_scrollController.position.maxScrollExtent;
-            if(scrollToTop.state){
+            if(scrollToTop){
               goToPosition -= positionAdd;
               if(goToPosition <= 0){
                 goToPosition = 0;
@@ -238,7 +282,7 @@ class UnsortedStorageOnHandScreenState extends ConsumerState<UnsortedStorageOnHa
               curve: Curves.easeInOut,
             );
           },
-          child: Icon(scrollToTop.state ? Icons.arrow_upward :Icons.arrow_downward),
+          child: Icon(scrollToTop ? Icons.arrow_upward :Icons.arrow_downward),
         ),
       body: SafeArea(
         child: PopScope(
@@ -789,14 +833,15 @@ class UnsortedStorageOnHandScreenState extends ConsumerState<UnsortedStorageOnHa
   }
 
   Widget getScanButton(BuildContext context) {
-      return usePhoneCamera.state ? buttonScanWithPhone(context, ref):
-      ScanButtonByAction(processor: widget,
+      return usePhoneCamera ? buttonScanWithPhone(context, ref):
+      ScanButtonByActionFixed(
+          processor: widget,
           actionTypeInt: widget.actionScanType);
 
   }
   Widget buttonScanWithPhone(BuildContext context,WidgetRef ref) {
     int a = widget.actionScanType;
-    int b = actionScan.state;
+    int b = actionScan;
     String tip = '(Loc)';
     if(a!=b){
       tip ='(X)';
@@ -812,7 +857,7 @@ class UnsortedStorageOnHandScreenState extends ConsumerState<UnsortedStorageOnHa
       ),
       onPressed:  () async {
 
-        isScanning.state = true;
+        isScanning = true;
           String? result= await SimpleBarcodeScanner.scanBarcode(
           context,
           barcodeAppBar: BarcodeAppBar(
@@ -828,11 +873,11 @@ class UnsortedStorageOnHandScreenState extends ConsumerState<UnsortedStorageOnHa
 
         result = result?.trim();
         if(result!=null && result.isNotEmpty){
-          isScanning.state = true;
+          isScanning = true;
           ref.read(scannedLocatorToProvider.notifier).update((state) => result!);
         } else {
           Future.delayed(const Duration(milliseconds: 500));
-          isScanning.state = false;
+          isScanning = false;
         }
 
       },
@@ -840,38 +885,107 @@ class UnsortedStorageOnHandScreenState extends ConsumerState<UnsortedStorageOnHa
           fontSize: themeFontSizeLarge),),
     );
   }
-  Widget getMovementCard(BuildContext context, WidgetRef ref) {
 
-    return Container(
+  Widget getMovementCard(BuildContext context, WidgetRef ref) {
+    final documentColor = ref.watch(colorMovementDocumentTypeProvider);
+    IdempiereLocator? lastLocatorTo = movementAndLines.lastLocatorTo;
+    if(lastLocatorTo != null){
+      lastLocatorTo.value ??= lastLocatorTo.identifier;
+
+    }    return Container(
       decoration: BoxDecoration(
-        color: Colors.grey[200],
+        color: documentColor,
         border: Border.all(
           color: Colors.black, // Specify the border color
         ),
         borderRadius: BorderRadius.circular(10),
       ),
       child: Column(
-            spacing: 5,
+            //spacing: 5,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+
               ListTile(
+                dense: true,
+
                 leading: SizedBox(
-                  width: 60,
+                  width: trailingWidth,
                   child: Text('${Messages.FROM} ${Messages.LOCATOR}',
                     style: TextStyle(
-                      fontSize: fontSizeMedium,
+                      fontSize: fontSizeSmall,
                       fontWeight: FontWeight.bold,
                       color: Colors.black,),textAlign: TextAlign.start,),
                 ),
                 title: Text(locatorFrom.value ??
                      Messages.LOCATOR_FROM,style: TextStyle(
-                  fontSize: fontSizeMedium,
+                  fontSize: fontSizeSmall,
                   fontWeight: FontWeight.bold,
                   color: Colors.purple,),),
-                trailing: Icon(Icons.check_circle,color:
-                  widget.storage.mLocatorID != null ?
-                  Colors.green : Colors.red,)
+                trailing: SizedBox(
+                  width: 48.0, // Ancho estándar de un IconButton
+                  height: 48.0, // Alto estándar de un IconButton
+                  child: Center(
+                    child: Icon(Icons.check_circle, color: widget.storage.mLocatorID != null ? Colors.green : Colors.red),
+                  ),
+                ),
               ),
+
+              if(lastLocatorTo != null)
+                ListTile(
+                  dense: true,
+                  leading: SizedBox(
+                    width: trailingWidth,
+                    child: Center(
+                      child: Checkbox(
+                        value: copyLastLocatorTo,
+                        onChanged: (value) {
+                          if (value == null) return;
+                          ref.read(copyLastLocatorToProvider.notifier).state = value;
+
+                          if (value) {
+                            // copiar último locator al seleccionado
+                            if(lastLocatorTo!=null) {
+                              ref.read(selectedLocatorToProvider.notifier).state =
+                                  lastLocatorTo;
+                            }
+                          } else {
+                            // resetear locator seleccionado
+                            ref.read(selectedLocatorToProvider.notifier).state =
+                                IdempiereLocator(
+                                  id: Memory.INITIAL_STATE_ID,
+                                  value: Messages.FIND,
+                                );
+                          }
+                        },
+                      ),
+                    ),
+
+                  ),
+                  title: Text(Messages.COPY_LAST_DATA,
+                    style: TextStyle(
+                      fontSize: fontSizeSmall,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black,
+                    ),
+                  ),
+                  subtitle: Text(
+                    lastLocatorTo.value ?? lastLocatorTo.identifier ?? '',
+                    style: TextStyle(
+                      fontSize: fontSizeSmall,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.purple,
+                    ),
+                  ),
+                  trailing: IconButton(
+                    padding: EdgeInsets.zero, // Eliminar padding para alinear
+                    icon: const Icon(Icons.download, color: Colors.purple),
+                    onPressed: () {
+                      // acción opcional extra si quieres forzar copia manual
+                      ref.read(selectedLocatorToProvider.notifier).state =
+                          lastLocatorTo;
+                    },
+                  ),
+                ),
               getLocatorTo(context, ref),
 
             ],
@@ -882,23 +996,27 @@ class UnsortedStorageOnHandScreenState extends ConsumerState<UnsortedStorageOnHa
   }
 
   Widget getLocatorTo(BuildContext context, WidgetRef ref) {
-
+    locatorTo = ref.watch(selectedLocatorToProvider);
     return findLocatorTo.when(
-      data: (locator) {
-
-        if(locator!=null && locator.id!=null && locator.id!>0){
-
-          putAwayMovement!.movementLineToCreate!.mLocatorToID = locator;
-          putAwayMovement!.movementToCreate!.mWarehouseToID = locator?.mWarehouseID ;
+      data: (locatorFromFuture) {
+        IdempiereLocator locator;
+        if (locatorTo.id != Memory.INITIAL_STATE_ID) {
+          // Hay locator elegido manualmente (LocatorCard)
+          print(locatorTo.toJson());
+          locator = locatorTo;
+        } else {
+          // Usar el que viene del escaneo / FutureProvider
+          locator = locatorFromFuture;
         }
-
-
         WidgetsBinding.instance.addPostFrameCallback((_) async {
+
         });
         return ListTile(
+          dense: true,
           leading: GestureDetector(
             onTap: (){
-
+              bool forCreateLine = false ;
+              ref.read(findingCreateLinLocatorToProvider.notifier).state = forCreateLine;
               Memory.pageFromIndex = ref.read(productsHomeCurrentIndexProvider.notifier).state;
               ref.read(productsHomeCurrentIndexProvider.notifier).update((state) => Memory.PAGE_INDEX_NO_REQUERED_SCAN_SCREEN);
               showDialog(
@@ -906,36 +1024,45 @@ class UnsortedStorageOnHandScreenState extends ConsumerState<UnsortedStorageOnHa
                 builder: (BuildContext context) {
                   return SearchLocatorDialog(
                     searchLocatorFrom :false,
-                    forCreateLine: false,
+                    forCreateLine: forCreateLine,
                   );
                 },
               );
 
             },
             child: SizedBox(
-              width: 60,
+              width: trailingWidth,
               child: Text('${Messages.TO} ${Messages.LOCATOR}',
                 style: TextStyle(
-                  fontSize: fontSizeMedium,
+                  fontSize: fontSizeSmall,
                   fontWeight: FontWeight.bold,
                   color: Colors.purple,),textAlign: TextAlign.start,),
             ),
           ),
+          /*title: Text(this.locatorTo.id != null ? this.locatorTo.value ??''
+              : this.locatorTo.identifier ?? '',style:TextStyle(
+            fontSize: fontSizeSmall,
+            fontWeight: FontWeight.bold,
+            color: Colors.purple,)),*/
           title: Text(locator.id != null ?locator.value ??''
               : locator.identifier ?? '',style:TextStyle(
-            fontSize: fontSizeMedium,
+            fontSize: fontSizeSmall,
             fontWeight: FontWeight.bold,
             color: Colors.purple,)),
           trailing:locator.id != null
-              && locator.id! > 0 ?
-          Icon(Icons.check_circle,color: Colors.green,) :
-          Icon(Icons.error,color: Colors.red,),
+              && locator.id! > 0
+              ? const SizedBox(width: 48.0, height: 48.0, child: Center(child: Icon(Icons.check_circle, color: Colors.green)))
+              : const SizedBox(
+                  width: 48.0,
+                  height: 48.0,
+                  child: Center(child: Icon(Icons.error, color: Colors.red)),
+                ),
 
         );
       },
       error: (error, stackTrace) {
         return Text(Messages.ERROR,style:TextStyle(
-        fontSize: fontSizeMedium,
+        fontSize: fontSizeSmall,
         fontWeight: FontWeight.bold,
         color: Colors.red,));
       },
@@ -953,19 +1080,96 @@ class UnsortedStorageOnHandScreenState extends ConsumerState<UnsortedStorageOnHa
       text: Messages.SLIDE_TO_CREATE,
       textStyle: TextStyle(fontSize: themeFontSizeLarge, color: Colors.purple,fontWeight: FontWeight.bold),
       onConfirmation: () {
-        print('----------------------------ConfirmationSlide');
-        if (putAwayMovement!=null && putAwayMovement!.movementLineToCreate!=null) {
-          putAwayMovement!.movementLineToCreate!.movementQty = ref.read(quantityToMoveProvider);
-          widget.notifier.prepareToCreatePutawayMovement(ref, putAwayMovement);
-        } else {
-          showErrorMessage(context, ref, Messages.MOVEMENT_ALREADY_CREATED);
 
+        if(movementAndLines.hasMovement){
+          createMovementLineOnly();
+          return;
+        } else {
+          showErrorMessage(context, ref, Messages.NO_MOVEMENT_SELECTED);
         }
+
       }
 
     );
   }
+  void createMovementLineOnly() {
+    print('----------------------------ConfirmationSlide');
+    int movementId =movementAndLines.id ?? -1;
+    if(movementId<=0){
+      showErrorMessage(context, ref, Messages.MOVEMENT_ID);
+      return ;
+    }
 
+    int locatorFrom = widget.storage.mLocatorID?.id ?? -1;
+    if(locatorFrom<=0){
+      showAutoCloseErrorDialog(context,ref,Messages.ERROR_LOCATOR_FROM,3);
+      return;
+    }
+    int locatorTo = this.locatorTo?.id ?? -1;
+    if(locatorTo<=0){
+      showAutoCloseErrorDialog(context,ref,Messages.ERROR_LOCATOR_TO,3);
+      return;
+    }
+    if(movementId>0 && locatorFrom>0 && locatorTo>0){
+      SqlDataMovementLine movementLine = SqlDataMovementLine();
+      Memory.sqlUsersData.copyToSqlData(movementLine);
+      movementLine.mMovementID = movementAndLines;
+      if(movementLine.mMovementID==null || movementLine.mMovementID!.id==null){
+        showErrorMessage(context, ref, Messages.ERROR_MOVEMENT);
+        return;
+      }
+      movementLine.mLocatorID = widget.storage.mLocatorID ;
+      if(movementLine.mLocatorID==null || movementLine.mLocatorID!.id==null){
+        showErrorMessage(context, ref, Messages.ERROR_LOCATOR_FROM);
+        return;
+      }
+      movementLine.mProductID = widget.storage.mProductID;
+      if(movementLine.mProductID==null || movementLine.mProductID!.id==null){
+        showErrorMessage(context, ref, Messages.ERROR_PRODUCT);
+        return;
+      }
+      movementLine.mLocatorToID = this.locatorTo;
+      if(movementLine.mLocatorToID==null || movementLine.mLocatorToID!.id==null){
+        showErrorMessage(context, ref, Messages.ERROR_LOCATOR_TO);
+        return;
+      }
+      movementLine.movementQty = ref.read(quantityToMoveProvider);
+      if(movementLine.movementQty==null && movementLine.movementQty!<=0){
+        showErrorMessage(context, ref, Messages.ERROR_QUANTITY);
+        return;
+      }
+      movementLine.mAttributeSetInstanceID = widget.storage.mAttributeSetInstanceID;
+      MemoryProducts.newSqlDataMovementLineToCreate = movementLine;
+      movementLine.line = lines;
+      MemoryProducts.movementAndLines.movementLineToCreate = movementLine;
+
+
+      MovementAndLines m = MovementAndLines();
+      if(widget.argument!= null && widget.argument!.isNotEmpty){
+        m = MovementAndLines.fromJson(jsonDecode(widget.argument!));
+        if(!m.hasMovement){
+          showErrorMessage(context, ref, Messages.ERROR_MOVEMENT);
+          return;
+        }
+      } else {
+        m = movementAndLines;
+        if(!m.hasMovement){
+          showErrorMessage(context, ref, Messages.ERROR_MOVEMENT);
+          return;
+        }
+      }
+      m.movementLineToCreate = movementLine;
+      MemoryProducts.movementAndLines = m;
+      String argument = m.id.toString() ?? '-1';
+      context.go('${AppRouter.PAGE_CREATE_MOVEMENT_LINE}/$argument',
+          extra: m);
+
+    }
+
+
+
+
+  }
   Widget getStockList(BuildContext context, WidgetRef ref) {
 
     return SliverPadding(
@@ -986,8 +1190,13 @@ class UnsortedStorageOnHandScreenState extends ConsumerState<UnsortedStorageOnHa
     ref.read(quantityToMoveProvider.notifier).update((state) => 0);
     ref.read(productsHomeCurrentIndexProvider.notifier).update((state) => Memory.PAGE_INDEX_STORE_ON_HAND);
     ref.read(actionScanProvider.notifier).state = Memory.ACTION_FIND_BY_UPC_SKU_FOR_STORE_ON_HAND;
-    context.go('${AppRouter.PAGE_PRODUCT_STORE_ON_HAND}/${widget.productUPC?? '-1'}');
+
+    print('--------------------${widget.productUPC?? '-1'}');
+    context.go('${AppRouter.PAGE_PRODUCT_STORE_ON_HAND_FOR_LINE}/${widget.productUPC?? '-1'}',
+      extra: movementAndLines
+    );
 
   }
 
 }
+

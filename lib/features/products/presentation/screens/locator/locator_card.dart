@@ -1,11 +1,12 @@
 import 'package:awesome_dialog/awesome_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:monalisa_app_001/features/products/presentation/providers/persitent_provider.dart';
 
 import '../../../../../config/theme/app_theme.dart';
-import '../../providers/common_provider.dart';
 import '../../providers/locator_provider_for_Line.dart';
 import '../../providers/product_provider_common.dart';
+import '../movement/products_home_provider.dart';
 import '../../../../shared/data/memory.dart';
 import '../../../../shared/data/messages.dart';
 import '../../../domain/idempiere/idempiere_locator.dart';
@@ -67,15 +68,15 @@ class LocatorCardState extends ConsumerState<LocatorCard> {
             }
           } else {
             if(widget.forCreateLine){
-              ref.read(scannedLocatorToForLineProvider.notifier).update((state) => widget.data.value ?? '');
+              ref.read(selectedLocatorToProvider.notifier).state = widget.data;
+              //ref.read(scannedLocatorToForLineProvider.notifier).update((state) => widget.data.value ?? '');
             } else {
-              ref.read(scannedLocatorToProvider.notifier).update((state) => widget.data.value ?? '');
+              ref.read(selectedLocatorToProvider.notifier).state = widget.data;
+              //ref.read(scannedLocatorToProvider.notifier).update((state) => widget.data.value ?? '');
             }
 
           }
 
-          int id1 = ref.read(selectedLocatorToProvider.notifier).state.id ?? 0;
-          int id2 = ref.read(selectedLocatorFromProvider.notifier).state.id ?? 0;
 
           ref.read(usePhoneCameraToScanForLineProvider.notifier).state = MemoryProducts.lastUsePhoneCameraState ;
           ref.read(productsHomeCurrentIndexProvider.notifier).state = Memory.pageFromIndex;

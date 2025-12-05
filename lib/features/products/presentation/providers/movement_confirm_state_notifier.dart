@@ -3,7 +3,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
 import '../../domain/idempiere/idempiere_product.dart';
-import 'movement_provider.dart';
+import 'movement_provider_old.dart';
 
 class MovementConfirmStateNotifier  extends StateNotifier<List<IdempiereProduct>>{
   static const int SQL_QUERY_CREATE =1;

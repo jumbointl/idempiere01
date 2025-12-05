@@ -10,8 +10,8 @@ import 'package:monalisa_app_001/features/products/domain/idempiere/movement_and
 import '../../../../../shared/data/memory.dart';
 import '../../../../../shared/data/messages.dart';
 import '../../../providers/common_provider.dart';
-import '../../../providers/movement_provider.dart';
 import '../pos/movement_direct_print.dart';
+import '../provider/new_movement_provider.dart';
 import 'cups_printer.dart';
 import 'lite_ipp_print.dart';
 import 'mo_printer.dart';
@@ -25,12 +25,25 @@ class PrinterState {
   final TextEditingController ipController;
   final TextEditingController portController;
   final TextEditingController typeController;
+  final TextEditingController serverPortController;
+  final TextEditingController serverIpController;
 
-  static const int PRINTER_TYPE_POS = 1;
-  static const int PRINTER_TYPE_ZPL = 2;
-  static const int PRINTER_TYPE_TSPL = 3;
-  static const int PRINTER_TYPE_TPL = 3;
-  static const int PRINTER_TYPE_A4 = 4;
+
+  static const int PRINTER_TYPE_POS_INT = 1;
+  static const int PRINTER_TYPE_ZPL_INT = 2;
+  static const int PRINTER_TYPE_TSPL_INT = 3;
+  static const int PRINTER_TYPE_TPL__INT = 3;
+  static const int PRINTER_TYPE_A4__INT = 4;
+  static const int PRINTER_TYPE_LABEL__INT = 5;
+  static const int PRINTER_TYPE_LASER__INT = 6;
+  static const String PRINTER_TYPE_POS = 'POS';
+  static const String PRINTER_TYPE_ZPL = 'ZPL';
+  static const String PRINTER_TYPE_TSPL = 'TSPL';
+  static const String PRINTER_TYPE_TPL = 'TPL';
+  static const String PRINTER_TYPE_A4 = 'A4';
+  static const String PRINTER_TYPE_LABEL = 'LABEL';
+  static const String PRINTER_TYPE_LASER = 'LASER';
+
 
 
   PrinterState({
@@ -38,6 +51,8 @@ class PrinterState {
     required this.ipController,
     required this.portController,
     required this.typeController,
+    required this.serverPortController,
+    required this.serverIpController,
   });
 }
 
@@ -48,6 +63,8 @@ class PrinterScanNotifier extends StateNotifier<PrinterState>  {
     ipController: TextEditingController(),
     portController: TextEditingController(),
     typeController: TextEditingController(),
+    serverPortController: TextEditingController(),
+    serverIpController: TextEditingController(),
   ));
 
   // Limpiar todos los controladores
@@ -60,14 +77,35 @@ class PrinterScanNotifier extends StateNotifier<PrinterState>  {
       ipController: state.ipController,
       portController: state.portController,
       typeController: state.typeController,
+      serverPortController: state.serverPortController,
+      serverIpController: state.serverIpController,
     );
   }
-  bool isA4(String type){
-    return type == 'A4';
+  bool isLaser(String type){
+    return type == PrinterState.PRINTER_TYPE_LASER;
   }
+  bool isPos(String type){
+    return type == PrinterState.PRINTER_TYPE_POS;
+  }
+  bool isZpl(String type){
+    return type == PrinterState.PRINTER_TYPE_ZPL;
+  }
+  bool isTspl(String type){
+    return type == PrinterState.PRINTER_TYPE_TSPL;
+  }
+  bool isTpl(String type){
+    return type == PrinterState.PRINTER_TYPE_TPL;
+  }
+  bool isA4(String type){
+    return type == PrinterState.PRINTER_TYPE_A4;
+  }
+  bool isLabel(String type){
+    return type == PrinterState.PRINTER_TYPE_LABEL;
+  }
+
   Future<void> printToCupsPdf(WidgetRef ref) async {
-    if(state.ipController.text.isEmpty || state.nameController.text.isEmpty
-        || state.portController.text.isEmpty){
+    if(state.serverIpController.text.isEmpty || state.nameController.text.isEmpty
+        || state.serverPortController.text.isEmpty){
       showErrorMessage(ref.context, ref, Messages.ERROR_EMPTY_FIELDS);
       return;
     }
@@ -78,13 +116,14 @@ class PrinterScanNotifier extends StateNotifier<PrinterState>  {
     final pdfBytes = await generateMovementDocument(movementAndLines, image);
     String cupsServiceUrl = Memory.URL_CUPS_SERVER;
     String documentNo = movementAndLines.documentNo ?? 'document-mo';
-    if(state.portController.text=='631'){
-      cupsServiceUrl = Memory.getUrlCupsServerWithPrinter(state.ipController.text,
-          state.portController.text,state.nameController.text);
+    if(state.serverPortController.text=='631'){
+      cupsServiceUrl = Memory.getUrlCupsServerWithPrinter(ip :state.serverIpController.text,
+          port:state.serverPortController.text,
+        printerName:state.nameController.text);
       await printPdfToCUPSDirect(ref, pdfBytes, cupsServiceUrl,documentNo,LiteIppPrintOptions.PRINTER_ORIENTATION_LANDSCAPE);
     } else {
-      cupsServiceUrl = Memory.getUrlNodeCupsServer(state.ipController.text,
-          state.portController.text);
+      cupsServiceUrl = Memory.getUrlNodeCupsServer(ip:state.serverIpController.text,
+          port: state.serverPortController.text);
       await sendPdfToNode(ref,pdfBytes, cupsServiceUrl,state.nameController.text);
     }
     ref.read(isPrintingProvider.notifier).state = false;
@@ -95,7 +134,7 @@ class PrinterScanNotifier extends StateNotifier<PrinterState>  {
     clearControllers(); // Limpiar antes de actualizar
     print('QR Data: $qrData');
     final parts = qrData.split(':');
-    if (parts.length == 5) {
+    if (parts.length >=3 ) {
       var printer = ref.read(lastPrinterProvider.notifier);
       MOPrinter moPrinter = MOPrinter();
 
@@ -105,14 +144,28 @@ class PrinterScanNotifier extends StateNotifier<PrinterState>  {
       moPrinter.port = port.toString();
       final typeString  = parts[2].toUpperCase();
       moPrinter.type = typeString;
-      final name = parts[3];
-      moPrinter.name = name;
-      //parts[4]='END' not used
+
+
       printer.state = MOPrinter();
-      state.nameController.text = name;
+
       state.ipController.text = ip;
       state.portController.text = port.toString();
       state.typeController.text = typeString;
+      if(parts.length>3){
+        final name = parts[3];
+        moPrinter.name = name;
+        state.nameController.text = name;
+      }
+      if(parts.length>4){
+        final serverIp = parts[4];
+        moPrinter.serverIp = serverIp;
+        state.serverIpController.text = serverIp;
+      }
+      if(parts.length>5){
+        final serverPort = parts[5];
+        moPrinter.serverPort = serverPort;
+        state.serverPortController.text = serverPort;
+      }
 
 
       state = PrinterState(
@@ -120,14 +173,27 @@ class PrinterScanNotifier extends StateNotifier<PrinterState>  {
         ipController: state.ipController,
         portController: state.portController,
         typeController: state.typeController,
+        serverPortController: state.serverPortController,
+        serverIpController: state.serverIpController,
       );
       Future.delayed(const Duration(milliseconds:500), () {
 
       });
-      if(state.typeController.text.startsWith('A4')) {
+
+      if(state.typeController.text.startsWith(PrinterState.PRINTER_TYPE_LASER) ||
+          state.typeController.text.startsWith(PrinterState.PRINTER_TYPE_A4)) {
+        if(state.serverIpController.text.isEmpty || state.serverPortController.text.isEmpty
+            || state.nameController.text.isEmpty){
+          if (ref.context.mounted) {
+            showWarningMessage(ref.context, ref, Messages.ERROR_SERVER);
+            return ;
+
+          }
+        }
+
         printToCupsPdf(ref);
-      } else if(state.typeController.text.startsWith('POS')){
-        print('----------------------------POS');
+      } else if(state.typeController.text.startsWith(PrinterState.PRINTER_TYPE_POS)){
+        print('----------------------------POS is type = POS? ${isPos(state.typeController.text)}');
         MovementAndLines movementAndLines = ref.read(movementAndLinesProvider);
         if(!movementAndLines.hasMovement || !movementAndLines.hasMovementLines) {
           if (ref.context.mounted) {
@@ -139,15 +205,8 @@ class PrinterScanNotifier extends StateNotifier<PrinterState>  {
           return;
         }
         int port = int.tryParse(state.portController.text) ?? 9100;
-        printReceiptWithQr(state.ipController.text, port, movementAndLines);
-        /*ref.context.go(
-          AppRouter.PAGE_MOVEMENT_PRINT_POS,
-          extra: {
-            'ip': state.ipController.text,
-            'port': port,
-            'movementAndLines': movementAndLines,
-          },
-        );*/
+
+        printReceiptWithQr(ref,state.ipController.text, port, movementAndLines);
       } else if(state.typeController.text.startsWith('ZPL')){
         print('----------------------------ZPL');
         if(ref.context.mounted) {
@@ -199,13 +258,15 @@ class PrinterScanNotifier extends StateNotifier<PrinterState>  {
     final printer = FlutterNetPrinter();
     int port = int.tryParse(state.portController.text) ?? 9100;
     switch(state.typeController.text) {
-      case PrinterState.PRINTER_TYPE_POS:
-      case PrinterState.PRINTER_TYPE_ZPL:
-      case PrinterState.PRINTER_TYPE_TSPL:
+      case PrinterState.PRINTER_TYPE_POS_INT:
+      case PrinterState.PRINTER_TYPE_ZPL_INT:
+      case PrinterState.PRINTER_TYPE_TSPL_INT:
         // Lógica común para estos tipos si es necesario
         showWarningMessage(ref.context, ref, Messages.NOT_ENABLED);
         break;
-      case PrinterState.PRINTER_TYPE_A4:
+      case PrinterState.PRINTER_TYPE_A4__INT:
+      case PrinterState.PRINTER_TYPE_LASER__INT:
+
         /*ref.read(printerProvider.notifier).setIp(state.ipController.text);
         ref.read(printerProvider.notifier).setPort(state.portController.text);
         ref.read(printerProvider.notifier).setName(state.nameController.text);
@@ -214,13 +275,15 @@ class PrinterScanNotifier extends StateNotifier<PrinterState>  {
         final image = await imageLogo;
         final pdfBytes = await generateMovementDocument(movementAndLines, image);
         String cupsServiceUrl = Memory.URL_CUPS_SERVER;
-        if(state.ipController.text.isNotEmpty && state.ipController.text != ''){
-          cupsServiceUrl = Memory.getUrlCupsServerWithPrinter(state.ipController.text,
-              state.portController.text,state.nameController.text);
+        if(state.serverPortController.text.isNotEmpty && state.serverIpController.text != ''
+            && state.nameController.text != ''){
+          cupsServiceUrl = Memory.getUrlCupsServerWithPrinter(ip:state.serverPortController.text,
+              port:state.serverPortController.text, printerName:state.nameController.text);
         }
 
         String printerName = state.nameController.text =='' ? 'BR_HL_10003' : state.nameController.text;
         await sendPdfToNode(ref,pdfBytes, cupsServiceUrl,printerName,);
+
 
 
       default:
@@ -267,17 +330,19 @@ class PrinterScanNotifier extends StateNotifier<PrinterState>  {
       ipController: state.ipController,
       portController: state.portController,
       typeController: state.typeController,
+      serverPortController: state.serverPortController,
+      serverIpController: state.serverIpController,
     );
-    if(state.typeController.text.startsWith('A4')) {
+    if(state.typeController.text.startsWith(PrinterState.PRINTER_TYPE_LASER)) {
       printToCupsPdf(ref);
-    } else if(state.typeController.text.startsWith('POS')){
+    } else if(state.typeController.text.startsWith(PrinterState.PRINTER_TYPE_POS)){
       print('----------------------------POS');
       if(ref.context.mounted) {
         showWarningMessage(ref.context, ref, '${Messages.NOT_ENABLED} : ${state.nameController} at '
             '${state.ipController.text}:${state.portController.text} type ${state.typeController.text}');
       }
-    } else if(state.typeController.text.startsWith('ZPL')){
-      print('----------------------------ZPL');
+    } else if(state.typeController.text.startsWith(PrinterState.PRINTER_TYPE_LABEL)){
+      print('----------------------------LABEL');
       if(ref.context.mounted) {
         showWarningMessage(ref.context, ref, '${Messages.NOT_ENABLED} :${state.nameController} at '
             '${state.ipController.text}:${state.portController.text} type ${state.typeController.text}');

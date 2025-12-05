@@ -3,14 +3,18 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
 import 'package:get_storage/get_storage.dart';
+import 'package:go_router/go_router.dart';
 import 'package:monalisa_app_001/features/products/common/scan_button_by_action.dart';
 
+import '../../../config/router/app_router.dart';
 import '../../../config/theme/app_theme.dart';
 import '../../home/presentation/screens/home_screen.dart';
 import '../../shared/data/memory.dart';
 import '../../shared/data/messages.dart';
 import '../domain/idempiere/movement_and_lines.dart';
 import '../presentation/providers/common_provider.dart';
+import '../presentation/providers/product_provider_common.dart';
+import '../presentation/screens/store_on_hand/memory_products.dart';
 import 'app_initializer_overlay.dart';
 import 'input_data_processor.dart';
 import 'input_dialog.dart';
@@ -111,9 +115,9 @@ abstract class CommonConsumerState<T extends ConsumerStatefulWidget> extends Con
               curve: Curves.easeInOut,
             );
           },
-          child: Icon(scrollToTop.state ? Icons.arrow_upward :Icons.arrow_downward),
+          child: Icon(scrollToTop ? Icons.arrow_upward :Icons.arrow_downward),
         ),*/
-        bottomNavigationBar: isDialogShowed.state ? Container(
+        bottomNavigationBar: isDialogShowed ? Container(
           height: Memory.BOTTOM_BAR_HEIGHT,
           color: themeColorPrimary,
           child: Center(
@@ -172,8 +176,8 @@ abstract class CommonConsumerState<T extends ConsumerStatefulWidget> extends Con
     => Memory.ACTION_FIND_MOVEMENT_BY_ID);*/
     print('popScopeAction----------------------------');
     ref.invalidate(homeScreenTitleProvider);
-    //context.go(AppRouter.PAGE_HOME);
-    Navigator.pop(context);
+    context.go(AppRouter.PAGE_HOME);
+
 
   }
 
@@ -181,7 +185,7 @@ abstract class CommonConsumerState<T extends ConsumerStatefulWidget> extends Con
     return BottomAppBar(
         height: Memory.BOTTOM_BAR_HEIGHT,
         color: getColorByActionScan() ,
-        child: usePhoneCamera.state ? buttonScanWithPhone(context,ref,this)
+        child: usePhoneCamera ? buttonScanWithPhone(context,ref,this)
             : getScanButton(context,ref)
     );
 
@@ -194,10 +198,10 @@ abstract class CommonConsumerState<T extends ConsumerStatefulWidget> extends Con
 
   Widget getScanButton(BuildContext context, WidgetRef ref) {
     //return EnterSubmitScreen(processor: this,);
-    print('actionScan.state ${actionScan.state}');
+    print('actionScan ${actionScan}');
     return ScanButtonByAction(
         color: getColorByActionScan(),
-        actionTypeInt: actionScan.state,
+        actionTypeInt: actionScan,
         processor: this);
 
 
@@ -258,7 +262,7 @@ abstract class CommonConsumerState<T extends ConsumerStatefulWidget> extends Con
   }
 
   Color? getColorByActionScan() {
-    int action = actionScan.state;
+    int action = actionScan;
     if(action == Memory.ACTION_FIND_MOVEMENT_BY_ID) {
       return Colors.cyan[800];
     }else if(action == Memory.ACTION_GET_LOCATOR_TO_VALUE){
@@ -272,25 +276,20 @@ abstract class CommonConsumerState<T extends ConsumerStatefulWidget> extends Con
   void findMovementAfterDate(DateTime date, {required bool isIn}) {}
 
   Widget getActionButtons(BuildContext context, WidgetRef ref) {
-    return usePhoneCamera.state ? IconButton(
-      icon: const Icon(Icons.barcode_reader),
-      onPressed: () => {
-        usePhoneCamera.state = false,
-        isDialogShowed.state = false,
-        setState(() {}),
-      },
+    return IconButton(
+      icon: Icon(usePhoneCamera ? Icons.barcode_reader : Icons.camera),
+      onPressed: () {
+        changeUsePhoneCameraToScanState(context,ref);
 
-    ) :  IconButton(
-      icon: const Icon(Icons.qr_code_scanner),
-      onPressed: () => {
-        usePhoneCamera.state = true,
-        isDialogShowed.state = false,
-        setState(() {}),
       },
-
     );
   }
   Future<void> setDefaultValues(BuildContext context, WidgetRef ref);
+
+  void changeUsePhoneCameraToScanState(BuildContext context, WidgetRef ref){
+    ref.read(usePhoneCameraToScanProvider.notifier).state = !usePhoneCamera;
+    ref.read(isDialogShowedProvider.notifier).state = false;
+  }
 
 }
 
@@ -339,10 +338,13 @@ class MovementDateFilterRow extends ConsumerWidget {
 
     return Column(
       children: [
+
         Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             OutlinedButton(
               style: OutlinedButton.styleFrom(
+                visualDensity: VisualDensity.compact,
                 backgroundColor: Colors.white,
               ),
               onPressed: () async {
@@ -354,23 +356,48 @@ class MovementDateFilterRow extends ConsumerWidget {
                 );
                 if (picked != null) {
                   ref.read(selectedDateProvider.notifier).state = picked;
+                  final date = ref.read(selectedDateProvider);
+                  final isIn = ref.read(inOutProvider); // bool?
+                  onOk(date, isIn);
                 }
               },
               child: Text(dateText, style: TextStyle(color: Colors.purple)),
               ),
-            const SizedBox(width: 8),
             OutlinedButton(
               style: OutlinedButton.styleFrom(
+                visualDensity: VisualDensity.compact,
                 backgroundColor: Colors.white,
               ),
               onPressed: () {
                 final now = DateTime.now();
                 final today = DateTime(now.year, now.month, now.day);
                 ref.read(selectedDateProvider.notifier).state = today;
+                final date = ref.read(selectedDateProvider);
+                final isIn = ref.read(inOutProvider); // bool?
+                onOk(date, isIn);
               },
               child: Text(
                 Messages.TODAY,
                 style: const TextStyle(color: Colors.purple),
+              ),
+            ),
+            OutlinedButton(
+              onPressed: () {
+                final date = ref.read(selectedDateProvider);
+                final isIn = ref.read(inOutProvider); // bool?
+                onOk(date, isIn);
+              },
+              style: OutlinedButton.styleFrom(
+                visualDensity: VisualDensity.compact,
+                backgroundColor: Colors.white,
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.find_in_page_outlined, color: Colors.purple),
+                  SizedBox(width: 4),
+                  Text(Messages.FIND, style: const TextStyle(color: Colors.purple)),
+                ],
               ),
             ),
           ],
@@ -378,57 +405,52 @@ class MovementDateFilterRow extends ConsumerWidget {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            // SegmentedButton con 3 opciones: ALL / IN / OUT
-            SegmentedButton<bool?>(
-              segments: <ButtonSegment<bool?>>[
-                ButtonSegment<bool?>(
-                  value: null,
-                  icon: const Icon(Icons.swap_vert, size: 20),
-                  label: Text(Messages.ALL), // crea Messages.ALL = 'ALL' o lo que quieras
-                ),
-                ButtonSegment<bool?>(
-                  value: true,
-                  icon: Icon(Icons.arrow_downward, size: 20),
-                  label: Text(Messages.IN),
-                ),
-                ButtonSegment<bool?>(
-                  value: false,
-                  icon: Icon(Icons.arrow_upward, size: 20),
-                  label: Text(Messages.OUT),
-                ),
-              ],
-              // selected no puede estar vacío, así que siempre metemos el valor actual (aunque sea null)
-              selected: <bool?>{isIn},
-              onSelectionChanged: (newSelection) {
-                // newSelection.first es bool? (null / true / false)
-                ref.read(inOutProvider.notifier).state = newSelection.first;
-              },
-              style: ButtonStyle(
-                visualDensity: VisualDensity.compact,
-                padding: WidgetStateProperty.all(
-                  const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            Expanded(
+              child: SegmentedButton<bool?>(
+                segments: <ButtonSegment<bool?>>[
+                  ButtonSegment<bool?>(
+                    value: null,
+                    icon: const Icon(Icons.swap_vert, size: 20),
+                    label: Text('ALL',style: TextStyle(fontSize: themeFontSizeSmall),), // crea Messages.ALL = 'ALL' o lo que quieras
+                  ),
+                  ButtonSegment<bool?>(
+                    value: true,
+                    icon: Icon(Icons.arrow_downward, size: 20),
+                    label: Text('IN',style: TextStyle(fontSize: themeFontSizeSmall),),
+                  ),
+                  ButtonSegment<bool?>(
+                    value: false,
+                    icon: Icon(Icons.arrow_upward, size: 20),
+                    label: Text('OUT',style: TextStyle(fontSize: themeFontSizeSmall),),
+                  ),
+                ],
+                // selected no puede estar vacío, así que siempre metemos el valor actual (aunque sea null)
+                selected: <bool?>{isIn},
+                onSelectionChanged: (newSelection) {
+                  // newSelection.first es bool? (null / true / false)
+                  ref.read(inOutProvider.notifier).state = newSelection.first;
+                },
+                style: ButtonStyle(
+                  visualDensity: VisualDensity.compact,
+                  padding: WidgetStateProperty.all(
+                    const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  ),
                 ),
               ),
             ),
             const SizedBox(width: 8),
-            IconButton(
+            OutlinedButton(
               onPressed: () {
-                final date = ref.read(selectedDateProvider);
-                final isIn = ref.read(inOutProvider); // bool?
-
-                // Cambia la firma de onOk para aceptar bool?
-                // onOk(date, isIn);  // DateTime, bool?
-
-                // Si todavía no cambiaste onOk, puedes mapear a algo:
-                // null = ALL -> por ejemplo, tratar como IN por defecto
-                // onOk(date, isIn ?? true);
-                onOk(date, isIn);
+                context.go('${AppRouter.PAGE_MOVEMENTS_SEARCH}/-1');
               },
-              icon: const Icon(
-                Icons.search,
-                color: Colors.purple,
+              style: OutlinedButton.styleFrom(
+                foregroundColor: Colors.white,
+                backgroundColor: themeColorPrimary,
+                visualDensity: VisualDensity.compact, // Para alinear altura
               ),
+              child: Text('SCAN',style: TextStyle(color: Colors.white)),
             ),
+
           ],
         ),
       ],

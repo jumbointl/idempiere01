@@ -17,8 +17,9 @@ import '../../../../../shared/data/messages.dart';
 import '../../../../common/messages_dialog.dart';
 import '../../../../domain/idempiere/movement_and_lines.dart';
 import '../../../providers/common_provider.dart';
-import '../../../providers/movement_provider.dart';
 import '../../../providers/product_provider_common.dart';
+import '../products_home_provider.dart';
+import '../provider/new_movement_provider.dart';
 import 'cups_printer.dart';
 import 'movement_pdf_generator.dart';
 import 'printer_scan_notifier.dart';
@@ -226,10 +227,34 @@ class _PrinterSetupScreenState extends ConsumerState<PrinterSetupScreen> {
                 children: [
                   ElevatedButton.icon(
                     onPressed: () => _startCameraScan(context, ref),
-                    icon: const Icon(Icons.qr_code_scanner),
+                    icon: const Icon(Icons.camera),
                     label: Text(Messages.OPEN_CAMERA),
                   ),
-                  const SizedBox(height: 20),
+
+                  const SizedBox(height: 10),
+                  Row(
+                    children: [
+                      Flexible(
+                        flex: 2,
+                        child: TextField(
+                          controller: printerState.ipController,
+                          enabled: false,
+                          keyboardType: TextInputType.number,
+                          decoration: InputDecoration(labelText: Messages.IP),
+                        ),
+                      ),
+                      Flexible(
+                        flex: 1,
+                        child: TextField(
+                          enabled: false,
+                          keyboardType: TextInputType.number,
+                          controller: printerState.portController,
+                          decoration: InputDecoration(labelText: Messages.PORT),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 5),
                   Row(
                     children: [
                       Flexible(
@@ -245,23 +270,23 @@ class _PrinterSetupScreenState extends ConsumerState<PrinterSetupScreen> {
                         flex: 1,
                         child: TextField(
                           enabled: false,
-                          keyboardType: TextInputType.none,
+                          keyboardType: TextInputType.text,
                           controller: printerState.typeController,
                           decoration: InputDecoration(labelText: Messages.TYPE),
                         ),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 10),
+                  const SizedBox(height: 5),
                   Row(
                     children: [
                       Flexible(
                         flex: 2,
                         child: TextField(
-                          controller: printerState.ipController,
+                          controller: printerState.serverIpController,
                           enabled: false,
                           keyboardType: TextInputType.none,
-                          decoration: InputDecoration(labelText: Messages.IP),
+                          decoration:  InputDecoration(labelText: Messages.SERVER),
                         ),
                       ),
                       Flexible(
@@ -269,8 +294,8 @@ class _PrinterSetupScreenState extends ConsumerState<PrinterSetupScreen> {
                         child: TextField(
                           enabled: false,
                           keyboardType: TextInputType.none,
-                          controller: printerState.portController,
-                          decoration: InputDecoration(labelText: Messages.PORT),
+                          controller: printerState.serverPortController,
+                          decoration: InputDecoration(labelText: Messages.SERVER_PORT),
                         ),
                       ),
                     ],
@@ -300,12 +325,25 @@ class _PrinterSetupScreenState extends ConsumerState<PrinterSetupScreen> {
                       String port = printerState.portController.text.trim();
                       String type = printerState.typeController.text.trim();
                       String name = printerState.nameController.text.trim();
-                      if(ip.isEmpty || port.isEmpty || type.isEmpty || name.isEmpty){
+                      String serverIp = printerState.serverIpController.text.trim();
+                      String serverPort = printerState.serverPortController.text.trim();
+
+                      if(ip.isEmpty || port.isEmpty || type.isEmpty){
                         showWarningMessage(context, ref, Messages.ERROR_SAVE_PRINTER);
                         return;
                       }
+                      String qrData = '$ip:$port:$type';
+                      if(name.isNotEmpty) {
+                        name = '$ip:$port:$type';
+                        qrData = '$qrData:$name';
+                      }
 
-                      String qrData = '$ip:$port:$type:$name:END';
+                      if(serverIp.isNotEmpty){
+                        qrData = '$qrData:$serverIp';
+                      }
+                      if(serverPort.isNotEmpty){
+                        qrData = '$qrData:$serverPort';
+                      }
                       print('QR Data: $qrData');
                       ref.read(printerProvider.notifier).updateFromScan(qrData, ref);
                     },

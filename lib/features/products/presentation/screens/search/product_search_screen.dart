@@ -3,15 +3,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:monalisa_app_001/features/products/presentation/screens/search/product_detail_with_photo_card.dart';
-import 'package:monalisa_app_001/features/products/presentation/screens/search/update_product_upc_screen.dart';
-import 'package:monalisa_app_001/features/products/presentation/screens/search/update_product_upc_view.dart';
+import 'package:monalisa_app_001/features/products/presentation/screens/update_upc/update_product_upc_screen3.dart';
+import 'package:monalisa_app_001/features/products/presentation/screens/update_upc/update_product_upc_view.dart';
 import 'package:simple_barcode_scanner/simple_barcode_scanner.dart';
 
 import '../../../../../config/router/app_router.dart';
 import '../../../../../config/theme/app_theme.dart';
 import '../../../../shared/common/scan_button.dart';
 import '../../../../shared/common/scanner.dart';
-import '../../providers/common_provider.dart';
+import '../movement/products_home_provider.dart';
 import '../../../../shared/data/memory.dart';
 import '../../../../shared/data/messages.dart';
 import '../../providers/product_provider_common.dart';
@@ -50,7 +50,7 @@ class ProductSearchScreen extends ConsumerStatefulWidget implements Scanner {
 class _ProductSearchScreenState extends ConsumerState<ProductSearchScreen> {
   @override
   void initState() {
-    widget.usePhoneCamera = ref.read(usePhoneCameraToScanProvider.notifier).state;
+    widget.usePhoneCamera = ref.read(usePhoneCameraToScanProvider); // bo
     super.initState();
   }
   @override
@@ -61,8 +61,7 @@ class _ProductSearchScreenState extends ConsumerState<ProductSearchScreen> {
     final double width = MediaQuery.of(context).size.width - 30;
     final double bodyHeight = MediaQuery.of(context).size.height - 200;
     final isScanning = ref.watch(isScanningProvider);
-    double singleProductDetailCardHeight = Memory.SIZE_PRODUCT_IMAGE_HEIGHT*2+20;
-    final usePhoneCamera = ref.watch(usePhoneCameraToScanProvider.notifier);
+    final usePhoneCamera = ref.watch(usePhoneCameraToScanProvider);
 
 
     String imageUrl =Memory.IMAGE_HTTP_SAMPLE_1; // Example image URL
@@ -78,17 +77,14 @@ class _ProductSearchScreenState extends ConsumerState<ProductSearchScreen> {
       child: DefaultTabController(
         length: 2,
         child: Scaffold(
-          resizeToAvoidBottomInset : false,
-
           appBar: AppBar(
             automaticallyImplyLeading: false,
-            leading:IconButton(
+            leading: IconButton(
               icon: const Icon(Icons.arrow_back),
-              onPressed: () => {
-                FocusScope.of(context).unfocus(),
-                //ref.read(productsHomeCurrentIndexProvider.notifier).state = 0,
-
-                context.go(AppRouter.PAGE_HOME)},
+              onPressed: () {
+                FocusScope.of(context).unfocus();
+                context.go(AppRouter.PAGE_HOME);
+              },
             ),
             title: Row(
               children: [
@@ -103,29 +99,30 @@ class _ProductSearchScreenState extends ConsumerState<ProductSearchScreen> {
                   dividerColor: themeColorPrimary,
                   tabAlignment: TabAlignment.start,
                   labelStyle: TextStyle(
-                      fontSize: themeFontSizeLarge,
-                      fontWeight: FontWeight.bold,
-                      color: themeColorPrimary),
+                    fontSize: themeFontSizeLarge,
+                    fontWeight: FontWeight.bold,
+                    color: themeColorPrimary,
+                  ),
                   unselectedLabelStyle: TextStyle(fontSize: themeFontSizeLarge),
                 ),
-                Spacer(),
+                const Spacer(),
 
-                /*usePhoneCamera.state ? UnfocusedScanButton(scanner: widget) :
-                    ScanButton(notifier: widget.productsNotifier, scanner: widget,scanAction: widget.scanAction,),
-                */
-
-                IconButton(onPressed: (){
-                  if(usePhoneCamera.state){
-                    usePhoneCamera.state = false;
-                  } else {
-                    usePhoneCamera.state = true;
-
-                  }
-                }, icon: Icon(usePhoneCamera.state?
-                Icons.barcode_reader : Icons.qr_code_scanner , color: Colors.black,)),
+                IconButton(
+                  onPressed: () {
+                    // toggle del provider
+                    final notifier =
+                    ref.read(usePhoneCameraToScanProvider.notifier);
+                    notifier.state = !usePhoneCamera;
+                  },
+                  icon: Icon(
+                    usePhoneCamera
+                        ? Icons.barcode_reader
+                        : Icons.camera,
+                    color: Colors.black,
+                  ),
+                ),
               ],
             ),
-
           ),
           bottomNavigationBar: BottomAppBar(
             color: themeColorPrimary,
@@ -139,7 +136,6 @@ class _ProductSearchScreenState extends ConsumerState<ProductSearchScreen> {
               }
               ref.read(usePhoneCameraToScanProvider.notifier).state = widget.usePhoneCamera;
               context.go(AppRouter.PAGE_HOME);
-              Navigator.pop(context);
             },
             child: TabBarView(
 
@@ -196,7 +192,7 @@ class _ProductSearchScreenState extends ConsumerState<ProductSearchScreen> {
                                   foregroundColor: Colors.white,
                                 ),
                                 onPressed: (){
-                                    Navigator.of(context).push(MaterialPageRoute(builder: (context) => UpdateProductUpcScreen()));
+                                    Navigator.of(context).push(MaterialPageRoute(builder: (context) => UpdateProductUpcScreen3()));
                                 },
                                 child: Text(Messages.UPDATE_UPC)),
                           )): Container();
@@ -262,58 +258,69 @@ class _ProductSearchScreenState extends ConsumerState<ProductSearchScreen> {
 
 
   Widget getSearchBar(BuildContext context){
+    final isScanning = ref.watch(isScanningProvider);
+    final usePhoneCamera = ref.watch(usePhoneCameraToScanProvider); // bool
 
-
-    var isScanning = ref.watch(isScanningProvider);
-    var usePhoneCamera = ref.watch(usePhoneCameraToScanProvider.notifier);
-    return
-      SizedBox(
-        //width: double.infinity,
-        width: MediaQuery.of(context).size.width - 30,
-        height: 36,
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            SizedBox(width: 5), //spacing: 5 equivalent
-            IconButton(onPressed: (){
-                if(usePhoneCamera.state){
-                  usePhoneCamera.state = false;
-                } else {
-                  usePhoneCamera.state = true;
-
-                }
-            }, icon: Icon(usePhoneCamera.state?
-            Icons.qr_code_scanner :Icons.barcode_reader , color: Colors.purple,)),
-            Expanded(
-              child: Text(
-                Messages.FIND_PRODUCT_BY_UPC_SKU,
-                textAlign: TextAlign.center,
-              ),
-            ) ,
-            IconButton(onPressed:() async {getBarCode(context,false);},
-              icon: Icon( Icons.search, color:isScanning?Colors.grey: Colors.purple,)),
-            IconButton(onPressed:() async {getBarCode(context,true);},
-                icon: Icon( Icons.history, color:isScanning?Colors.grey: Colors.purple,)),
-            SizedBox(width: 5), //spacing: 5 equivalent
-
-          ],
-        ),
-      );
-
+    return SizedBox(
+      width: MediaQuery.of(context).size.width - 30,
+      height: 36,
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          const SizedBox(width: 5),
+          IconButton(
+            onPressed: () {
+              final notifier =
+              ref.read(usePhoneCameraToScanProvider.notifier);
+              notifier.state = !usePhoneCamera;
+            },
+            icon: Icon(
+              usePhoneCamera ? Icons.qr_code_scanner : Icons.barcode_reader,
+              color: Colors.purple,
+            ),
+          ),
+          Expanded(
+            child: Text(
+              Messages.FIND_PRODUCT_BY_UPC_SKU,
+              textAlign: TextAlign.center,
+            ),
+          ),
+          IconButton(
+            onPressed: isScanning ? null : () async {
+              getBarCode(context, false);
+            },
+            icon: Icon(
+              Icons.search,
+              color: isScanning ? Colors.grey : Colors.purple,
+            ),
+          ),
+          IconButton(
+            onPressed: isScanning ? null : () async {
+              getBarCode(context, true);
+            },
+            icon: Icon(
+              Icons.history,
+              color: isScanning ? Colors.grey : Colors.purple,
+            ),
+          ),
+          const SizedBox(width: 5),
+        ],
+      ),
+    );
   }
   Future<void> getBarCode(BuildContext context, bool history) async{
     TextEditingController controller = TextEditingController();
     if(history){
       String lastSearch = Memory.lastSearch;
-      if(lastSearch.isEmpty){
-        controller.text = Messages.NO_RECORDS_FOUND;
-      } else {
-        controller.text = lastSearch;
-      }
-
+      controller.text = lastSearch.isEmpty
+          ? Messages.NO_RECORDS_FOUND
+          : lastSearch;
     }
-    bool stateActual = ref.watch(usePhoneCameraToScanProvider.notifier).state;
-    ref.watch(usePhoneCameraToScanProvider.notifier).state = true;
+
+    final cameraNotifier = ref.read(usePhoneCameraToScanProvider.notifier);
+    final bool stateActual = cameraNotifier.state;
+    cameraNotifier.state = true;
+
     AwesomeDialog(
       context: context,
       headerAnimationLoop: false,
@@ -322,16 +329,14 @@ class _ProductSearchScreenState extends ConsumerState<ProductSearchScreen> {
         padding: const EdgeInsets.symmetric(horizontal: 40),
         child: Center(
           child: Column(
-
             children: [
               Text(Messages.FIND_PRODUCT_BY_UPC_SKU),
-              SizedBox(height: 10), //spacing: 10 equivalent
+              const SizedBox(height: 10),
               TextField(
                 controller: controller,
                 style: const TextStyle(fontStyle: FontStyle.italic),
                 keyboardType: TextInputType.text,
               ),
-
             ],
           ),
         ),
@@ -341,19 +346,21 @@ class _ProductSearchScreenState extends ConsumerState<ProductSearchScreen> {
       btnCancelText: Messages.CANCEL,
       btnOkText: Messages.OK,
       btnOkOnPress: () {
-        ref.watch(usePhoneCameraToScanProvider.notifier).state = stateActual;
+        cameraNotifier.state = stateActual;
         final result = controller.text;
-        if(result==''){
+        if(result.isEmpty){
           AwesomeDialog(
             context: context,
             animType: AnimType.scale,
             dialogType: DialogType.error,
-            body: Center(child: Text(
-              Messages.ERROR_UPC_EMPTY,
-              style: TextStyle(fontStyle: FontStyle.italic),
-            ),), // correct here
+            body: Center(
+              child: Text(
+                Messages.ERROR_UPC_EMPTY,
+                style: const TextStyle(fontStyle: FontStyle.italic),
+              ),
+            ),
             title: Messages.ERROR_UPC_EMPTY,
-            desc:   '',
+            desc: '',
             autoHide: const Duration(seconds: 3),
             btnOkOnPress: () {},
             btnOkColor: Colors.amber,
@@ -364,13 +371,12 @@ class _ProductSearchScreenState extends ConsumerState<ProductSearchScreen> {
         }
         widget.productsNotifier.addBarcodeByUPCOrSKUForSearch(result);
       },
-      btnCancelOnPress: (){
-        ref.watch(usePhoneCameraToScanProvider.notifier).state = stateActual;
-        return ;
-      }
+      btnCancelOnPress: () {
+        cameraNotifier.state = stateActual;
+      },
     ).show();
-
   }
+
   Widget getProductDetailCard({required ProductsScanNotifier productsNotifier, required product}) {
     switch(widget.actionTypeInt){
       case Memory.ACTION_CALL_UPDATE_PRODUCT_UPC_PAGE:
@@ -415,7 +421,7 @@ class _ProductSearchScreenState extends ConsumerState<ProductSearchScreen> {
             ),
             height: MediaQuery.of(context).size.height,
             width: MediaQuery.of(context).size.width,
-            child: UpdateProductUpcScreen(),
+            child: UpdateProductUpcScreen3(),
 
           ),
           actions: <Widget>[

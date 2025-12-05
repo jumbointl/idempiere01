@@ -610,7 +610,7 @@ Widget getSearchBar(BuildContext context,WidgetRef ref,String hintText,InputData
             usePhoneCamera.state = !usePhoneCamera.state;
             ref.read(isDialogShowedProvider.notifier).state = false;
           }, icon: Icon(usePhoneCamera.state?
-          Icons.qr_code_scanner : Icons.barcode_reader, color:
+          Icons.camera : Icons.barcode_reader, color:
           ref.watch(isDialogShowedProvider.notifier).state? Colors.red : Colors.purple,)),
           Expanded(
             child: Text(

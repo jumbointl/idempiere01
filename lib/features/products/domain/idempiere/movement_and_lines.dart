@@ -1,3 +1,5 @@
+import 'dart:ui';
+
 import 'package:monalisa_app_001/features/products/domain/idempiere/idempiere_business_partner.dart';
 import 'package:monalisa_app_001/features/products/domain/idempiere/idempiere_locator.dart';
 import 'package:monalisa_app_001/features/products/domain/idempiere/idempiere_movement.dart';
@@ -225,10 +227,16 @@ class MovementAndLines extends IdempiereMovement {
     data['FreightAmt'] = freightAmt;
     data['movement_lines'] =  movementLines?.map((x) => x.toJson()).toList();
     data['next_product_id_upc'] = nextProductIdUPC;
-    data['movement_line_to_create'] = movementLineToCreate?.toJson();
+    //data['movement_line_to_create'] = movementLineToCreate?.toJson();
+    if (movementLineToCreate != null) {
+      data['movement_line_to_create'] = movementLineToCreate?.getInsertJson();
+
+    }
+
     data['movement_confirms']= movementConfirms?.map((x) => x.toJson()).toList();
     data['C_BPartner_ID'] = cBPartnerID?.toJson();
     data['C_BPartner_Location_ID'] = cBPartnerLocationID?.toJson();
+
     return data;
   }
   bool canCreateMovementLine() {
@@ -237,6 +245,11 @@ class MovementAndLines extends IdempiereMovement {
     if(!hasLastLocatorTo) return false;
     if(movementQuantityForMovementLineCreate<=0) return false;
     return true;
+  }
+  bool? get isMaterialMovement {
+    if(warehouseFrom == null || warehouseFrom!.id ==null ) return null ;
+    if(warehouseTo == null || warehouseTo!.id ==null) return null ;
+    return warehouseFrom!.id == warehouseTo!.id;
   }
   bool  get canCompleteMovement {
     if(!hasMovement) return false;
@@ -393,6 +406,16 @@ class MovementAndLines extends IdempiereMovement {
 
   String? get documentMovementOrganizationName => cBPartnerID?.identifier ?? aDOrgID?.identifier;
   String? get documentMovementOrganizationAddress => cBPartnerLocationID?.identifier;
+
+  bool get canChangeLocatorForEachLine {
+    if(cDocTypeID == null || cDocTypeID?.id==null) return true;
+    int doc = cDocTypeID!.id!;
+    if(doc == Memory.IDEMPIERE_DOC_TYPE_MATERIAL_MOVEMENT){
+      return true ;
+    }
+        return false;
+
+  }
 
 
 

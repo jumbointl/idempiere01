@@ -29,21 +29,15 @@ class ProductDetailCardForLineState extends ConsumerState<ProductDetailCardForLi
     if(att==''){
       att = '${Messages.ATTRIBUET_INSTANCE}: ${widget.product.mAttributeSetInstanceID?.identifier  ?? '--'}';
     }
-    String category = widget.product.mProductCategoryID?.identifier  ?? '--';
+    String category = '${Messages.CATEGORY}: ${widget.product.mProductCategoryID?.identifier  ?? '--'}';
 
-    Color backGroundColor = Colors.cyan[800]!;
-    bool canSearch = true ;
+    Color backGroundColor = themeColorPrimary;
     if(MemoryProducts.movementAndLines.id ==null || MemoryProducts.movementAndLines.id! <= 0){
       if(widget.product.mOLIConfigurableSKU == null || widget.product.mOLIConfigurableSKU == '') {
-        canSearch = false;
         backGroundColor = Colors.amber[800]!;
 
       }
-      if(ref.watch(searchByMOLIConfigurableSKUProvider.notifier).state){
-        backGroundColor = Colors.amber[800]!;
-      } else {
-        backGroundColor = themeColorPrimary;
-      }
+
       return GestureDetector(
         onTap: () {
 
@@ -84,14 +78,8 @@ class ProductDetailCardForLineState extends ConsumerState<ProductDetailCardForLi
               Text('UPC: ${widget.product.uPC ?? 'UPC--'}',style: textStyle,),
               Text('SKU: ${widget.product.sKU ?? 'SKU--'}',style: textStyle,),
               Text('M_SKU: ${widget.product.mOLIConfigurableSKU ?? 'M_SKU--'}',style: textStyle,),
-
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                Text(att,style: textStyle),
-                const SizedBox(width: 8,),
-                Text(category,style: textStyle),
-              ],)
+              Text(att,style: textStyle),
+              Text(category,style: textStyle)
 
             ],
           ),
@@ -116,13 +104,8 @@ class ProductDetailCardForLineState extends ConsumerState<ProductDetailCardForLi
           Text('UPC: ${widget.product.uPC ?? 'UPC--'}',style: textStyle,),
           Text('SKU: ${widget.product.sKU ?? 'SKU--'}',style: textStyle,),
           Text('M_SKU: ${widget.product.mOLIConfigurableSKU ?? 'M_SKU--'}',style: textStyle,),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(att,style: textStyle),
-              const SizedBox(width: 8,),
-              Text(category,style: textStyle),
-            ],)
+          Text(att,style: textStyle),
+          Text(category,style: textStyle)
 
 
         ],

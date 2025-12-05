@@ -8,7 +8,7 @@ class IdempiereDocumentType extends IdempiereObject{
     super.active,
     super.propertyLabel,
     super.identifier,
-    super.modelName,
+    super.modelName ='C_DocType',
     super.image,
     super.category,
   });

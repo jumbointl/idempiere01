@@ -24,11 +24,11 @@ import '../../../../domain/idempiere/idempiere_locator.dart';
 import '../../../../domain/idempiere/idempiere_storage_on_hande.dart';
 import '../../../../domain/idempiere/idempiere_warehouse.dart';
 import '../../../../domain/sql/sql_data_movement_line.dart';
-import '../../../providers/common_provider.dart';
 import '../../../providers/locator_provider_for_Line.dart';
-import '../../../providers/movement_provider.dart';
 import '../../../providers/products_scan_notifier_for_line.dart';
 import '../../locator/search_locator_dialog.dart';
+import '../provider/new_movement_provider.dart';
+import '../products_home_provider.dart';
 import '../../store_on_hand/memory_products.dart';
 class UnsortedStorageOnHandScreenForLine extends ConsumerStatefulWidget implements InputDataProcessor{
 
@@ -39,7 +39,7 @@ class UnsortedStorageOnHandScreenForLine extends ConsumerStatefulWidget implemen
   double width;
   int pageIndex = Memory.PAGE_INDEX_UNSORTED_STORAGE_ON_HAND;
   final int actionTypeInt = Memory.ACTION_GET_LOCATOR_TO_VALUE ;
-  late ProductsScanNotifierForLine scanHandleNotifier;
+  //late ProductsScanNotifierForLine scanHandleNotifier;
   MovementAndLines movementAndLines ;
   //test json
   String argument;
@@ -56,6 +56,7 @@ class UnsortedStorageOnHandScreenForLine extends ConsumerStatefulWidget implemen
 
   @override
   Future<void> handleInputString(BuildContext context, WidgetRef ref, String inputData) async {
+    late ProductsScanNotifierForLine scanHandleNotifier =  ref.read(scanStateNotifierForLineProvider.notifier);
      scanHandleNotifier.handleInputString(context, ref, inputData);
   }
 
@@ -147,17 +148,19 @@ class UnsortedStorageOnHandScreenForLineState extends ConsumerState<UnsortedStor
   @override
   Widget build(BuildContext context) {
     String title ='${Messages.MOVEMENT} : ${Messages.CREATE}';
+    TextStyle textStyle = TextStyle(fontSize: themeFontSizeLarge);
     productId = widget.movementAndLines.nextProductIdUPC ;
-
     allowedLocatorFrom = widget.storage.mLocatorID;
 
-    lines = ref.watch(linesProvider.notifier);
-    actionScan = ref.watch(actionScanProvider.notifier);
+    lines = ref.watch(linesProvider);
+    actionScan = ref.watch(actionScanProvider);
     if(movementAndLines.hasMovement){
       title = movementAndLines.documentNo ?? '' ;
+      if(title.length>20) textStyle = TextStyle(fontSize: themeFontSizeSmall);
+
       if(movementAndLines.hasMovementLines){
         Future.delayed(Duration(microseconds: 50),() {
-          actionScan.state = Memory.ACTION_NO_ACTION;
+          ref.read(actionScanProvider.notifier).update((state) => Memory.ACTION_NO_ACTION);
           ref.read(productsHomeCurrentIndexProvider.notifier).state =
           Memory.PAGE_INDEX_NO_REQUERED_SCAN_SCREEN;
 
@@ -169,11 +172,11 @@ class UnsortedStorageOnHandScreenForLineState extends ConsumerState<UnsortedStor
         locatorTo.value ??= locatorTo.identifier;
       } else {
         findLocatorTo = ref.watch(findLocatorToForLineProvider);
-        locatorTo = ref.read(persistentLocatorToProvider.notifier);
+        locatorTo = ref.watch(persistentLocatorToProvider);
 
         Future.delayed(Duration(microseconds: 50),(){
           showScanButton = true;
-          actionScan.state = widget.actionTypeInt;
+          ref.read(actionScanProvider.notifier).update((state) => widget.actionTypeInt);
 
         });
 
@@ -182,13 +185,13 @@ class UnsortedStorageOnHandScreenForLineState extends ConsumerState<UnsortedStor
     }
 
 
-    isDialogShowed = ref.watch(isDialogShowedProvider.notifier);
-    isScanning = ref.watch(isScanningLocatorToForLineProvider.notifier);
-
+    isDialogShowed = ref.watch(isDialogShowedProvider);
+    isScanning = ref.watch(isScanningLocatorToForLineProvider);
+    usePhoneCamera = ref.watch(usePhoneCameraToScanForLineProvider);
     widget.width = MediaQuery.of(context).size.width;
     quantityToMove = ref.watch(quantityToMoveProvider);
-    usePhoneCamera = ref.watch(usePhoneCameraToScanForLineProvider.notifier);
-    scrollToTop = ref.watch(scrollToUpProvider.notifier);
+
+    scrollToTop = ref.watch(scrollToUpProvider);
 
     widthLarge = widget.width/3*2;
     widthSmall = widget.width/3;
@@ -196,7 +199,7 @@ class UnsortedStorageOnHandScreenForLineState extends ConsumerState<UnsortedStor
 
     dialogHeight = MediaQuery.of(context).size.height;
     dialogWidth = MediaQuery.of(context).size.width;
-    isLocatorScreenShowed = ref.watch(isLocatorScreenShowedForLineProvider.notifier);
+    isLocatorScreenShowed = ref.watch(isLocatorScreenShowedForLineProvider);
     storageList = unsortedStorageList
         .where((element) =>
     element.mLocatorID?.mWarehouseID?.id ==
@@ -220,35 +223,30 @@ class UnsortedStorageOnHandScreenForLineState extends ConsumerState<UnsortedStor
             },
           ),
           actions: [
-            usePhoneCamera.state ? IconButton(
-              icon: const Icon(Icons.barcode_reader),
-              onPressed: () => {
+            IconButton(
+              icon: Icon(usePhoneCamera ? Icons.barcode_reader : Icons.camera),
+              onPressed: () {
+                // 🧠 Riverpod se encarga del rebuild, sin setState
+                print('usePhoneCamera: $usePhoneCamera');
+                ref
+                    .read(usePhoneCameraToScanForLineProvider.notifier)
+                    .state = !usePhoneCamera;
 
-                usePhoneCamera.state = false,
-                isDialogShowed.state = false,
-                setState(() {}),
+                ref.read(isDialogShowedProvider.notifier).state = false;
               },
-            ) :  IconButton(
-              icon: const Icon(Icons.qr_code_scanner),
-              onPressed: () => {
-                usePhoneCamera.state = true,
-                isDialogShowed.state = false,
-                setState(() {}),
-              },
-
             ),
 
           ],
           title: Column(
             children: [
-              Text(title),
+              Text(title,style: textStyle,),
               Text('${Messages.LINES} : (${movementAndLines.movementLines?.length ?? 0})',),
             ],
           ),
 
 
         ),
-        bottomNavigationBar: isDialogShowed.state ? Container(
+        bottomNavigationBar: isDialogShowed ? Container(
           height: Memory.BOTTOM_BAR_HEIGHT,
           color: themeColorPrimary,
           child: Center(
@@ -259,7 +257,7 @@ class UnsortedStorageOnHandScreenForLineState extends ConsumerState<UnsortedStor
         floatingActionButton: FloatingActionButton(
           onPressed: () {
             double positionAdd=_scrollController.position.maxScrollExtent;
-            if(scrollToTop.state){
+            if(scrollToTop){
               goToPosition -= positionAdd;
               if(goToPosition <= 0){
                 goToPosition = 0;
@@ -280,7 +278,7 @@ class UnsortedStorageOnHandScreenForLineState extends ConsumerState<UnsortedStor
               curve: Curves.easeInOut,
             );
           },
-          child: Icon(scrollToTop.state ? Icons.arrow_upward :Icons.arrow_downward),
+          child: Icon(scrollToTop ? Icons.arrow_upward :Icons.arrow_downward),
         ),
         body: SafeArea(
           child: PopScope(
@@ -437,10 +435,10 @@ class UnsortedStorageOnHandScreenForLineState extends ConsumerState<UnsortedStor
                                             int currentPage = ref.read(productsHomeCurrentIndexProvider.notifier).state;
                                             ref.read(productsHomeCurrentIndexProvider.notifier).update((state) =>
                                             Memory.PAGE_INDEX_NO_REQUERED_SCAN_SCREEN);
-                                            int currentAction = ref.read(actionScanProvider.notifier).state;
+                                            int currentAction = ref.read(actionScanProvider);
                                             ref.read(actionScanProvider.notifier).update((state) => Memory.ACTION_NO_ACTION);
                                             TextEditingController controller = TextEditingController();
-                                            String old = lines.state.toString();
+                                            String old = lines.toString();
 
                                             showDialog(
                                                 context: context,
@@ -472,7 +470,7 @@ class UnsortedStorageOnHandScreenForLineState extends ConsumerState<UnsortedStor
                                                         ),
                                                         onPressed: () {
                                                           controller.text = old;
-                                                          isDialogShowed.state = false;
+                                                          isDialogShowed = false;
                                                           ref.read(productsHomeCurrentIndexProvider.notifier).update((
                                                               state) => currentPage);
                                                           ref.read(actionScanProvider.notifier).update((state) =>
@@ -494,33 +492,16 @@ class UnsortedStorageOnHandScreenForLineState extends ConsumerState<UnsortedStor
                                                           final result = controller.text;
                                                           if (result.isEmpty) {
                                                             controller.text = old;
-                                                            //showErrorMessage(context, ref, Messages.TEXT_FIELD_EMPTY);
-                                                            /*ScaffoldMessenger.of(context).showSnackBar(
-                                                              SnackBar(
-                                                                duration: Duration(seconds: 3),
-                                                                content: Column(
-                                                                  children: [
-                                                                    Icon(Icons.error,color: Colors.purple,),
-                                                                    Text(Messages.TEXT_FIELD_EMPTY,style: TextStyle(
-                                                                        fontSize: fontSizeMedium,
-                                                                        color: Colors.purple),),
-                                                                  ],
-
-                                                                ),
-                                                                // Opcionalmente, puedes agregar un botón de acción o personalizar la duración
-                                                                // action: SnackBarAction(label: 'OK', onPressed: () {}),
-                                                                ),
-                                                              );*/
                                                             return;
                                                           } else {
-                                                            isDialogShowed.state = false;
+                                                            ref.read(isDialogShowedProvider.notifier).state = false;
                                                             ref.read(productsHomeCurrentIndexProvider.notifier).update((
                                                                 state) => currentPage);
                                                             ref.read(actionScanProvider.notifier).update((state) =>
                                                             currentAction);
                                                             double aux = double.tryParse(controller.text) ?? 0;
                                                             if (aux > 0) {
-                                                              lines.state = aux;
+                                                              ref.read(linesProvider.notifier).update((state) => aux);
                                                               setState(() {});
                                                               Navigator.pop(context);
                                                             } else {
@@ -534,7 +515,7 @@ class UnsortedStorageOnHandScreenForLineState extends ConsumerState<UnsortedStor
                                                   );
                                                 }
                                             ).then((value) {
-                                              isDialogShowed.state = false;
+                                              ref.read(isDialogShowedProvider.notifier).state = false;
                                               ref.read(productsHomeCurrentIndexProvider.notifier).update((state) => currentPage);
                                               ref.read(actionScanProvider.notifier).update((state) => currentAction);
                                               Future.delayed(const Duration(microseconds: 100));
@@ -543,7 +524,7 @@ class UnsortedStorageOnHandScreenForLineState extends ConsumerState<UnsortedStor
                                           },
                                           child: Padding(
                                             padding: const EdgeInsets.symmetric(horizontal: 10),
-                                            child: Text(Memory.numberFormatter0Digit.format(lines.state),
+                                            child: Text(Memory.numberFormatter0Digit.format(lines),
                                               style: TextStyle(
                                                 fontSize: fontSizeMedium,
                                                 fontWeight: FontWeight.bold,
@@ -590,7 +571,6 @@ class UnsortedStorageOnHandScreenForLineState extends ConsumerState<UnsortedStor
   Widget storageOnHandCard(IdempiereStorageOnHande storage,int index) {
     final warehouse = ref.read(authProvider).selectedWarehouse;
     int warehouseID = warehouse?.id ?? 0;
-    IdempiereLocator warehouseLocator = storage.mLocatorID!;
     IdempiereWarehouse? warehouseStorage = storage.mLocatorID?.mWarehouseID;
     Color background = warehouseStorage?.id == warehouseID ? widget.colorSameWarehouse : widget.colorDifferentWarehouse;
     String warehouseName = warehouseStorage?.identifier ?? '--';
@@ -982,7 +962,7 @@ class UnsortedStorageOnHandScreenForLineState extends ConsumerState<UnsortedStor
 
   }
   Future<void> _getQuantityToMoveDialog(BuildContext context, WidgetRef ref,int index) async {
-    isDialogShowed.state = true;
+    ref.read(isDialogShowedProvider.notifier).state = true;
     setState(() {
 
     });
@@ -990,7 +970,8 @@ class UnsortedStorageOnHandScreenForLineState extends ConsumerState<UnsortedStor
     TextEditingController quantityController = TextEditingController();
     double qtyOnHand = storageList[index].qtyOnHand ?? 0;
     quantityController.text = Memory.numberFormatter0Digit.format(storageList[index].qtyOnHand);
-    AwesomeDialog(
+    if(context.mounted) {
+      AwesomeDialog(
       context: context,
       animType: AnimType.scale,
       dialogType: DialogType.noHeader,
@@ -1026,7 +1007,7 @@ class UnsortedStorageOnHandScreenForLineState extends ConsumerState<UnsortedStor
       title:  Messages.QUANTITY_TO_MOVE,
       desc:   '',
       btnOkOnPress: () async {
-        isDialogShowed.state = false;
+        ref.read(isDialogShowedProvider.notifier).state = false;
         setState(() {
 
         });
@@ -1034,7 +1015,7 @@ class UnsortedStorageOnHandScreenForLineState extends ConsumerState<UnsortedStor
         String quantity = quantityController.text;
         if(quantity.isEmpty){
           String message =  '${Messages.ERROR_QUANTITY} ${Messages.EMPTY}';
-          showErrorMessage(context, ref, message);
+          if(context.mounted)showErrorMessage(context, ref, message);
           return;
         }
 
@@ -1061,7 +1042,7 @@ class UnsortedStorageOnHandScreenForLineState extends ConsumerState<UnsortedStor
       btnCancelText: Messages.CANCEL,
       btnCancelOnPress: (){
         ref.read(quantityToMoveProvider.notifier).state = 0;
-        isDialogShowed.state = false;
+        ref.read(isDialogShowedProvider.notifier).state = false;
         setState(() {
 
         });
@@ -1069,6 +1050,7 @@ class UnsortedStorageOnHandScreenForLineState extends ConsumerState<UnsortedStor
       btnCancelColor: Colors.red,
       btnOkText: Messages.OK,
     ).show();
+    }
   }
 
   Widget getMovementInfo(BuildContext context, WidgetRef ref) {
@@ -1126,7 +1108,7 @@ class UnsortedStorageOnHandScreenForLineState extends ConsumerState<UnsortedStor
                   fontWeight: FontWeight.bold,
                   color: Colors.white,),textAlign: TextAlign.start,),
                 SizedBox(height: 10,),
-                 isScanning.state ?
+                 isScanning ?
                   LinearProgressIndicator(minHeight: 22,)
                     :Text(locatorTo?.value ?? '',style: TextStyle(
                   fontSize: fontSizeMedium,
@@ -1144,7 +1126,7 @@ class UnsortedStorageOnHandScreenForLineState extends ConsumerState<UnsortedStor
 
   }
   Widget getScanButton(BuildContext context) {
-    return isLocatorScreenShowed.state || !showScanButton ? Container() :
+    return isLocatorScreenShowed || !showScanButton ? Container() :
     ref.watch(usePhoneCameraToScanForLineProvider) ? buttonScanWithPhone(context, ref):
     ScanButtonByAction(processor: widget, actionTypeInt: widget.actionTypeInt);
 
@@ -1181,11 +1163,11 @@ class UnsortedStorageOnHandScreenForLineState extends ConsumerState<UnsortedStor
         result = result?.trim();
         if(result!=null && result.isNotEmpty){
 
-          isScanning.state = true;
+          isScanning = true;
           ref.read(scannedLocatorToForLineProvider.notifier).update((state) => result!);
         } else {
           Future.delayed(const Duration(milliseconds: 500));
-          isScanning.state = false;
+          isScanning = false;
         }
 
       },
@@ -1235,55 +1217,107 @@ class UnsortedStorageOnHandScreenForLineState extends ConsumerState<UnsortedStor
   Widget getLocatorTo(BuildContext context, WidgetRef ref) {
 
     return findLocatorTo.when(
-      data: (locator) {
-        locatorTo = locator ;
+      data: (locatorFromFuture) {
+        IdempiereLocator locator ;
+        if(locatorTo.id == null || locatorTo.id! !=Memory.INITIAL_STATE_ID){
+          locator = locatorTo ;
+          locatorTo = movementAndLines.lastLocatorTo;
+          locatorTo.value ??= locatorTo.identifier;
+        } else {
+          locator = locatorFromFuture;
+        }
+
         WidgetsBinding.instance.addPostFrameCallback((_) async {
            Future.delayed(const Duration(milliseconds: 50),(){
-             //ref.read(isScanningFromDialogProvider.notifier).state = false;
            });
 
         });
 
-        return ListTile(
-          leading: GestureDetector(
-            onTap: (){
+        return Column(
+          children: [
+            ListTile(
+              leading: GestureDetector(
+                onTap: (){
 
-              Memory.pageFromIndex = ref.read(productsHomeCurrentIndexProvider.notifier).state;
-              ref.read(productsHomeCurrentIndexProvider.notifier).update((state) => Memory.PAGE_INDEX_NO_REQUERED_SCAN_SCREEN);
-              isLocatorScreenShowed.update((state) => true);
-              MemoryProducts.lastUsePhoneCameraState = usePhoneCamera.state;
-              ref.read(isDialogShowedProvider.notifier).state = true ;
-              usePhoneCamera.state = false;
-              showDialog(
-                context: context,
-                builder: (BuildContext context) {
-                  return SearchLocatorDialog(
-                    searchLocatorFrom :false,
-                    forCreateLine: true,
+                  Memory.pageFromIndex = ref.read(productsHomeCurrentIndexProvider);
+                  ref.read(productsHomeCurrentIndexProvider.notifier).update((state) => Memory.PAGE_INDEX_NO_REQUERED_SCAN_SCREEN);
+                  isLocatorScreenShowed.update((state) => true);
+                  MemoryProducts.lastUsePhoneCameraState = usePhoneCamera;
+                  ref.read(isDialogShowedProvider.notifier).state = true ;
+                  usePhoneCamera = false;
+                  showDialog(
+                    context: context,
+                    builder: (BuildContext context) {
+                      return SearchLocatorDialog(
+                        searchLocatorFrom :false,
+                        forCreateLine: true,
+                      );
+                    },
                   );
+
                 },
-              );
+                child: SizedBox(
+                  width: 60,
+                  child: Text('${Messages.TO} ${Messages.LOCATOR}',
+                    style: TextStyle(
+                      fontSize: fontSizeMedium,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.purple,),textAlign: TextAlign.start,),
+                ),
+              ),
+              title: Text(locatorTo != null ? locatorTo!.value ??''
+                  : locatorTo!.identifier ?? '',style:TextStyle(
+                fontSize: fontSizeMedium,
+                fontWeight: FontWeight.bold,
+                color: Colors.purple,)),
+              trailing:locator.id != null
+                  && locator.id! > 0 ?
+              Icon(Icons.check_circle,color: Colors.green,) :
+              Icon(Icons.error,color: Colors.red,),
 
-            },
-            child: SizedBox(
-              width: 60,
-              child: Text('${Messages.TO} ${Messages.LOCATOR}',
-                style: TextStyle(
-                  fontSize: fontSizeMedium,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.purple,),textAlign: TextAlign.start,),
             ),
-          ),
-          title: Text(locatorTo != null ? locatorTo!.value ??''
-              : locatorTo!.identifier ?? '',style:TextStyle(
-            fontSize: fontSizeMedium,
-            fontWeight: FontWeight.bold,
-            color: Colors.purple,)),
-          trailing:locator.id != null
-              && locator.id! > 0 ?
-          Icon(Icons.check_circle,color: Colors.green,) :
-          Icon(Icons.error,color: Colors.red,),
-
+            ListTile(
+              leading: GestureDetector(
+                onTap: (){
+            
+                  Memory.pageFromIndex = ref.read(productsHomeCurrentIndexProvider.notifier).state;
+                  ref.read(productsHomeCurrentIndexProvider.notifier).update((state) => Memory.PAGE_INDEX_NO_REQUERED_SCAN_SCREEN);
+                  isLocatorScreenShowed.update((state) => true);
+                  MemoryProducts.lastUsePhoneCameraState = usePhoneCamera;
+                  ref.read(isDialogShowedProvider.notifier).state = true ;
+                  usePhoneCamera = false;
+                  showDialog(
+                    context: context,
+                    builder: (BuildContext context) {
+                      return SearchLocatorDialog(
+                        searchLocatorFrom :false,
+                        forCreateLine: true,
+                      );
+                    },
+                  );
+            
+                },
+                child: SizedBox(
+                  width: 60,
+                  child: Text('${Messages.TO} ${Messages.LOCATOR}',
+                    style: TextStyle(
+                      fontSize: fontSizeMedium,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.purple,),textAlign: TextAlign.start,),
+                ),
+              ),
+              title: Text(locatorTo != null ? locatorTo!.value ??''
+                  : locatorTo!.identifier ?? '',style:TextStyle(
+                fontSize: fontSizeMedium,
+                fontWeight: FontWeight.bold,
+                color: Colors.purple,)),
+              trailing:locator.id != null
+                  && locator.id! > 0 ?
+              Icon(Icons.check_circle,color: Colors.green,) :
+              Icon(Icons.error,color: Colors.red,),
+            
+            ),
+          ],
         );
       },
       error: (error, stackTrace) {
@@ -1348,10 +1382,10 @@ class UnsortedStorageOnHandScreenForLineState extends ConsumerState<UnsortedStor
       }
       movementLine.mAttributeSetInstanceID = widget.storage.mAttributeSetInstanceID;
       MemoryProducts.newSqlDataMovementLineToCreate = movementLine;
-      movementLine.line = lines.state;
+      movementLine.line = lines;
       MemoryProducts.movementAndLines.movementLineToCreate = movementLine;
 
-      String argument = movementAndLines.id?.toString() ??'-1';
+      
       MovementAndLines m = MovementAndLines();
       if(widget.argument.isNotEmpty){
         m = MovementAndLines.fromJson(jsonDecode(widget.argument));
@@ -1359,13 +1393,16 @@ class UnsortedStorageOnHandScreenForLineState extends ConsumerState<UnsortedStor
           showErrorMessage(context, ref, Messages.ERROR_MOVEMENT);
           return;
         }
+      } else {
+        m = movementAndLines;
+        if(!m.hasMovement){
+          showErrorMessage(context, ref, Messages.ERROR_MOVEMENT);
+          return;
+        }
       }
       m.movementLineToCreate = movementLine;
       MemoryProducts.movementAndLines = m;
-
-      //ref.invalidate(newScannedMovementIdForSearchProvider);
-      //ref.invalidate(newMovementIdForMovementLineSearchProvider);
-
+      String argument = m.id.toString() ?? '-1';
       context.go('${AppRouter.PAGE_CREATE_MOVEMENT_LINE}/$argument',
           extra: m);
     }
@@ -1438,7 +1475,7 @@ class UnsortedStorageOnHandScreenForLineState extends ConsumerState<UnsortedStor
     int currentAction = ref.read(actionScanProvider.notifier).state;
     ref.read(actionScanProvider.notifier).update((state) => Memory.ACTION_NO_ACTION);
     TextEditingController controller = TextEditingController();
-    String old = lines.state.toString();
+    String old = lines.toString();
 
     showDialog(
       context: context,
@@ -1470,7 +1507,7 @@ class UnsortedStorageOnHandScreenForLineState extends ConsumerState<UnsortedStor
               ),
               onPressed: () {
                 controller.text = old;
-                isDialogShowed.state = false;
+                isDialogShowed = false;
                 ref.read(productsHomeCurrentIndexProvider.notifier).update((
                     state) => currentPage);
                 ref.read(actionScanProvider.notifier).update((state) =>
@@ -1512,14 +1549,14 @@ class UnsortedStorageOnHandScreenForLineState extends ConsumerState<UnsortedStor
                                     );*/
                   return;
                 } else {
-                  isDialogShowed.state = false;
+                  isDialogShowed = false;
                   ref.read(productsHomeCurrentIndexProvider.notifier).update((
                       state) => currentPage);
                   ref.read(actionScanProvider.notifier).update((state) =>
                   currentAction);
                   double aux = double.tryParse(controller.text) ?? 0;
                   if (aux > 0) {
-                    lines.state = aux;
+                    lines = aux;
                     setState(() {});
                     Navigator.pop(context);
                   } else {
@@ -1533,7 +1570,7 @@ class UnsortedStorageOnHandScreenForLineState extends ConsumerState<UnsortedStor
         );
       }
     ).then((value) {
-      isDialogShowed.state = false;
+      ref.read(isDialogShowedProvider.notifier).state = false;
       ref.read(productsHomeCurrentIndexProvider.notifier).update((state) => currentPage);
       ref.read(actionScanProvider.notifier).update((state) => currentAction);
       Future.delayed(const Duration(microseconds: 100));
@@ -1571,6 +1608,7 @@ class UnsortedStorageOnHandScreenForLineState extends ConsumerState<UnsortedStor
     ref.read(quantityToMoveProvider.notifier).update((state) => 0);
     ref.read(productsHomeCurrentIndexProvider.notifier).update((state) => Memory.PAGE_INDEX_STORE_ON_HAND);
     ref.read(actionScanProvider.notifier).update((state) => Memory.ACTION_FIND_BY_UPC_SKU_FOR_STORE_ON_HAND);
+
     context.go('${AppRouter.PAGE_PRODUCT_STORE_ON_HAND_FOR_LINE}/$productId',
         extra: movementAndLines);
 

@@ -8,8 +8,8 @@ import '../../../../../shared/data/messages.dart';
 import '../../../../common/input_dialog.dart';
 import '../../../../common/messages_dialog.dart';
 import '../../../../domain/idempiere/idempiere_movement_line.dart';
-import '../../../providers/movement_provider.dart';
 import '../../../providers/product_provider_common.dart';
+import '../provider/new_movement_provider.dart';
 class NewMovementLineCard extends ConsumerStatefulWidget {
   final IdempiereMovementLine movementLine;
   final double width;
@@ -29,27 +29,30 @@ class NewMovementLineCard extends ConsumerStatefulWidget {
 
 class NewMovementLineCardState extends ConsumerState<NewMovementLineCard> {
 
-  double? height =200;
+  double? height =210;
   late AsyncValue quantityAsync ;
   late var movementQuatity;
   @override
   Widget build(BuildContext context) {
-    if(widget.showLocators??false){
-      height = 210;
-    } else {
-      height = 170;
-    }
+
     final int lineId = widget.movementLine.id ?? widget.index;
     quantityAsync = ref.watch(editQuantityToMoveProvider(lineId));
     movementQuatity = ref.watch(movementLineQuantityToMoveProvider(lineId));
 
-    widget.productsNotifier = ref.watch(scanStateNotifierForLineProvider.notifier);
+    widget.productsNotifier = ref.watch(scanStateNotifierForLineProvider);
     String quantity = Memory.numberFormatter0Digit.format(widget.movementLine.movementQty ?? 0);
     Color backGroundColor = Colors.cyan[800]!;
-    TextStyle textStyleTitle = TextStyle(fontSize: themeFontSizeLarge, color: Colors.white,fontWeight: FontWeight.bold);
-    TextStyle textStyle = TextStyle(fontSize: themeFontSizeNormal, color: Colors.white,fontWeight: FontWeight.bold);
-    TextStyle textStyleTitleBlue = TextStyle(fontSize: themeFontSizeLarge, color: Colors.white,
+    TextStyle textStyleTitle = TextStyle(fontSize: themeFontSizeNormal, color: Colors.white,fontWeight: FontWeight.bold);
+    TextStyle textStyle = TextStyle(fontSize: themeFontSizeSmall, color: Colors.white,fontWeight: FontWeight.bold);
+    TextStyle textStyleTitleBlue = TextStyle(fontSize: themeFontSizeNormal, color: Colors.white,
         fontWeight: FontWeight.bold,backgroundColor: themeColorPrimary);
+    String productName = widget.movementLine.productName ?? '' ;
+    if(widget.showLocators??false){
+      height = 190;
+    } else {
+      height = 150;
+    }
+    if(productName.length>40) height = (height!+10.0);
     return Container(
       height: height,
       width: widget.width,
@@ -151,9 +154,8 @@ class NewMovementLineCardState extends ConsumerState<NewMovementLineCard> {
     );
   }
   Future<void> editQuantityToMoveDialog(BuildContext context, WidgetRef ref) async {
-    var isDialogShowed = ref.watch(isDialogShowedProvider.notifier);
     TextEditingController quantityController = TextEditingController();
-    isDialogShowed.state = true;
+    ref.read(isDialogShowedProvider.notifier).state = true;
     setState(() {
 
     });
@@ -162,7 +164,6 @@ class NewMovementLineCardState extends ConsumerState<NewMovementLineCard> {
     double qtyOnHand = widget.movementLine.movementQty ?? 0;
     quantityController.text = Memory.numberFormatter0Digit.format(qtyOnHand);
     final int lineId = widget.movementLine.id ?? widget.index;
-    var movementLineProvider = ref.read(movementLineForEditQuantityToMoveProvider(lineId).notifier);
     if(context.mounted) {
       AwesomeDialog(
         context: context,
@@ -212,7 +213,8 @@ class NewMovementLineCardState extends ConsumerState<NewMovementLineCard> {
           double? aux = double.tryParse(quantity);
           if (aux != null && aux >= 0) {
             widget.movementLine.movementQty = aux;
-            movementLineProvider.state = widget.movementLine;
+            ref.read(movementLineForEditQuantityToMoveProvider(lineId).notifier).state = widget.movementLine;
+
           } else {
             String message = '${Messages.ERROR_QUANTITY} ${aux == null
                 ? Messages.EMPTY
@@ -222,7 +224,7 @@ class NewMovementLineCardState extends ConsumerState<NewMovementLineCard> {
           }
 
 
-          isDialogShowed.state = false;
+          ref.read(isDialogShowedProvider.notifier).state = false;
           setState(() {
 
           });
@@ -231,7 +233,7 @@ class NewMovementLineCardState extends ConsumerState<NewMovementLineCard> {
         buttonsTextStyle: const TextStyle(color: Colors.white),
         btnCancelText: Messages.CANCEL,
         btnCancelOnPress: () {
-          isDialogShowed.state = false;
+          ref.read(isDialogShowedProvider.notifier).state = false;
           setState(() {
 
           });

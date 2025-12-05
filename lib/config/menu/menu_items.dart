@@ -93,17 +93,17 @@ final appHomeOptionCol3Items = <MenuItem>[
     icon: Icons.swap_horiz,
   ),
   MenuItem(
-    title: Messages.MOVEMENT_LIST_DR,
-    subTitle: '',
-    link: AppRouter.PAGE_MOVEMENTS_LIST,
-    icon: Icons.list
-    ,
-  ),
-  MenuItem(
-    title: Messages.MOVEMENT_CREATE,
+    title: Messages.MOVEMENT_CREATE_OR_STOCK,
     subTitle: '',
     link: '${AppRouter.PAGE_PRODUCT_STORE_ON_HAND}/-1',
     icon: Icons.inventory,
+  ),
+  MenuItem(
+    title: Messages.MOVEMENT_LIST_DR,
+    subTitle: '',
+    link: '${AppRouter.PAGE_MOVEMENTS_LIST}/-1',
+    icon: Icons.list
+    ,
   ),
 
   MenuItem(

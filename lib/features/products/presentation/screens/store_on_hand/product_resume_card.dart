@@ -28,7 +28,7 @@ class ProductResumeCardState extends ConsumerState<ProductResumeCard> {
       hideResult = true;
     }
 
-    bool searchFiledByMOLIConfigurableSKU = ref.watch(searchByMOLIConfigurableSKUProvider.notifier).state;
+    bool searchFiledByMOLIConfigurableSKU = ref.watch(searchByMOLIConfigurableSKUProvider);
     String scannedCode = ref.watch(scannedCodeForStoredOnHandProvider) ?? '';
     String searchText = '(UPC)';
     if(searchFiledByMOLIConfigurableSKU){

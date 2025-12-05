@@ -26,8 +26,9 @@ class SqlUsersData {
   void setIdempiereOrganization(int id) {
     aDOrgID = IdempiereOrganization(id: id);
   }
-  void setIdempiereWarehouse(int id) {
-    mWarehouseID = IdempiereWarehouse(id: id);
+  void setIdempiereWarehouse( {required int warehouseId, required int organizationId}) {
+    IdempiereOrganization organization = IdempiereOrganization(id: organizationId);
+    mWarehouseID = IdempiereWarehouse(id: warehouseId,aDOrgID: organization);
   }
   void copyToSqlData(SqlData data) {
     if(aDOrgID!=null && aDOrgID!.id!=null) data.setIdempiereOrganization(aDOrgID!.id!);

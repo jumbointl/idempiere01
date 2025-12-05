@@ -1,8 +1,12 @@
 import 'package:flutter_esc_pos_network/flutter_esc_pos_network.dart';
+import 'package:flutter/material.dart';
 import 'package:esc_pos_utils_plus/esc_pos_utils_plus.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image/image.dart' as img;
 import 'package:flutter/services.dart' show rootBundle, Uint8List, ByteData;
+import 'package:monalisa_app_001/features/products/common/messages_dialog.dart';
 import 'package:monalisa_app_001/features/products/domain/idempiere/movement_and_lines.dart';
+import 'package:monalisa_app_001/features/shared/data/messages.dart';
 
 import '../../../../../shared/data/memory.dart';
 import '../../../../domain/idempiere/idempiere_movement_confirm.dart';
@@ -10,10 +14,11 @@ import '../../../../domain/idempiere/idempiere_movement_line.dart';
 import '../printer/pos_image_utility.dart';
 
 final maxCharacterBarcodeOneRow = 17;
-Future<void> printReceiptWithQr(String ip, int port,MovementAndLines movementAndLines) async {
+Future<void> printReceiptWithQr(WidgetRef ref,String ip, int port,MovementAndLines movementAndLines) async {
   if(ip.isEmpty || port==0) {
     return;
   }
+  print('PRINTING POS');
   // 1. Cargar el perfil de la impresora
   final profile = await CapabilityProfile.load();
   final generator = Generator(PaperSize.mm80, profile); // Ajusta el tamaño del papel
@@ -243,7 +248,7 @@ Future<void> printReceiptWithQr(String ip, int port,MovementAndLines movementAnd
   String datetime = now.toIso8601String().split('.').first;
   datetime = datetime.replaceAll('T', ' ');
   //var barcodeValue = '{BORDEN-${Random().nextInt(9999)}';
-
+  print('PRINTING POS 2');
   if(movementAndLines.movementConfirms!= null && movementAndLines.movementConfirms!.isNotEmpty){
        for(int i = 0; i<movementAndLines.movementConfirms!.length; i++){
          IdempiereMovementConfirm movementConfirm = movementAndLines.movementConfirms![i];
@@ -306,20 +311,29 @@ Future<void> printReceiptWithQr(String ip, int port,MovementAndLines movementAnd
 
   bytes += generator.feed(5);
   bytes += generator.cut(); // Cortar el papel
-  printPosTicket(ip,port,bytes);
+  if(ref.context.mounted) printPosTicket(ref, ip,port,bytes);
 
 }
 
-Future<void> printPosTicket(String ip, int port, List<int> ticket) async {
-
+Future<void> printPosTicket(WidgetRef ref, String ip, int port, List<int> ticket) async {
+  print('PRINTING POS printPosTicket');
   final printer = PrinterNetworkManager(ip,
       port: port);
   PosPrintResult connect = await printer.connect();
+  print('PRINTING POS printPosTicket connect: $connect');
   if (connect == PosPrintResult.success) {
+    print('PRINTING POS printPosTicket connect: success');
     PosPrintResult printing = await printer.printTicket(ticket);
     print(printing.msg);
     await Future.delayed(const Duration(seconds: 2));
     printer.disconnect();
+  } else {
+    print('PRINTING POS printPosTicket connect: timeout');
+    if (ref.context.mounted) {
+      showErrorMessage(ref.context, ref, Messages.ERROR_TIMEOUT);
+    }
   }
-
 }
+
+
+

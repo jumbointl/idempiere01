@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:monalisa_app_001/config/config.dart';
 
 import '../../shared/data/memory.dart';
@@ -11,9 +12,8 @@ import '../presentation/providers/scan_provider.dart';
 import '../../shared/data/messages.dart';
 import '../presentation/providers/product_provider_common.dart';
 class ScanButtonByActionFixed extends ConsumerStatefulWidget {
-
+  InputDataProcessor processor;
   final int actionTypeInt;
-  final InputDataProcessor processor;
   Color? color; // Agrega el parámetro color
 
   ScanButtonByActionFixed({
@@ -30,8 +30,7 @@ class ScanButtonByActionFixedState extends ConsumerState<ScanButtonByActionFixed
       fontWeight: FontWeight.bold,
       color: Colors.white);
   final FocusNode _focusNode = FocusNode();
-  late var notifier;
-  late var inputString;
+
   int scannedTimes = 0;
   String scannedData = "";
   @override
@@ -58,9 +57,6 @@ class ScanButtonByActionFixedState extends ConsumerState<ScanButtonByActionFixed
 
       }
 
-      setState(() {
-
-      });
       scannedData ="";
       return;
     }
@@ -71,37 +67,27 @@ class ScanButtonByActionFixedState extends ConsumerState<ScanButtonByActionFixed
 
   }
   late var isScanning;
-  late var scanText;
-
+  //late var scanText;
+  //late var inputString;
+  late var isDialogShowed;
   @override
   Widget build(BuildContext context) {
-    notifier = ref.watch(scanStateNotifierForLineProvider.notifier);
-    inputString = ref.watch(inputStringProvider.notifier);
-    scanText = ref.watch(scanTextControllerProvider.notifier);
-    final isDialogShowed = ref.watch(isDialogShowedProvider.notifier);
-    isScanning = ref.watch(isScanningProvider.notifier);
-    final usePhoneCamera = ref.watch(usePhoneCameraToScanForLineProvider.notifier);
-    bool scannerActivate = false;
-    WidgetsBinding.instance.addPostFrameCallback((_) {
 
+    //inputString = ref.watch(inputStringProvider.notifier);
+    //scanText = ref.watch(scanTextControllerProvider.notifier);
+    isDialogShowed = ref.watch(isDialogShowedProvider);
+    isScanning = ref.watch(isScanningProvider);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
-        if (scannerActivate) {
-          _focusNode.requestFocus();
-        } else {
-          _focusNode.unfocus();
-        }
+        _focusNode.requestFocus();
       }
 
     });
-    print(' widget.actionTypeInt: ${widget.actionTypeInt}');
-
-
-
-    scannerActivate = true;
+    print(' --fixed widget.actionTypeInt: ${widget.actionTypeInt}');
 
     return KeyboardListener(
       focusNode: _focusNode,
-      onKeyEvent: ref.watch(isScanningProvider) ? null : _handleKeyEvent,
+      onKeyEvent: isScanning || isDialogShowed ? null : _handleKeyEvent,
       child: GestureDetector(
         onTap: (){
 
@@ -158,7 +144,7 @@ class ScanButtonByActionFixedState extends ConsumerState<ScanButtonByActionFixed
 
   }
   /*void handleResult(WidgetRef ref, String data) {
-
+    final notifier = ref.read(scanStateNotifierForLineProvider);
     if (data.isNotEmpty) {
       switch(widget.actionTypeInt){
         case Memory.ACTION_UPDATE_UPC:
@@ -174,11 +160,9 @@ class ScanButtonByActionFixedState extends ConsumerState<ScanButtonByActionFixed
           notifier.addBarcodeByUPCOrSKUForStoreOnHande(data);
           break;
         case Memory.ACTION_GET_LOCATOR_TO_VALUE:
-          Memory.awesomeDialog?.dismiss();
           notifier.findLocatorToByValue(ref,data);
           break;
         case Memory.ACTION_GET_LOCATOR_FROM_VALUE:
-          Memory.awesomeDialog?.dismiss();
           notifier.findLocatorFromByValue(ref,data);
           break;
         case Memory.ACTION_FIND_MOVEMENT_BY_ID:

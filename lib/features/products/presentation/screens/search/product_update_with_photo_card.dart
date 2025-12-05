@@ -36,7 +36,7 @@ class _ProductDetailWithPhotoCardState extends ConsumerState<ProductUpdateWithPh
     String imageUrl = widget.product.imageURL ?? '' ;
     if(testMode){
       imageUrl =Memory.IMAGE_HTTP_SAMPLE_1; // Example image URL
-      int countScannedCamera = ref.watch(scannedCodeTimesProvider.notifier).state;
+      int countScannedCamera = ref.watch(scannedCodeTimesProvider);
       if(countScannedCamera.isEven){
         imageUrl = Memory.IMAGE_HTTP_SAMPLE_2;
         } else {

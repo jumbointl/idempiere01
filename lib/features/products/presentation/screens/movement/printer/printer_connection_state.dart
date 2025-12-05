@@ -5,13 +5,19 @@ class PrinterConnectionState {
   final String ip;
   final String name;
   final int port;
-  final PrinterType printType; // Nuevo atributo
+  final PrinterType printType;
+  final String? serverIp;
+  final String? serverPort;
+
 
   const PrinterConnectionState({
     this.ip = '',
     this.name = '',
     this.port = 9100,
-    this.printType = PrinterType.A4, // Valor por defecto
+    this.printType = PrinterType.LABEL,
+    this.serverIp,
+    this.serverPort,
+  // Valor por defecto
   });
 
   PrinterConnectionState copyWith({
@@ -19,6 +25,8 @@ class PrinterConnectionState {
     String? name,
     int? port,
     PrinterType? printType,
+    String? serverPort,
+    String? serverIp,
   }) {
     return PrinterConnectionState(
       ip: ip ?? this.ip,

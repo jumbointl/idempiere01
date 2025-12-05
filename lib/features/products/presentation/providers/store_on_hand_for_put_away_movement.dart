@@ -3,6 +3,7 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
+import 'package:monalisa_app_001/features/products/domain/idempiere/idempiere_organization.dart';
 import 'package:monalisa_app_001/features/products/presentation/providers/product_provider_common.dart';
 import 'package:monalisa_app_001/features/products/presentation/providers/store_on_hand_provider.dart';
 import 'package:monalisa_app_001/features/products/presentation/screens/store_on_hand/memory_products.dart';
@@ -85,6 +86,12 @@ final findProductForPutAwayMovementProvider = FutureProvider.autoDispose<Product
 
               for (var data in productsListRaw) {
 
+                /*IdempiereOrganization? organization = data.aDOrgID ;
+                if(organization!=null && data.mLocatorID !=null
+                    && data.mLocatorID!.mWarehouseID != null
+                    && data.mLocatorID!.mWarehouseID!.aDOrgID == null){
+                  data.mLocatorID!.mWarehouseID!.aDOrgID = organization;
+                }*/
                 if (product.id == data.mProductID?.id) {
                   String key = '${data.mLocatorID?.value}-${data.mAttributeSetInstanceID?.id}';
                   if (groupedProducts.containsKey(key)) {
@@ -189,6 +196,7 @@ final findStoreOnHandForPutAwayMovementProvider = FutureProvider.autoDispose<Lis
         ref.watch(unsortedStoreOnHandListProvider.notifier).state = productsListRaw;
         Map<String, IdempiereStorageOnHande> groupedProducts = {};
         int warehouseUser = ref.read(authProvider).selectedWarehouse?.id ?? 0;
+
 
         for (var data in productsListRaw) {
 

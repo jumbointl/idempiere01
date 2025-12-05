@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:monalisa_app_001/features/products/common/input_data_processor.dart';
 import 'package:monalisa_app_001/features/products/common/scan_button_by_action.dart';
+import 'package:monalisa_app_001/features/products/common/scan_button_by_action_fixed.dart';
 import 'package:monalisa_app_001/features/products/domain/idempiere/idempiere_product.dart';
 import 'package:monalisa_app_001/features/products/domain/idempiere/idempiere_storage_on_hande.dart';
 import 'package:monalisa_app_001/features/products/domain/idempiere/movement_and_lines.dart';
@@ -16,11 +17,13 @@ import 'package:monalisa_app_001/features/products/presentation/widget/no_storag
 
 import '../../../../../../config/router/app_router.dart';
 import '../../../../../../config/theme/app_theme.dart';
+import '../../../../common/app_initializer_overlay.dart';
 import '../../../../common/input_dialog.dart';
 import '../../../../common/messages_dialog.dart';
 import '../../../providers/common_provider.dart';
 import '../../../providers/products_scan_notifier_for_line.dart';
 import 'product_detail_card_for_line.dart';
+import '../products_home_provider.dart';
 import '../../../../../auth/domain/entities/warehouse.dart';
 import '../../../../../auth/presentation/providers/auth_provider.dart';
 import '../../../../../shared/data/memory.dart';
@@ -96,6 +99,7 @@ class ProductStoreOnHandScreenForLine extends ConsumerStatefulWidget implements 
 
   @override
   Future<void> handleInputString(BuildContext context, WidgetRef ref, String inputData) async {
+
     productsNotifier.handleInputString(context, ref, inputData);
   }
 
@@ -107,13 +111,14 @@ class ProductStoreOnHandScreenForLineState
   Color colorBackgroundHasMovementId = Colors.yellow[200]!;
   Color colorBackgroundNoMovementId = Colors.white;
 
-  int sameLocator = 0;
+  //int sameLocator = 0;
   final ScrollController _scrollController = ScrollController();
   late var scrollToTop  ;
   double goToPosition =0.0;
   late var isDialogShowed;
-  late var actionScan ;
   late var usePhoneCamera;
+  late var isScanning;
+  late var showResultCard;
   int movementId =-1;
   MovementAndLines get movementAndLines {
 
@@ -129,26 +134,12 @@ class ProductStoreOnHandScreenForLineState
   }
   @override
   void initState() {
-
+    super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) async {
-      Future.delayed(Duration(microseconds: 100),(){
-        ref.read(isScanningFromDialogProvider.notifier).update((state) => false);
-        ref.read(isScanningProvider.notifier).update((state) => false);
-        ref.read(isScanningForLineProvider.notifier).update((state) => false);
-        ref.read(isDialogShowedProvider.notifier).update((state) => false);
-        ref.read(productsHomeCurrentIndexProvider.notifier).update((state) => widget.pageIndex);
-        //ref.read(actionScanProvider.notifier).update((state) => widget.actionTypeInt);
-        MemoryProducts.movementAndLines ;
-        if(widget.productId.isNotEmpty && widget.productId!='-1'){
-          ref.read(scanHandleNotifierProvider.notifier).addBarcodeByUPCOrSKUForStoreOnHande
-            (widget.productId);
-        }
-
-
-      });
+      await setDefaultValues(context, ref);
 
     });
-    super.initState();
+
   }
   void showErrorMessage(BuildContext context, WidgetRef ref, String message) {
     if (!context.mounted) {
@@ -179,32 +170,25 @@ class ProductStoreOnHandScreenForLineState
 
   @override
   Widget build(BuildContext context){
-
-    // No sé porque, sin hacer preguntas no muestras....widget.movementAndLines
-
-
+    widget.productsNotifier = ref.watch(scanStateNotifierForLineProvider.notifier);
+    isScanning = ref.watch(isScanningForLineProvider);
+    showResultCard = ref.watch(showResultCardProvider);
     String lines = '0';
     lines = movementAndLines.movementLines?.length.toString() ?? '0';
     movementId = movementAndLines.id ?? -1;
-    isDialogShowed = ref.watch(isDialogShowedProvider.notifier);
+    isDialogShowed = ref.watch(isDialogShowedProvider);
     final productAsync = ref.watch(findProductByUPCOrSKUForStoreOnHandProvider);
     final productsStoredAsync = ref.watch(findProductsStoreOnHandProvider);
-    widget.productsNotifier = ref.watch(scanStateNotifierForLineProvider.notifier);
+
     final double width = MediaQuery.of(context).size.width - 30;
-    final resultOfSameWarehouse = ref.watch(resultOfSameWarehouseProvider.notifier);
     Warehouse? userWarehouse = ref.read(authProvider).selectedWarehouse;
     int userWarehouseId = userWarehouse?.id ?? 0;
     String userWarehouseName = userWarehouse?.name ?? '';
-
-    usePhoneCamera = ref.watch(usePhoneCameraToScanForLineProvider.notifier);
-
-    Future.delayed(Duration(microseconds: 50),(){
-      actionScan = ref.watch(actionScanProvider.notifier);
-      actionScan.state = widget.actionTypeInt;
-    });
-
-    scrollToTop = ref.watch(scrollToUpProvider.notifier);
-
+    usePhoneCamera = ref.watch(usePhoneCameraToScanForLineProvider);
+    scrollToTop = ref.watch(scrollToUpProvider);
+    String title = movementAndLines.documentNo ?? '';
+    TextStyle textStyle = TextStyle(fontSize: themeFontSizeLarge);
+    if(title.length>20) textStyle = TextStyle(fontSize: themeFontSizeSmall);
 
 
     return Scaffold(
@@ -223,25 +207,21 @@ class ProductStoreOnHandScreenForLineState
         ),
 
         title: ListTile(
-            title: Text('${movementAndLines.documentNo ?? ''} ' ),
+            title: Text(title,style: textStyle, ),
             subtitle: Text('${Messages.LINES} : $lines'),
         ),
         actions: [
-          usePhoneCamera.state ? IconButton(
-            icon: const Icon(Icons.barcode_reader),
-            onPressed: () => {
-              usePhoneCamera.state = false,
-              isDialogShowed.state = false,
-              setState(() {}),
-            },
-          ) :  IconButton(
-            icon: const Icon(Icons.qr_code_scanner),
-            onPressed: () => {
-              usePhoneCamera.state = true,
-              isDialogShowed.state = false,
-              setState(() {}),
-            },
+          IconButton(
+            icon: Icon(usePhoneCamera ? Icons.barcode_reader : Icons.camera),
+            onPressed: () {
+              // 🧠 Riverpod se encarga del rebuild, sin setState
+              print('usePhoneCamera: $usePhoneCamera');
+              ref
+                  .read(usePhoneCameraToScanForLineProvider.notifier)
+                  .state = !usePhoneCamera;
 
+              ref.read(isDialogShowedProvider.notifier).state = false;
+            },
           ),
 
         ],
@@ -253,7 +233,7 @@ class ProductStoreOnHandScreenForLineState
           /*if(MediaQuery.of(context).orientation == Orientation.portrait){
             positionAdd=250;
           }*/
-          if(scrollToTop.state){
+          if(scrollToTop){
             goToPosition -= positionAdd;
             if(goToPosition <= 0){
               goToPosition = 0;
@@ -274,9 +254,9 @@ class ProductStoreOnHandScreenForLineState
             curve: Curves.easeInOut,
           );
         },
-        child: Icon(scrollToTop.state ? Icons.arrow_upward :Icons.arrow_downward),
+        child: Icon(scrollToTop ? Icons.arrow_upward :Icons.arrow_downward),
       ),
-      bottomNavigationBar: isDialogShowed.state ? Container(
+      bottomNavigationBar: isDialogShowed ? Container(
         height: Memory.BOTTOM_BAR_HEIGHT,
         color: themeColorPrimary,
         child: Center(
@@ -304,9 +284,13 @@ class ProductStoreOnHandScreenForLineState
                       widget.productsNotifier),
                   productAsync.when(
                     data: (products) {
-                      print('------------------------------------ ${products.length}');
                       WidgetsBinding.instance.addPostFrameCallback((_) async {
                         ref.read(isScanningForLineProvider.notifier).update((state) => false);
+                        if(products.isNotEmpty && products[0].id != null && products[0].id! > 0){
+                          ref.read(showResultCardProvider.notifier).update((state) => true);
+                        } else {
+                          ref.read(showResultCardProvider.notifier).update((state) => false);
+                        }
                       });
                       if(products.isEmpty || products[0].id == null || products[0].id! <= 0) return NoDataCard();
 
@@ -320,7 +304,6 @@ class ProductStoreOnHandScreenForLineState
 
                   productsStoredAsync.when(
                     data: (storages) {
-                      print('------------------------------------ ${storages.length}');
                       WidgetsBinding.instance.addPostFrameCallback((_) async {
                         // deley 1 secund
                         ref.read(isScanningForLineProvider.notifier).update((state) => false);
@@ -336,23 +319,7 @@ class ProductStoreOnHandScreenForLineState
                         }
 
                         String aux = Memory.numberFormatter0Digit.format(quantity);
-                        resultOfSameWarehouse.update((state) =>  [aux,userWarehouseName]);
-                        if(ref.read(searchByMOLIConfigurableSKUProvider.notifier).state){
-                          ref.read(showResultCardProvider.notifier).state = false;
-                        } else {
-                          final productAsync = ref.watch(findProductByUPCOrSKUForStoreOnHandProvider);
-                          productAsync.when(
-                              data: (products) {
-                                if(products.isNotEmpty && products[0].id != null && products[0].id! > 0){
-                                  ref.watch(showResultCardProvider.notifier).update((state) => true);
-                                } else {
-                                  ref.watch(showResultCardProvider.notifier).update((state) => false);
-                                }
-                              },
-                              error: (error, stackTrace) => {ref.watch(showResultCardProvider.notifier).update((state) => false)},
-                              loading: () => {ref.watch(showResultCardProvider.notifier).update((state) => false)}
-                          );
-                        }
+                        ref.read(resultOfSameWarehouseProvider.notifier).update((state) =>  [aux,userWarehouseName]);
                       });
                       return getStoragesOnHand(storages, width);
 
@@ -374,31 +341,6 @@ class ProductStoreOnHandScreenForLineState
 
   Widget getStoragesOnHand(List<IdempiereStorageOnHande> storages, double width) {
 
-    String locatorFromValue = movementAndLines.lastLocatorFrom?.value
-        ?? movementAndLines.lastLocatorFrom?.identifier ?? '';
-    String locatorToValue = movementAndLines.lastLocatorTo?.value
-        ?? movementAndLines.lastLocatorTo?.identifier ?? '';
-
-
-    bool isScanning = ref.watch(isScanningForLineProvider);
-    bool showResultCard = ref.watch(showResultCardProvider);
-    if(movementAndLines.hasMovement){
-      sameLocator =0 ;
-      if(movementAndLines.lastLocatorFrom == null
-        || movementAndLines.lastLocatorFrom!.id==null ||
-          movementAndLines.lastLocatorFrom!.id!<=0){
-        sameLocator = storages.length;
-      } else {
-        for (var data in storages) {
-          int? locatorId = movementAndLines.lastLocatorFrom!.id;
-          if (data.mLocatorID?.id == locatorId) {
-            sameLocator++;
-          }
-        }
-      }
-
-    }
-
     if(!showResultCard){
       return Text(Messages.NO_DATA_FOUND);
     }
@@ -417,7 +359,7 @@ class ProductStoreOnHandScreenForLineState
       );
     }
     int length = storages.length;
-    int add =2 ;
+    int add =1 ;
 
     return ListView.separated(
       controller: _scrollController,
@@ -425,7 +367,7 @@ class ProductStoreOnHandScreenForLineState
       itemCount: length+add,
       separatorBuilder: (context, index) => const SizedBox(height: 10),
       itemBuilder: (context, index) {
-        if (index == 1) {
+        if (index == 0) {
           return showResultCard
               ? Container(
               width: width,
@@ -437,74 +379,6 @@ class ProductStoreOnHandScreenForLineState
               child: ProductResumeCard(storages, width))
               : Text(Messages.NO_RESUME_SHOWED);
         }
-        if (index == 0) {
-          return (movementAndLines.hasMovement)
-              ? sameLocator == 0
-              ? Container(
-              height: 90 ,
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: sameLocator == 0
-                    ? themeColorError
-                    : Colors.cyan[800],
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Column(
-                children: [
-                  Text('${Messages.FROM} $locatorFromValue',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                        fontSize: themeFontSizeNormal,
-                      )),
-                  Text('${Messages.TO} $locatorToValue',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                        fontSize: themeFontSizeNormal,
-                      )),
-                  Text(Messages.NOT_DATA_OF_SAME_LOCATOR_AVAILABLE,
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                        fontSize: themeFontSizeNormal,
-                      )),
-                ],
-              )
-            //child: ProductResumeCard(storages,width-10)
-          )
-              : Container(
-              height: 70,
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: sameLocator == 0
-                    ? themeColorError
-                    : Colors.cyan[800],
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Column(
-                children: [
-                  Text('${Messages.FROM} $locatorFromValue',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                        fontSize: themeFontSizeNormal,
-                      )),
-                  Text('${Messages.TO} $locatorToValue',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                        fontSize: themeFontSizeNormal,
-                      )),
-                ],
-              )
-            //child: ProductResumeCard(storages,width-10)
-          )
-              : Container();
-          /*Center(child: Text(Messages.MOVEMENT_CREATE,
-                style: TextStyle(fontSize: themeFontSizeLarge,
-                  color: Colors.purple,)));*/
-        }
 
         return StorageOnHandCardForLine(
           widget.productsNotifier,
@@ -514,7 +388,7 @@ class ProductStoreOnHandScreenForLineState
           width: width - 10,
           argument: widget.argument,
           movementAndLines: MovementAndLines.fromJson(jsonDecode(widget.argument)),
-          allowedLocatorFrom: movementAndLines.lastLocatorFrom,
+          allowedWarehouseFrom: movementAndLines.lastLocatorFrom?.mWarehouseID,
         );
       },
     );
@@ -556,7 +430,7 @@ class ProductStoreOnHandScreenForLineState
         btnCancelText: Messages.CANCEL,
         btnOkText: Messages.OK,
         btnOkOnPress: () async {
-          isDialogShowed.state = false;
+          isDialogShowed = false;
           setState(() {});
           await Future.delayed(Duration(milliseconds: 100));
 
@@ -584,7 +458,7 @@ class ProductStoreOnHandScreenForLineState
           widget.productsNotifier.addBarcodeByUPCOrSKUForSearch(result);
         },
         btnCancelOnPress: () async {
-          isDialogShowed.state = false;
+          isDialogShowed = false;
           setState(() {});
           await Future.delayed(Duration(milliseconds: 100));
           return ;
@@ -598,10 +472,10 @@ class ProductStoreOnHandScreenForLineState
     return BottomAppBar(
         height: Memory.BOTTOM_BAR_HEIGHT,
         color: themeColorPrimary ,
-        child: usePhoneCamera.state ? buttonScanWithPhone(context, ref,widget.productsNotifier)
-            : ScanButtonByAction(
-          actionTypeInt: widget.actionTypeInt,
-          processor: widget,)
+        child: usePhoneCamera ? buttonScanWithPhone(context, ref,widget.productsNotifier)
+            : ScanButtonByActionFixed(
+          processor: widget,
+          actionTypeInt: widget.actionTypeInt,)
 
     );
 
@@ -626,7 +500,17 @@ class ProductStoreOnHandScreenForLineState
         Memory.PAGE_INDEX_MOVEMENTE_EDIT_SCREEN;
     ref.read(actionScanProvider.notifier).state = Memory.ACTION_FIND_MOVEMENT_BY_ID;
     context.go('${AppRouter.PAGE_MOVEMENTS_SEARCH}/$movementId');
-  }
 
+  }
+  Future<void> setDefaultValues(BuildContext context, WidgetRef ref) async {
+
+    ref.read(isScanningFromDialogProvider.notifier).update((state) => false);
+    ref.read(isScanningProvider.notifier).update((state) => false);
+    ref.read(isScanningForLineProvider.notifier).update((state) => false);
+    ref.read(isDialogShowedProvider.notifier).update((state) => false);
+
+    MemoryProducts.movementAndLines.clearData() ;
+
+  }
 
 }

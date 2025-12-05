@@ -31,8 +31,7 @@ class ScanButtonByActionState extends ConsumerState<ScanButtonByAction> {
       fontWeight: FontWeight.bold,
       color: Colors.white);
   final FocusNode _focusNode = FocusNode();
-  late var notifier;
-  late var inputString;
+
   int scannedTimes = 0;
   String scannedData = "";
   @override
@@ -75,34 +74,35 @@ class ScanButtonByActionState extends ConsumerState<ScanButtonByAction> {
     }
 
   }
-  late var isScanning;
-  late var scanText;
 
+  //late var scanText;
+  //late var notifier;
+  //late var inputString;
+  late var actionScan;
+  late var isScanning;
+  late var isDialogShowed;
   @override
   Widget build(BuildContext context) {
-    notifier = ref.watch(scanStateNotifierForLineProvider.notifier);
+    /*notifier = ref.watch(scanStateNotifierForLineProvider.notifier);
     inputString = ref.watch(inputStringProvider.notifier);
-    scanText = ref.watch(scanTextControllerProvider.notifier);
-    final actionScan = ref.read(actionScanProvider.notifier);
+    scanText = ref.watch(scanTextControllerProvider.notifier);*/
+
 
     /*bool show = false;
     if(ref.read(productsHomeCurrentIndexProvider.notifier).state==widget.pageIndex){
       show = true ;
     }*/
-    final isDialogShowed = ref.watch(isDialogShowedProvider.notifier);
-    isScanning = ref.watch(isScanningProvider.notifier);
-    final usePhoneCamera = ref.watch(usePhoneCameraToScanForLineProvider.notifier);
-    bool scannerActivate = false;
+    actionScan = ref.watch(actionScanProvider);
+    isDialogShowed = ref.watch(isDialogShowedProvider);
+    isScanning = ref.watch(isScanningProvider);
     WidgetsBinding.instance.addPostFrameCallback((_) {
 
       if (mounted) {
-        if (scannerActivate) {
-          _focusNode.requestFocus();
-        } else {
-          _focusNode.unfocus();
-        }
+        _focusNode.requestFocus();
       }
-
+      /*if(actionScan!=widget.actionTypeInt){
+        _focusNode.unfocus();
+      }*/
     });
     /*if(isScanning.state){
       return Padding(
@@ -110,26 +110,29 @@ class ScanButtonByActionState extends ConsumerState<ScanButtonByAction> {
         child: LinearProgressIndicator(minHeight: 25,),
       );
     }*/
-    print('actionScan.state: ${actionScan.state} ? widget.actionTypeInt: ${widget.actionTypeInt}');
-    if(actionScan.state!=widget.actionTypeInt){
-      return Center(child: Text('${Messages.NOT_CURRENT_PAGE} ${getTip(actionScan.state)}',style: style,),) ;
+    print('actionScan.state: $actionScan ? widget.actionTypeInt: ${widget.actionTypeInt}');
+    if(actionScan!=widget.actionTypeInt){
+      return Center(child: Text('${Messages.NOT_CURRENT_PAGE} ${getTip(actionScan)}',style: style,),) ;
     }
-    if(isDialogShowed.state){
+    if(isDialogShowed){
       return Center(child: Text(Messages.DIALOG_SHOWED,style: style,),) ;
     }
-    /*if(usePhoneCamera.state){
-      return Center(child: Text(Messages.OPEN_CAMERA,style: style,),) ;
-    }*/
 
-    scannerActivate = true;
 
     return KeyboardListener(
       focusNode: _focusNode,
-      onKeyEvent: ref.watch(isScanningProvider) ? null : _handleKeyEvent,
+      onKeyEvent: isScanning || isDialogShowed ? null : _handleKeyEvent,
       child: GestureDetector(
         onTap: (){
 
+          if (mounted) {
+            if(_focusNode.hasFocus){
+              _focusNode.unfocus();
+            } else {
+              _focusNode.requestFocus();
+            }
 
+          }
         },
 
         child: Container(
@@ -147,8 +150,8 @@ class ScanButtonByActionState extends ConsumerState<ScanButtonByAction> {
                 child: Text( // Use ref.watch here to react to state changes
 
                   _focusNode.hasFocus
-                      ? Messages.PRESS_TO_SCAN+getTip(actionScan.state)
-                      : Messages.READY_TO_SCAN+getTip(actionScan.state)
+                      ? Messages.PRESS_TO_SCAN+getTip(actionScan)
+                      : Messages.READY_TO_SCAN+getTip(actionScan)
                   ,
                   style: TextStyle(
                       color: Colors.white, fontSize: themeFontSizeLarge),

@@ -8,6 +8,7 @@ import 'package:go_router/go_router.dart';
 import 'package:monalisa_app_001/features/products/domain/idempiere/idempiere_locator.dart';
 import 'package:monalisa_app_001/features/products/domain/idempiere/idempiere_product.dart';
 import 'package:monalisa_app_001/features/products/domain/idempiere/movement_and_lines.dart';
+import 'package:monalisa_app_001/features/products/presentation/screens/movement/products_home_provider.dart';
 import 'package:monalisa_app_001/features/products/presentation/screens/store_on_hand/memory_products.dart';
 
 import '../../../../../../config/router/app_router.dart';
@@ -18,7 +19,6 @@ import '../../../../../shared/data/messages.dart';
 import '../../../../domain/idempiere/idempiere_movement_line.dart';
 import '../../../../domain/idempiere/idempiere_storage_on_hande.dart';
 import '../../../../domain/idempiere/idempiere_warehouse.dart';
-import '../../../providers/common_provider.dart';
 import '../../../providers/product_provider_common.dart';
 import '../../../providers/products_scan_notifier_for_line.dart';
 class StorageOnHandCardForLine extends ConsumerStatefulWidget {
@@ -30,7 +30,7 @@ class StorageOnHandCardForLine extends ConsumerStatefulWidget {
   final Color colorDifferentWarehouse = themeColorGrayLight;
   final double width;
   final double height = 120;
-  IdempiereLocator? allowedLocatorFrom;
+  IdempiereWarehouse? allowedWarehouseFrom;
   final MovementAndLines movementAndLines;
   String? argument;
 
@@ -41,8 +41,8 @@ class StorageOnHandCardForLine extends ConsumerStatefulWidget {
       this.index,
       this.listLength, {
       required this.movementAndLines,
-      required this.width,this.allowedLocatorFrom,
-        super.key, required this.argument,});
+      required this.width,this.allowedWarehouseFrom,
+      super.key, required this.argument,});
 
 
   @override
@@ -51,7 +51,7 @@ class StorageOnHandCardForLine extends ConsumerStatefulWidget {
 
 class StorageOnHandCardForLineState extends ConsumerState<StorageOnHandCardForLine> {
   late var usePhoneCamera ;
-  late var allowedLocatorId;
+  late var allowedWarehouseId;
   MovementAndLines get movementAndLines {
     if(widget.argument!=null && widget.argument!.isNotEmpty && widget.argument!='-1') {
       return MovementAndLines.fromJson(jsonDecode(widget.argument!));
@@ -68,22 +68,22 @@ class StorageOnHandCardForLineState extends ConsumerState<StorageOnHandCardForLi
     if(movementAndLines.hasMovement){
       lines = movementAndLines.movementLines?.length.toString() ?? '0';
       if(movementAndLines.hasMovementLines){
-        widget.allowedLocatorFrom = movementAndLines.lastLocatorFrom;
+        widget.allowedWarehouseFrom = movementAndLines.lastLocatorFrom?.mWarehouseID;
       } else {
-        widget.allowedLocatorFrom = widget.storage.mLocatorID;
+        widget.allowedWarehouseFrom = widget.storage.mLocatorID?.mWarehouseID;
       }
     }
 
 
     usePhoneCamera = ref.watch(usePhoneCameraToScanForLineProvider.notifier);
-    allowedLocatorId = widget.allowedLocatorFrom?.id ?? -1;
+    allowedWarehouseId = widget.allowedWarehouseFrom?.id ?? -1;
     final warehouse = ref.read(authProvider).selectedWarehouse;
     int warehouseID = warehouse?.id ?? 0;
     IdempiereWarehouse? warehouseStorage = widget.storage.mLocatorID?.mWarehouseID;
     bool canMove = false ;
     Color background = widget.colorDifferentWarehouse;
-    if(allowedLocatorId > 0){
-      if(widget.storage.mLocatorID?.id != allowedLocatorId){
+    if(allowedWarehouseId > 0){
+      if(widget.storage.mLocatorID?.mWarehouseID?.id != allowedWarehouseId){
         background = widget.colorDifferentWarehouse;
       } else {
         background = widget.colorSameWarehouse;
@@ -150,7 +150,7 @@ class StorageOnHandCardForLineState extends ConsumerState<StorageOnHandCardForLi
 
         ref.read(isDialogShowedProvider.notifier).update((state)=>true);
         ref.read(isScanningFromDialogProvider.notifier).update((state)=>false);
-        _selectLocatorDialog(ref,movementAndLines);
+        _goToNextPage(ref,movementAndLines);
 
       },
       child: Container(
@@ -204,7 +204,7 @@ class StorageOnHandCardForLineState extends ConsumerState<StorageOnHandCardForLi
       ),
     );
   }
-  Future<void> _selectLocatorDialog(WidgetRef ref, MovementAndLines movementAndLines) async {
+  Future<void> _goToNextPage(WidgetRef ref, MovementAndLines movementAndLines) async {
 
 
     MemoryProducts.index = widget.index;
@@ -216,9 +216,18 @@ class StorageOnHandCardForLineState extends ConsumerState<StorageOnHandCardForLi
     ref.read(productsHomeCurrentIndexProvider.notifier).state = Memory.PAGE_INDEX_UNSORTED_STORAGE_ON_HAND;
     String argument = movementAndLines.nextProductIdUPC ??'-1';
     if(ref.context.mounted) {
-      ref.context.go(
-          '${AppRouter.PAGE_UNSORTED_STORAGE_ON_HAND_FOR_LINE}/$argument',
-          extra: movementAndLines);
+      if(movementAndLines.canChangeLocatorForEachLine){
+        print(' PAGE_UNSORTED_STORAGE_ON_HAND_FOR_LINE_SELECT_LOCATOR');
+        ref.context.go(
+            '${AppRouter.PAGE_UNSORTED_STORAGE_ON_HAND_FOR_LINE_SELECT_LOCATOR}/$argument',
+            extra: movementAndLines);
+      } else {
+        print(' PAGE_UNSORTED_STORAGE_ON_HAND_FOR_LINE');
+        ref.context.go(
+            '${AppRouter.PAGE_UNSORTED_STORAGE_ON_HAND_FOR_LINE}/$argument',
+            extra: movementAndLines);
+      }
+
     }
 
   }

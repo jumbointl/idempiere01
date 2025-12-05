@@ -118,7 +118,7 @@ class AuthDataSourceImpl implements AuthDataSource {
       if(authDataResponse.token!=null){
         Memory.sqlUsersData.setIdempiereClient(clientId);
         Memory.sqlUsersData.setIdempiereOrganization(organizationId);
-        Memory.sqlUsersData.setIdempiereWarehouse(warehouseId);
+        Memory.sqlUsersData.setIdempiereWarehouse(warehouseId: warehouseId,organizationId: organizationId);
         if(authDataResponse.userId!=null) Memory.sqlUsersData.setIdempiereCreateBy(authDataResponse.userId!);
 
       }

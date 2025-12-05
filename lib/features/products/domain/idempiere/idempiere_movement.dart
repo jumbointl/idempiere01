@@ -1,8 +1,12 @@
 
+import 'dart:ui';
+
+import 'package:flutter/material.dart';
 import 'package:monalisa_app_001/features/products/domain/idempiere/idempiere_business_partner.dart';
 import 'package:monalisa_app_001/features/products/domain/idempiere/idempiere_business_partner_location.dart';
 import 'package:monalisa_app_001/features/products/domain/idempiere/idempiere_warehouse.dart';
 
+import '../../../shared/data/memory.dart';
 import 'idempiere_document_status.dart';
 import 'idempiere_document_type.dart';
 import 'idempiere_price_list.dart';
@@ -253,6 +257,39 @@ class IdempiereMovement extends IdempiereObject {
     }
     return list;
   }
+
+  Color? get colorMovementDocumentType {
+
+    if(cDocTypeID == null || cDocTypeID!.id == null || cDocTypeID!.id! <=0){
+      return Colors.grey[100];
+    }
+    int id = cDocTypeID!.id ?? 0;
+    if(id == Memory.materialMovement.id){
+      return Colors.green[100];
+    } else if(id ==Memory.materialMovementWithConfirm.id){
+      return Colors.cyan[100];
+    } else if(id ==Memory.electronicDeliveryNote.id){
+      return Colors.blue[100];
+    }
+    return Colors.grey[100];
+  }
+  Color? get colorMovementDocumentTypeDark {
+
+    if(cDocTypeID == null || cDocTypeID!.id == null || cDocTypeID!.id! <=0){
+      return Colors.grey[800];
+    }
+    int id = cDocTypeID!.id ?? 0;
+    if(id == Memory.materialMovement.id){
+      return Colors.green[800];
+    } else if(id ==Memory.materialMovementWithConfirm.id){
+      return Colors.cyan[800];
+    } else if(id ==Memory.electronicDeliveryNote.id){
+      return Colors.blue[800];
+    }
+    return Colors.grey[800];
+
+  }
+
 }
 
 

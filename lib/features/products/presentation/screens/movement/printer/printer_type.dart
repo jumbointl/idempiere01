@@ -3,5 +3,7 @@ enum PrinterType {
   ZPL,
   TSPL,
   POS,
-  unknown
+  LABEL,
+  LASER,
+  UNKNOWN,
 }

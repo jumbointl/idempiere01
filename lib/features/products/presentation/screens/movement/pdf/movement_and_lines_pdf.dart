@@ -64,7 +64,7 @@ Future<Uint8List> generateDocument(data, image) async {
                     crossAxisAlignment: pw.CrossAxisAlignment.start,
                     children: [
                       pw.Text('Document No: ${data.documentNo ?? ''}', style: pw.TextStyle(fontSize: defaultFontSize)),
-                      pw.Text('Date: ${data.movementDate != null ? data.movementDate! : ''}',
+                      pw.Text('Date: ${data.movementDateFilter != null ? data.movementDateFilter! : ''}',
                           style: pw.TextStyle(fontSize: defaultFontSize)),
                     ],
                   ),

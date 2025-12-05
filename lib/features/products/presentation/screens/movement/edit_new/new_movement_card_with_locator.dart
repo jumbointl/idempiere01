@@ -16,8 +16,8 @@ import '../../../../../../config/router/app_router.dart';
 import '../../../../../../config/theme/app_theme.dart';
 import '../../../../../shared/data/memory.dart';
 import '../../../../../shared/data/messages.dart';
-import '../../../providers/common_provider.dart';
 import '../../../providers/product_provider_common.dart';
+import '../products_home_provider.dart';
 
 class NewMovementCardWithLocator extends ConsumerStatefulWidget {
   Color bgColor;
@@ -45,7 +45,10 @@ class NewMovementCardWithLocator extends ConsumerStatefulWidget {
 class MovementHeaderCardWithLocatorState extends ConsumerState<NewMovementCardWithLocator> {
   @override
   Widget build(BuildContext context) {
-
+    widget.bgColor = themeColorPrimary;
+    if(widget.movementAndLines.hasMovement && widget.movementAndLines.colorMovementDocumentType!=null){
+      widget.bgColor = widget.movementAndLines.colorMovementDocumentTypeDark! ;
+    }
     String titleLeft='';
     String titleRight='';
     String subtitleLeft='';
@@ -53,6 +56,8 @@ class MovementHeaderCardWithLocatorState extends ConsumerState<NewMovementCardWi
 
     String date='';
     String id='';
+    String documentType = widget.movementAndLines.cDocTypeID?.identifier ?? 'DOC';
+
     bool canCompleteMovement = widget.movementAndLines.canCompleteMovement ;
     if(widget.movementAndLines.hasMovement){      //id = movement.documentNo ?? '';
       id = widget.movementAndLines.id.toString();
@@ -65,8 +70,7 @@ class MovementHeaderCardWithLocatorState extends ConsumerState<NewMovementCardWi
       id = widget.movementAndLines.name ?? Messages.EMPTY;
       titleLeft =widget.movementAndLines.identifier ?? Messages.EMPTY;
     }
-    final isScanning = ref.watch(isScanningProvider.notifier);
-    widget.bgColor = themeColorPrimary;
+
     return Card(
       elevation: 1,
       margin: EdgeInsets.zero,
@@ -157,6 +161,11 @@ class MovementHeaderCardWithLocatorState extends ConsumerState<NewMovementCardWi
               ],
             ),
             Text(
+              documentType,
+              style: widget.movementStyle,
+              overflow: TextOverflow.ellipsis,
+            ),
+            /*Text(
               widget.movementAndLines.hasLastLocatorFrom ?
               widget.movementAndLines.lastLocatorFrom!.value ??
                   widget.movementAndLines.lastLocatorFrom!.identifier ?? '' : '',
@@ -168,7 +177,7 @@ class MovementHeaderCardWithLocatorState extends ConsumerState<NewMovementCardWi
                   widget.movementAndLines.lastLocatorTo!.identifier ?? '' : '',
               style: widget.movementStyle,
               overflow: TextOverflow.ellipsis,
-            ),
+            ),*/
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -200,10 +209,30 @@ class MovementHeaderCardWithLocatorState extends ConsumerState<NewMovementCardWi
                       ).show();
                       return;
                     } else {
+                      AwesomeDialog(
+                        context: context,
+                        animType: AnimType.scale,
+                        dialogType: DialogType.question,
+                        body: Center(child: Text(
+                          Messages.CONFIRM_MOVEMENT,
+                          //style: TextStyle(fontStyle: FontStyle.italic),
+                        ),), // correct here
+                        title: '${Messages.CONFIRM_MOVEMENT}?',
+                        desc:   '',
+                        //autoHide: const Duration(seconds: 3),
+                        btnOkOnPress: () {
+                          GoRouterHelper(context).go(
+                              AppRouter.PAGE_MOVEMENTS_CONFIRM_SCREEN,
+                              extra: widget.movementAndLines);
+                        },
+                        btnCancelOnPress: () {},
+                        btnOkColor: themeColorSuccessful,
+                        btnCancelColor: themeColorError,
+                        btnCancelText: Messages.CANCEL,
+                        btnOkText: Messages.OK,
+                      ).show();
+                      return;
 
-                      GoRouterHelper(context).go(
-                          AppRouter.PAGE_MOVEMENTS_CONFIRM_SCREEN,
-                      extra: widget.movementAndLines);
                     }
 
                   },

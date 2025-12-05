@@ -38,14 +38,14 @@ class ProductDetailCardState extends ConsumerState<ProductDetailCard> {
         backGroundColor = Colors.amber[800]!;
 
       }
-      if(ref.watch(searchByMOLIConfigurableSKUProvider.notifier).state){
+      if(ref.watch(searchByMOLIConfigurableSKUProvider)){
         backGroundColor = Colors.amber[800]!;
       } else {
         backGroundColor = themeColorPrimary;
       }
       return GestureDetector(
         onTap: () {
-          if(!ref.watch(searchByMOLIConfigurableSKUProvider.notifier).state){
+          if(!ref.watch(searchByMOLIConfigurableSKUProvider)){
 
             if(!canSearch){
               AwesomeDialog(

@@ -68,18 +68,35 @@ class PrinterNotifier extends StateNotifier<PrinterConnectionState> {
   void setPrintType(PrinterType type) {
     state = state.copyWith(printType: type);
   }
+  void setServerIp(String ip) {
+    state = state.copyWith(serverIp: ip);
+  }
+  void setServerPort(String port) {
+    state = state.copyWith(serverPort: port);
+  }
+
 
   Future<void> printDirectly({required Uint8List bytes}) async {
-    print('Intentando imprimir en ${state.ip}:${state.port} con tipo ${state.printType}');
+    final int port;
+    final String ip;
 
+    if(state.printType == PrinterType.LASER || state.printType == PrinterType.A4){
+      print('Intentando imprimir en ${state.serverIp}:${state.serverPort} con tipo ${state.printType}');
+      port = int.tryParse(state.serverPort?? '') ?? 9100;
+      ip = state.serverIp ?? '192.168.0.100';
+    } else {
+      print('Intentando imprimir en ${state.ip}:${state.port} con tipo ${state.printType}');
+      port = state.port ?? 9100;
+      ip = state.ip ?? '';
+    }
     // Usa la clase FlutterNetPrinter directamente.
     final printer = FlutterNetPrinter();
 
     try {
       // Usa el método connectToPrinter para establecer la conexión.
       final connectedDevice = await printer.connectToPrinter(
-          state.ip,
-          state.port,
+          ip,
+          port,
           timeout: const Duration(seconds: 5)
       );
 

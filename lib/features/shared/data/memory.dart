@@ -2,7 +2,10 @@
 import 'package:awesome_dialog/awesome_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:monalisa_app_001/features/products/domain/idempiere/idempiere_document_type.dart';
+import 'package:monalisa_app_001/features/products/domain/idempiere/idempiere_locator.dart';
 import 'package:monalisa_app_001/features/products/domain/idempiere/idempiere_product.dart';
+import 'package:monalisa_app_001/features/products/domain/idempiere/idempiere_warehouse.dart';
 import 'package:monalisa_app_001/features/products/domain/sql/sql_users_data.dart';
 
 import '../../products/domain/idempiere/idempiere_movement.dart';
@@ -128,14 +131,15 @@ class Memory {
 
   static String URL_CUPS_SERVER ='http://192.168.188.108:3100/print';
 
-  static String VERSIONS='1.01.025';
+  static String VERSIONS='1.01.035';
 
-  static String getUrlCupsServerWithPrinter(String ip,String port,String printerName){
+  static String getUrlCupsServerWithPrinter({required String ip,
+    required String port,required String printerName}){
     if(ip.startsWith('http')) return '$ip:$port/print';
     // Si no comienza con 'http', agrega 'http://'
     return 'http://$ip:$port/printers/$printerName';
   }
-  static String getUrlNodeCupsServer(String ip,String port){
+  static String getUrlNodeCupsServer({required String ip,required String port}){
     if(ip.startsWith('http')) return '$ip:$port/printers';
     // Si no comienza con 'http', agrega 'http://'
     return 'http://$ip:$port/printers';
@@ -178,7 +182,41 @@ class Memory {
     String description = '${Messages.APP_DESCRIPTION} $userName';
     return description;
   }
+  static final IdempiereDocumentType materialMovement = IdempiereDocumentType(
+    id: 1000022, identifier: 'Material Movement', name: 'Material Movement'
+  );
+  static final IdempiereDocumentType materialMovementWithConfirm = IdempiereDocumentType(
+      id: 1000064, identifier: 'Material Movement w/Confirm', name: 'Material Movement w/Confirm'
+  );
+  static final IdempiereDocumentType electronicDeliveryNote = IdempiereDocumentType(
+      id: 1000047, identifier: 'MM Nota Remisión Electrónica',
+      name: 'MM Nota Remisión Electrónica'
+  );
 
+  static get IDEMPIERE_DOC_TYPE_MATERIAL_MOVEMENT => materialMovement.id;
+  static get IDEMPIERE_DOC_TYPE_MATERIAL_MOVEMENT_WITH_CONFIRM => materialMovementWithConfirm.id;
+  static get IDEMPIERE_DOC_TYPE_ELECTRONIC_DELIVERY_NOTE => electronicDeliveryNote.id;
+
+  /*static IdempiereDocumentType? getMovementDocumentType({
+    required IdempiereWarehouse? warehouseFrom, required IdempiereWarehouse? warehouseTo}){
+    if(warehouseFrom ==null || warehouseFrom.id == null ||
+        warehouseTo== null || warehouseTo.id == null){
+      return null;
+    }
+    if(warehouseFrom.aDOrgID == null || warehouseTo.aDOrgID!.id == null
+        || warehouseTo.aDOrgID == null  || warehouseTo.aDOrgID!.id == null){
+      return null;
+    }
+    if(warehouseFrom.id == warehouseTo.id){
+      return Memory.materialMovement;
+    }
+
+    if(warehouseFrom.aDOrgID!.id == warehouseTo.aDOrgID!.id){
+      return Memory.materialMovementWithConfirm;
+    }
+    return Memory.electronicDeliveryNote;
+
+  }*/
 
 
 }

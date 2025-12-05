@@ -80,7 +80,9 @@ class SqlDataMovement extends IdempiereMovement implements SqlData {
       data['Description'] = description ?? Memory.getDescriptionFromApp();
       data['MovementDate'] = movementDate ?? DateTime.now().toIso8601String().split('T').first ;
       data['model-name'] = modelName;
-
+      if (cDocTypeID != null) {
+        data['C_DocType_ID'] = cDocTypeID!.toJsonForIdempiereSqlUse();
+      }
 
       /*
       data['id'] = id;
@@ -103,9 +105,7 @@ class SqlDataMovement extends IdempiereMovement implements SqlData {
       if (docStatus != null) {
         data['DocStatus'] = docStatus!.toJsonForIdempiereSqlUse();
       }
-      if (cDocTypeID != null) {
-        data['C_DocType_ID'] = cDocTypeID!.toJsonForIdempiereSqlUse();
-      }
+
       data['Created'] = created;
       data['ApprovalAmt'] = approvalAmt;
       data['IsApproved'] = isApproved;
@@ -275,10 +275,6 @@ class SqlDataMovement extends IdempiereMovement implements SqlData {
         ? IdempiereDocumentStatus.fromJson(json['MOLI_FsPaused'])
         : null;
   }
-
-
-
-
 
 
 

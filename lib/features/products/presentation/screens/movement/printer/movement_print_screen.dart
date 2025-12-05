@@ -17,6 +17,10 @@ class MovementPrintScreen extends ConsumerWidget {
   final ipController = TextEditingController();
   final nameController = TextEditingController();
   final portController = TextEditingController();
+  final typeController = TextEditingController();
+  final serverPortController = TextEditingController();
+  final serverIpController = TextEditingController();
+
   final String argument;
   final MovementAndLines movementAndLines;
 
@@ -55,6 +59,8 @@ class MovementPrintScreen extends ConsumerWidget {
 
     ipController.text = printerState.ip;
     portController.text = printerState.port.toString();
+    nameController.text = printerState.name;
+
 
     return Scaffold(
       appBar: AppBar(
@@ -65,11 +71,7 @@ class MovementPrintScreen extends ConsumerWidget {
         child: SingleChildScrollView(
           child: Column(
             children: [
-              TextField(
-                controller: nameController,
-                decoration: InputDecoration(labelText: Messages.NAME),
-                onChanged: ref.read(printerProvider.notifier).setName,
-              ),
+
               TextField(
                 controller: ipController,
                 decoration: InputDecoration(labelText: Messages.IP),
@@ -82,7 +84,6 @@ class MovementPrintScreen extends ConsumerWidget {
                 keyboardType: TextInputType.number,
                 onChanged: ref.read(printerProvider.notifier).setPort,
               ),
-              const SizedBox(height: 20),
               // Widget para seleccionar el tipo de impresión
               DropdownButton<PrinterType>(
                 value: printerState.printType,
@@ -97,6 +98,21 @@ class MovementPrintScreen extends ConsumerWidget {
                     child: Text(type.name),
                   );
                 }).toList(),
+              ),
+              TextField(
+                controller: nameController,
+                decoration: InputDecoration(labelText: Messages.NAME),
+                onChanged: ref.read(printerProvider.notifier).setName,
+              ),
+              TextField(
+                controller: serverIpController,
+                decoration: InputDecoration(labelText: Messages.SERVER),
+                onChanged: ref.read(printerProvider.notifier).setName,
+              ),
+              TextField(
+                controller: serverPortController,
+                decoration: InputDecoration(labelText: Messages.SERVER_PORT),
+                onChanged: ref.read(printerProvider.notifier).setName,
               ),
               const SizedBox(height: 20),
               ElevatedButton(

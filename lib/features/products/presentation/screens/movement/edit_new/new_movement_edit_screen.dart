@@ -9,6 +9,8 @@ import 'package:monalisa_app_001/features/products/domain/idempiere/idempiere_lo
 import 'package:monalisa_app_001/features/products/domain/idempiere/idempiere_movement.dart';
 import 'package:monalisa_app_001/features/products/domain/idempiere/idempiere_movement_confirm.dart';
 import 'package:monalisa_app_001/features/products/domain/idempiere/movement_and_lines.dart';
+import 'package:monalisa_app_001/features/products/presentation/screens/movement/products_home_provider.dart';
+import 'package:monalisa_app_001/features/products/presentation/screens/movement/provider/new_movement_provider.dart';
 import 'package:monalisa_app_001/features/products/presentation/screens/store_on_hand/memory_products.dart';
 
 import '../../../../../../config/router/app_router.dart';
@@ -19,9 +21,9 @@ import '../../../../../shared/data/memory.dart';
 import '../../../../../shared/data/messages.dart';
 import '../../../../common/input_dialog.dart';
 import '../../../../common/messages_dialog.dart';
+import '../../../../common/scan_button_by_action.dart';
 import '../../../../domain/idempiere/idempiere_movement_line.dart';
 import '../../../providers/common_provider.dart';
-import '../../../providers/movement_provider.dart';
 import '../../../providers/persitent_provider.dart';
 import '../../../providers/product_provider_common.dart';
 import '../../../providers/store_on_hand_provider.dart';
@@ -33,14 +35,13 @@ import 'new_movement_line_card.dart';
 class NewMovementEditScreen extends ConsumerStatefulWidget {
 
   int countScannedCamera =0;
-  late var productsNotifier ;
   final int actionTypeInt = Memory.ACTION_FIND_MOVEMENT_BY_ID;
   late var allowedLocatorId;
   final int pageIndex = Memory.PAGE_INDEX_MOVEMENTE_EDIT_SCREEN;
   String? movementId;
   bool isMovementSearchedShowed = false;
 
-  static const String WAIT_FOR_SCAN_MOVEMENT = '-1';
+  static const String WAIT_FOR_SCAN_MOVEMENT='-1';
 
 
   NewMovementEditScreen({
@@ -93,7 +94,8 @@ class NewMovementEditScreenState extends CommonConsumerState<NewMovementEditScre
         Future.delayed(Duration(milliseconds: 100), () {});
       }
       print('search ${widget.movementId}');
-      widget.productsNotifier.addBarcodeToSearchMovementNew(widget.movementId!);
+      final productsNotifier = ref.read(scanStateNotifierForLineProvider.notifier);
+      productsNotifier.addBarcodeToSearchMovementNew(widget.movementId!);
     }
 
 
@@ -108,7 +110,7 @@ class NewMovementEditScreenState extends CommonConsumerState<NewMovementEditScre
 
   @override
   Color? getAppBarBackgroundColor(BuildContext context, WidgetRef ref) {
-    return getColorByMovementAndLines(movementAndLines.state);
+    return getColorByMovementAndLines(movementAndLines);
   }
 
   @override
@@ -124,6 +126,7 @@ class NewMovementEditScreenState extends CommonConsumerState<NewMovementEditScre
         MovementAndLines? movementAndLines = movement;
 
         WidgetsBinding.instance.addPostFrameCallback((_) async {
+          if(movement==null) return;
           if(movementAndLines!=null && !movementAndLines.isOnInitialState){
             changeMovementAndLineState(ref, movementAndLines);
 
@@ -150,7 +153,9 @@ class NewMovementEditScreenState extends CommonConsumerState<NewMovementEditScre
               movementAndLines: MemoryProducts.movementAndLines,
             )
             : MovementNoDataCard(),
-            if(movementAndLines.movementConfirms!=null && movementAndLines.movementConfirms!.isNotEmpty) getMovementConfirm(movementAndLines.movementConfirms!),
+            if(movementAndLines.movementConfirms!=null &&
+                movementAndLines.movementConfirms!.isNotEmpty)
+              getMovementConfirm(movementAndLines.movementConfirms!),
             if(movementAndLines.canCompleteMovement || !movementAndLines.hasMovementLines)
               SizedBox(
                 width: double.infinity,
@@ -178,7 +183,9 @@ class NewMovementEditScreenState extends CommonConsumerState<NewMovementEditScre
           final product = storages[index];
           return NewMovementLineCard(index: index + 1, totalLength:storages.length,
             width: width - 10, movementLine: product,
-            canEdit: movementAndLines.state.canCompleteMovement , );
+            canEdit: movementAndLines.canCompleteMovement ,
+            showLocators: true,
+          );
         },
         separatorBuilder: (BuildContext context, int index) =>
         const SizedBox(height: 10,)
@@ -193,17 +200,16 @@ class NewMovementEditScreenState extends CommonConsumerState<NewMovementEditScre
   void initialSetting(BuildContext context, WidgetRef ref) {
 
     ref.invalidate(persistentLocatorToProvider);
-    isScanning = ref.watch(isScanningProvider.notifier);
-    usePhoneCamera = ref.watch(usePhoneCameraToScanProvider.notifier);
-    isDialogShowed = ref.watch(isDialogShowedProvider.notifier);
-    scrollToTop = ref.watch(scrollToUpProvider.notifier);
+    isScanning = ref.watch(isScanningProvider);
+    usePhoneCamera = ref.watch(usePhoneCameraToScanProvider);
+    isDialogShowed = ref.watch(isDialogShowedProvider);
+    scrollToTop = ref.watch(scrollToUpProvider);
     scrollController = ScrollController();
-    //widget.productsNotifier = ref.watch(scanHandleNotifierProvider.notifier);
-    widget.productsNotifier = ref.watch(scanStateNotifierForLineProvider.notifier);
-    inputString = ref.watch(inputStringProvider.notifier);
-    pageIndexProdiver = ref.watch(productsHomeCurrentIndexProvider.notifier);
-    actionScan = ref.read(actionScanProvider.notifier);
-    movementAndLines = ref.watch(movementAndLinesProvider.notifier);
+
+    inputString = ref.watch(inputStringProvider);
+    pageIndexProdiver = ref.watch(productsHomeCurrentIndexProvider);
+    actionScan = ref.read(actionScanProvider);
+    movementAndLines = ref.watch(movementAndLinesProvider);
 
 
 
@@ -214,24 +220,21 @@ class NewMovementEditScreenState extends CommonConsumerState<NewMovementEditScre
     if(inputData.isEmpty){
       return;
     }
-    widget.productsNotifier.handleInputString(context,ref,inputData);
+    final productsNotifier = ref.read(scanStateNotifierForLineProvider.notifier);
+    productsNotifier.handleInputString(context,ref,inputData);
 
     //ref.read(inputStringProvider.notifier).update((state) => inputData);
   }
 
   void changeMovementAndLineState(WidgetRef ref,MovementAndLines? movementAndLines) async {
-    isScanning.state = false;
-    actionScan.state = Memory.ACTION_FIND_MOVEMENT_BY_ID;
+    ref.read(isScanningProvider.notifier).update((state) => false);
+
 
     if(movementAndLines!=null && movementAndLines.hasMovement){
-      this.movementAndLines.state = movementAndLines;
+      ref.read(movementAndLinesProvider.notifier).state = movementAndLines;
       widget.movementId = movementAndLines.id.toString();
-      //await saveMovementAndLines(movementAndLines);
-      //actionScan.state = Memory.ACTION_GO_TO_STORAGE_ON_HAND_PAGE_WITH_UPC;
-
     }
 
-    //ref.read(movementIdForConfirmProvider.notifier).state = id;
   }
   Widget getAddButton(BuildContext context, WidgetRef ref) {
     return SizedBox(
@@ -243,21 +246,24 @@ class NewMovementEditScreenState extends CommonConsumerState<NewMovementEditScre
           ),
         ),
         onPressed: () async {
-          isScanning.state = false;
+          ref.read(isScanningProvider.notifier).update((state) => false);
 
           if(MemoryProducts.movementAndLines.hasMovement){
             MemoryProducts.movementAndLines.nextProductIdUPC ='-1';
             MovementAndLines movementAndLines = MovementAndLines();
             movementAndLines.cloneMovementAndLines(MemoryProducts.movementAndLines);
-            pageIndexProdiver.update((state)=>Memory.PAGE_INDEX_STORE_ON_HAND);
-            actionScan.update((state) => Memory.ACTION_FIND_BY_UPC_SKU_FOR_STORE_ON_HAND);
-            await saveMovementAndLines(movementAndLines);
-            Future.delayed(Duration(milliseconds: 100), () {
+            ref.read(productsHomeCurrentIndexProvider.notifier).state = Memory.PAGE_INDEX_STORE_ON_HAND;
+            ref.read(productsHomeCurrentIndexProvider.notifier).state = Memory.PAGE_INDEX_STORE_ON_HAND;
+            ref.read(actionScanProvider.notifier).state = Memory.ACTION_FIND_BY_UPC_SKU_FOR_STORE_ON_HAND;
 
-            });
+            await saveMovementAndLines(movementAndLines);
+
+            print('page index ${pageIndexProdiver}');
+            print('action scan ${actionScan}');
+            String route = '${AppRouter.PAGE_PRODUCT_STORE_ON_HAND_FOR_LINE}/-1';
 
             if(context.mounted) {
-              context.go('${AppRouter.PAGE_PRODUCT_STORE_ON_HAND_FOR_LINE}/-1',
+              context.push(route,
               extra: movementAndLines);
             }
           }
@@ -337,9 +343,9 @@ class NewMovementEditScreenState extends CommonConsumerState<NewMovementEditScre
           ),
         ),
         onPressed: () async {
-          isScanning.state = false ;
-          isDialogShowed.state = false;
-          actionScan.state = Memory.ACTION_FIND_MOVEMENT_BY_ID;
+          ref.read(isScanningProvider.notifier).state = false ;
+          ref.read(isDialogShowedProvider.notifier).state = false;
+          ref.read(actionScanProvider.notifier).state = Memory.ACTION_FIND_MOVEMENT_BY_ID;
           pageIndexProdiver.update((state)=>Memory.PAGE_INDEX_MOVEMENTE_EDIT_SCREEN);
           widget.movementId = '-1';
           ref.invalidate(newScannedMovementIdForSearchProvider);
@@ -359,20 +365,26 @@ class NewMovementEditScreenState extends CommonConsumerState<NewMovementEditScre
     return BottomAppBar(
         height: Memory.BOTTOM_BAR_HEIGHT,
         color: getColorByActionScan() ,
-        child: usePhoneCamera.state ? buttonScanWithPhone(context,ref,this)
+        child: usePhoneCamera ? buttonScanWithPhone(context,ref,this)
             : getScanButton(context,ref)
     );
 
 
   }
-
+  @override
+  Widget getScanButton(BuildContext context, WidgetRef ref) {
+    return ScanButtonByAction(
+        color: getColorByActionScan(),
+        actionTypeInt: widget.actionTypeInt,
+        processor: this);
+  }
   @override
   String get hinText {
-    if(actionScan.state == Memory.ACTION_FIND_MOVEMENT_BY_ID) {
+    if(actionScan == Memory.ACTION_FIND_MOVEMENT_BY_ID) {
       return Messages.FIND_MOVEMENT;
-    } else if(actionScan.state == Memory.ACTION_GET_LOCATOR_TO_VALUE) {
+    } else if(actionScan == Memory.ACTION_GET_LOCATOR_TO_VALUE) {
       return Messages.FIND_LOCATOR;
-    }  else  if(actionScan.state == Memory.ACTION_FIND_BY_UPC_SKU_FOR_STORE_ON_HAND) {
+    }  else  if(actionScan == Memory.ACTION_FIND_BY_UPC_SKU_FOR_STORE_ON_HAND) {
       return Messages.SKU_UPC;
     }  else {
       return Messages.INPUT_DATA;
@@ -403,19 +415,23 @@ class NewMovementEditScreenState extends CommonConsumerState<NewMovementEditScre
 
   @override
   Future<void> setDefaultValues(BuildContext context, WidgetRef ref) async {
+
     ref.read(isScanningProvider.notifier).update((state) => false);
-    ref.read(initializingProvider.notifier).state = true;
-    await Future.delayed(Duration.zero);
-    MemoryProducts.movementAndLines.clearData();
-    GetStorage().remove(Memory.KEY_MOVEMENT_AND_LINES);
-    ref.read(homeScreenTitleProvider.notifier).state = Messages.MOVEMENT_SEARCH;
-    MemoryProducts.movementAndLines.clearData();
-    GetStorage().remove(Memory.KEY_MOVEMENT_AND_LINES);
-    ref.read(productsHomeCurrentIndexProvider.notifier).update(
-            (state) => Memory.PAGE_INDEX_MOVEMENTE_EDIT_SCREEN);
-    ref.read(actionScanProvider.notifier).update(
-            (state) => Memory.ACTION_FIND_MOVEMENT_BY_ID);
-    ref.read(initializingProvider.notifier).state = false;
+
+  }
+
+  @override
+  void popScopeAction(BuildContext context, WidgetRef ref) async {
+    ref.invalidate(newScannedMovementIdForSearchProvider);
+    context.go('${AppRouter.PAGE_MOVEMENTS_LIST}/-1');
+  }
+
+  @override
+  void changeUsePhoneCameraToScanState(BuildContext context, WidgetRef ref) {
+    // 🧠 Riverpod se encarga del rebuild, sin setState
+    print('usePhoneCamera: $usePhoneCamera');
+    ref.read(usePhoneCameraToScanProvider.notifier).state = !usePhoneCamera;
+    ref.read(isDialogShowedProvider.notifier).state = false;
   }
 }
 
