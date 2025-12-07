@@ -33,6 +33,8 @@ class PrinterConnectionState {
       name: name ?? this.name,
       port: port ?? this.port,
       printType: printType ?? this.printType,
+      serverIp: serverIp ?? this.serverIp,
+      serverPort: serverPort ?? this.serverPort,
     );
   }
 }

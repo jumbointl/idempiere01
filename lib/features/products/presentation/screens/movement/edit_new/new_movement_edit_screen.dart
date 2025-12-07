@@ -9,7 +9,7 @@ import 'package:monalisa_app_001/features/products/domain/idempiere/idempiere_lo
 import 'package:monalisa_app_001/features/products/domain/idempiere/idempiere_movement.dart';
 import 'package:monalisa_app_001/features/products/domain/idempiere/idempiere_movement_confirm.dart';
 import 'package:monalisa_app_001/features/products/domain/idempiere/movement_and_lines.dart';
-import 'package:monalisa_app_001/features/products/presentation/screens/movement/products_home_provider.dart';
+import 'package:monalisa_app_001/features/products/presentation/screens/movement/provider/products_home_provider.dart';
 import 'package:monalisa_app_001/features/products/presentation/screens/movement/provider/new_movement_provider.dart';
 import 'package:monalisa_app_001/features/products/presentation/screens/store_on_hand/memory_products.dart';
 
@@ -132,6 +132,7 @@ class NewMovementEditScreenState extends CommonConsumerState<NewMovementEditScre
 
           }
 
+
         });
         if(movementAndLines==null || movementAndLines.isOnInitialState){
           return   MovementNoDataCard();
@@ -192,9 +193,11 @@ class NewMovementEditScreenState extends CommonConsumerState<NewMovementEditScre
     );
 
   }
-  //@override
-  //AsyncValue get mainDataListAsync => ref.watch(newFindMovementLinesByMovementIdProvider);
+  @override
+  int get qtyOfDataToAllowScroll => 2;
 
+  @override
+  int get actionScanTypeInt => widget.actionTypeInt;
 
   @override
   void initialSetting(BuildContext context, WidgetRef ref) {
@@ -203,8 +206,6 @@ class NewMovementEditScreenState extends CommonConsumerState<NewMovementEditScre
     isScanning = ref.watch(isScanningProvider);
     usePhoneCamera = ref.watch(usePhoneCameraToScanProvider);
     isDialogShowed = ref.watch(isDialogShowedProvider);
-    scrollToTop = ref.watch(scrollToUpProvider);
-    scrollController = ScrollController();
 
     inputString = ref.watch(inputStringProvider);
     pageIndexProdiver = ref.watch(productsHomeCurrentIndexProvider);
@@ -216,17 +217,34 @@ class NewMovementEditScreenState extends CommonConsumerState<NewMovementEditScre
   }
 
   @override
-  Future<void> handleInputString(BuildContext context, WidgetRef ref, String inputData) async {
+  Future<void> handleInputString({required WidgetRef ref,required  String inputData,required int actionScan}) async {
     if(inputData.isEmpty){
       return;
     }
     final productsNotifier = ref.read(scanStateNotifierForLineProvider.notifier);
-    productsNotifier.handleInputString(context,ref,inputData);
+    productsNotifier.handleInputString(ref: ref, inputData: inputData,
+        actionScan: widget.actionTypeInt);
 
     //ref.read(inputStringProvider.notifier).update((state) => inputData);
   }
 
   void changeMovementAndLineState(WidgetRef ref,MovementAndLines? movementAndLines) async {
+    int len = movementAndLines?.movementLines?.length ?? 0;
+    if(len>0) {
+      final allow = len > qtyOfDataToAllowScroll;
+      final notifier = ref.read(allowScrollFabProvider.notifier);
+      if (notifier.state != allow) {
+        notifier.state = allow;
+      }
+
+      if (scrollController.hasClients) {
+        scrollController.animateTo(
+          scrollController.position.maxScrollExtent,
+          duration: const Duration(milliseconds: 250),
+          curve: Curves.easeOut,
+        );
+      }
+    }
     ref.read(isScanningProvider.notifier).update((state) => false);
 
 
@@ -281,7 +299,7 @@ class NewMovementEditScreenState extends CommonConsumerState<NewMovementEditScre
   }
 
   @override
-  Widget? getAppBarTitle(BuildContext context, WidgetRef ref) {
+  /*Widget? getAppBarTitle(BuildContext context, WidgetRef ref) {
     MovementAndLines movementAndLines = MemoryProducts.movementAndLines;
     late TextStyle style = textStyleLarge;
     if(movementAndLines.documentNo!=null && movementAndLines.documentNo!.length>20){
@@ -289,17 +307,74 @@ class NewMovementEditScreenState extends CommonConsumerState<NewMovementEditScre
     }
     if(widget.movementId!=null && widget.movementId!='-1' && movementAndLines.hasMovement){
       return ListTile(
+        leading:IconButton(
+            icon: const Icon(Icons.arrow_back),
+            onPressed: () async =>
+            {
+              popScopeAction(context, ref),
+            }
+          //
+        ),
         title: Text(movementAndLines.documentNo ??'',
           style: style,
           ),
         subtitle: Text('${movementAndLines.id ?? ''} ${movementAndLines.docStatus?.id ?? ''}'
-          ,style: textStyleLarge,),
+          ,style: style,),
       );
     } else {
       return Text(Messages.MOVEMENT_SEARCH,style: textStyleTitle);
     }
 
+  }*/
+  Widget? getAppBarTitle(BuildContext context, WidgetRef ref) {
+    MovementAndLines m = MemoryProducts.movementAndLines;
+
+    if (widget.movementId != null &&
+        widget.movementId != '-1' &&
+        m.hasMovement) {
+
+      final styleMain = m.documentNo != null && m.documentNo!.length > 20
+          ? textStyleTitleMore20C
+          : textStyleLarge;
+
+      return Row(
+        children: [
+          IconButton(
+            icon: const Icon(Icons.arrow_back),
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(
+              minWidth: 32,
+              minHeight: 32,
+            ),
+            onPressed: () => popScopeAction(context, ref),
+          ),
+          const SizedBox(width: 4),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  m.documentNo ?? '',
+                  style: styleMain,
+                  overflow: TextOverflow.ellipsis,
+                  maxLines: 1,
+                ),
+                Text(
+                  '${m.id ?? ''}   ${m.docStatus?.id ?? ''}',
+                  style: textStyleSmallBold,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
+          ),
+        ],
+      );
+    }
+
+    return Text(Messages.MOVEMENT_SEARCH, style: textStyleTitle);
   }
+
 
   @override
   void addQuantityText(BuildContext context, WidgetRef ref,

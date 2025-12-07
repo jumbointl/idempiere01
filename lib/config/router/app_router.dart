@@ -28,15 +28,14 @@ import '../../features/products/presentation/screens/locator/search_locator_scre
 import '../../features/products/presentation/screens/movement/edit_new/new_movement_edit_screen.dart';
 import '../../features/products/presentation/screens/movement/edit_new/movement_confirm_screen.dart';
 import '../../features/products/presentation/screens/movement/edit_new/movement_lines_create_screen.dart';
-import '../../features/products/presentation/screens/movement/edit/movements_screen.dart';
 import '../../features/products/presentation/screens/movement/create/movements_create_screen.dart';
 import '../../features/products/presentation/screens/movement/edit_new/unsorted_storage_on__hand_select_locator_screen.dart';
 import '../../features/products/presentation/screens/movement/pos/movement_pos_page.dart';
-import '../../features/products/presentation/screens/movement/products_home_provider.dart';
+import '../../features/products/presentation/screens/movement/printer/printer_setup_input_screen.dart';
+import '../../features/products/presentation/screens/movement/provider/products_home_provider.dart';
 import '../../features/products/presentation/screens/movement/provider/new_movement_provider.dart';
 import '../../features/products/presentation/screens/search/product_search_screen.dart';
 import '../../features/products/presentation/screens/store_on_hand/product_store_on_hand_screen.dart';
-import '../../features/products/presentation/screens/store_on_hand/product_store_on_hand_screen2.dart';
 import '../../features/products/presentation/screens/movement/create/unsorted_storage_on__hand_screen.dart';
 import '../../features/products/presentation/screens/movement/edit_new/unsorted_storage_on__hand_screen_for_line.dart';
 import '../../features/products/presentation/screens/update_upc/update_product_upc_screen3.dart';
@@ -52,7 +51,6 @@ class AppRouter {
   static const String PAGE_HOME = '/home';
   static const String PAGE_PRODUCT_SEARCH = '/product/search';
   static const String PAGE_PRODUCT_STORE_ON_HAND = '/storeOnHand';
-  static const String PAGE_PRODUCT_STORE_ON_HAND_2 = '/storeOnHand2';
   static const String PAGE_PRODUCT_SEARCH_UPDATE_UPC = '/product/searchUpdateProductUPC';
   static const String PAGE_LOGIN = '/login';
   static const String PAGE_AUTH_DATA = '/authData';
@@ -84,6 +82,8 @@ class AppRouter {
   static String PAGE_MOVEMENT_PRINTER_SETUP='/movement_printer_set_up';
   static String PAGE_MOVEMENT_PRINT_POS='/movement_print_pos';
   static String PAGE_UNSORTED_STORAGE_ON_HAND_FOR_LINE_SELECT_LOCATOR = '/unsorted_store_on_hand_select_locator';
+
+  static String PAGE_PRINTER_SETUP_INPUT='/printer_setup_input';
 
 
 
@@ -259,19 +259,6 @@ final goRouterProvider = Provider((ref) {
       ),
 
       GoRoute(
-          path: AppRouter.PAGE_PRODUCT_STORE_ON_HAND_2,
-          builder: (context, state){
-            if( RolesApp.hasStockPrivilege()){
-
-              return ProductStoreOnHandScreen2();
-
-            } else{
-              return const HomeScreen();
-            }
-          }
-
-      ),
-      GoRoute(
           path: AppRouter.PAGE_BARCODE_SCANER,
           builder: (context, state){
             if( RolesApp.hasStockPrivilege()){
@@ -283,6 +270,10 @@ final goRouterProvider = Provider((ref) {
             }
           }
 
+      ),
+      GoRoute(
+        path: AppRouter.PAGE_PRINTER_SETUP_INPUT,
+        builder: (context, state) => const PrinterSetupInputScreen(),
       ),
       GoRoute(
         path: AppRouter.PAGE_MOVEMENT_PRINT_POS,
@@ -415,7 +406,7 @@ final goRouterProvider = Provider((ref) {
             } else { return const HomeScreen();}
           }
       ),
-      
+
       GoRoute(
         path: AppRouter.PAGE_SEARCH_LOCATOR_FROM,
         builder: (context, state) => RolesApp.hasStockPrivilege() ?
@@ -484,6 +475,8 @@ final goRouterProvider = Provider((ref) {
             //final argument = state.pathParameters['argument'] ?? '';
             MovementAndLines movementAndLines = state.extra as MovementAndLines;
             String argument = jsonEncode(movementAndLines.toJson());
+            String upc = MemoryProducts.storage.mProductID?.uPC ?? '-1';
+            MemoryProducts.movementAndLines = movementAndLines;
             Future.delayed(Duration.zero, () {
               ref.read(productsHomeCurrentIndexProvider.notifier).update((state) =>
               Memory.PAGE_INDEX_UNSORTED_STORAGE_ON_HAND);
@@ -495,6 +488,7 @@ final goRouterProvider = Provider((ref) {
               movementAndLines: movementAndLines,
               index:MemoryProducts.index,
               storage: MemoryProducts.storage,
+              productUPC: upc,
               width: MemoryProducts.width,);
           }
         },
@@ -509,12 +503,14 @@ final goRouterProvider = Provider((ref) {
             //final argument = state.pathParameters['argument'] ?? '';
             MovementAndLines movementAndLines = state.extra as MovementAndLines;
             String argument = jsonEncode(movementAndLines.toJson());
+
             Future.delayed(Duration.zero, () {
               ref.read(productsHomeCurrentIndexProvider.notifier).update((state) =>
               Memory.PAGE_INDEX_UNSORTED_STORAGE_ON_HAND);
               ref.read(actionScanProvider.notifier).update((state) =>
                   Memory.ACTION_GET_LOCATOR_TO_VALUE);
             });
+            String upc = MemoryProducts.storage.mProductID?.uPC ?? '-1';
             return UnsortedStorageOnHandScreenForLine(
               argument: argument,
               movementAndLines: movementAndLines,

@@ -6,8 +6,8 @@ import 'package:monalisa_app_001/features/products/domain/idempiere/idempiere_mo
 import 'package:monalisa_app_001/features/products/domain/idempiere/idempiere_product.dart';
 import 'package:monalisa_app_001/features/shared/data/messages.dart';
 
-import '../../../../../config/theme/app_theme.dart';
-import '../../../../shared/data/memory.dart';
+import '../../../../../../config/theme/app_theme.dart';
+import '../../../../../shared/data/memory.dart';
 
 class MovementLineCardForCreate extends ConsumerStatefulWidget {
   final double width;

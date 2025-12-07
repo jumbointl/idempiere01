@@ -17,52 +17,51 @@ double get fontSizeMedium => themeFontSizeNormal;
 double get fontSizeLarge => themeFontSizeLarge;
 
 
-Future<void> openInputDialog(BuildContext context, WidgetRef ref,
-    bool history,InputDataProcessor processor) async{
+
+Future<String?> openInputDialogWithResult(
+    BuildContext context,
+    WidgetRef ref,
+    bool history,
+    {required String text}
+
+    ) async {
   var actionScan = ref.watch(actionScanProvider.notifier);
   print('actionScan.state -- ${actionScan.state}');
 
-  //var isDialogShowed = ref.read(isDialogShowedProvider.notifier);
-  /*int currentPage = ref.read(productsHomeCurrentIndexProvider.notifier).state;
-  ref.read(productsHomeCurrentIndexProvider.notifier).update((state) =>
-  Memory.PAGE_INDEX_NO_REQUERED_SCAN_SCREEN);
-  int currentAction = ref.read(actionScanProvider.notifier).state;
-  actionScan.update((state) => Memory.ACTION_NO_ACTION);*/
-
   String title = Messages.INPUT_DATA;
-  if(actionScan.state == Memory.ACTION_FIND_MOVEMENT_BY_ID){
-    title = Messages.FIND_MOVEMENT_BY_ID;
-  } else if(actionScan.state == Memory.ACTION_FIND_BY_UPC_SKU_FOR_STORE_ON_HAND){
-    title = Messages.FIND_PRODUCT_BY_UPC_SKU;
-  } else if(actionScan.state == Memory.ACTION_GET_LOCATOR_TO_VALUE){
-    title = Messages.FIND_LOCATOR;
 
+  if (actionScan.state == Memory.ACTION_FIND_MOVEMENT_BY_ID) {
+    title = Messages.FIND_MOVEMENT_BY_ID;
+  } else if (actionScan.state ==
+      Memory.ACTION_FIND_BY_UPC_SKU_FOR_STORE_ON_HAND) {
+    title = Messages.FIND_PRODUCT_BY_UPC_SKU;
+  } else if (actionScan.state == Memory.ACTION_GET_LOCATOR_TO_VALUE) {
+    title = Messages.FIND_LOCATOR;
   }
 
-  //Future.delayed(const Duration(microseconds: 50));
   TextEditingController controller = TextEditingController();
-  if(history){
+  controller.text = text ;
+  if (history) {
     String lastSearch = Memory.lastSearch;
-    if(actionScan.state == Memory.ACTION_FIND_MOVEMENT_BY_ID){
+
+    if (actionScan.state == Memory.ACTION_FIND_MOVEMENT_BY_ID) {
       lastSearch = Memory.lastSearchMovement;
     }
-    if(lastSearch =='-1') lastSearch ='';
 
-    if(lastSearch.isEmpty){
-      controller.text = Messages.NO_RECORDS_FOUND;
-    } else {
-      controller.text = lastSearch;
-    }
+    if (lastSearch == '-1') lastSearch = '';
 
+    controller.text =
+    lastSearch.isEmpty ? Messages.NO_RECORDS_FOUND : lastSearch;
   }
-  showModalBottomSheet(
+
+  final result = await showModalBottomSheet<String?>(
     isScrollControlled: true,
     context: context,
     builder: (BuildContext context) {
       return FractionallySizedBox(
-        heightFactor: 0.85, // Adjust the height as needed
+        heightFactor: 0.85,
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 5,vertical: 20),
+          padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 20),
           child: Center(
             child: SingleChildScrollView(
               child: Column(
@@ -70,76 +69,79 @@ Future<void> openInputDialog(BuildContext context, WidgetRef ref,
                 children: [
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 5.0),
-                    child: Text(title,style: TextStyle
-                      (fontSize: fontSizeLarge,fontWeight: FontWeight.bold,color: Colors.purple),),
+                    child: Text(
+                      title,
+                      style: TextStyle(
+                        fontSize: fontSizeLarge,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.purple,
+                      ),
+                    ),
                   ),
+
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 5.0),
                     child: TextField(
                       controller: controller,
-                      style: TextStyle
-                        (fontSize: fontSizeLarge,fontWeight: FontWeight.bold,color: Colors.purple),
+                      style: TextStyle(
+                        fontSize: fontSizeLarge,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.purple,
+                      ),
                       keyboardType: TextInputType.none,
                     ),
                   ),
+
                   keyboardButtons(context, ref, controller),
+
                   Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                      spacing: 10,
-                      children: [
-                        Expanded(
-                          child: TextButton(
-                              style: TextButton.styleFrom(
-                                foregroundColor: Colors.white,
-                                backgroundColor: Colors.red,
-                              ),
-                              onPressed: (){
-                                //isDialogShowed.state = false;
-                                //ref.read(productsHomeCurrentIndexProvider.notifier).update((state) => currentPage);
-                                //ref.read(actionScanProvider.notifier).update((state) => currentAction);
-                                Future.delayed(Duration.zero);
-                                Navigator.pop(context);
-                                return ;
-                              },
-                              child: Text(
-                                Messages.CANCEL,
-                              )
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    spacing: 10,
+                    children: [
+                      Expanded(
+                        child: TextButton(
+                          style: TextButton.styleFrom(
+                            foregroundColor: Colors.white,
+                            backgroundColor: Colors.red,
                           ),
+                          onPressed: () {
+                            Navigator.pop(context, null);
+                          },
+                          child: Text(Messages.CANCEL),
                         ),
-                        Expanded(
-                          child: TextButton(
-                              style: TextButton.styleFrom(
-                                foregroundColor: Colors.white,
-                                backgroundColor: Colors.green,
-                              ),
-                              onPressed: (){
-
-                                final result = controller.text;
-                                if(result.isEmpty){
-                                  showErrorMessage(context, ref, Messages.TEXT_FIELD_EMPTY);
-
-                                  return;
-                                } else {
-                                  if(actionScan.state == Memory.ACTION_FIND_MOVEMENT_BY_ID){
-                                    Memory.lastSearchMovement = result;
-                                  } else {
-                                    Memory.lastSearch = result;
-                                  }
-
-                                  //isDialogShowed.state = false;
-                                  //ref.read(productsHomeCurrentIndexProvider.notifier).update((state) => currentPage);
-                                  //ref.read(actionScanProvider.notifier).update((state) => currentAction);
-                                  print('result: $result actionscan $actionScan');
-                                  Future.delayed(Duration.zero);
-                                  processor.handleInputString(context,ref,result);
-                                  Navigator.pop(context);
-                                }
-
-                              },
-                              child: Text(Messages.CONFIRM)
+                      ),
+                      Expanded(
+                        child: TextButton(
+                          style: TextButton.styleFrom(
+                            foregroundColor: Colors.white,
+                            backgroundColor: Colors.green,
                           ),
+                          onPressed: () {
+                            final text = controller.text;
+
+                            if (text.isEmpty) {
+                              showErrorMessage(
+                                  context, ref, Messages.TEXT_FIELD_EMPTY);
+                              return;
+                            }
+
+                            if (actionScan.state ==
+                                Memory.ACTION_FIND_MOVEMENT_BY_ID) {
+                              Memory.lastSearchMovement = text;
+                            } else {
+                              Memory.lastSearch = text;
+                            }
+
+                            // 🔥 ahora se usa la función callback
+                            //onOk(context, ref, text);
+
+                            Navigator.pop(context, text);
+                          },
+                          child: Text(Messages.CONFIRM),
                         ),
-                      ]),
+                      ),
+                    ],
+                  ),
                 ],
               ),
             ),
@@ -147,15 +149,150 @@ Future<void> openInputDialog(BuildContext context, WidgetRef ref,
         ),
       );
     },
-  ).then((_) {
-    //isDialogShowed.state = false;
-    ref.read(isDialogShowedProvider.notifier).state = false;
-    print('then----------------------');
-    Future.delayed(Duration.zero);
-    /*ref.read(productsHomeCurrentIndexProvider.notifier).update((state) => currentPage);
-    ref.read(actionScanProvider.notifier).update((state) => currentAction);*/
-  });
+  );
+
+  ref.read(isDialogShowedProvider.notifier).state = false;
+  return result;
 }
+
+Future<void> openInputDialogWithAction({
+    required WidgetRef ref,
+    required bool history,
+    required int actionScan,
+    required void Function({required WidgetRef ref,required String inputData,required int actionScan}) onOk,
+}) async {
+  print('actionScan.state -- $actionScan');
+
+  String title = Messages.INPUT_DATA;
+
+  if (actionScan == Memory.ACTION_FIND_MOVEMENT_BY_ID) {
+    title = Messages.FIND_MOVEMENT_BY_ID;
+  } else if (actionScan ==
+      Memory.ACTION_FIND_BY_UPC_SKU_FOR_STORE_ON_HAND) {
+    title = Messages.FIND_PRODUCT_BY_UPC_SKU;
+  } else if (actionScan == Memory.ACTION_GET_LOCATOR_TO_VALUE) {
+    title = Messages.FIND_LOCATOR;
+  }
+
+  TextEditingController controller = TextEditingController();
+
+  if (history) {
+    String lastSearch = Memory.lastSearch;
+
+    if (actionScan == Memory.ACTION_FIND_MOVEMENT_BY_ID) {
+      lastSearch = Memory.lastSearchMovement;
+    }
+
+    if (lastSearch == '-1') lastSearch = '';
+
+    controller.text =
+    lastSearch.isEmpty ? Messages.NO_RECORDS_FOUND : lastSearch;
+  }
+
+  // ⬇️ Ahora retornamos el Future<String?>
+  final result = await showModalBottomSheet<String?>(
+    isScrollControlled: true,
+    context: ref.context,
+    builder: (BuildContext context) {
+      return FractionallySizedBox(
+        heightFactor: 0.85,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 20),
+          child: Center(
+            child: SingleChildScrollView(
+              child: Column(
+                spacing: 10,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 5.0),
+                    child: Text(
+                      title,
+                      style: TextStyle(
+                        fontSize: fontSizeLarge,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.purple,
+                      ),
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 5.0),
+                    child: TextField(
+                      controller: controller,
+                      style: TextStyle(
+                        fontSize: fontSizeLarge,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.purple,
+                      ),
+                      keyboardType: TextInputType.none,
+                    ),
+                  ),
+
+                  keyboardButtons(context, ref, controller),
+
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    spacing: 10,
+                    children: [
+                      Expanded(
+                        child: TextButton(
+                          style: TextButton.styleFrom(
+                            foregroundColor: Colors.white,
+                            backgroundColor: Colors.red,
+                          ),
+                          onPressed: () {
+                            Navigator.pop(context, null); // ❗ devolvemos null
+                          },
+                          child: Text(Messages.CANCEL),
+                        ),
+                      ),
+                      Expanded(
+                        child: TextButton(
+                          style: TextButton.styleFrom(
+                            foregroundColor: Colors.white,
+                            backgroundColor: Colors.green,
+                          ),
+                          onPressed: () {
+                            final text = controller.text;
+
+                            if (text.isEmpty) {
+                              showErrorMessage(
+                                  context, ref, Messages.TEXT_FIELD_EMPTY);
+                              return;
+                            }
+
+                            if (actionScan ==
+                                Memory.ACTION_FIND_MOVEMENT_BY_ID) {
+                              Memory.lastSearchMovement = text;
+                            } else {
+                              Memory.lastSearch = text;
+                            }
+
+                            onOk(ref: ref, inputData: text,
+                                actionScan: actionScan); // ❗ llamamos a onOk
+
+                            Navigator.pop(context, text); // <-- 🔥 devolvemos text
+                          },
+                          child: Text(Messages.CONFIRM),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+    },
+  );
+
+  ref.read(isDialogShowedProvider.notifier).state = false;
+
+  print('Dialog closed with: $result');
+
+  //return result; // 🔥 devolvemos el valor final al que llama
+}
+
 Widget keyboardButtons(BuildContext context, WidgetRef ref,TextEditingController textController){
   double widthButton = (MediaQuery.of(context).size.width) /10;
   return Center(
@@ -338,7 +475,6 @@ Widget numberButtons(BuildContext context, WidgetRef ref,TextEditingController q
   double widthButton = 40 ;
   return Center(
 
-    //margin: EdgeInsets.only(left: 10, right: 10,),
     child: Column(
       children: [
         Row(
@@ -589,7 +725,9 @@ void removeText(BuildContext context,WidgetRef ref,TextEditingController textCon
   textController.text = textController.text.substring(0,textController.text.length-1);
 }
 
-Widget getSearchBar(BuildContext context,WidgetRef ref,String hintText,InputDataProcessor processor){
+Widget getSearchBar(BuildContext context,WidgetRef ref,String hintText, int actionScan,
+    void Function({required WidgetRef ref,required String inputData,required int actionScan
+     }) onOk, ){
   var isScanning = ref.watch(isScanningProvider.notifier);
   var usePhoneCamera = ref.watch(usePhoneCameraToScanProvider.notifier);
   var inputString = ref.watch(inputStringProvider.notifier);
@@ -619,11 +757,9 @@ Widget getSearchBar(BuildContext context,WidgetRef ref,String hintText,InputData
             ),
           ) ,
           IconButton(onPressed:() async {
-            //isScanning.state = false ;
-            //isDialogShowed.state = true;
-            //await Future.delayed(const Duration(microseconds: 100));
             if(context.mounted){
-              openInputDialog(context,ref,false,processor);
+              openInputDialogWithAction(ref: ref,history: true,onOk:onOk,
+                  actionScan:actionScan);
             }
           },
               icon: Icon( Icons.search, color:isScanning.state ?Colors.grey: Colors.purple,)),
@@ -632,7 +768,7 @@ Widget getSearchBar(BuildContext context,WidgetRef ref,String hintText,InputData
             //isDialogShowed.state = true;
             //await Future.delayed(const Duration(microseconds: 100));
             if(context.mounted){
-              openInputDialog(context,ref,true,processor);
+              openInputDialogWithAction(ref: ref,history: false,onOk:onOk, actionScan: actionScan);
             }
           },
               icon: Icon( Icons.history, color:isScanning.state?Colors.grey: Colors.purple,)),
@@ -663,23 +799,21 @@ String getTip(int action) {
 }
 
 Widget buttonScanWithPhone(BuildContext context,WidgetRef ref,InputDataProcessor processor) {
-  var isScanning = ref.watch(isScanningProvider.notifier);
-  var actionScan = ref.watch(actionScanProvider.notifier);
-  print('actionScan.state ${actionScan.state}');
-  print('isScanning.state ${isScanning.state}');
+  var isScanning = ref.watch(isScanningProvider);
+  var actionScan = ref.watch(actionScanProvider);
 
   Color backgroundColor =  Colors.cyan[800]!;
   return TextButton(
 
     style: TextButton.styleFrom(
-      backgroundColor: isScanning.state ? Colors.grey :backgroundColor,
+      backgroundColor: isScanning ? Colors.grey :backgroundColor,
       foregroundColor: Colors.white,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(0),
       ),
 
     ),
-    onPressed: isScanning.state ? null :  () async {
+    onPressed: isScanning ? null :  () async {
       ref.watch(isScanningProvider.notifier).state = true;
       String? result= await SimpleBarcodeScanner.scanBarcode(
         context,
@@ -694,16 +828,151 @@ Widget buttonScanWithPhone(BuildContext context,WidgetRef ref,InputDataProcessor
         cameraFace: CameraFace.back,
       );
       if(result!=null){
-        isScanning.state = false;
+        isScanning = false;
         if(context.mounted){
-          processor.handleInputString(context, ref, result);
+          processor.handleInputString(ref:ref, inputData: result, actionScan: actionScan);
         }
       } else {
-        isScanning.state = false;
+        isScanning = false;
       }
     },
-    child: Text(Messages.OPEN_CAMERA+getTip(actionScan.state),style: TextStyle(fontSize: themeFontSizeLarge,
+    child: Text(Messages.OPEN_CAMERA+getTip(actionScan),style: TextStyle(fontSize: themeFontSizeLarge,
         color: Colors.white),),
 
   );
+}
+Future<int?> openInputNumberDialogWithResult(
+    BuildContext context,
+    WidgetRef ref,
+    bool history,
+
+    ) async {
+  var actionScan = ref.watch(actionScanProvider.notifier);
+  print('actionScan.state -- ${actionScan.state}');
+
+  String title = Messages.INPUT_DATA;
+
+  if (actionScan.state == Memory.ACTION_FIND_MOVEMENT_BY_ID) {
+    title = Messages.FIND_MOVEMENT_BY_ID;
+  } else if (actionScan.state ==
+      Memory.ACTION_FIND_BY_UPC_SKU_FOR_STORE_ON_HAND) {
+    title = Messages.FIND_PRODUCT_BY_UPC_SKU;
+  } else if (actionScan.state == Memory.ACTION_GET_LOCATOR_TO_VALUE) {
+    title = Messages.FIND_LOCATOR;
+  }
+
+  TextEditingController controller = TextEditingController();
+
+  if (history) {
+    String lastSearch = Memory.lastSearch;
+
+    if (actionScan.state == Memory.ACTION_FIND_MOVEMENT_BY_ID) {
+      lastSearch = Memory.lastSearchMovement;
+    }
+
+    if (lastSearch == '-1') lastSearch = '';
+
+    controller.text =
+    lastSearch.isEmpty ? Messages.NO_RECORDS_FOUND : lastSearch;
+  }
+
+  final int? result = await showModalBottomSheet<int?>(
+    isScrollControlled: true,
+    context: context,
+    builder: (BuildContext context) {
+      return FractionallySizedBox(
+        heightFactor: 0.85,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 20),
+          child: Center(
+            child: SingleChildScrollView(
+              child: Column(
+                spacing: 10,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 5.0),
+                    child: Text(
+                      title,
+                      style: TextStyle(
+                        fontSize: fontSizeLarge,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.purple,
+                      ),
+                    ),
+                  ),
+
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 5.0),
+                    child: TextField(
+                      controller: controller,
+                      style: TextStyle(
+                        fontSize: fontSizeLarge,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.purple,
+                      ),
+                      keyboardType: TextInputType.none,
+                    ),
+                  ),
+
+                  keyboardButtons(context, ref, controller),
+
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    spacing: 10,
+                    children: [
+                      Expanded(
+                        child: TextButton(
+                          style: TextButton.styleFrom(
+                            foregroundColor: Colors.white,
+                            backgroundColor: Colors.red,
+                          ),
+                          onPressed: () {
+                            Navigator.pop(context, null);
+                          },
+                          child: Text(Messages.CANCEL),
+                        ),
+                      ),
+                      Expanded(
+                        child: TextButton(
+                          style: TextButton.styleFrom(
+                            foregroundColor: Colors.white,
+                            backgroundColor: Colors.green,
+                          ),
+                          onPressed: () {
+                            final text = controller.text;
+
+                            if (text.isEmpty) {
+                              showErrorMessage(
+                                  context, ref, Messages.TEXT_FIELD_EMPTY);
+                              return;
+                            }
+
+                            if (actionScan.state ==
+                                Memory.ACTION_FIND_MOVEMENT_BY_ID) {
+                              Memory.lastSearchMovement = text;
+                            } else {
+                              Memory.lastSearch = text;
+                            }
+
+                            // 🔥 ahora se usa la función callback
+                            //onOk(context, ref, text);
+
+                            Navigator.pop(context, int.tryParse(text));
+                          },
+                          child: Text(Messages.CONFIRM),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+    },
+  );
+
+  ref.read(isDialogShowedProvider.notifier).state = false;
+  return result;
 }

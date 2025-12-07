@@ -53,7 +53,8 @@ class ScanButtonByActionFixedState extends ConsumerState<ScanButtonByActionFixed
     if (event.logicalKey == LogicalKeyboardKey.enter) {
 
       if(context.mounted){
-        widget.processor.handleInputString(context, ref, scannedData);
+        widget.processor.handleInputString(ref: ref, inputData: scannedData
+            ,actionScan: widget.actionTypeInt);
 
       }
 

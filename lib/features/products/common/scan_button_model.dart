@@ -7,7 +7,7 @@ import 'package:simple_barcode_scanner/simple_barcode_scanner.dart';
 import '../../../config/theme/app_theme.dart';
 import '../../shared/data/messages.dart';
 import '../presentation/providers/product_provider_common.dart';
-import '../presentation/screens/movement/products_home_provider.dart';
+import '../presentation/screens/movement/provider/products_home_provider.dart';
 import 'input_data_processor.dart';
 
 abstract class ScanButtonModel<T extends ConsumerStatefulWidget> extends ConsumerState<T> {
@@ -40,7 +40,8 @@ abstract class ScanButtonModel<T extends ConsumerStatefulWidget> extends Consume
     if (event.logicalKey == LogicalKeyboardKey.enter) {
 
       if(context.mounted){
-        processor.handleInputString(context, ref, scannedData);
+        processor.handleInputString(ref: ref, inputData: scannedData
+            ,actionScan: actionTypeInt);
       }
       scannedData ="";
       return;
@@ -198,7 +199,8 @@ abstract class ScanButtonModel<T extends ConsumerStatefulWidget> extends Consume
         if(result!=null){
           isScanning.state = false;
           if(context.mounted){
-            processor.handleInputString(context, ref, result);
+            processor.handleInputString(ref: ref, inputData: result
+                ,actionScan: actionTypeInt);
           }
         } else {
           isScanning.state = false;

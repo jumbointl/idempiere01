@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:get_storage/get_storage.dart';
 import 'package:monalisa_app_001/config/config.dart';
 import 'package:monalisa_app_001/features/m_inout/domain/entities/m_in_out.dart';
 import 'package:monalisa_app_001/features/m_inout/domain/entities/m_in_out_confirm.dart';
@@ -8,6 +9,7 @@ import 'package:monalisa_app_001/features/m_inout/domain/entities/line.dart';
 import 'package:monalisa_app_001/features/m_inout/presentation/widgets/barcode_list.dart';
 import 'package:intl/intl.dart';
 import '../../../products/common/selections_dialog.dart';
+import '../../../products/presentation/providers/common_provider.dart';
 import '../../domain/entities/barcode.dart';
 import '../providers/m_in_out_providers.dart';
 import '../widgets/enter_barcode_button.dart';
@@ -27,6 +29,12 @@ class MInOutScreenState extends ConsumerState<MInOutScreen> {
   @override
   void initState() {
     super.initState();
+    int quantityToAllow = ref.read(
+      quantityOfMovementAndScannedToAllowInputScannedQuantityProvider,
+    );
+    if(quantityToAllow >1){
+      quantityOfMovementAndScannedToAllowInputScannedQuantity = quantityToAllow;
+    }
     WidgetsBinding.instance.addPostFrameCallback((_) {
       mInOutNotifier = ref.read(mInOutProvider.notifier);
       mInOutNotifier.setParameters(widget.type);
@@ -1412,6 +1420,8 @@ class _MInOutView extends ConsumerWidget {
             CustomFilledButton(
               onPressed: () {
                 mInOutNotifier.removeBarcode(barcode: barcode, isOver: true,context: context);
+                Future.delayed(const Duration(milliseconds: 500), () {
+                });
                 Navigator.of(context).pop();
               },
               label: 'Si',
@@ -1506,7 +1516,6 @@ class _ScanView extends ConsumerWidget {
 
   Widget _buildActionFilterList(WidgetRef ref,MInOutNotifier mInOutNotifier) {
     final adjustScanned = ref.watch(adjustScannedQtyProvider);
-    int qty = quantityOfMovementAndScannedToAllowInputScannedQuantity ;
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
@@ -1540,6 +1549,9 @@ class _ScanView extends ConsumerWidget {
                   showDialog(
                     context: ref.context,
                     builder: (BuildContext context) {
+                      final qty = ref.read(
+                        quantityOfMovementAndScannedToAllowInputScannedQuantityProvider,
+                      );
                       return AlertDialog(
                         title: const Text('Ajustar Cantidad'),
                         content: SingleChildScrollView(
@@ -1579,13 +1591,16 @@ class _ScanView extends ConsumerWidget {
                         final selectedAction =
                         ref.watch(defaultActionWhenUPCIsScannedProvider);
 
+                        final qty = ref.watch(
+                          quantityOfMovementAndScannedToAllowInputScannedQuantityProvider,
+                        );
+
                         return AlertDialog(
                           title: const Text('AJUSTES'),
                           content: SingleChildScrollView(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-
                                 // 🔽 Texto explicativo para la acción por defecto
                                 const Text(
                                   'Cuando se escanea un UPC existente, '
@@ -1596,10 +1611,50 @@ class _ScanView extends ConsumerWidget {
                                 verticalSegmentedButtons(
                                   selected: selectedAction,
                                   onSelected: (value) {
-                                    ref.read(defaultActionWhenUPCIsScannedProvider.notifier).state = value;
+                                    ref
+                                        .read(defaultActionWhenUPCIsScannedProvider.notifier)
+                                        .state = value;
                                   },
                                 ),
 
+                                const SizedBox(height: 16),
+
+                                // 🔽 NUEVO BLOQUE: configuración de cantidad
+                                const Text(
+                                  'Cantidad mínima de movimientos/escaneos\n'
+                                      'para permitir ingresar cantidad escaneada:',
+                                  style: TextStyle(fontWeight: FontWeight.bold),
+                                ),
+                                const SizedBox(height: 8),
+                                TextFormField(
+                                  initialValue: qty.toString(),
+                                  keyboardType: TextInputType.number,
+                                  decoration: const InputDecoration(
+                                    border: OutlineInputBorder(),
+                                    isDense: true,
+                                    contentPadding: EdgeInsets.symmetric(
+                                      horizontal: 8,
+                                      vertical: 8,
+                                    ),
+                                    labelText: 'Cantidad (ej: 3)',
+                                  ),
+                                  onChanged: (value) {
+                                    final parsed = int.tryParse(value);
+                                    if (parsed != null && parsed > 1) {
+                                      ref
+                                          .read(
+                                        quantityOfMovementAndScannedToAllowInputScannedQuantityProvider
+                                            .notifier,
+                                      )
+                                          .state = parsed;
+                                      // Guarda en GetStorage
+                                      GetStorage().write(KEY_QTY_ALLOW_INPUT, parsed);
+
+                                      print("Guardado -> $parsed");
+
+                                    }
+                                  },
+                                ),
                               ],
                             ),
                           ),
@@ -1614,6 +1669,7 @@ class _ScanView extends ConsumerWidget {
                         );
                       },
                     );
+
                   },
                 );
               },

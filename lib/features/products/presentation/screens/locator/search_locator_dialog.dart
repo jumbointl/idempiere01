@@ -8,7 +8,7 @@ import '../../../../../config/theme/app_theme.dart';
 import '../../../../shared/data/memory.dart';
 import '../../../../shared/data/messages.dart';
 import '../../providers/product_provider_common.dart';
-import '../movement/products_home_provider.dart';
+import '../movement/provider/products_home_provider.dart';
 
 class SearchLocatorDialog extends ConsumerStatefulWidget {
   String? title;

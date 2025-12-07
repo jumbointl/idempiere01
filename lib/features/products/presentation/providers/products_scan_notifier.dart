@@ -241,59 +241,59 @@ class ProductsScanNotifier  extends StateNotifier<List<IdempiereProduct>> implem
   }
 
   @override
-  Future<void> handleInputString(BuildContext context, WidgetRef ref, String data) async {
+  Future<void> handleInputString({required WidgetRef ref, required String inputData, required int actionScan}) async {
     int actionTypeInt = ref.read(actionScanProvider.notifier).state;
 
-    if (data.isNotEmpty) {
+    if (inputData.isNotEmpty) {
       switch(actionTypeInt){
         case Memory.ACTION_UPDATE_UPC:
-          addNewUPCCode(data);
+          addNewUPCCode(inputData);
           break;
         case Memory.ACTION_CALL_UPDATE_PRODUCT_UPC_PAGE:
-          addBarcodeByUPCOrSKUForSearch(data);
+          addBarcodeByUPCOrSKUForSearch(inputData);
           break;
         case Memory.ACTION_FIND_BY_UPC_SKU:
-          addBarcodeByUPCOrSKUForSearch(data);
+          addBarcodeByUPCOrSKUForSearch(inputData);
           break;
         case Memory.ACTION_FIND_BY_UPC_SKU_FOR_STORE_ON_HAND:
-          addBarcodeByUPCOrSKUForStoreOnHande(data);
+          addBarcodeByUPCOrSKUForStoreOnHande(inputData);
           break;
         case Memory.ACTION_GET_LOCATOR_TO_VALUE:
           Memory.awesomeDialog?.dismiss();
-          findLocatorToByValue(ref,data);
+          findLocatorToByValue(ref,inputData);
           break;
         case Memory.ACTION_GET_LOCATOR_FROM_VALUE:
           Memory.awesomeDialog?.dismiss();
-          findLocatorFromByValue(ref,data);
+          findLocatorFromByValue(ref,inputData);
           break;
         case Memory.ACTION_FIND_MOVEMENT_BY_ID:
-          addBarcodeToSearchMovement(data);
+          addBarcodeToSearchMovement(inputData);
           break;
         case Memory.ACTION_GO_TO_STORAGE_ON_HAND_PAGE_WITH_UPC:
-          MemoryProducts.movementAndLines.nextProductIdUPC = data;
+          MemoryProducts.movementAndLines.nextProductIdUPC = inputData;
           MovementAndLines movementAndLines = MovementAndLines();
           movementAndLines.cloneMovementAndLines(MemoryProducts.movementAndLines);
           await GetStorage().write(Memory.KEY_MOVEMENT_AND_LINES, movementAndLines);
           int? movementId = movementAndLines.id ?? -1;
           if(movementId <= 0){
-            if(context.mounted) showErrorMessage(context, ref, Messages.ERROR_MOVEMENT_NOT_FOUND);
+            if(ref.context.mounted) showErrorMessage(ref.context, ref, Messages.ERROR_MOVEMENT_NOT_FOUND);
             return;
           }
-          movementAndLines.nextProductIdUPC = data;
+          movementAndLines.nextProductIdUPC = inputData;
           ref.read(actionScanProvider.notifier).update((state) => Memory.ACTION_FIND_BY_UPC_SKU_FOR_STORE_ON_HAND);
-          if(context.mounted) {
+          if(ref.context.mounted) {
             ref.context.go(
-                '${AppRouter.PAGE_PRODUCT_STORE_ON_HAND_FOR_LINE}/$data',
+                '${AppRouter.PAGE_PRODUCT_STORE_ON_HAND_FOR_LINE}/$inputData',
                 extra: movementAndLines);
           }
           break;
         default:
-          addBarcodeByUPCOrSKUForSearch(data);
+          addBarcodeByUPCOrSKUForSearch(inputData);
           break;
 
       }
 
-      data = "";
+      inputData = "";
     }
   }
 

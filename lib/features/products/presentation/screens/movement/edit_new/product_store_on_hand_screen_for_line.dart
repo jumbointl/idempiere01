@@ -20,10 +20,11 @@ import '../../../../../../config/theme/app_theme.dart';
 import '../../../../common/app_initializer_overlay.dart';
 import '../../../../common/input_dialog.dart';
 import '../../../../common/messages_dialog.dart';
+import '../../../../common/scan_button_by_action_fixed_short.dart';
 import '../../../providers/common_provider.dart';
 import '../../../providers/products_scan_notifier_for_line.dart';
 import 'product_detail_card_for_line.dart';
-import '../products_home_provider.dart';
+import '../provider/products_home_provider.dart';
 import '../../../../../auth/domain/entities/warehouse.dart';
 import '../../../../../auth/presentation/providers/auth_provider.dart';
 import '../../../../../shared/data/memory.dart';
@@ -98,9 +99,10 @@ class ProductStoreOnHandScreenForLine extends ConsumerStatefulWidget implements 
   void newMovementButtonPressed(BuildContext context, WidgetRef ref, String s) {}
 
   @override
-  Future<void> handleInputString(BuildContext context, WidgetRef ref, String inputData) async {
-
-    productsNotifier.handleInputString(context, ref, inputData);
+  Future<void> handleInputString({required WidgetRef ref,required  String inputData,required int actionScan}) async {
+    print('handleInputString result scan: $inputData');
+    productsNotifier.handleInputString(ref: ref, inputData: inputData,
+        actionScan: actionTypeInt);
   }
 
 
@@ -111,15 +113,12 @@ class ProductStoreOnHandScreenForLineState
   Color colorBackgroundHasMovementId = Colors.yellow[200]!;
   Color colorBackgroundNoMovementId = Colors.white;
 
-  //int sameLocator = 0;
-  final ScrollController _scrollController = ScrollController();
-  late var scrollToTop  ;
   double goToPosition =0.0;
   late var isDialogShowed;
-  late var usePhoneCamera;
   late var isScanning;
   late var showResultCard;
   int movementId =-1;
+
   MovementAndLines get movementAndLines {
 
     if(widget.argument.isNotEmpty && widget.argument!='-1') {
@@ -137,6 +136,11 @@ class ProductStoreOnHandScreenForLineState
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       await setDefaultValues(context, ref);
+      print('----------product Id ${widget.productId}');
+      if(widget.productId.isNotEmpty && widget.productId!='-1'){
+        widget.handleInputString(ref: ref, inputData: widget.productId,
+            actionScan: widget.actionTypeInt);
+      }
 
     });
 
@@ -184,12 +188,10 @@ class ProductStoreOnHandScreenForLineState
     Warehouse? userWarehouse = ref.read(authProvider).selectedWarehouse;
     int userWarehouseId = userWarehouse?.id ?? 0;
     String userWarehouseName = userWarehouse?.name ?? '';
-    usePhoneCamera = ref.watch(usePhoneCameraToScanForLineProvider);
-    scrollToTop = ref.watch(scrollToUpProvider);
     String title = movementAndLines.documentNo ?? '';
     TextStyle textStyle = TextStyle(fontSize: themeFontSizeLarge);
     if(title.length>20) textStyle = TextStyle(fontSize: themeFontSizeSmall);
-
+    final showScan = ref.watch(showScanFixedButtonProvider(widget.actionTypeInt));
 
     return Scaffold(
 
@@ -211,60 +213,20 @@ class ProductStoreOnHandScreenForLineState
             subtitle: Text('${Messages.LINES} : $lines'),
         ),
         actions: [
+          if(showScan) ScanButtonByActionFixedShort(
+            actionTypeInt: widget.actionTypeInt,
+            onOk: widget.handleInputString,),
           IconButton(
-            icon: Icon(usePhoneCamera ? Icons.barcode_reader : Icons.camera),
-            onPressed: () {
-              // 🧠 Riverpod se encarga del rebuild, sin setState
-              print('usePhoneCamera: $usePhoneCamera');
-              ref
-                  .read(usePhoneCameraToScanForLineProvider.notifier)
-                  .state = !usePhoneCamera;
-
-              ref.read(isDialogShowedProvider.notifier).state = false;
+            icon: const Icon(Icons.keyboard,color: Colors.purple),
+            onPressed: () => {
+              openInputDialogWithAction(ref: ref, history: false,
+                  onOk: widget.handleInputString, actionScan:  widget.actionTypeInt)
             },
           ),
 
         ],
 
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          double positionAdd=_scrollController.position.maxScrollExtent;
-          /*if(MediaQuery.of(context).orientation == Orientation.portrait){
-            positionAdd=250;
-          }*/
-          if(scrollToTop){
-            goToPosition -= positionAdd;
-            if(goToPosition <= 0){
-              goToPosition = 0;
-              ref.read(scrollToUpProvider.notifier).update((state) => !state);
-            }
-          } else {
-            goToPosition+= positionAdd;
-            if(goToPosition >= _scrollController.position.maxScrollExtent){
-              goToPosition = _scrollController.position.maxScrollExtent;
-              ref.read(scrollToUpProvider.notifier).update((state) => !state);
-            }
-          }
-
-          setState(() {});
-          _scrollController.animateTo(
-            goToPosition,
-            duration: const Duration(milliseconds: 500),
-            curve: Curves.easeInOut,
-          );
-        },
-        child: Icon(scrollToTop ? Icons.arrow_upward :Icons.arrow_downward),
-      ),
-      bottomNavigationBar: isDialogShowed ? Container(
-        height: Memory.BOTTOM_BAR_HEIGHT,
-        color: themeColorPrimary,
-        child: Center(
-          child: Text(Messages.DIALOG_SHOWED,
-            style: TextStyle(color: Colors.white,fontSize: themeFontSizeLarge
-                ,fontWeight: FontWeight.bold),),
-        ),
-      ) :bottomAppBar(context),
       body: SafeArea(
         child: PopScope(
           canPop: false,
@@ -275,13 +237,11 @@ class ProductStoreOnHandScreenForLineState
             popScopeAction(context, ref);
           },
           child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10,vertical: 20),
+            padding: const EdgeInsets.symmetric(horizontal: 10,vertical: 10),
             child: SingleChildScrollView(
               child: Column(
                 spacing: 10,
                 children: [
-                  getSearchBar(context,ref,Messages.FIND_PRODUCT_BY_UPC_SKU,
-                      widget.productsNotifier),
                   productAsync.when(
                     data: (products) {
                       WidgetsBinding.instance.addPostFrameCallback((_) async {
@@ -362,7 +322,7 @@ class ProductStoreOnHandScreenForLineState
     int add =1 ;
 
     return ListView.separated(
-      controller: _scrollController,
+      physics: const NeverScrollableScrollPhysics(),
       shrinkWrap: true,
       itemCount: length+add,
       separatorBuilder: (context, index) => const SizedBox(height: 10),
@@ -394,106 +354,7 @@ class ProductStoreOnHandScreenForLineState
     );
   }
 
-  Future<void> getBarCode(BuildContext context, bool history) async{
-    TextEditingController controller = TextEditingController();
-    if(history){
-      String lastSearch = Memory.lastSearch;
-      if(lastSearch.isEmpty){
-        controller.text = Messages.NO_RECORDS_FOUND;
-      } else {
-        controller.text = lastSearch;
-      }
 
-    }
-    AwesomeDialog(
-        context: context,
-        headerAnimationLoop: false,
-        dialogType: DialogType.noHeader,
-        body: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 40),
-          child: Center(
-            child: Column(
-              spacing: 10,
-              children: [
-                Text(Messages.FIND_PRODUCT_BY_UPC_SKU),
-                TextField(
-                  controller: controller,
-                  style: const TextStyle(fontStyle: FontStyle.italic),
-                  keyboardType: TextInputType.text,
-                ),
-              ],
-            ),
-          ),
-        ),
-        title: Messages.FIND_PRODUCT_BY_UPC_SKU,
-        desc: Messages.FIND_PRODUCT_BY_UPC_SKU,
-        btnCancelText: Messages.CANCEL,
-        btnOkText: Messages.OK,
-        btnOkOnPress: () async {
-          isDialogShowed = false;
-          setState(() {});
-          await Future.delayed(Duration(milliseconds: 100));
-
-          final result = controller.text;
-          if(result==''){
-            AwesomeDialog(
-              context: context,
-              animType: AnimType.scale,
-              dialogType: DialogType.error,
-              body: Center(child: Text(
-                Messages.ERROR_UPC_EMPTY,
-                style: TextStyle(fontStyle: FontStyle.italic),
-              ),), // correct here
-              title: Messages.ERROR_UPC_EMPTY,
-              desc:   '',
-              autoHide: const Duration(seconds: 3),
-              btnOkOnPress: () async {
-              },
-              btnOkColor: Colors.amber,
-              btnCancelText: Messages.CANCEL,
-              btnOkText: Messages.OK,
-            ).show();
-            return;
-          }
-          widget.productsNotifier.addBarcodeByUPCOrSKUForSearch(result);
-        },
-        btnCancelOnPress: () async {
-          isDialogShowed = false;
-          setState(() {});
-          await Future.delayed(Duration(milliseconds: 100));
-          return ;
-        }
-    ).show();
-
-  }
-
-  BottomAppBar bottomAppBar(BuildContext context) {
-
-    return BottomAppBar(
-        height: Memory.BOTTOM_BAR_HEIGHT,
-        color: themeColorPrimary ,
-        child: usePhoneCamera ? buttonScanWithPhone(context, ref,widget.productsNotifier)
-            : ScanButtonByActionFixed(
-          processor: widget,
-          actionTypeInt: widget.actionTypeInt,)
-
-    );
-
-
-  }
-
-  Widget getProductDetails(List<IdempiereProduct> products, double width) {
-
-    return SliverList.separated(
-        separatorBuilder: (context, index) => SizedBox(height: 5,),
-        itemCount: products.length,
-        itemBuilder: (context, index) => ProductDetailCardForLine(
-            productsNotifier: widget.productsNotifier, product: products[index]));
-
-
-
-
-  }
 
   void popScopeAction(BuildContext context, WidgetRef ref) {
     ref.read(productsHomeCurrentIndexProvider.notifier).state =

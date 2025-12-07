@@ -68,11 +68,11 @@ class PrinterNotifier extends StateNotifier<PrinterConnectionState> {
   void setPrintType(PrinterType type) {
     state = state.copyWith(printType: type);
   }
-  void setServerIp(String ip) {
-    state = state.copyWith(serverIp: ip);
+  void setServerIp(String serverIp) {
+    state = state.copyWith(serverIp: serverIp);
   }
-  void setServerPort(String port) {
-    state = state.copyWith(serverPort: port);
+  void setServerPort(String serverPort) {
+    state = state.copyWith(serverPort: serverPort);
   }
 
 

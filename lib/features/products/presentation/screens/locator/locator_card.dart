@@ -6,7 +6,7 @@ import 'package:monalisa_app_001/features/products/presentation/providers/persit
 import '../../../../../config/theme/app_theme.dart';
 import '../../providers/locator_provider_for_Line.dart';
 import '../../providers/product_provider_common.dart';
-import '../movement/products_home_provider.dart';
+import '../movement/provider/products_home_provider.dart';
 import '../../../../shared/data/memory.dart';
 import '../../../../shared/data/messages.dart';
 import '../../../domain/idempiere/idempiere_locator.dart';

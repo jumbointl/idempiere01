@@ -135,9 +135,6 @@ final findProductsStoreOnHandProvider = FutureProvider.autoDispose<List<Idempier
   try {
     String url = "/api/v1/models/m_storageonhand?\$expand=M_Locator_ID&\$IsActive=true"
         "&\$filter=QtyOnHand%20neq%200%20AND%20M_Product_ID%20eq%20$productId";
-    if(MemoryProducts.movementAndLines.hasLastLocatorFrom){
-      url = '$url%20AND%20M_Locator_ID%20eq%20${MemoryProducts.movementAndLines.lastLocatorFrom!.id!}';
-    }
     print(url);
     final response = await dio.get(url);
     print(response.statusCode);

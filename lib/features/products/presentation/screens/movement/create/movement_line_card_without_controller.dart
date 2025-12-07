@@ -6,7 +6,7 @@ import 'package:monalisa_app_001/config/config.dart';
 import 'package:monalisa_app_001/features/products/domain/idempiere/idempiere_movement_line.dart';
 import 'package:monalisa_app_001/features/shared/data/messages.dart';
 
-import '../../../../shared/data/memory.dart';
+import '../../../../../shared/data/memory.dart';
 
 class MovementLineCardWithoutController extends ConsumerStatefulWidget {
   final double radius;

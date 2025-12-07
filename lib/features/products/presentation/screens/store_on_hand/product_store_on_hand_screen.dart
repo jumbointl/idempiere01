@@ -16,6 +16,8 @@ import '../../../../../config/router/app_router.dart';
 import '../../../../../config/theme/app_theme.dart';
 import '../../../../home/presentation/screens/home_screen.dart';
 import '../../../common/input_dialog.dart';
+import '../../../common/scan_button_by_action_fixed_short.dart';
+import '../../providers/common_provider.dart';
 import '../../providers/persitent_provider.dart';
 import '../../../../auth/domain/entities/warehouse.dart';
 import '../../../../auth/presentation/providers/auth_provider.dart';
@@ -36,7 +38,7 @@ class ProductStoreOnHandScreen extends ConsumerStatefulWidget {
 
   int countScannedCamera =0;
   late ProductsScanNotifier productsNotifier ;
-  final int actionTypeInt = Memory.ACTION_FIND_BY_UPC_SKU_FOR_STORE_ON_HAND;
+  final int actionScanType = Memory.ACTION_FIND_BY_UPC_SKU_FOR_STORE_ON_HAND;
   late var allowedLocatorId;
   final int pageIndex = Memory.PAGE_INDEX_STORE_ON_HAND;
   String? productId;
@@ -61,12 +63,14 @@ class ProductStoreOnHandScreenState extends ConsumerState<ProductStoreOnHandScre
   double goToPosition =0.0;
   late var isDialogShowed;
   late AsyncValue productAsync ;
-  late AsyncValue productsStoredAsync;
+  //late AsyncValue productsStoredAsync;
   late var resultOfSameWarehouse;
   late var isScanning;
 
   double? width;
   Warehouse? userWarehouse;
+
+   String productUPC ='-1';
   void popScopeAction(BuildContext context, WidgetRef ref) async {
     print('popScopeAction----------------------------');
     ref.invalidate(homeScreenTitleProvider);
@@ -78,7 +82,6 @@ class ProductStoreOnHandScreenState extends ConsumerState<ProductStoreOnHandScre
 
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       //ref.read(isScanningProvider.notifier).update((state) => false);
-      print('-------widget productId ${widget.productId}');
       if(widget.productId!=null && widget.productId!.isNotEmpty && widget.productId!='-1'){
         print('-------widget productId start search ${widget.productId}');
         widget.productsNotifier.addBarcodeByUPCOrSKUForStoreOnHande(widget.productId!);
@@ -88,33 +91,20 @@ class ProductStoreOnHandScreenState extends ConsumerState<ProductStoreOnHandScre
     });
     super.initState();
   }
-  /*void _safeGoHome(BuildContext context) {
-    // Cerrar diálogos si hubiera alguno abierto
-    Navigator.of(context, rootNavigator: true).popUntil((r) => r.isFirst);
-
-    // Navegar fuera del ciclo actual (evita deadlocks en Android viejos)
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (context.mounted) {
-        context.go(AppRouter.PAGE_HOME);
-      }
-    });
-  }*/
   @override
   Widget build(BuildContext context){
     ref.invalidate(persistentLocatorToProvider);
     isDialogShowed = ref.watch(isDialogShowedProvider);
     isScanning = ref.watch(isScanningProvider);
     productAsync = ref.watch(findProductForPutAwayMovementProvider);
-    productsStoredAsync = ref.watch(findStoreOnHandForPutAwayMovementProvider);
     widget.productsNotifier = ref.watch(scanHandleNotifierProvider.notifier);
     width = MediaQuery.of(context).size.width - 30;
     resultOfSameWarehouse = ref.watch(resultOfSameWarehouseProvider);
     userWarehouse = ref.read(authProvider).selectedWarehouse;
 
 
-    final usePhoneCamera = ref.watch(usePhoneCameraToScanProvider);
     scrollToTop = ref.watch(scrollToUpProvider);
-
+    final showScan = ref.watch(showScanFixedButtonProvider(widget.actionScanType));
 
 
     return Scaffold(
@@ -134,52 +124,20 @@ class ProductStoreOnHandScreenState extends ConsumerState<ProductStoreOnHandScre
 
         title: Text(Messages.PRODUCT),
           actions: [
-              IconButton(
-              icon: Icon(usePhoneCamera ? Icons.barcode_reader : Icons.camera),
-              onPressed: () {
-                // 🧠 Riverpod se encarga del rebuild, sin setState
-                ref.read(usePhoneCameraToScanProvider.notifier).state = !usePhoneCamera;
-                ref.read(isDialogShowedProvider.notifier).state = false;
+            if(showScan) ScanButtonByActionFixedShort(
+              actionTypeInt: widget.actionScanType,
+              onOk: widget.productsNotifier.handleInputString,),
+            IconButton(
+              icon: const Icon(Icons.keyboard,color: Colors.purple),
+              onPressed: () => {
+                openInputDialogWithAction(ref: ref, history: false,
+                    onOk: widget.productsNotifier.handleInputString,
+                    actionScan:  widget.actionScanType)
               },
             ),
         ],
 
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          double positionAdd=_scrollController.position.maxScrollExtent;
-          if(scrollToTop){
-            goToPosition -= positionAdd;
-            if(goToPosition <= 0){
-              goToPosition = 0;
-              ref.read(scrollToUpProvider.notifier).update((state) => !state);
-            }
-          } else {
-            goToPosition+= positionAdd;
-            if(goToPosition >= _scrollController.position.maxScrollExtent){
-              goToPosition = _scrollController.position.maxScrollExtent;
-              ref.read(scrollToUpProvider.notifier).update((state) => !state);
-            }
-          }
-
-          setState(() {});
-          _scrollController.animateTo(
-            goToPosition,
-            duration: const Duration(milliseconds: 500),
-            curve: Curves.easeInOut,
-          );
-        },
-        child: Icon(scrollToTop ? Icons.arrow_upward :Icons.arrow_downward),
-      ),
-      bottomNavigationBar: isDialogShowed ? Container(
-        height: Memory.BOTTOM_BAR_HEIGHT,
-        color: themeColorPrimary,
-        child: Center(
-          child: Text(Messages.DIALOG_SHOWED,
-            style: TextStyle(color: Colors.white,fontSize: themeFontSizeLarge
-                ,fontWeight: FontWeight.bold),),
-        ),
-      ) :getScanButton(context),
       body: SafeArea(
         child: PopScope(
           canPop: false, // el back físico no hace pop automático
@@ -192,13 +150,13 @@ class ProductStoreOnHandScreenState extends ConsumerState<ProductStoreOnHandScre
 
           },
           child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10,vertical: 20),
+            padding: const EdgeInsets.symmetric(horizontal: 10,vertical: 10),
             child: SingleChildScrollView(
               child: Column(
                 spacing: 10,
                 children: [
-                  getSearchBar(context,ref,Messages.FIND_PRODUCT_BY_UPC_SKU,
-                      widget.productsNotifier),
+                  /*getSearchBar(context,ref,Messages.FIND_PRODUCT_BY_UPC_SKU,widget.actionScanType,
+                      widget.productsNotifier.handleInputString),*/
                   getDataContainer(context),
 
               
@@ -349,7 +307,7 @@ class ProductStoreOnHandScreenState extends ConsumerState<ProductStoreOnHandScre
 
   }
 
-  BottomAppBar getScanButton(BuildContext context) {
+  /*BottomAppBar getScanButton(BuildContext context) {
       return BottomAppBar(
           height: Memory.BOTTOM_BAR_HEIGHT,
           color: themeColorPrimary ,
@@ -357,13 +315,13 @@ class ProductStoreOnHandScreenState extends ConsumerState<ProductStoreOnHandScre
           buttonScanWithPhone(context, ref) :
           ScanButtonByAction(processor: widget.productsNotifier,
               actionTypeInt: Memory.ACTION_FIND_BY_UPC_SKU_FOR_STORE_ON_HAND,)
-          /*ScanProductBarcodeButton(
+          *//*ScanProductBarcodeButton(
              notifier: widget.productsNotifier,
-              actionTypeInt: widget.actionTypeInt,pageIndex: widget.pageIndex)*/
+              actionTypeInt: widget.actionTypeInt,pageIndex: widget.pageIndex)*//*
       );
 
 
-  }
+  }*/
 
   Widget getProductDetails(List<IdempiereProduct> products, double width) {
 
@@ -392,6 +350,7 @@ class ProductStoreOnHandScreenState extends ConsumerState<ProductStoreOnHandScre
            int userWarehouseId = userWarehouse?.id ?? 0;
            String userWarehouseName = userWarehouse?.name ?? '';
            double quantity = 0;
+
            for (var data in result.sortedStorageOnHande) {
              int warehouseID = data.mLocatorID?.mWarehouseID?.id ?? 0;
 
@@ -401,7 +360,7 @@ class ProductStoreOnHandScreenState extends ConsumerState<ProductStoreOnHandScre
            }
 
            String aux = Memory.numberFormatter0Digit.format(quantity);
-           resultOfSameWarehouse.update((state) =>  [aux,userWarehouseName]);
+           ref.read(resultOfSameWarehouseProvider.notifier).update((state) =>  [aux,userWarehouseName]);
 
          });
          MemoryProducts.productWithStock = result;
@@ -419,7 +378,6 @@ class ProductStoreOnHandScreenState extends ConsumerState<ProductStoreOnHandScre
 
 
   }
-
 
 
 

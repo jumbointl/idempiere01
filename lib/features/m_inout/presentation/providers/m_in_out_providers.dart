@@ -15,7 +15,8 @@ import '../../domain/entities/line_confirm.dart';
 import '../../infrastructure/repositories/m_in_out_repository_impl.dart';
 
 
-const int quantityOfMovementAndScannedToAllowInputScannedQuantity = 3;
+int quantityOfMovementAndScannedToAllowInputScannedQuantity = 3;
+const String KEY_QTY_ALLOW_INPUT = 'qtyOfMovementAndScannedToAllowInputScannedQuantity';
 final adjustScannedQtyProvider = StateProvider<bool>((ref) => true);
 
 final mInOutProvider =

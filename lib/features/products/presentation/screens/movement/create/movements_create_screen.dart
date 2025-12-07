@@ -5,8 +5,8 @@ import 'package:monalisa_app_001/config/config.dart';
 import 'package:monalisa_app_001/features/products/domain/idempiere/movement_and_lines.dart';
 import 'package:monalisa_app_001/features/products/domain/idempiere/put_away_movement.dart';
 import 'package:monalisa_app_001/features/products/presentation/screens/movement/edit_new/movement_card_without_controller.dart';
-import 'package:monalisa_app_001/features/products/presentation/screens/movement/movement_line_card_without_controller.dart';
-import 'package:monalisa_app_001/features/products/presentation/screens/movement/products_home_provider.dart';
+import 'package:monalisa_app_001/features/products/presentation/screens/movement/create/movement_line_card_without_controller.dart';
+import 'package:monalisa_app_001/features/products/presentation/screens/movement/provider/products_home_provider.dart';
 import 'package:monalisa_app_001/features/products/presentation/screens/movement/provider/new_movement_provider.dart';
 
 import '../../../../domain/idempiere/idempiere_movement.dart';
@@ -16,8 +16,8 @@ import '../../../../../shared/data/messages.dart';
 import '../../../providers/product_provider_common.dart';
 import '../../../providers/products_scan_notifier.dart';
 import '../../store_on_hand/memory_products.dart';
-import '../movement_line_card_for_create.dart';
-import '../no_data_created_put_away_movement_card.dart';
+import 'movement_line_card_for_create.dart';
+import 'no_data_created_put_away_movement_card.dart';
 
 
 class MovementsCreateScreen extends ConsumerStatefulWidget {

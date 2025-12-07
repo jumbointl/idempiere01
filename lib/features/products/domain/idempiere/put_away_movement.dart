@@ -61,6 +61,8 @@ class PutAwayMovement {
     if(!hasMovementLineToCreate) return ERROR_MOVEMENT_LINE;
     if(movementLineToCreate!.id !=null && movementLineToCreate!.id!>0) return ERROR_MOVEMENT_LINE;
     if(!hasWarehouseFrom) return ERROR_WAREHOUSE_FROM;
+
+
     if(warehouseFrom == null || warehouseFrom!.aDOrgID == null ||
         warehouseFrom!.aDOrgID!.id == null || warehouseFrom!.aDOrgID!.id! <=0){
       return ERROR_ORG_WAREHOUSE_FROM;

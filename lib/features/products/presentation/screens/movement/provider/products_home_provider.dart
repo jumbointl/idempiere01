@@ -2,21 +2,19 @@ import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
 
-import '../../../../../config/http/dio_client.dart';
-import '../../../../auth/presentation/providers/auth_provider.dart';
-import '../../../domain/idempiere/idempiere_product.dart';
-import '../../../../shared/data/memory.dart';
-import '../../../../shared/data/messages.dart';
-import '../../../../shared/domain/entities/response_api.dart';
-import '../../../../shared/infrastructure/errors/custom_error.dart';
+import '../../../../../../config/http/dio_client.dart';
+import '../../../../../auth/presentation/providers/auth_provider.dart';
+import '../../../../domain/idempiere/idempiere_product.dart';
+import '../../../../../shared/data/memory.dart';
+import '../../../../../shared/data/messages.dart';
+import '../../../../../shared/domain/entities/response_api.dart';
+import '../../../../../shared/infrastructure/errors/custom_error.dart';
 
 
 
 final productsHomeCurrentIndexProvider = StateProvider<int>((ref) => 0);
 
-final movementsHomeCurrentIndexProvider = StateProvider<int>((ref) => 0);
 
-final productsHomeIsLoadingProvider = StateProvider<bool>((ref) => false);
 
 final productsHomeScannedCodeForSearchProvider = StateProvider.autoDispose<String?>((ref) {
   return '';

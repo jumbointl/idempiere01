@@ -104,13 +104,8 @@ class ProductDetailCardState extends ConsumerState<ProductDetailCard> {
               Text('UPC: ${widget.product.uPC ?? 'UPC--'}',style: textStyle,),
               Text('SKU: ${widget.product.sKU ?? 'SKU--'}',style: textStyle,),
               Text('M_SKU: ${widget.product.mOLIConfigurableSKU ?? 'M_SKU--'}',style: textStyle,),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(att,style: textStyle),
-                  const SizedBox(width: 8,),
-                  Text(category,style: textStyle),
-                ],)
+              Text(att,style: textStyle),
+              Text(category,style: textStyle),
 
             ],
           ),

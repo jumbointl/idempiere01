@@ -7,7 +7,7 @@ import 'package:go_router/go_router.dart';
 import 'package:monalisa_app_001/config/config.dart';
 
 import '../providers/product_provider_common.dart';
-import '../screens/movement/products_home_provider.dart';
+import '../screens/movement/provider/products_home_provider.dart';
 import '../../../shared/data/memory.dart';
 import '../../../shared/data/messages.dart';
 import '../providers/products_scan_notifier.dart';

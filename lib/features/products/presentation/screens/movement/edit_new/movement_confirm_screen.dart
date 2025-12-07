@@ -10,7 +10,7 @@ import 'package:monalisa_app_001/features/products/domain/idempiere/idempiere_lo
 import 'package:monalisa_app_001/features/products/domain/idempiere/idempiere_movement.dart';
 import 'package:monalisa_app_001/features/products/domain/idempiere/idempiere_warehouse.dart';
 import 'package:monalisa_app_001/features/products/domain/idempiere/movement_and_lines.dart';
-import 'package:monalisa_app_001/features/products/presentation/screens/movement/products_home_provider.dart';
+import 'package:monalisa_app_001/features/products/presentation/screens/movement/provider/products_home_provider.dart';
 
 
 import '../../../../../shared/data/memory.dart';

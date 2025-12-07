@@ -17,7 +17,7 @@ import '../../../../../../config/theme/app_theme.dart';
 import '../../../../../shared/data/memory.dart';
 import '../../../../../shared/data/messages.dart';
 import '../../../providers/product_provider_common.dart';
-import '../products_home_provider.dart';
+import '../provider/products_home_provider.dart';
 
 class NewMovementCardWithLocator extends ConsumerStatefulWidget {
   Color bgColor;

@@ -2,11 +2,12 @@
 import 'package:awesome_dialog/awesome_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_riverpod/legacy.dart';
 import 'package:go_router/go_router.dart';
 import 'package:monalisa_app_001/features/products/common/input_data_processor.dart';
+import 'package:monalisa_app_001/features/products/common/input_dialog.dart';
 import 'package:monalisa_app_001/features/products/common/scan_button_by_action.dart';
-import 'package:monalisa_app_001/features/products/presentation/providers/persitent_provider.dart';
+import 'package:monalisa_app_001/features/products/common/scan_button_by_action_fixed_short.dart';
+import 'package:monalisa_app_001/features/products/domain/idempiere/idempiere_organization.dart';
 import 'package:monalisa_app_001/features/products/presentation/providers/products_providers.dart';
 import 'package:simple_barcode_scanner/simple_barcode_scanner.dart';
 import 'package:slide_to_confirm/slide_to_confirm.dart';
@@ -24,7 +25,7 @@ import '../../../../domain/idempiere/put_away_movement.dart';
 import '../../../providers/common_provider.dart';
 import '../../../providers/locator_provider.dart';
 import '../../locator/search_locator_dialog.dart';
-import '../products_home_provider.dart';
+import '../provider/products_home_provider.dart';
 import '../provider/new_movement_provider.dart';
 class UnsortedStorageOnHandScreen extends ConsumerStatefulWidget implements InputDataProcessor{
 
@@ -52,8 +53,9 @@ class UnsortedStorageOnHandScreen extends ConsumerStatefulWidget implements Inpu
   ConsumerState<UnsortedStorageOnHandScreen> createState() =>UnsortedStorageOnHandScreenState();
 
   @override
-  Future<void> handleInputString(BuildContext context, WidgetRef ref, String inputData) async {
-     notifier.handleInputString(context, ref, inputData);
+  Future<void> handleInputString({required WidgetRef ref, required String inputData,
+    required int actionScan}) async {
+    notifier.handleInputString(ref:ref, inputData:inputData,actionScan:actionScan);
 
   }
   @override
@@ -119,52 +121,52 @@ class UnsortedStorageOnHandScreenState extends ConsumerState<UnsortedStorageOnHa
   double goToPosition =0.0;
   PutAwayMovement? putAwayMovement;
 
-  late var documentColor;
-
 
   @override
   void initState() {
 
 
     WidgetsBinding.instance.addPostFrameCallback((_){
-      int id = locatorFrom?.id ?? -1;
-      ref.read(actualLocatorFromProvider.notifier).state = id ;
+      final id = locatorFrom?.id ?? -1;
+      ref.read(actualLocatorFromProvider.notifier).state = id;
       ref.read(actualWarehouseToProvider.notifier).state = 0;
+
+
     });
     super.initState();
+    putAwayMovement = PutAwayMovement();
+    putAwayMovement!.setUser(Memory.sqlUsersData);
+    putAwayMovement!.movementLineToCreate!.mProductID = widget.storage.mProductID;
+    IdempiereOrganization org = widget.storage.mLocatorID!.aDOrgID!;
+    widget.storage.mLocatorID!.mWarehouseID!.aDOrgID = org;
+    putAwayMovement!.movementLineToCreate!.mLocatorID = widget.storage.mLocatorID;
+
+    locatorFrom = widget.storage.mLocatorID;
+
+    putAwayMovement!.movementToCreate!.locatorFromId = locatorFrom.id;
+    putAwayMovement!.movementToCreate!.mWarehouseID = locatorFrom.mWarehouseID;
+
+
+
 
   }
 
   @override
   Widget build(BuildContext context) {
 
-    putAwayMovement = PutAwayMovement();
-    putAwayMovement!.setUser(Memory.sqlUsersData);
-    putAwayMovement!.movementLineToCreate!.mProductID = widget.storage.mProductID;
-    putAwayMovement!.movementLineToCreate!.mLocatorID = widget.storage.mLocatorID;
-    documentColor = ref.watch(colorMovementDocumentTypeProvider);
 
-    locatorFrom = widget.storage.mLocatorID;
-    putAwayMovement!.movementToCreate!.locatorFromId = locatorFrom.id;
-    putAwayMovement!.movementToCreate!.mWarehouseID = locatorFrom.mWarehouseID;
-    if(putAwayMovement!.movementToCreate!.mWarehouseID!=null) {
-      putAwayMovement!.movementToCreate!.mWarehouseID!.aDOrgID = widget.storage.mLocatorID?.aDOrgID;
-    }
+
     widget.notifier = ref.read(scanHandleNotifierProvider.notifier);
-
-
     locatorFrom = widget.storage.mLocatorID;
-    locatorFrom?.value ??= locatorFrom?.identifier;
+    locatorTo = ref.watch(selectedLocatorToProvider.notifier);
     findLocatorTo = ref.watch(findLocatorToProvider);
-     actionScan = ref.watch(actionScanProvider);
-     isScanning = ref.watch(isScanningLocatorToProvider);
-     isDialogShowed = ref.watch(isDialogShowedProvider);
-     widget.width = MediaQuery.of(context).size.width;
-     quantityToMove = ref.watch(quantityToMoveProvider);
-     usePhoneCamera = ref.watch(usePhoneCameraToScanProvider);
-     scrollToTop = ref.watch(scrollToUpProvider);
-
-
+    actionScan = ref.watch(actionScanProvider.notifier);
+    isScanning = ref.watch(isScanningLocatorToProvider.notifier);
+    isDialogShowed = ref.watch(isDialogShowedProvider.notifier);
+    widget.width = MediaQuery.of(context).size.width;
+    quantityToMove = ref.watch(quantityToMoveProvider);
+    usePhoneCamera = ref.watch(usePhoneCameraToScanProvider.notifier);
+    scrollToTop = ref.watch(scrollToUpProvider.notifier);
 
 
     widthLarge = widget.width/3*2;
@@ -175,193 +177,169 @@ class UnsortedStorageOnHandScreenState extends ConsumerState<UnsortedStorageOnHa
 
     storageList = unsortedStorageList
         .where((element) =>
-            element.mLocatorID?.mWarehouseID?.id ==
-            widget.storage.mLocatorID?.mWarehouseID?.id &&
-            element.mProductID?.id == widget.storage.mProductID?.id &&
-            element.mLocatorID?.id == widget.storage.mLocatorID?.id )
+    element.mLocatorID?.mWarehouseID?.id ==
+        widget.storage.mLocatorID?.mWarehouseID?.id &&
+        element.mProductID?.id == widget.storage.mProductID?.id &&
+        element.mLocatorID?.id == widget.storage.mLocatorID?.id )
         .toList();
     String title ='${Messages.MOVEMENT} : ${Messages.CREATE}';
     if (isCardsSelected.isEmpty && storageList.isNotEmpty) {
       isCardsSelected = List<bool>.filled(storageList.length, false);
     }
+    final canShowBottomBar = ref.watch(canShowUnsortedBottomBarProvider);
+    final showScan = ref.watch(showScanFixedButtonProvider(widget.actionScanType));
     return Scaffold(
-      appBar: AppBar(
+        appBar: AppBar(
           backgroundColor: Colors.white,
-        leading:IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () =>
-          {
-            popScopeAction(context,ref),
+          leading:IconButton(
+              icon: const Icon(Icons.arrow_back),
+              onPressed: () =>
+              {
+                popScopeAction(context,ref),
 
-          }
-        ),
-        actions: [
-          IconButton(
-            icon: Icon(usePhoneCamera ? Icons.barcode_reader : Icons.camera),
-            onPressed: () {
-              // 🧠 Riverpod se encarga del rebuild, sin setState
-              ref
-                  .read(usePhoneCameraToScanProvider.notifier)
-                  .state = !usePhoneCamera;
-
-              ref.read(isDialogShowedProvider.notifier).state = false;
-            },
+              }
           ),
-
-        ],
-        title: Text(title),
-
-
-      ),
-        bottomNavigationBar: isDialogShowed ? Container(
-          height: Memory.BOTTOM_BAR_HEIGHT,
-          color: themeColorPrimary,
-          child: Center(
-            child: Text(Messages.DIALOG_SHOWED,
-              style: TextStyle(color: Colors.white,fontSize: themeFontSizeLarge
-                  ,fontWeight: FontWeight.bold),),
-          ),) :bottomAppBar(context, ref),
-        floatingActionButton: FloatingActionButton(
-          onPressed: () {
-            double positionAdd=_scrollController.position.maxScrollExtent;
-            if(scrollToTop){
-              goToPosition -= positionAdd;
-              if(goToPosition <= 0){
-                goToPosition = 0;
-                ref.read(scrollToUpProvider.notifier).update((state) => !state);
-              }
-            } else {
-              goToPosition+= positionAdd;
-              if(goToPosition >= _scrollController.position.maxScrollExtent){
-                goToPosition = _scrollController.position.maxScrollExtent;
-                ref.read(scrollToUpProvider.notifier).update((state) => !state);
-              }
-            }
-
-            setState(() {});
-            _scrollController.animateTo(
-              goToPosition,
-              duration: const Duration(milliseconds: 500),
-              curve: Curves.easeInOut,
-            );
-          },
-          child: Icon(scrollToTop ? Icons.arrow_upward :Icons.arrow_downward),
-        ),
-      body: SafeArea(
-        child: PopScope(
-          canPop: false,
-          onPopInvokedWithResult: (bool didPop, Object? result) async {
-            if (didPop) {
-
-              return;
-            }
-            popScopeAction(context,ref);
-
-          },
-          child: Container(
-            padding: EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(10),
+          actions: [
+            if(showScan) ScanButtonByActionFixedShort(actionTypeInt: widget.actionScanType,
+              onOk: widget.handleInputString,),
+            if(showScan) IconButton(
+              icon: const Icon(Icons.keyboard,color: Colors.purple),
+              onPressed: () => {
+                openInputDialogWithAction(ref: ref, history: false, actionScan: widget.actionScanType,
+                    onOk: widget.handleInputString)
+              },
             ),
-            child: CustomScrollView(
-                controller: _scrollController,
-                slivers: [
-                  SliverPadding(
-                      padding: EdgeInsets.only(top: 5),
-                      sliver: SliverToBoxAdapter(child: getMovementCard(context, ref))),
-                  SliverPadding(
-                    padding: EdgeInsets.only(top: 5),
-                    sliver: SliverToBoxAdapter(
-                      child: Container(
-                        padding: EdgeInsets.all(10),
-                        decoration: BoxDecoration(
-                          color: Colors.green[200],
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: Text(widget.storage.mProductID?.identifier ?? '--',style: TextStyle(
-                          fontSize: fontSizeMedium,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.black,),),
-                      ),
-                    ),
-                  ),
 
-                  SliverPadding(
-                    padding: EdgeInsets.only(top: 5),
-                    sliver: SliverToBoxAdapter(
-                      child: Container(
-                        padding: EdgeInsets.all(10),
-                        decoration: BoxDecoration(
-                          color: Colors.grey[200],
-                          border: Border.all(
-                            color: Colors.black, // Specify the border color
-                          ),
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: Row(
-                          spacing: 5,
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-
-                            Expanded(
-                              flex: 1, // Use widthSmall for this column's width
-                              child: Column(
-                                spacing: 5,
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-
-                                  Text(Messages.QUANTITY_SHORT,style: TextStyle(
-                                    fontSize: fontSizeMedium,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.black,),),
-                                ],
-                              ),
-                            ),
-                            Expanded(
-                              flex: 2, // Use widthLarge for this column's width
-                              child: Column(
-                                spacing: 5,
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-
-                                  Text(Memory.numberFormatter0Digit.format(quantityToMove),
-                                    style: TextStyle(
-                                      fontSize: fontSizeMedium,
-                                      fontWeight: FontWeight.bold,
-                                      color: Colors.purple,
-                                    ),),
-
-                                ],
-                              ),
-                            ),
-
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                  getStockList(context,ref),
+          ],
+          title: Text(title),
 
 
-              ]),
-          )
         ),
+        bottomNavigationBar: canShowBottomBar ? bottomAppBar(context, ref): null,
+
+        body: SafeArea(
+          child: PopScope(
+              canPop: false,
+              onPopInvokedWithResult: (bool didPop, Object? result) async {
+                if (didPop) {
+
+                  return;
+                }
+                popScopeAction(context,ref);
+
+              },
+              child: Container(
+                padding: EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: CustomScrollView(
+                    controller: _scrollController,
+                    slivers: [
+                      SliverToBoxAdapter(child: getMovementCard(context, ref)),
+                      SliverPadding(
+                        padding: EdgeInsets.only(top: 5),
+                        sliver: SliverToBoxAdapter(
+                          child: Container(
+                            padding: EdgeInsets.all(10),
+                            decoration: BoxDecoration(
+                              color: Colors.green[200],
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Text(widget.storage.mProductID?.identifier ?? '--',style: TextStyle(
+                              fontSize: fontSizeMedium,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.black,),),
+                          ),
+                        ),
+                      ),
+
+                      SliverPadding(
+                        padding: EdgeInsets.only(top: 5),
+                        sliver: SliverToBoxAdapter(
+                          child: Container(
+                            padding: EdgeInsets.all(10),
+                            decoration: BoxDecoration(
+                              color: Colors.grey[200],
+                              border: Border.all(
+                                color: Colors.black, // Specify the border color
+                              ),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Row(
+                              spacing: 5,
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+
+                                Expanded(
+                                  flex: 1, // Use widthSmall for this column's width
+                                  child: Column(
+                                    spacing: 5,
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+
+                                      Text(Messages.QUANTITY_SHORT,style: TextStyle(
+                                        fontSize: fontSizeMedium,
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.black,),),
+                                    ],
+                                  ),
+                                ),
+                                Expanded(
+                                  flex: 2, // Use widthLarge for this column's width
+                                  child: Column(
+                                    spacing: 5,
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+
+                                      Text(Memory.numberFormatter0Digit.format(quantityToMove),
+                                        style: TextStyle(
+                                          fontSize: fontSizeMedium,
+                                          fontWeight: FontWeight.bold,
+                                          color: Colors.purple,
+                                        ),),
+
+                                    ],
+                                  ),
+                                ),
+
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                      getStockList(context,ref),
+
+
+                    ]),
+              )
+          ),
         )
-      );
+    );
   }
 
   Widget bottomAppBar(BuildContext context, WidgetRef ref) {
     return BottomAppBar(
-      height: 130,
+      height: 70,
       color: themeColorPrimary,
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        spacing: 6,
-        children: [
-          getScanButton(context),
-          if(ref.read(quantityToMoveProvider.notifier).state>0)getConfirmationSliderButton(context, ref),
+      child: ConfirmationSlider(
+          height: 45,
+          backgroundColor: Colors.green[100]!,
+          backgroundColorEnd: Colors.green[800]!,
+          foregroundColor: Colors.green,
+          text: Messages.SLIDE_TO_CREATE,
+          textStyle: TextStyle(fontSize: themeFontSizeLarge, color: Colors.purple,fontWeight: FontWeight.bold),
+          onConfirmation: () {
+            print('----------------------------ConfirmationSlide');
+            if (putAwayMovement!=null && putAwayMovement!.movementLineToCreate!=null) {
+              putAwayMovement!.movementLineToCreate!.movementQty = ref.read(quantityToMoveProvider);
+              widget.notifier.prepareToCreatePutawayMovement(ref, putAwayMovement);
+            } else {
+              showErrorMessage(context, ref, Messages.MOVEMENT_ALREADY_CREATED);
 
-        ],
+            }
+          }
+
       ),
     );
   }
@@ -385,7 +363,7 @@ class UnsortedStorageOnHandScreenState extends ConsumerState<UnsortedStorageOnHa
         // Handle tap event here
         setState(() { // Use setState to trigger a rebuild when isSelected changes
           isCardsSelected = List<bool>.filled(storageList.length, false);
-           isCardsSelected[index] = !isCardsSelected[index]; // Update the corresponding index in isCardsSelected
+          isCardsSelected[index] = !isCardsSelected[index]; // Update the corresponding index in isCardsSelected
         });
         FocusScope.of(context).unfocus();
         _getQuantityToMoveDialog(context, ref, index);
@@ -442,7 +420,7 @@ class UnsortedStorageOnHandScreenState extends ConsumerState<UnsortedStorageOnHa
     );
   }
 
-  
+
   void showErrorMessage(BuildContext context, WidgetRef ref, String message) {
     if (!context.mounted) {
       Future.delayed(const Duration(seconds: 1));
@@ -796,14 +774,14 @@ class UnsortedStorageOnHandScreenState extends ConsumerState<UnsortedStorageOnHa
   }
 
   Widget getScanButton(BuildContext context) {
-      return usePhoneCamera ? buttonScanWithPhone(context, ref):
-      ScanButtonByAction(processor: widget,
-          actionTypeInt: widget.actionScanType);
+    return usePhoneCamera.state ? buttonScanWithPhone(context, ref):
+    ScanButtonByAction(processor: widget,
+        actionTypeInt: widget.actionScanType);
 
   }
   Widget buttonScanWithPhone(BuildContext context,WidgetRef ref) {
     int a = widget.actionScanType;
-    int b = actionScan;
+    int b = actionScan.state;
     String tip = '(Loc)';
     if(a!=b){
       tip ='(X)';
@@ -819,8 +797,8 @@ class UnsortedStorageOnHandScreenState extends ConsumerState<UnsortedStorageOnHa
       ),
       onPressed:  () async {
 
-        isScanning = true;
-          String? result= await SimpleBarcodeScanner.scanBarcode(
+        isScanning.state = true;
+        String? result= await SimpleBarcodeScanner.scanBarcode(
           context,
           barcodeAppBar: BarcodeAppBar(
             appBarTitle: Messages.SCANNING,
@@ -835,11 +813,11 @@ class UnsortedStorageOnHandScreenState extends ConsumerState<UnsortedStorageOnHa
 
         result = result?.trim();
         if(result!=null && result.isNotEmpty){
-          isScanning = true;
+          isScanning.state = true;
           ref.read(scannedLocatorToProvider.notifier).update((state) => result!);
         } else {
           Future.delayed(const Duration(milliseconds: 500));
-          isScanning = false;
+          isScanning.state = false;
         }
 
       },
@@ -848,93 +826,64 @@ class UnsortedStorageOnHandScreenState extends ConsumerState<UnsortedStorageOnHa
     );
   }
   Widget getMovementCard(BuildContext context, WidgetRef ref) {
-    final documentColor = ref.watch(colorMovementDocumentTypeProvider);
+
     return Container(
       decoration: BoxDecoration(
-        color: documentColor,
+        color: Colors.grey[200],
         border: Border.all(
           color: Colors.black, // Specify the border color
         ),
         borderRadius: BorderRadius.circular(10),
       ),
       child: Column(
-            //spacing: 5,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-
-              ListTile(
-                leading: SizedBox(
-                  width: 60,
-                  child: Text('${Messages.FROM} ${Messages.LOCATOR}',
-                    style: TextStyle(
-                      fontSize: fontSizeMedium,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black,),textAlign: TextAlign.start,),
-                ),
-                title: Text(locatorFrom.value ??
-                     Messages.LOCATOR_FROM,style: TextStyle(
-                  fontSize: fontSizeMedium,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.purple,),),
-                trailing: Icon(Icons.check_circle,color:
-                  widget.storage.mLocatorID != null ?
-                  Colors.green : Colors.red,)
+        spacing: 5,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          ListTile(
+              leading: SizedBox(
+                width: 60,
+                child: Text('${Messages.FROM} ${Messages.LOCATOR}',
+                  style: TextStyle(
+                    fontSize: fontSizeMedium,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black,),textAlign: TextAlign.start,),
               ),
-
-              getLocatorTo(context, ref),
-
-            ],
+              title: Text(locatorFrom.value ??
+                  Messages.LOCATOR_FROM,style: TextStyle(
+                fontSize: fontSizeMedium,
+                fontWeight: FontWeight.bold,
+                color: Colors.purple,),),
+              trailing: Icon(Icons.check_circle,color:
+              widget.storage.mLocatorID != null ?
+              Colors.green : Colors.red,)
           ),
+          getLocatorTo(context, ref),
+
+        ],
+      ),
 
 
     );
   }
 
   Widget getLocatorTo(BuildContext context, WidgetRef ref) {
-    locatorTo = ref.watch(selectedLocatorToProvider);
+
     return findLocatorTo.when(
-      data: (locatorFromFuture) {
-        IdempiereLocator locator;
+      data: (locator) {
 
-        if (locatorTo.id != Memory.INITIAL_STATE_ID) {
-          // Hay locator elegido manualmente (LocatorCard)
-          print(locatorTo.toJson());
-          locator = locatorTo;
-        } else {
-          // Usar el que viene del escaneo / FutureProvider
-          locator = locatorFromFuture;
-        }
-        Color? color;
-
-        if(locator.id!=null && locator.id!>0){
+        if(locator!=null && locator.id!=null && locator.id!>0){
 
           putAwayMovement!.movementLineToCreate!.mLocatorToID = locator;
-          locator.mWarehouseID?.aDOrgID = locator.aDOrgID;
-          putAwayMovement!.movementToCreate!.mWarehouseToID = locator.mWarehouseID ;
-          color = putAwayMovement!.movementToCreate!.colorMovementDocumentType ;
-          int locatorToId = locator.id ?? -1 ;
-          int locatorFromId = locatorFrom.id ?? -1 ;
-          if(locatorToId == locatorFromId){
-            //showAutoCloseErrorDialog(context, ref, Messages.SAME_LOCATOR, 3);
-            color = Colors.amber[100];
-          }
-
+          putAwayMovement!.movementToCreate!.mWarehouseToID = locator?.mWarehouseID ;
         }
-        color ??= Colors.amber;
 
 
         WidgetsBinding.instance.addPostFrameCallback((_) async {
-          if(locator.id!=null && locator.id!>0 && putAwayMovement!=null
-              && putAwayMovement!.movementToCreate!=null){
-            ref.read(colorMovementDocumentTypeProvider.notifier).state = color!;
-          }
-
         });
         return ListTile(
           leading: GestureDetector(
             onTap: (){
-              bool forCreateLine = false ;
-              ref.read(findingCreateLinLocatorToProvider.notifier).state = forCreateLine;
+
               Memory.pageFromIndex = ref.read(productsHomeCurrentIndexProvider.notifier).state;
               ref.read(productsHomeCurrentIndexProvider.notifier).update((state) => Memory.PAGE_INDEX_NO_REQUERED_SCAN_SCREEN);
               showDialog(
@@ -942,7 +891,7 @@ class UnsortedStorageOnHandScreenState extends ConsumerState<UnsortedStorageOnHa
                 builder: (BuildContext context) {
                   return SearchLocatorDialog(
                     searchLocatorFrom :false,
-                    forCreateLine: forCreateLine,
+                    forCreateLine: false,
                   );
                 },
               );
@@ -957,11 +906,6 @@ class UnsortedStorageOnHandScreenState extends ConsumerState<UnsortedStorageOnHa
                   color: Colors.purple,),textAlign: TextAlign.start,),
             ),
           ),
-          /*title: Text(this.locatorTo.id != null ? this.locatorTo.value ??''
-              : this.locatorTo.identifier ?? '',style:TextStyle(
-            fontSize: fontSizeMedium,
-            fontWeight: FontWeight.bold,
-            color: Colors.purple,)),*/
           title: Text(locator.id != null ?locator.value ??''
               : locator.identifier ?? '',style:TextStyle(
             fontSize: fontSizeMedium,
@@ -976,36 +920,16 @@ class UnsortedStorageOnHandScreenState extends ConsumerState<UnsortedStorageOnHa
       },
       error: (error, stackTrace) {
         return Text(Messages.ERROR,style:TextStyle(
-        fontSize: fontSizeMedium,
-        fontWeight: FontWeight.bold,
-        color: Colors.red,));
+          fontSize: fontSizeMedium,
+          fontWeight: FontWeight.bold,
+          color: Colors.red,));
       },
       loading: () => LinearProgressIndicator(minHeight: 16,),
     );
 
 
   }
-  Widget getConfirmationSliderButton(BuildContext context, WidgetRef ref) {
-    return ConfirmationSlider(
-      height: 50,
-      backgroundColor: Colors.green[100]!,
-      backgroundColorEnd: Colors.green[800]!,
-      foregroundColor: Colors.green,
-      text: Messages.SLIDE_TO_CREATE,
-      textStyle: TextStyle(fontSize: themeFontSizeLarge, color: Colors.purple,fontWeight: FontWeight.bold),
-      onConfirmation: () {
-        print('----------------------------ConfirmationSlide');
-        if (putAwayMovement!=null && putAwayMovement!.movementLineToCreate!=null) {
-          putAwayMovement!.movementLineToCreate!.movementQty = ref.read(quantityToMoveProvider);
-          widget.notifier.prepareToCreatePutawayMovement(ref, putAwayMovement);
-        } else {
-          showErrorMessage(context, ref, Messages.MOVEMENT_ALREADY_CREATED);
 
-        }
-      }
-
-    );
-  }
 
   Widget getStockList(BuildContext context, WidgetRef ref) {
 
@@ -1013,8 +937,8 @@ class UnsortedStorageOnHandScreenState extends ConsumerState<UnsortedStorageOnHa
       padding: EdgeInsets.only(top: 5),
       sliver: SliverList.separated(
         itemBuilder: (BuildContext context, int index) {
-            return storageOnHandCard(storageList[index], index);
-          },
+          return storageOnHandCard(storageList[index], index);
+        },
         itemCount: storageList.length,
         separatorBuilder: (BuildContext context, int index) => const SizedBox(height: 5,),
       ),
@@ -1027,9 +951,11 @@ class UnsortedStorageOnHandScreenState extends ConsumerState<UnsortedStorageOnHa
     ref.read(quantityToMoveProvider.notifier).update((state) => 0);
     ref.read(productsHomeCurrentIndexProvider.notifier).update((state) => Memory.PAGE_INDEX_STORE_ON_HAND);
     ref.read(actionScanProvider.notifier).state = Memory.ACTION_FIND_BY_UPC_SKU_FOR_STORE_ON_HAND;
-    context.go('${AppRouter.PAGE_PRODUCT_STORE_ON_HAND}/${widget.productUPC?? '-1'}');
+    String productUPC = widget.storage.mProductID?.identifier ?? '-1';
+    productUPC = productUPC.split('_').first;
+    print('${AppRouter.PAGE_PRODUCT_STORE_ON_HAND}/$productUPC');
+    context.go('${AppRouter.PAGE_PRODUCT_STORE_ON_HAND}/$productUPC');
 
   }
 
 }
-

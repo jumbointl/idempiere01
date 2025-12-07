@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/legacy.dart';
 import 'package:get_storage/get_storage.dart';
 import 'package:go_router/go_router.dart';
 import 'package:monalisa_app_001/features/products/common/scan_button_by_action.dart';
+import 'package:monalisa_app_001/features/products/common/scan_button_by_action_fixed_short.dart';
 
 import '../../../config/router/app_router.dart';
 import '../../../config/theme/app_theme.dart';
@@ -14,6 +15,7 @@ import '../../shared/data/messages.dart';
 import '../domain/idempiere/movement_and_lines.dart';
 import '../presentation/providers/common_provider.dart';
 import '../presentation/providers/product_provider_common.dart';
+import '../presentation/providers/store_on_hand_provider.dart';
 import '../presentation/screens/store_on_hand/memory_products.dart';
 import 'app_initializer_overlay.dart';
 import 'input_data_processor.dart';
@@ -24,24 +26,23 @@ abstract class CommonConsumerState<T extends ConsumerStatefulWidget> extends Con
     implements InputDataProcessor {
 
 
-  /*late var isScanning = ref.watch(isScanningProvider.notifier);
-  late var usePhoneCamera = ref.watch(usePhoneCameraToScanProvider.notifier);
+  /*late var isScanning = ref.watch(isScanningProvider);
+  late var usePhoneCamera = ref.watch(usePhoneCameraToScanProvider);
   late AsyncValue mainDataAsync  = getMainDataAsync;
   late AsyncValue mainDataListAsync = getMainDataListAsync;
-  late var isDialogShowed = ref.watch(isDialogShowedProvider.notifier);
-  late var scrollToTop = ref.watch(scrollToUpProvider.notifier);
-  late ScrollController scrollController = ScrollController();*/
+  late var isDialogShowed = ref.watch(isDialogShowedProvider);
+  late var scrollToTop = ref.watch(scrollToUpProvider);*/
 
   late var isScanning ;
   late var usePhoneCamera ;
   AsyncValue get mainDataAsync ;
   //AsyncValue get mainDataListAsync;
   late var isDialogShowed;
-  late var scrollToTop ;
+  //late var scrollToTop ;
   late var inputString;
   late var pageIndexProdiver;
   late var actionScan;
-  late ScrollController scrollController;
+  late ScrollController scrollController = ScrollController();
   double goToPosition =0.0;
   double? get fontSizeTitle =>themeFontSizeTitle;
   double? get fontSizeLarge =>themeFontSizeLarge;
@@ -54,6 +55,7 @@ abstract class CommonConsumerState<T extends ConsumerStatefulWidget> extends Con
   Color? get hintTextColor=>Colors.purple;
   Color? get resultColor=>Colors.purple;
   Color? get borderColor=>Colors.black;
+  int get qtyOfDataToAllowScroll => 2;
   late TextStyle textStyleTitle = TextStyle(fontSize: fontSizeTitle,
       color: fontForegroundColor);
   late TextStyle textStyleTitleMore20C = TextStyle(fontSize: 13,
@@ -84,49 +86,63 @@ abstract class CommonConsumerState<T extends ConsumerStatefulWidget> extends Con
     });
   }
   @override
+  void dispose() {
+    scrollController.dispose();
+    super.dispose();
+  }
+  bool get isNearBottom {
+    if (!scrollController.hasClients) return false;
+    final pos = scrollController.position;
+    const threshold = 80.0; // píxeles de tolerancia
+    return pos.maxScrollExtent - pos.pixels < threshold;
+  }
+  @override
   Widget build(BuildContext context){
     initialSetting(context,ref);
-
+    final showFab = ref.watch(allowScrollFabProvider);
     return AppInitializerOverlay(
       child: Scaffold(
       
         appBar: getAppBar(context,ref),
-        /*floatingActionButton: FloatingActionButton(
+        floatingActionButton: showFab
+            ? FloatingActionButton(
           onPressed: () {
-            double positionAdd= scrollController.position.maxScrollExtent;
-            if(scrollToTop.state){
-              goToPosition -= positionAdd;
-              if(goToPosition <= 0){
-                goToPosition = 0;
-                ref.read(scrollToUpProvider.notifier).update((state) => !state);
-              }
-            } else {
-              goToPosition+= positionAdd;
-              if(goToPosition >= scrollController.position.maxScrollExtent){
-                goToPosition = scrollController.position.maxScrollExtent;
-                ref.read(scrollToUpProvider.notifier).update((state) => !state);
-              }
-            }
-      
-            setState(() {});
+            if (!scrollController.hasClients) return;
+
+            final position = scrollController.position;
+
+            // Estamos "cerca" del fondo?
+            final bool isAtBottom =
+                (position.maxScrollExtent - position.pixels) < 50;
+
+            final double target = isAtBottom
+                ? position.minScrollExtent   // si ya estoy abajo → subo arriba
+                : position.maxScrollExtent;  // si no → bajo al fondo
+
             scrollController.animateTo(
-              goToPosition,
+              target,
               duration: const Duration(milliseconds: 500),
               curve: Curves.easeInOut,
             );
           },
-          child: Icon(scrollToTop ? Icons.arrow_upward :Icons.arrow_downward),
-        ),*/
-        bottomNavigationBar: isDialogShowed ? Container(
-          height: Memory.BOTTOM_BAR_HEIGHT,
-          color: themeColorPrimary,
-          child: Center(
-            child: Text(Messages.DIALOG_SHOWED,
-              style: TextStyle(color: Colors.white,fontSize: themeFontSizeLarge
-                  ,fontWeight: FontWeight.bold),),
+          child: Builder(
+            builder: (_) {
+              /*if (!scrollController.hasClients) {
+                return const Icon(Icons.arrow_downward);
+              }
+
+              final position = scrollController.position;
+              final bool isAtBottom =
+                  (position.maxScrollExtent - position.pixels) < 50;
+
+              // Si estoy abajo → muestro flecha hacia arriba
+              return Icon(isAtBottom ? Icons.arrow_upward : Icons.arrow_downward);*/
+              return Icon(Icons.swap_vert);
+            },
           ),
-        ) : getBottomAppBar(context,ref),
-      
+        ) : null,
+
+
         body: SafeArea(
           child: PopScope(
             canPop: false,
@@ -139,16 +155,10 @@ abstract class CommonConsumerState<T extends ConsumerStatefulWidget> extends Con
       
             },
             child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10,vertical: 20),
+              padding: const EdgeInsets.symmetric(horizontal: 10,vertical: 10),
               child: SingleChildScrollView(
-                child: Column(
-                  spacing: 10,
-                  children: [
-                    if(showSearchBar) getSearchBar(context,ref,hinText,this),
-                    getMainDataCard(context, ref),
-                    //getMainDataList(context, ref),
-                  ],
-                ),
+                controller: scrollController,
+                child: getMainDataCard(context, ref),
               ),
             ),
           ),
@@ -210,24 +220,14 @@ abstract class CommonConsumerState<T extends ConsumerStatefulWidget> extends Con
 
 
   AppBar? getAppBar(BuildContext context, WidgetRef ref) {
+
     return AppBar(
       backgroundColor: getAppBarBackgroundColor(context,ref),
-      automaticallyImplyLeading: true,
-      leading:IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () async =>
-          {
-            print('iconBackPressed----------------------------'),
-            popScopeAction(context, ref),
-          }
-        //
-      ),
+      automaticallyImplyLeading: false,
+
 
       title: getAppBarTitle(context,ref),
-      actions: [
-        getActionButtons(context,ref),
-
-      ],
+      actions: getActionButtons(context,ref),
 
     );
   }
@@ -274,15 +274,36 @@ abstract class CommonConsumerState<T extends ConsumerStatefulWidget> extends Con
   }
 
   void findMovementAfterDate(DateTime date, {required bool isIn}) {}
+  int get actionScanTypeInt ;
+  List<Widget> getActionButtons(BuildContext context, WidgetRef ref) {
+    final showScan = ref.watch(showScanFixedButtonProvider(actionScanTypeInt));
 
-  Widget getActionButtons(BuildContext context, WidgetRef ref) {
-    return IconButton(
-      icon: Icon(usePhoneCamera ? Icons.barcode_reader : Icons.camera),
-      onPressed: () {
-        changeUsePhoneCameraToScanState(context,ref);
+    final buttons = <Widget>[];
 
-      },
+    if (showScan) {
+      buttons.add(
+        ScanButtonByActionFixedShort(
+          actionTypeInt: actionScanTypeInt,
+          onOk: handleInputString,
+        ),
+      );
+    }
+
+    buttons.add(
+      IconButton(
+        icon: const Icon(Icons.keyboard, color: Colors.purple),
+        onPressed: () {
+          openInputDialogWithAction(
+            ref: ref,
+            history: false,
+            onOk: handleInputString,
+            actionScan: actionScanTypeInt,
+          );
+        },
+      ),
     );
+
+    return buttons;
   }
   Future<void> setDefaultValues(BuildContext context, WidgetRef ref);
 

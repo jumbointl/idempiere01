@@ -35,7 +35,7 @@ class MemoryProducts {
 
 
   //static bool isMovementSearched=false;
-  static int delayOnSwitchPageInSeconds=5;
+  static int delayOnSwitchPageInSeconds=2;
   static String lastSearchMovementText ='';
 
   static bool lastUsePhoneCameraState =false;

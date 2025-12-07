@@ -3,9 +3,15 @@ import 'package:flutter_riverpod/legacy.dart';
 
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:get_storage/get_storage.dart';
+import 'package:monalisa_app_001/features/products/presentation/providers/product_provider_common.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../../m_inout/presentation/providers/m_in_out_providers.dart';
+import '../../domain/idempiere/movement_and_lines.dart';
 import '../screens/movement/printer/mo_printer.dart';
+import '../screens/movement/provider/new_movement_provider.dart';
+import 'locator_provider.dart';
 
 final sharedPreferencesProvider = Provider<SharedPreferences>(
       (ref) => throw UnimplementedError(),
@@ -76,4 +82,50 @@ final inOutProvider = StateProvider<bool?>((ref) => null);
 
 final colorMovementDocumentTypeProvider = StateProvider.autoDispose<Color?>((ref) {
   return null;
+});
+
+final allowScrollFabProvider = StateProvider.autoDispose<bool>((ref) {
+  return false;
+});
+
+final canShowUnsortedBottomBarProvider = Provider.autoDispose<bool>((ref) {
+  final qty = ref.watch(quantityToMoveProvider);          // double
+  final locatorTo = ref.watch(selectedLocatorToProvider); // IdempiereLocator
+  final isDialogShowed = ref.watch(isDialogShowedProvider);
+  final isScanning = ref.watch(isScanningProvider);
+
+  final hasQuantity = qty > 0;
+  final hasLocatorTo = locatorTo.id != null && locatorTo.id! > 0;
+  // ✅ Solo mostramos el bottomBar si:
+  // - hay cantidad > 0
+  // - hay locatorTo válido
+  print('--------------canShowUnsortedBottomBa: $hasLocatorTo');
+  bool result = hasQuantity && hasLocatorTo && !isDialogShowed && !isScanning;
+  print('---------------result: $result');
+
+  return result;
+  //return hasQuantity;
+});
+
+final showScanFixedButtonProvider = Provider.family<bool, int>((ref, int actionScanTypeInt) {
+  //final isDialogShowed = ref.watch(isDialogShowedProvider);
+  //final isScanning = ref.watch(isScanningProvider);
+  final currentAction = ref.watch(actionScanProvider);
+  final result = currentAction == actionScanTypeInt;
+  print('showScanFixedButtonProvider: $result');
+  return result;
+});
+
+final movementLinesProvider = StateProvider.autoDispose
+    .family<double, MovementAndLines>((ref, movement) {
+  final length = movement.movementLines?.length ?? 0;
+  final base = (length + 1) * 10;
+  return base.toDouble();
+});
+
+final quantityOfMovementAndScannedToAllowInputScannedQuantityProvider =
+StateProvider<int>((ref) {
+  final box = GetStorage();
+  // Lê GetStorage — se não existir, devolve 3
+  return box.read(KEY_QTY_ALLOW_INPUT) ?? 3;
 });

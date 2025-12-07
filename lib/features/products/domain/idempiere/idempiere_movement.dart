@@ -269,7 +269,7 @@ class IdempiereMovement extends IdempiereObject {
     } else if(id ==Memory.materialMovementWithConfirm.id){
       return Colors.cyan[100];
     } else if(id ==Memory.electronicDeliveryNote.id){
-      return Colors.blue[100];
+      return Colors.amber[100];
     }
     return Colors.grey[100];
   }
@@ -282,9 +282,9 @@ class IdempiereMovement extends IdempiereObject {
     if(id == Memory.materialMovement.id){
       return Colors.green[800];
     } else if(id ==Memory.materialMovementWithConfirm.id){
-      return Colors.cyan[800];
-    } else if(id ==Memory.electronicDeliveryNote.id){
       return Colors.blue[800];
+    } else if(id ==Memory.electronicDeliveryNote.id){
+      return Colors.amber[800];
     }
     return Colors.grey[800];
 

@@ -112,11 +112,11 @@ class ProductsScanNotifierForLine  extends StateNotifier<List<IdempiereProduct>>
   }
 
   @override
-  Future<void> handleInputString(BuildContext context,WidgetRef ref, String inputData) async {
+  Future<void> handleInputString({required WidgetRef ref, required String inputData,required actionScan}) async {
 
-    int action  = ref.read(actionScanProvider);
-    print('handleInputString $action');
-    switch(action){
+    //int action  = ref.read(actionScanProvider);
+    print('handleInputString $actionScan');
+    switch(actionScan){
       case Memory.ACTION_FIND_MOVEMENT_BY_ID:
         addBarcodeToSearchMovementNew(inputData);
         break;
@@ -129,7 +129,7 @@ class ProductsScanNotifierForLine  extends StateNotifier<List<IdempiereProduct>>
         findLocatorToByValue(ref,inputData);
         break;
       case Memory.ACTION_GO_TO_MOVEMENT_EDIT_PAGE_WITH_ID:
-        if(context.mounted) ref.context.go('${AppRouter.PAGE_MOVEMENTS_SEARCH}/$inputData');
+        if(ref.context.mounted) ref.context.go('${AppRouter.PAGE_MOVEMENTS_SEARCH}/$inputData');
 
         break;
       case Memory.ACTION_GO_TO_STORAGE_ON_HAND_PAGE_WITH_UPC:
@@ -141,12 +141,12 @@ class ProductsScanNotifierForLine  extends StateNotifier<List<IdempiereProduct>>
 
         int? movementId = movementAndLines.id ?? -1;
         if(movementId <= 0){
-          if(context.mounted) showErrorMessage(context, ref, Messages.ERROR_MOVEMENT_NOT_FOUND);
+          if(ref.context.mounted) showErrorMessage(ref.context, ref, Messages.ERROR_MOVEMENT_NOT_FOUND);
           return;
         }
         ref.read(actionScanProvider.notifier).update((state) => Memory.ACTION_FIND_BY_UPC_SKU_FOR_STORE_ON_HAND);
 
-        if(context.mounted) {
+        if(ref.context.mounted) {
           ref.context.go(
               '${AppRouter.PAGE_PRODUCT_STORE_ON_HAND_FOR_LINE}/$inputData}',
               extra: movementAndLines);

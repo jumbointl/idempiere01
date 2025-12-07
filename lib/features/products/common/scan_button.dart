@@ -8,7 +8,7 @@ import '../../shared/data/memory.dart';
 import 'input_data_processor.dart';
 import '../presentation/providers/common_provider.dart';
 import '../presentation/providers/scan_provider.dart';
-import '../presentation/screens/movement/products_home_provider.dart';
+import '../presentation/screens/movement/provider/products_home_provider.dart';
 import '../../shared/data/messages.dart';
 import '../presentation/providers/product_provider_common.dart';
 class ScanButton extends ConsumerStatefulWidget {
@@ -56,7 +56,8 @@ class ScanButtonState extends ConsumerState<ScanButton> {
     if (event.logicalKey == LogicalKeyboardKey.enter) {
 
       if(context.mounted){
-        widget.processor.handleInputString(context, ref, scannedData);
+        widget.processor.handleInputString(ref: ref, inputData: scannedData
+            ,actionScan: widget.actionTypeInt);
 
       }
 

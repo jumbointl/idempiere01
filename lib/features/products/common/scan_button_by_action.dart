@@ -58,7 +58,8 @@ class ScanButtonByActionState extends ConsumerState<ScanButtonByAction> {
         return ;
       }
       if(context.mounted){
-        widget.processor.handleInputString(context, ref, scannedData);
+        widget.processor.handleInputString(ref: ref, inputData: scannedData
+            ,actionScan: widget.actionTypeInt);
 
       }
 

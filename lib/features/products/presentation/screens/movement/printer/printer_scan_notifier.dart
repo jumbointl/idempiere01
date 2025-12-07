@@ -116,7 +116,7 @@ class PrinterScanNotifier extends StateNotifier<PrinterState>  {
     final pdfBytes = await generateMovementDocument(movementAndLines, image);
     String cupsServiceUrl = Memory.URL_CUPS_SERVER;
     String documentNo = movementAndLines.documentNo ?? 'document-mo';
-    if(state.serverPortController.text=='631'){
+    if(state.serverPortController.text.startsWith('631')){
       cupsServiceUrl = Memory.getUrlCupsServerWithPrinter(ip :state.serverIpController.text,
           port:state.serverPortController.text,
         printerName:state.nameController.text);

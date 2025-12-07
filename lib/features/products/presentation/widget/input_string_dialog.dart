@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
 import 'package:monalisa_app_001/features/products/common/input_dialog.dart';
+import 'package:monalisa_app_001/features/products/presentation/providers/product_provider_common.dart';
 
 import '../../common/input_data_processor.dart';
 import '../../../shared/data/memory.dart';
@@ -24,10 +25,13 @@ class InputStringDialog extends ConsumerStatefulWidget implements InputDataProce
   }
 
   @override
-  Future<void> handleInputString(BuildContext context, WidgetRef ref, String result) async {
-    if (result == '') {
+  Future<void> handleInputString(
+      {required WidgetRef ref,
+        required String inputData,
+        required int actionScan}) async {
+    if (inputData == '') {
       AwesomeDialog(
-        context: context,
+        context: ref.context,
         animType: AnimType.scale,
         dialogType: DialogType.error,
         body: Center(child: Text(
@@ -44,7 +48,8 @@ class InputStringDialog extends ConsumerStatefulWidget implements InputDataProce
       ).show();
     } else {
       var textState = ref.read(textStateProvider.notifier);
-      textState.update((state) => result);
+      textState.update((state) => inputData);
+      print('-----------------R Locator handleInputString$inputData $actionScan');
     }
   }
 
@@ -95,7 +100,13 @@ class InputStringDialogState extends ConsumerState<InputStringDialog> {
       }
 
     }
-    openInputDialog(context, ref, false, widget);
+    final actionScan = ref.read(actionScanProvider);
+    openInputDialogWithAction(ref: ref, history:
+    false,onOk: widget.handleInputString, actionScan:actionScan);
+
+
+
+
 
 
 
