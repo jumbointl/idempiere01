@@ -11,7 +11,6 @@ import '../../../shared/data/messages.dart';
 import '../../../shared/domain/entities/response_api.dart';
 import '../../../shared/infrastructure/errors/custom_error.dart';
 import '../../domain/idempiere/idempiere_locator.dart';
-import '../../domain/idempiere/idempiere_organization.dart';
 import '../../domain/idempiere/idempiere_warehouse.dart';
 
 final scannedBarcodeProvider = StateProvider<String?>((ref) => null);
@@ -141,13 +140,19 @@ final findLocatorToProvider = FutureProvider<IdempiereLocator>((ref) async {
         });
         return productsList[0];
       } else {
+        String message = '${Messages.NOT_FOUND} $scannedCode';
+        if(warehouseId>0){
+          message = '${Messages.ERROR_DIFFERENT_WAREHOUSE} : $scannedCode';
+        }
         Future.delayed(const Duration(seconds: 1), () {
           ref.read(selectedLocatorToProvider.notifier).state =
-              IdempiereLocator(id:Memory.NOT_FOUND_ID,value: '${Messages.NOT_FOUND} $scannedCode'  );
+              IdempiereLocator(id:Memory.NOT_FOUND_ID,value: message  );
           ref.read(isScanningProvider.notifier).state = false;
           ref.read(isScanningLocatorToProvider.notifier).state = false;
         });
-        return IdempiereLocator(id:Memory.NOT_FOUND_ID,value: '${Messages.NOT_FOUND} $scannedCode'  );
+
+
+        return IdempiereLocator(id:Memory.NOT_FOUND_ID,value: message);
       }
     } else {
       Future.delayed(const Duration(seconds: 1), () {

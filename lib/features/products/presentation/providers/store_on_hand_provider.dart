@@ -5,7 +5,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
 import 'package:monalisa_app_001/features/products/presentation/providers/product_provider_common.dart';
 import 'package:monalisa_app_001/features/products/presentation/providers/product_search_provider.dart';
-import 'package:monalisa_app_001/features/products/presentation/screens/store_on_hand/memory_products.dart';
 import 'package:monalisa_app_001/features/shared/data/messages.dart';
 
 import '../../../../config/http/dio_client.dart';
@@ -14,6 +13,7 @@ import '../../../shared/domain/entities/response_api.dart';
 import '../../../shared/infrastructure/errors/custom_error.dart';
 import '../../domain/idempiere/idempiere_product.dart';
 import '../../domain/idempiere/idempiere_storage_on_hande.dart';
+import '../../domain/idempiere/product_with_stock.dart';
 
 
 final scannedCodeForStoredOnHandProvider = StateProvider.autoDispose<String?>((ref) {
@@ -24,18 +24,20 @@ final scrollToUpProvider = StateProvider.autoDispose<bool>((ref) {
   return false;
 });
 
-final findProductByUPCOrSKUForStoreOnHandProvider = FutureProvider.autoDispose<List<IdempiereProduct>>((ref) async {
+final findProductByUPCOrSKUForStoreOnHandProvider = FutureProvider.autoDispose<ProductWithStock>((ref) async {
   print('---------------------findProductByUPCOrSKUForStoreOnHandProvider---');
   final String? scannedCode = ref.watch(scannedCodeForStoredOnHandProvider)?.toUpperCase();
 
-  if(scannedCode==null || scannedCode=='') return [IdempiereProduct(id:0)];
+  ProductWithStock productWithStock = ProductWithStock(searched: false,showResultCard: true);
+
+  if(scannedCode==null || scannedCode=='') return productWithStock;
+  print('---------------------findProductByUPCOrSKUForStoreOnHandProvider $scannedCode');
+  productWithStock.searched = true;
+  productWithStock.searchString = scannedCode;
   int? aux = int.tryParse(scannedCode);
   String searchField ='upc';
   if(aux==null){
     searchField = 'sku';
-  }
-  if(ref.watch(searchByMOLIConfigurableSKUProvider)){
-    searchField = 'MOLI_ConfigurableSKU';
   }
   Dio dio = await DioClient.create();
   ref.read(showResultCardProvider.notifier).state = true;
@@ -52,24 +54,95 @@ final findProductByUPCOrSKUForStoreOnHandProvider = FutureProvider.autoDispose<L
 
       if (responseApi.records != null && responseApi.records!.isNotEmpty) {
         final productsList = responseApi.records!;
-        /*if(productsList.length==1){
-          ref.watch(productIdProvider.notifier).state = productsList[0].id!;
-        } else {
-          ref.watch(productIdProvider.notifier).state = 0;
-        }*/
+        IdempiereProduct product = productsList[0];
+        productWithStock.copyWithProduct(product);
 
-        ref.read(productIdProvider.notifier).state = productsList[0].id!;
-        print('200---------------------findProductByUPCOrSKUForStoreOnHandProvider---');
-        return productsList;
 
-      } else {
-        print('EMPTY---------------------findProductByUPCOrSKUForStoreOnHandProvider---');
-        return [IdempiereProduct(name: Messages.NOT_FOUND, uPC: scannedCode,id: 0)];
+        if(productWithStock.hasProduct){
+          String productId = product.id.toString();
+          String url = "/api/v1/models/m_storageonhand?\$expand=M_Locator_ID&\$IsActive=true"
+              "&\$filter=QtyOnHand%20neq%200%20AND%20M_Product_ID%20eq%20$productId";
+
+          print(url);
+          final response = await dio.get(url);
+          if (response.statusCode == 200) {
+
+            final responseApi =
+            ResponseApi<IdempiereStorageOnHande>.fromJson(response.data, IdempiereStorageOnHande.fromJson);
+            //print(response.data);
+            print(responseApi.records?.length ?? 'null');
+            if (responseApi.records != null && responseApi.records!.isNotEmpty) {
+              ref.watch(showResultCardProvider.notifier).update((state) =>true);
+
+              final productsListRaw = responseApi.records!;
+              productWithStock.listStorageOnHande = productsListRaw;
+
+              ref.watch(unsortedStoreOnHandListProvider.notifier).state = productsListRaw;
+              Map<String, IdempiereStorageOnHande> groupedProducts = {};
+              int warehouseUser = ref.read(authProvider).selectedWarehouse?.id ?? 0;
+
+              for (var data in productsListRaw) {
+
+                if (product.id == data.mProductID?.id) {
+                  String key = '${data.mLocatorID?.value}-${data.mAttributeSetInstanceID?.id}';
+                  if (groupedProducts.containsKey(key)) {
+                    // If the group already exists, sum the qtyOnHand
+                    groupedProducts[key]!.qtyOnHand = (groupedProducts[key]!.qtyOnHand ?? 0) + (data.qtyOnHand ?? 0);
+                  } else {
+                    // Otherwise, add the new group
+                    groupedProducts[key] = IdempiereStorageOnHande(
+                      mLocatorID: data.mLocatorID,
+                      mAttributeSetInstanceID: data.mAttributeSetInstanceID,
+                      qtyOnHand: data.qtyOnHand,
+                      mProductID: data.mProductID,
+                      // Copy other necessary fields
+                    );
+                  }
+                }
+              }
+
+              List<IdempiereStorageOnHande> productsList = groupedProducts.values.toList();
+
+              // Group products by warehouse
+              Map<int, List<IdempiereStorageOnHande>> groupedByWarehouse = {};
+              for (var product in productsList) {
+                int warehouseID = product.mLocatorID?.mWarehouseID?.id ?? 0;
+
+                groupedByWarehouse.putIfAbsent(warehouseID, () => []).add(product);
+              }
+
+              // Sort products within each group by qtyOnHand in descending order
+              groupedByWarehouse.forEach((key, value) {
+                value.sort((a, b) => b.qtyOnHand!.compareTo(a.qtyOnHand!));
+              });
+
+              // Put the user's warehouse first, then sort the rest by warehouse ID
+              List<int> sortedWarehouseIDs = groupedByWarehouse.keys.toList()..sort();
+              if (groupedByWarehouse.containsKey(warehouseUser)) {
+                sortedWarehouseIDs.remove(warehouseUser);
+                sortedWarehouseIDs.insert(0, warehouseUser);
+              }
+
+              // Flatten the grouped and sorted products into a single list
+              List<IdempiereStorageOnHande> sortedProductsList = [];
+              for (var warehouseID in sortedWarehouseIDs) {
+                sortedProductsList.addAll(groupedByWarehouse[warehouseID]!.where((product) => product.qtyOnHand != 0));
+              }
+
+              productWithStock.sortedStorageOnHande = sortedProductsList;
+            }
+          }
+
+
+          print('200---------------------findProductWithStock---');
+          print(productWithStock.sortedStorageOnHande?.length ?? ' s empty');
+          print(productWithStock.listStorageOnHande?.length ?? ' l empty');
+          print('200---------------------findProductWithStock---end');
+
+        }
       }
-    } else {
-      throw Exception(
-          'Error al obtener la lista de $scannedCode: ${response.statusCode}');
     }
+    return productWithStock;
   } on DioException catch (e) {
     final authDataNotifier = ref.read(authProvider.notifier);
     throw CustomErrorDioException(e, authDataNotifier);

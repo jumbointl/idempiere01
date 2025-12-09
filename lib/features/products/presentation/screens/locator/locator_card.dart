@@ -1,7 +1,6 @@
 import 'package:awesome_dialog/awesome_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:monalisa_app_001/features/products/presentation/providers/persitent_provider.dart';
 
 import '../../../../../config/theme/app_theme.dart';
 import '../../providers/locator_provider_for_Line.dart';
@@ -68,11 +67,11 @@ class LocatorCardState extends ConsumerState<LocatorCard> {
             }
           } else {
             if(widget.forCreateLine){
-              ref.read(selectedLocatorToProvider.notifier).state = widget.data;
-              //ref.read(scannedLocatorToForLineProvider.notifier).update((state) => widget.data.value ?? '');
+              //ref.read(selectedLocatorToProvider.notifier).state = widget.data;
+              ref.read(scannedLocatorToForLineProvider.notifier).update((state) => widget.data.value ?? '');
             } else {
-              ref.read(selectedLocatorToProvider.notifier).state = widget.data;
-              //ref.read(scannedLocatorToProvider.notifier).update((state) => widget.data.value ?? '');
+              //ref.read(selectedLocatorToProvider.notifier).state = widget.data;
+              ref.read(scannedLocatorToProvider.notifier).update((state) => widget.data.value ?? '');
             }
 
           }

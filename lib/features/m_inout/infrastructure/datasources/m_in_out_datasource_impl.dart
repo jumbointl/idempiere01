@@ -1,8 +1,12 @@
+import 'dart:convert';
+
 import 'package:dio/dio.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:monalisa_app_001/features/m_inout/domain/entities/line_confirm.dart';
 import 'package:monalisa_app_001/features/m_inout/domain/entities/locate.dart';
+import 'package:monalisa_app_001/features/shared/domain/entities/ad_entity_id.dart';
 import 'package:monalisa_app_001/features/shared/domain/entities/model_crud.dart';
 import 'package:monalisa_app_001/features/shared/domain/entities/model_crud_request.dart';
 import 'package:monalisa_app_001/features/shared/domain/entities/response_api.dart';
@@ -323,6 +327,7 @@ class MInOutDataSourceImpl implements MInOutDataSource {
     try {
       final String url =
           "/api/v1/models/m_movement?\$filter=DocumentNo%20eq%20'${movementDoc.toString()}'%20AND%20(M_Warehouse_ID%20eq%20$warehouseID%20OR%20M_Warehouse_ID%20eq%20null)";
+      print(url);
       final response = await dio.get(url);
 
       if (response.statusCode == 200) {
@@ -331,7 +336,7 @@ class MInOutDataSourceImpl implements MInOutDataSource {
 
         if (responseApi.records != null && responseApi.records!.isNotEmpty) {
           final mInOut = responseApi.records!.first;
-
+          print('mInOutgetMovement-----${mInOut.toJson()}');
           final lines = await getLinesMovement(mInOut.id!, ref);
           mInOut.lines = lines;
 
@@ -517,6 +522,7 @@ class MInOutDataSourceImpl implements MInOutDataSource {
 
   @override
   Future<MInOut> setDocAction(WidgetRef ref) async {
+    print('----------setDocAction----------init ');
     await _dioInitialized;
     final mInOutState = ref.watch(mInOutProvider);
 
@@ -528,11 +534,15 @@ class MInOutDataSourceImpl implements MInOutDataSource {
         ? mInOutState.mInOutConfirm?.docStatus.id?.toString() ?? 'DR'
         : mInOutState.mInOut?.docStatus.id?.toString() ?? 'DR';
 
-    final status = isConfirm
+    var status = isConfirm
         ? 'CO'
         : (currentStatus == 'DR'
             ? 'PR'
             : (currentStatus == 'IP' ? 'CO' : 'DR'));
+    if(mInOutState.mInOutType == MInOutType.move){
+      status ='CO';
+    }
+    print('-----status : $status currentStatus : $currentStatus isConfirm : $isConfirm');
 
     try {
       final String url =
@@ -579,23 +589,122 @@ class MInOutDataSourceImpl implements MInOutDataSource {
           ),
         ).toJson()
       };
+      print(request);
+      print(url);
 
       final response = await dio.post(url, data: request);
-
       if (response.statusCode == 200) {
         final standardResponse =
             StandardResponse.fromJson(response.data['StandardResponse']);
+        print('StandardResponse ${standardResponse.toJson()}');
         if (standardResponse.isError == false) {
-          final mInOutResponse = mInOutState.mInOutType == MInOutType.move
+          int duration = 3;
+          await Future.delayed(Duration(seconds: duration));
+          print ('await Future.delayed(Duration(seconds: $duration))');
+          final bool getDataMovement =(mInOutState.mInOutType == MInOutType.move
+              || mInOutState.mInOutType == MInOutType.moveConfirm);
+          final mInOutResponse = getDataMovement
+
               ? await getMovement(
                   mInOutState.mInOut!.documentNo!.toString(), ref)
               : await getMInOut(
                   mInOutState.mInOut!.documentNo!.toString(), ref);
-          if (mInOutResponse.id == mInOutState.mInOut!.id) {
+          //if (mInOutResponse.id == mInOutState.mInOut!.id) {
+
+            print(mInOutResponse.toJson());
+            // WHEN RESPONSE  isError == false SWITCH DOCSTATUS TO 'CO'
+            print('----------------------------');
+            print('mInOutResponse----------------------------');
+            print(mInOutResponse.docStatus.id ?? 'ID DOC NULL' );
+            print(mInOutResponse.docStatus.identifier ?? 'DOC NULL' );
+            print('mInOutResponse--------------');
+            final prettyJson =
+            const JsonEncoder.withIndent('  ').convert(mInOutResponse.docStatus.toJson());
+            String doc = mInOutResponse.docStatus.id ?? 'NULL';
+            Color color = Colors.grey.shade200;
+            if(doc == 'CO') {
+              color = Colors.green.shade200;
+            } else if(doc == 'IP'){
+              color = Colors.cyan.shade200;
+              if(mInOutState.mInOutType == MInOutType.moveConfirm) color = Colors.red.shade200;
+            } else if(doc == 'DR'){
+              color = Colors.red.shade200;
+            }
+            if(ref.context.mounted) {
+              await showModalBottomSheet(
+              context: ref.context,
+              isScrollControlled: true,
+              shape: const RoundedRectangleBorder(
+                borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+              ),
+              builder: (ctx) {
+                final height = MediaQuery.of(ctx).size.height * 0.7;
+                return SizedBox(
+                  height: height,
+                  child: Padding(
+                    padding: const EdgeInsets.all(16.0),
+
+                    child: Container(
+                      padding: EdgeInsets.all(20),
+                      decoration: BoxDecoration(
+                        color: color,
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Text(
+                            'Documento actualizado : ${mInOutResponse.documentNo}',
+                            style: const TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            'Documento id : ${mInOutResponse.docStatus.id}',
+                            style: const TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          Text(
+                            'Documento status : ${mInOutResponse.docStatus.identifier}',
+                            style: const TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          /*Expanded(
+                            child: SingleChildScrollView(
+                              child: SelectableText(
+                                prettyJson,
+                                style: const TextStyle(fontSize: 12),
+                              ),
+                            ),
+                          ),*/
+                          const SizedBox(height: 12),
+                          Align(
+                            alignment: Alignment.centerRight,
+                            child: ElevatedButton(
+                              onPressed: () {
+                                Navigator.of(ctx).pop();
+                              },
+                              child: const Text('OK'),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                );
+              },
+            );
+            }
             return mInOutResponse;
-          } else {
-            throw Exception('Error al confirmar el ${mInOutState.title}');
-          }
+          //} else {
+          //  throw Exception('Error al confirmar el ${mInOutState.title}');
+          //}
         } else {
           throw Exception(standardResponse.error ?? 'Unknown error');
         }
@@ -603,6 +712,7 @@ class MInOutDataSourceImpl implements MInOutDataSource {
         throw Exception(
             'Error al cargar los datos del ${mInOutState.title}: ${response.statusCode}');
       }
+
     } on DioException catch (e) {
       final authDataNotifier = ref.read(authProvider.notifier);
       throw CustomErrorDioException(e, authDataNotifier);
@@ -611,13 +721,14 @@ class MInOutDataSourceImpl implements MInOutDataSource {
     }
   }
 
+
   @override
   Future<LineConfirm> updateLineConfirm(Line line, WidgetRef ref) async {
     await _dioInitialized;
     try {
       final String url =
           "/ADInterface/services/rest/model_adservice/update_data";
-
+      print(url);
       final authData = ref.read(authProvider);
       final mInOutData = ref.read(mInOutProvider);
 
@@ -661,12 +772,15 @@ class MInOutDataSourceImpl implements MInOutDataSource {
           ),
         ).toJson()
       };
+      print(url);
+      print(request);
 
       final response = await dio.post(url, data: request);
 
       if (response.statusCode == 200) {
         final standardResponse =
             StandardResponse.fromJson(response.data['StandardResponse']);
+        print('StandardResponse ${standardResponse.toJson()}');
         if (standardResponse.isError == null ||
             standardResponse.isError == false) {
           LineConfirm lineResponse = LineConfirm(

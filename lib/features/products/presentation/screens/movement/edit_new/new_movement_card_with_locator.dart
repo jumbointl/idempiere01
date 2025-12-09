@@ -58,14 +58,13 @@ class MovementHeaderCardWithLocatorState extends ConsumerState<NewMovementCardWi
     String id='';
     String documentType = widget.movementAndLines.cDocTypeID?.identifier ?? 'DOC';
 
-    bool canCompleteMovement = widget.movementAndLines.canCompleteMovement ;
     if(widget.movementAndLines.hasMovement){      //id = movement.documentNo ?? '';
       id = widget.movementAndLines.id.toString();
       date = widget.movementAndLines.movementDate?.toString() ?? '';
       titleLeft = '${Messages.FROM}:${widget.movementAndLines.mWarehouseID?.identifier ?? ''}';
       titleRight = '${Messages.TO}:${widget.movementAndLines.mWarehouseToID?.identifier ?? ''}';
       subtitleLeft = '${Messages.DOC_STATUS}: ${widget.movementAndLines.docStatus?.identifier ?? ''}';
-      subtitleRight = canCompleteMovement ? Messages.CONFIRM : '';
+      subtitleRight = '';//canCompleteMovement ? Messages.CONFIRM : '';
     } else {
       id = widget.movementAndLines.name ?? Messages.EMPTY;
       titleLeft =widget.movementAndLines.identifier ?? Messages.EMPTY;
@@ -80,11 +79,6 @@ class MovementHeaderCardWithLocatorState extends ConsumerState<NewMovementCardWi
         width: widget.width,
         decoration: BoxDecoration(
           color: widget.bgColor,
-          /*image: DecorationImage(
-            image: AssetImage('assets/images/supply-chain.png'),
-            fit: BoxFit.cover,
-            alignment: Alignment.topRight,
-          ),*/
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
@@ -117,6 +111,17 @@ class MovementHeaderCardWithLocatorState extends ConsumerState<NewMovementCardWi
                       backgroundColor: Colors.green, // Changed to transparent for IconButton
                     ),
                     onPressed: () {
+
+                      GoRouterHelper(ref.context).push(AppRouter.PAGE_MOVEMENT_QR_LIST,
+                          extra: widget.movementAndLines);
+
+                    },
+                    icon: Icon(Icons.qr_code, color: Colors.white,)),
+                IconButton(
+                    style: IconButton.styleFrom(
+                      backgroundColor: Colors.green, // Changed to transparent for IconButton
+                    ),
+                    onPressed: () {
                       ref.read(productsHomeCurrentIndexProvider.notifier).state =
                           Memory.PAGE_INDEX_MOVEMENT_PRINTER_SETUP;
                       ref.read(actionScanProvider.notifier).state = Memory.ACTION_FIND_MOVEMENT_BY_ID;
@@ -124,20 +129,8 @@ class MovementHeaderCardWithLocatorState extends ConsumerState<NewMovementCardWi
                       GoRouterHelper(ref.context).go(AppRouter.PAGE_MOVEMENT_PRINTER_SETUP,
                           extra: widget.movementAndLines);
 
-                      /*AwesomeDialog(
-                        context: context,
-                        dialogType: DialogType.info,
-                        animType: AnimType.scale,
-                        title: Messages.NOT_IMPLEMENTED,
-                        desc: Messages.NOT_IMPLEMENTED_YET,
-                        autoHide: const Duration(seconds: 3),
-                        btnOkOnPress: () {},
-                        btnOkColor: themeColorSuccessful,
-                      ).show();
-
-                       */
                     },
-                    icon: Icon(Icons.print, color: Colors.white,)), // Changed to Icon for IconButton
+                    icon: Icon(Icons.print, color: Colors.white,)), // Cha// Changed to Icon for IconButton
               ],
             ),
             Row(
@@ -165,19 +158,6 @@ class MovementHeaderCardWithLocatorState extends ConsumerState<NewMovementCardWi
               style: widget.movementStyle,
               overflow: TextOverflow.ellipsis,
             ),
-            /*Text(
-              widget.movementAndLines.hasLastLocatorFrom ?
-              widget.movementAndLines.lastLocatorFrom!.value ??
-                  widget.movementAndLines.lastLocatorFrom!.identifier ?? '' : '',
-              style: widget.movementStyle,
-              overflow: TextOverflow.ellipsis,
-            ),
-            Text(
-              widget.movementAndLines.hasLastLocatorTo ? widget.movementAndLines.lastLocatorTo!.value ??
-                  widget.movementAndLines.lastLocatorTo!.identifier ?? '' : '',
-              style: widget.movementStyle,
-              overflow: TextOverflow.ellipsis,
-            ),*/
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -186,71 +166,13 @@ class MovementHeaderCardWithLocatorState extends ConsumerState<NewMovementCardWi
                   style: widget.movementStyle,
                   overflow: TextOverflow.ellipsis,
                 ),
-
-                canCompleteMovement ? GestureDetector(
-                  onTap: (){
-                    if(!widget.movementAndLines.canComplete){
-                      AwesomeDialog(
-                        context: context,
-                        animType: AnimType.scale,
-                        dialogType: DialogType.error,
-                        body: Center(child: Text(
-                          Messages.MOVEMENT_ALREADY_COMPLETED,
-                          //style: TextStyle(fontStyle: FontStyle.italic),
-                        ),), // correct here
-                        title: Messages.MOVEMENT_ALREADY_COMPLETED,
-                        desc:   '',
-                        autoHide: const Duration(seconds: 3),
-                        btnOkOnPress: () {},
-                        btnOkColor: themeColorSuccessful,
-                        btnCancelColor: themeColorError,
-                        btnCancelText: Messages.CANCEL,
-                        btnOkText: Messages.OK,
-                      ).show();
-                      return;
-                    } else {
-                      AwesomeDialog(
-                        context: context,
-                        animType: AnimType.scale,
-                        dialogType: DialogType.question,
-                        body: Center(child: Text(
-                          Messages.CONFIRM_MOVEMENT,
-                          //style: TextStyle(fontStyle: FontStyle.italic),
-                        ),), // correct here
-                        title: '${Messages.CONFIRM_MOVEMENT}?',
-                        desc:   '',
-                        //autoHide: const Duration(seconds: 3),
-                        btnOkOnPress: () {
-                          GoRouterHelper(context).go(
-                              AppRouter.PAGE_MOVEMENTS_CONFIRM_SCREEN,
-                              extra: widget.movementAndLines);
-                        },
-                        btnCancelOnPress: () {},
-                        btnOkColor: themeColorSuccessful,
-                        btnCancelColor: themeColorError,
-                        btnCancelText: Messages.CANCEL,
-                        btnOkText: Messages.OK,
-                      ).show();
-                      return;
-
-                    }
-
-                  },
-                  child: Container(
-                    color: canCompleteMovement ? Colors.green : themeColorPrimary,
-                    child: Text(
-                      subtitleRight ,
-                      textAlign: TextAlign.end,
-                      style: widget.movementStyle,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                ) :Text(
+                Text(
                   subtitleRight ,
                   textAlign: TextAlign.end,
                   style: widget.movementStyle,
                   overflow: TextOverflow.ellipsis,
                 ),
+
 
               ],
             ) ,

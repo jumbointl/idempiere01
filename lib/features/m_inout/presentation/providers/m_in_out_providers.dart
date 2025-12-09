@@ -1,15 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
-import 'package:monalisa_app_001/config/config.dart';
 import 'package:monalisa_app_001/features/m_inout/domain/entities/line.dart';
 import 'package:monalisa_app_001/features/m_inout/domain/entities/m_in_out.dart';
 import 'package:monalisa_app_001/features/m_inout/domain/entities/m_in_out_confirm.dart';
 import 'package:monalisa_app_001/features/m_inout/domain/repositories/m_in_out_repositiry.dart';
 import 'package:monalisa_app_001/features/products/common/number_input_panel.dart';
 import '../../../../config/constants/roles_app.dart';
+import '../../../../config/theme/app_theme.dart';
 import '../../../products/common/number_sum_panel.dart';
 import '../../../products/common/selections_dialog.dart';
+import '../../../products/presentation/providers/common_provider.dart';
 import '../../domain/entities/barcode.dart';
 import '../../domain/entities/line_confirm.dart';
 import '../../infrastructure/repositories/m_in_out_repository_impl.dart';
@@ -535,10 +536,12 @@ class MInOutNotifier extends StateNotifier<MInOutStatus> {
   }
 
   bool isConfirmMInOut() {
+    print('state.mInOut?.docStatus.id ${state.mInOut?.docStatus.id?.toString() ?? 'NULL'}');
     if (((state.mInOutType == MInOutType.shipment ||
         state.mInOutType == MInOutType.receipt) &&
         state.mInOut?.docStatus.id.toString() == 'IP') ||
         state.mInOutType == MInOutType.move) {
+      print('state.mInOut?.docStatus.id ${state.mInOut?.docStatus.id?.toString() ?? 'NULL'}');
       return true;
     }
     final validStatuses = {
@@ -557,6 +560,7 @@ class MInOutNotifier extends StateNotifier<MInOutStatus> {
   }
 
   Future<void> setDocAction(WidgetRef ref) async {
+    print('setDocAction init');
     state = state.copyWith(isLoading: true, errorMessage: '');
     if (state.mInOut?.id == null) {
       state = state.copyWith(
@@ -566,9 +570,13 @@ class MInOutNotifier extends StateNotifier<MInOutStatus> {
       return;
     }
     try {
+      print('try setDocAction');
       for (final line in state.mInOut!.lines) {
+        print('try setDocAction ${line.id ?? '--'}');
         if (line.editLocator != null) {
+          print('try setDocAction line.editLocator ${line.editLocator}');
           final update = await mInOutRepository.updateLocator(line, ref);
+          print('update  mInOutRepository ${line.id} ${update ? 'true':'no true'}');
           if (!update) {
             state = state.copyWith(
               errorMessage:
@@ -579,12 +587,15 @@ class MInOutNotifier extends StateNotifier<MInOutStatus> {
           }
         }
       }
+      print('mInOutResponse');
       final mInOutResponse = await mInOutRepository.setDocAction(ref);
+      print('update  mInOutRepository ${mInOutResponse.docStatus.identifier}');
       state = state.copyWith(
         mInOut: mInOutResponse.copyWith(lines: state.mInOut!.lines),
         isLoading: false,
         isComplete: true,
       );
+      print('update  mInOutRepository ${mInOutResponse.documentNo?.toString() ?? '--'}');
     } catch (e) {
       state = state.copyWith(
         errorMessage: e.toString().replaceAll('Exception: ', ''),
@@ -816,26 +827,30 @@ class MInOutNotifier extends StateNotifier<MInOutStatus> {
                     itemCount: linesWithSameUPC.length,
                     itemBuilder: (BuildContext context, int i) {
                       final currentLine = linesWithSameUPC[i];
-                      return ListTile(
-                        title: Text('Línea: ${currentLine.line}'),
-                        subtitle: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text('Cant. Movement: ${currentLine.movementQty ??
-                                0}'),
-                            Text('Cant. Manual: ${currentLine.manualQty ?? 0}'),
-                            Text('Cant. Escaneada: ${currentLine.scanningQty ??
-                                0}'),
-                            Text(
-                                'Cant. Confirmada: ${currentLine.confirmedQty ??
-                                    0}'),
-                            Text('Cant. Desecho: ${currentLine.scrappedQty ??
-                                0}'),
-                          ],
+
+                      return Card(
+                        color: Colors.grey[200],
+                        child: ListTile(
+                          title: Text('Línea: ${currentLine.line}'),
+                          subtitle: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text('Cant. Movement: ${currentLine.movementQty ??
+                                  0}'),
+                              Text('Cant. Manual: ${currentLine.manualQty ?? 0}'),
+                              Text('Cant. Escaneada: ${currentLine.scanningQty ??
+                                  0}'),
+                              Text(
+                                  'Cant. Confirmada: ${currentLine.confirmedQty ??
+                                      0}'),
+                              Text('Cant. Desecho: ${currentLine.scrappedQty ??
+                                  0}'),
+                            ],
+                          ),
+                          onTap: () {
+                            Navigator.of(context).pop(linesIndexWithSameUPC[i]);
+                          },
                         ),
-                        onTap: () {
-                          Navigator.of(context).pop(linesIndexWithSameUPC[i]);
-                        },
                       );
                     },
                   ),
@@ -911,7 +926,10 @@ class MInOutNotifier extends StateNotifier<MInOutStatus> {
           String textButton3 = 'Sumar';
           final container = ProviderScope.containerOf(context, listen: false);
           final defaultAction = container.read(defaultActionWhenUPCIsScannedProvider);
-
+          int buttonsToShow = 2;
+          if(linesWithSameUPC.length<2){
+            buttonsToShow = 3 ;
+          }
           switch (defaultAction) {
             case DefaultActionWhenUPCIsScanned.ask:
 
@@ -921,7 +939,9 @@ class MInOutNotifier extends StateNotifier<MInOutStatus> {
                   subtitle: subtitle,
                   textButton1: textButton1,
                   textButton2: textButton2,
-                  textButton3: textButton3);
+                  textButton3: textButton3,
+                  buttonsToShow: buttonsToShow,
+              );
 
 
               if (action == textButton2) {
@@ -1317,3 +1337,73 @@ class MInOutStatus {
         rolComplete: rolComplete ?? this.rolComplete,
       );
 }
+
+// import 'package:flutter/material.dart';
+// import 'package:flutter_riverpod/flutter_riverpod.dart';
+// import 'package:monalisa_app_001/config/theme/app_theme.dart';
+// import 'tu_path/minout_status.dart'; // donde esté MInOutStatus + MInOutType
+
+/// Provider que devuelve el color de fondo del header según el estado del MInOut
+final mInOutHeaderColorProvider =
+Provider.family<Color, MInOutStatus>((ref, mInOutState) {
+  final docStatusId = mInOutState.mInOut?.docStatus.id?.toString();
+  final confirmStatusId = mInOutState.mInOutConfirm?.docStatus.id?.toString();
+
+  print('mInOutHeaderColorProvider mInoutColor ${mInOutState.mInOutType}');
+  if (mInOutState.mInOutType == MInOutType.move) {
+    print('mInoutColor1 ${mInOutState.mInOutType}');
+    print('docStatus $docStatusId');
+    print('confirmStatusId $confirmStatusId');
+
+    if (docStatusId == 'DR') {
+      return themeColorWarningLight;
+    } else if (docStatusId == 'IP') {
+      return Colors.cyan.shade200;
+    } else if (docStatusId == 'CO') {
+      return themeColorSuccessfulLight;
+    } else {
+      return Colors.grey.shade200;
+    }
+  }
+  if (mInOutState.mInOutType == MInOutType.moveConfirm) {
+    print('mInoutColor2 ${mInOutState.mInOutType}');
+    print('docStatus $docStatusId');
+    print('confirmStatusId $confirmStatusId');
+
+    if (confirmStatusId == 'DR') {
+      return themeColorWarningLight;
+    } else if (confirmStatusId == 'IP') {
+      return  Colors.cyan.shade200;
+    } else if (confirmStatusId  == 'CO') {
+      return themeColorSuccessfulLight;
+    } else {
+      return Colors.grey.shade200;
+    }
+  }
+
+  final type = mInOutState.mInOutType;
+
+  final esInOutNormal =
+      type == MInOutType.shipment ||
+          type == MInOutType.receipt ||
+          type == MInOutType.move ||
+          type == MInOutType.moveConfirm;
+
+  if (!esInOutNormal) {
+    // usar docStatus del confirm
+    if (confirmStatusId == 'IP') {
+      return themeColorWarningLight;
+    } else if (confirmStatusId == 'CO') {
+      return themeColorSuccessfulLight;
+    }
+  } else {
+    // usar docStatus del mInOut principal
+    if (docStatusId == 'IP') {
+      return themeColorWarningLight;
+    } else if (docStatusId == 'CO') {
+      return themeColorSuccessfulLight;
+    }
+  }
+
+  return themeBackgroundColorLight;
+});

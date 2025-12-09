@@ -14,4 +14,11 @@ class StandardResponse {
         isError: json["@IsError"],
         error: json["Error"],
     );
+
+    Map<String, dynamic> toJson() => {
+        "@RecordID": recordId,
+        "@IsError": isError,
+        "Error": error,
+    };
+
 }

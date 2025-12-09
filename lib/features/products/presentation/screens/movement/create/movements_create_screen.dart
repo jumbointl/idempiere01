@@ -142,7 +142,7 @@ class MovementsCreateScreenState extends ConsumerState<MovementsCreateScreen> {
                  Future.delayed(Duration.zero);
 
                  if (context.mounted) {
-                   context.go('${AppRouter.PAGE_PRODUCT_STORE_ON_HAND_FOR_LINE}/:-1',
+                   context.go('${AppRouter.PAGE_PRODUCT_STORE_ON_HAND_FOR_LINE}/-1',
                    extra: data,);
 
                  }
@@ -190,7 +190,7 @@ class MovementsCreateScreenState extends ConsumerState<MovementsCreateScreen> {
                                    ref.read(isDialogShowedProvider.notifier).update((state) =>false);
                                    MemoryProducts.movementAndLines.clearData();
                                    if(context.mounted){
-                                     context.go('${AppRouter.PAGE_MOVEMENTS_SEARCH}/$id');
+                                     context.go('${AppRouter.PAGE_MOVEMENTS_SEARCH}/$id/-1');
                                    }
                                  },
                                  child: Text(Messages.MOVEMENT,style: TextStyle(fontSize: themeFontSizeLarge,
@@ -256,7 +256,7 @@ class MovementsCreateScreenState extends ConsumerState<MovementsCreateScreen> {
                              ref.read(isDialogShowedProvider.notifier).update((state) =>false);
                              MemoryProducts.movementAndLines.clearData();
                              if (context.mounted) {
-                               context.go('${AppRouter.PAGE_MOVEMENTS_SEARCH}/$id');
+                               context.go('${AppRouter.PAGE_MOVEMENTS_SEARCH}/$id/-1');
                             }
                            },
                            child: Text(Messages.OK,style: TextStyle(fontSize: themeFontSizeLarge,

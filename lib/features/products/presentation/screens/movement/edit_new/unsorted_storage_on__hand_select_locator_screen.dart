@@ -4,10 +4,8 @@ import 'dart:convert';
 import 'package:awesome_dialog/awesome_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_riverpod/legacy.dart';
 import 'package:go_router/go_router.dart';
 import 'package:monalisa_app_001/features/products/common/input_data_processor.dart';
-import 'package:monalisa_app_001/features/products/common/scan_button_by_action.dart';
 import 'package:monalisa_app_001/features/products/domain/idempiere/movement_and_lines.dart';
 import 'package:monalisa_app_001/features/products/presentation/providers/persitent_provider.dart';
 import 'package:monalisa_app_001/features/products/presentation/providers/products_providers.dart';
@@ -24,18 +22,16 @@ import '../../../../common/messages_dialog.dart';
 import '../../../../common/scan_button_by_action_fixed.dart';
 import '../../../../common/scan_button_by_action_fixed_short.dart';
 import '../../../../domain/idempiere/idempiere_locator.dart';
-import '../../../../domain/idempiere/idempiere_product.dart';
 import '../../../../domain/idempiere/idempiere_storage_on_hande.dart';
 import '../../../../domain/idempiere/idempiere_warehouse.dart';
-import '../../../../domain/idempiere/put_away_movement.dart';
 import '../../../../domain/sql/sql_data_movement_line.dart';
 import '../../../providers/common_provider.dart';
 import '../../../providers/locator_provider.dart';
-import '../../../providers/products_scan_notifier_for_line.dart';
 import '../../locator/search_locator_dialog.dart';
 import '../../store_on_hand/memory_products.dart';
 import '../provider/products_home_provider.dart';
 import '../provider/new_movement_provider.dart';
+import 'custom_app_bar.dart';
 class UnsortedStorageOnHandSelectLocatorScreen extends ConsumerStatefulWidget implements InputDataProcessor{
 
   final IdempiereStorageOnHande storage;
@@ -138,23 +134,12 @@ class UnsortedStorageOnHandScreenSelectLocatorState extends ConsumerState<Unsort
   String? productId ;
   late var copyLastLocatorTo ;
   late var documentColor;
-  late TextStyle textStyle ;
-  late String title ;
-
+  double trailingWidth = 60;
 
   @override
   void initState() {
     super.initState();
     movementAndLines = widget.movementAndLines;
-    if(movementAndLines.hasMovement){
-      title = movementAndLines.documentNo ?? '' ;
-      if(title.length>20){
-        textStyle = TextStyle(fontSize: themeFontSizeSmall);
-      }
-      Future.delayed(Duration(microseconds: 50),() {
-
-      });
-    }
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final copyLast = ref.read(copyLastLocatorToProvider);
       final from = widget.storage.mLocatorID;
@@ -174,15 +159,13 @@ class UnsortedStorageOnHandScreenSelectLocatorState extends ConsumerState<Unsort
     });
   }
 
-  double trailingWidth = 60;
+
   @override
   Widget build(BuildContext context) {
     actionScan = ref.watch(actionScanProvider);
     copyLastLocatorTo = ref.watch(copyLastLocatorToProvider);
 
     locatorFrom = widget.storage.mLocatorID ;
-    String title ='${Messages.MOVEMENT} : ${Messages.CREATE}';
-    TextStyle textStyle = TextStyle(fontSize: themeFontSizeLarge);
 
     productId = widget.movementAndLines.nextProductIdUPC ;
 
@@ -190,10 +173,6 @@ class UnsortedStorageOnHandScreenSelectLocatorState extends ConsumerState<Unsort
 
     findLocatorTo = ref.watch(findLocatorToProvider);
     locatorTo = ref.watch(selectedLocatorToProvider);
-
-
-
-
     isDialogShowed = ref.watch(isDialogShowedProvider);
     isScanning = ref.watch(isScanningProvider);
 
@@ -246,7 +225,11 @@ class UnsortedStorageOnHandScreenSelectLocatorState extends ConsumerState<Unsort
             },
           ),
         ],
-        title: Text(title,style: textStyle,),
+        title: movementAppBarTitle(movementAndLines: movementAndLines,
+            onBack: ()=> popScopeAction,
+            showBackButton: false,
+            subtitle: '${Messages.LINES} : (${movementAndLines.movementLines?.length ?? 0})'
+        ),
 
 
       ),
@@ -1007,11 +990,9 @@ class UnsortedStorageOnHandScreenSelectLocatorState extends ConsumerState<Unsort
 
                           if (value) {
                             // copiar último locator al seleccionado
-                            if(lastLocatorTo!=null) {
-                              ref.read(selectedLocatorToProvider.notifier).state =
-                                  lastLocatorTo;
-                            }
-                          } else {
+                            ref.read(selectedLocatorToProvider.notifier).state =
+                                lastLocatorTo;
+                                                    } else {
                             // resetear locator seleccionado
                             ref.read(selectedLocatorToProvider.notifier).state =
                                 IdempiereLocator(

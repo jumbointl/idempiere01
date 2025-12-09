@@ -1,4 +1,3 @@
-import 'dart:ui';
 
 import 'package:monalisa_app_001/features/products/domain/idempiere/idempiere_business_partner.dart';
 import 'package:monalisa_app_001/features/products/domain/idempiere/idempiere_locator.dart';
@@ -23,8 +22,10 @@ class MovementAndLines extends IdempiereMovement {
   SqlUsersData? user;
   List<IdempiereMovementLine>? movementLines;
   SqlDataMovementLine? movementLineToCreate;
+  List<IdempiereMovementConfirm>? movementConfirms;
   bool get hasMovement => id != null && id!>0;
   bool get hasMovementLines => movementLines != null && movementLines!.isNotEmpty;
+  bool get hasMovementConfirms => movementConfirms != null && movementConfirms!.isNotEmpty;
   IdempiereWarehouse? get warehouseFrom => mWarehouseID;
   IdempiereWarehouse? get warehouseTo => mWarehouseToID;
   bool get hasWarehouseFrom => warehouseFrom != null && warehouseFrom!.id != null && warehouseFrom!.id!>0;
@@ -38,7 +39,7 @@ class MovementAndLines extends IdempiereMovement {
   IdempiereLocator? get locatorFromForMovementLineCreate => movementLineToCreate?.mLocatorID;
   IdempiereLocator? get locatorToForMovementLineCreate => movementLineToCreate?.mLocatorToID;
   String? nextProductIdUPC;
-  List<IdempiereMovementConfirm>? movementConfirms;
+
 
 
   String get documentNumber => documentNo ?? '';
@@ -162,9 +163,6 @@ class MovementAndLines extends IdempiereMovement {
     IdempiereBusinessPartner.fromJson(json['C_BPartner_ID']) : null;
     cBPartnerLocationID = json['C_BPartner_Location_ID'] != null ?
     IdempiereBusinessPartnerLocation.fromJson(json['C_BPartner_Location_ID']) : null;
-
-
-
   }
   @override
   Map<String, dynamic> toJson() {

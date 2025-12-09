@@ -15,6 +15,7 @@ import 'package:monalisa_app_001/features/home/presentation/screens/home_screen.
 import 'package:monalisa_app_001/features/m_inout/presentation/screens/m_in_out_screen.dart';
 import 'package:monalisa_app_001/features/products/common/scanner_screen.dart';
 import 'package:monalisa_app_001/features/products/domain/idempiere/put_away_movement.dart';
+import 'package:monalisa_app_001/features/products/presentation/screens/movement/edit_new/movement_barcode_list_screen.dart';
 import 'package:monalisa_app_001/features/products/presentation/screens/movement/list/movement_list_screen.dart';
 import 'package:monalisa_app_001/features/products/presentation/screens/movement/printer/movement_print_screen.dart';
 import 'package:monalisa_app_001/features/products/presentation/screens/movement/printer/printer_setup_screen.dart';
@@ -31,7 +32,6 @@ import '../../features/products/presentation/screens/movement/edit_new/movement_
 import '../../features/products/presentation/screens/movement/create/movements_create_screen.dart';
 import '../../features/products/presentation/screens/movement/edit_new/unsorted_storage_on__hand_select_locator_screen.dart';
 import '../../features/products/presentation/screens/movement/pos/movement_pos_page.dart';
-import '../../features/products/presentation/screens/movement/printer/printer_setup_input_screen.dart';
 import '../../features/products/presentation/screens/movement/provider/products_home_provider.dart';
 import '../../features/products/presentation/screens/movement/provider/new_movement_provider.dart';
 import '../../features/products/presentation/screens/search/product_search_screen.dart';
@@ -83,7 +83,8 @@ class AppRouter {
   static String PAGE_MOVEMENT_PRINT_POS='/movement_print_pos';
   static String PAGE_UNSORTED_STORAGE_ON_HAND_FOR_LINE_SELECT_LOCATOR = '/unsorted_store_on_hand_select_locator';
 
-  static String PAGE_PRINTER_SETUP_INPUT='/printer_setup_input';
+
+  static String PAGE_MOVEMENT_QR_LIST='/movement_qr_list';
 
 
 
@@ -139,7 +140,17 @@ final goRouterProvider = Provider((ref) {
         path: '/mInOut/:type',
         builder: (context, state) {
           final type = state.pathParameters['type'] ?? 'shipment';
-          return MInOutScreen(type: type);
+          final documentNo = '-1';
+          return MInOutScreen(type: type, documentNo: documentNo);
+        },
+      ),
+      GoRoute(
+        path: '/mInOut/:type/:documentNo',
+        builder: (context, state) {
+          final type = state.pathParameters['type'] ?? 'shipment';
+          final documentNo = state.pathParameters['documentNo'] ?? '-1';
+
+          return MInOutScreen(type: type, documentNo: documentNo);
         },
       ),
       GoRoute(
@@ -257,6 +268,22 @@ final goRouterProvider = Provider((ref) {
 
 
       ),
+      GoRoute(
+          path: AppRouter.PAGE_MOVEMENT_QR_LIST,
+          builder: (context, state){
+            if( RolesApp.hasStockPrivilege()){
+              MovementAndLines movementAndLines = state.extra as MovementAndLines;
+              return MovementBarcodeListScreen(
+                  argument: jsonEncode(movementAndLines.toJson()),
+                  movementAndLines: movementAndLines,);
+
+            } else{
+              return const HomeScreen();
+            }
+          }
+
+
+      ),
 
       GoRoute(
           path: AppRouter.PAGE_BARCODE_SCANER,
@@ -271,10 +298,7 @@ final goRouterProvider = Provider((ref) {
           }
 
       ),
-      GoRoute(
-        path: AppRouter.PAGE_PRINTER_SETUP_INPUT,
-        builder: (context, state) => const PrinterSetupInputScreen(),
-      ),
+
       GoRoute(
         path: AppRouter.PAGE_MOVEMENT_PRINT_POS,
         builder: (ctx, state) {
@@ -326,6 +350,7 @@ final goRouterProvider = Provider((ref) {
 
             String movementId = state.pathParameters['movementId'] ??
                 NewMovementEditScreen.WAIT_FOR_SCAN_MOVEMENT;
+            String fromPage = '-1';
 
             Future.delayed(Duration.zero, () {
               MemoryProducts.movementAndLines.clearData();
@@ -342,7 +367,56 @@ final goRouterProvider = Provider((ref) {
                 future: Future.delayed(Duration(milliseconds: transitionTimeMilliseconds)),
                 builder: (context, snapshot) {
                   if (snapshot.connectionState == ConnectionState.done) {
-                    return NewMovementEditScreen(movementId: movementId);
+                    return NewMovementEditScreen(
+                        fromPage: fromPage,
+                        movementId: movementId);
+                  }
+                  return const Scaffold(
+                    body: Center(child: CircularProgressIndicator()),
+                  );
+                },
+              ),
+              transitionDuration:Duration(microseconds: transitionTimeMilliseconds),
+              transitionsBuilder: (context, animation, secondaryAnimation, child) {
+                const begin = Offset(-1.0, 0.0);
+                const end = Offset.zero;
+                final tween = Tween(begin: begin, end: end).chain(CurveTween(curve: Curves.easeInOut));
+                return SlideTransition(position: animation.drive(tween), child: child);
+              },
+            );
+          } else {
+            return const NoTransitionPage(child: HomeScreen());
+          }
+        },
+      ),
+      GoRoute(
+        path: '${AppRouter.PAGE_MOVEMENTS_SEARCH}/:movementId/:fromPage',
+        pageBuilder: (context, state) {
+          if (RolesApp.hasStockPrivilege()) {
+
+            String movementId = state.pathParameters['movementId'] ??
+                NewMovementEditScreen.WAIT_FOR_SCAN_MOVEMENT;
+            String fromPage = state.pathParameters['fromPage'] ??
+                NewMovementEditScreen.FROM_PAGE_HOME;
+
+            Future.delayed(Duration.zero, () {
+              MemoryProducts.movementAndLines.clearData();
+              GetStorage().remove(Memory.KEY_MOVEMENT_AND_LINES);
+              ref.read(homeScreenTitleProvider.notifier).state = Messages.MOVEMENT_SEARCH;
+              ref.read(productsHomeCurrentIndexProvider.notifier).update(
+                      (state) => Memory.PAGE_INDEX_MOVEMENTE_EDIT_SCREEN);
+              ref.read(actionScanProvider.notifier).update(
+                      (state) => Memory.ACTION_FIND_MOVEMENT_BY_ID);
+            });
+            return CustomTransitionPage(
+              key: state.pageKey,
+              child: FutureBuilder(
+                future: Future.delayed(Duration(milliseconds: transitionTimeMilliseconds)),
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.done) {
+                    return NewMovementEditScreen(
+                        fromPage: fromPage,
+                        movementId: movementId);
                   }
                   return const Scaffold(
                     body: Center(child: CircularProgressIndicator()),

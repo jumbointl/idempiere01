@@ -1,20 +1,19 @@
 
-import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:flutter/services.dart';
 import 'package:monalisa_app_001/config/config.dart';
 import 'package:monalisa_app_001/features/products/common/common_screen_state.dart';
 import 'package:monalisa_app_001/features/products/domain/idempiere/idempiere_document_status.dart';
-import 'package:monalisa_app_001/features/products/domain/idempiere/idempiere_document_type.dart';
 import 'package:monalisa_app_001/features/products/domain/idempiere/idempiere_locator.dart';
 import 'package:monalisa_app_001/features/products/domain/idempiere/idempiere_movement.dart';
 import 'package:monalisa_app_001/features/products/domain/idempiere/idempiere_warehouse.dart';
+import 'package:monalisa_app_001/features/products/presentation/screens/movement/edit_new/custom_app_bar.dart';
 import 'package:monalisa_app_001/features/products/presentation/screens/movement/provider/products_home_provider.dart';
 import 'package:monalisa_app_001/features/products/presentation/screens/movement/provider/new_movement_provider.dart';
 
-import '../../../../../../config/router/app_router.dart';
 import '../../../../../auth/domain/entities/warehouse.dart';
 import '../../../../../shared/data/memory.dart';
 import '../../../../../shared/data/messages.dart';
@@ -22,7 +21,6 @@ import '../../../../common/messages_dialog.dart';
 import '../../../providers/common_provider.dart';
 import '../../../providers/persitent_provider.dart';
 import '../../../providers/product_provider_common.dart';
-import '../../../providers/store_on_hand_provider.dart';
 import '../../../widget/movement_no_data_card.dart';
 
 
@@ -57,16 +55,14 @@ class MovementListScreenState extends CommonConsumerState<MovementListScreen> {
   @override
   late var isDialogShowed;
 
-  @override
-  late var usePhoneCamera;
 
 
   @override
   void executeAfterShown() {
     ref.read(isScanningProvider.notifier).update((state) => false);
     final date = ref.read(selectedDateProvider);
-    final isIn = ref.read(inOutProvider); // bool?
-    findMovementAfterDate(date, isIn: isIn);
+    final isIn = ref.read(inOutFilterProvider);
+    findMovementAfterDate(date, inOut: isIn);
   }
 
   @override
@@ -86,26 +82,34 @@ class MovementListScreenState extends CommonConsumerState<MovementListScreen> {
   @override
   Widget getMainDataCard(BuildContext context, WidgetRef ref) {
 
-     return mainDataAsync.when(
-      data: (movements) {
-        if(movements==null) return   MovementNoDataCard();
-        WidgetsBinding.instance.addPostFrameCallback((_) async {
+     return Column(
+       children: [
+         MovementDateFilterRow(
+             onOk: (date, inOut) {
+           findMovementAfterDate(date, inOut: inOut);
+         },),
+         mainDataAsync.when(
+          data: (movements) {
+            if(movements==null) return   MovementNoDataCard();
+            WidgetsBinding.instance.addPostFrameCallback((_) async {
 
 
-        });
-        List<IdempiereMovement> list = movements;
-        return getMovements(list);
+            });
+            List<IdempiereMovement> list = movements;
+            return getMovements(list);
 
-      },error: (error, stackTrace) => Text('Error'),
-       loading: () => LinearProgressIndicator(
-         minHeight: 36,
-       ),
-    );
+          },error: (error, stackTrace) => Text('Error'),
+           loading: () => LinearProgressIndicator(
+             minHeight: 36,
+           ),
+             ),
+       ]
+     );
   }
 
   Widget getMovements(List<IdempiereMovement> movements) {
     // Lee el valor actual de IN/OUT desde Riverpod
-    final isIn = ref.watch(inOutProvider); // true = IN, false = OUT
+    final inOut = ref.watch(inOutFilterProvider); // true = IN, false = OUT
 
 
     return ListView.separated(
@@ -115,10 +119,29 @@ class MovementListScreenState extends CommonConsumerState<MovementListScreen> {
       itemBuilder: (context, index) {
         final movement = movements[index];
         int movementId = movement.id ?? -1;
+        late var iconData;
+        late var textColor;
+        switch(inOut) {
+          case 'IN':
+            iconData = Icons.arrow_downward;
+            textColor = Colors.green;
+            break;
+          case 'OUT':
+            iconData = Icons.arrow_upward;
+            textColor = Colors.red;
+            break;
+          case 'SWAP':
+            iconData = Icons.swap_horiz;
+            textColor = Colors.blue;
+            break;
+          case 'ALL':
+            iconData = Icons.all_inclusive;
+            textColor = Colors.black;
+            break;
 
-        var iconData = isIn == null ? Icons.swap_vert : isIn ? Icons.arrow_downward : Icons.arrow_upward;
+        }
         Color? iconColor = Colors.purple;
-        var textColor = isIn == null ? Colors.black : isIn ? Colors.green : Colors.red;
+
 
         int userWarehouseId = Memory.sqlUsersData.mWarehouseID?.id ?? -1;
         int warehouseFromId = movement.mWarehouseID?.id ?? -2;
@@ -162,9 +185,24 @@ class MovementListScreenState extends CommonConsumerState<MovementListScreen> {
         return GestureDetector(
           onTap: () {
             if(movementId<=0){
+              showErrorMessage(context, ref, Messages.NOT_ENABLED);
               return;
             }
-            context.go('${AppRouter.PAGE_MOVEMENTS_SEARCH}/$movementId');
+            Clipboard.setData(ClipboardData(text: movement.documentNo ?? ''));
+            /*ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+              content: Text('${Messages.COPIED_TO_CLIPBOARD}: ${movement.documentNo ?? ''}'),
+              duration: const Duration(seconds: 1),
+            ));*/
+            String docStatus = movement.docStatus?.id ?? '';
+
+            if(movement.docStatus?.id == 'IP' || movement.docStatus?.id == 'DR'){
+              String documentNo = movement.documentNo ?? '-1';
+              showMovementOptionsSheet(context: context, documentNo: documentNo, movementId: movementId, docStatus:docStatus);
+
+            } else {
+              context.go('${AppRouter.PAGE_MOVEMENTS_SEARCH}/$movementId/1');
+            }
+
           },
 
           child: Card(
@@ -195,6 +233,107 @@ class MovementListScreenState extends CommonConsumerState<MovementListScreen> {
     );
   }
 
+  void showMovementOptionsSheet({
+    required BuildContext context,
+    required String documentNo,
+    required int movementId,
+    required String docStatus,
+  }) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent, // para ver el borde redondeado
+      builder: (BuildContext bc) {
+        return FractionallySizedBox(
+          heightFactor: 0.7, // 70% de la pantalla
+          child: Container(
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+            ),
+            child: SafeArea(
+              top: false,
+              child: Column(
+                mainAxisSize: MainAxisSize.max,
+                children: [
+                  const SizedBox(height: 8),
+
+                  // INVENTORY MOVE (azul)
+                  Card(
+                    color: Colors.blue,
+                    margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: docStatus=='DR' ? ListTile(
+                      leading: const Icon(Icons.inventory, color: Colors.white),
+                      title: Text(
+                        Messages.INVENTORY_MOVE,
+                        style: const TextStyle(color: Colors.white),
+                      ),
+                      onTap: () {
+                        Navigator.of(context).pop();
+                        context.push('/mInOut/move/$documentNo');
+                      },
+                    ) : docStatus=='IP' ? ListTile(
+                      leading: const Icon(Icons.inventory, color: Colors.white),
+                      title: Text(
+                        Messages.MOVE_CONFIRM,
+                        style: const TextStyle(color: Colors.white),
+                      ),
+                      onTap: () {
+                        Navigator.of(context).pop();
+                        context.push('/mInOut/moveconfirm/$documentNo');
+                      },
+                    ) : Container(),
+                  ),
+
+                  // VIEW MOVEMENT (ciano)
+                  Card(
+                    color: Colors.cyan,
+                    margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: ListTile(
+                      leading: const Icon(Icons.line_style, color: Colors.white),
+                      title: Text(
+                        Messages.VIEW_MOVEMENT,
+                        style: const TextStyle(color: Colors.white),
+                      ),
+                      onTap: () {
+                        Navigator.of(context).pop();
+                        context.go('${AppRouter.PAGE_MOVEMENTS_SEARCH}/$movementId/1');
+                      },
+                    ),
+                  ),
+
+                  // CANCEL (gris)
+                  Card(
+                    color: Colors.grey,
+                    margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: ListTile(
+                      leading: const Icon(Icons.cancel, color: Colors.white),
+                      title: Text(
+                        Messages.CANCEL,
+                        style: const TextStyle(color: Colors.white),
+                      ),
+                      onTap: () => Navigator.of(context).pop(),
+                    ),
+                  ),
+
+                  const SizedBox(height: 16),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
 
 
 
@@ -204,7 +343,6 @@ class MovementListScreenState extends CommonConsumerState<MovementListScreen> {
 
     ref.invalidate(persistentLocatorToProvider);
     isScanning = ref.watch(isScanningProvider);
-    usePhoneCamera = ref.watch(usePhoneCameraToScanProvider);
     isDialogShowed = ref.watch(isDialogShowedProvider);
     inputString = ref.watch(inputStringProvider);
     pageIndexProdiver = ref.watch(productsHomeCurrentIndexProvider);
@@ -221,14 +359,27 @@ class MovementListScreenState extends CommonConsumerState<MovementListScreen> {
   Widget? getAppBarTitle(BuildContext context, WidgetRef ref) {
     return mainDataAsync.when(
       data: (movements) {
-        if(movements==null) return Text(Messages.MOVEMENT_SEARCH,style: textStyleTitle);
+        //if(movements==null) return Text(Messages.MOVEMENT_SEARCH,style: textStyleTitle);
         WidgetsBinding.instance.addPostFrameCallback((_) async {
 
 
         });
         List<IdempiereMovement> list = movements;
-        if(list.isEmpty || list[0].id==null || list[0].id!<0) return Text(Messages.MOVEMENT_SEARCH,style: textStyleTitle);
-        return Row(
+        String title = Messages.MOVEMENT_SEARCH;
+        if(list.isEmpty || list[0].id==null || list[0].id!<0) {
+          //return Text(Messages.MOVEMENT_SEARCH,style: textStyleTitle);
+          return commonAppBarTitle(
+            onBack: ()=>popScopeAction(context, ref),
+          );
+        }
+        title = '${Messages.RECORDS} : ${list.length}';
+        return commonAppBarTitle(
+          title: title,
+          showBackButton: true,
+          onBack: ()=>popScopeAction(context, ref),
+        );
+
+        /*return Row(
           children: [
             IconButton(
               icon: const Icon(Icons.arrow_back),
@@ -239,9 +390,9 @@ class MovementListScreenState extends CommonConsumerState<MovementListScreen> {
               ),
               onPressed: () => popScopeAction(context, ref),
             ),
-            Text('${Messages.RECORDS} :( ${list.length} )',style: textStyleTitle),
+            Text('${Messages.RECORDS} : ${list.length}',style: textStyleLarge),
           ],
-        );
+        );*/
 
       },error: (error, stackTrace) => Text('Error: $error'),
       loading: () => LinearProgressIndicator(
@@ -284,10 +435,10 @@ class MovementListScreenState extends CommonConsumerState<MovementListScreen> {
   }
 
 
-  @override
+ /* @override
   BottomAppBar getBottomAppBar(BuildContext context, WidgetRef ref) {
     return BottomAppBar(
-        height: 120,
+        height: 105,
         color: Colors.cyan[200] ,
         child: MovementDateFilterRow(
           onOk: (date, isIn) {
@@ -297,7 +448,7 @@ class MovementListScreenState extends CommonConsumerState<MovementListScreen> {
     );
 
 
-  }
+  }*/
 
   @override
   String get hinText {
@@ -313,14 +464,33 @@ class MovementListScreenState extends CommonConsumerState<MovementListScreen> {
 
   }
  @override
-  void findMovementAfterDate(DateTime date, {required bool? isIn}) {
+  void findMovementAfterDate(DateTime date, {required String inOut}) {
     String dateString = date.toString().substring(0,10);
     Memory.sqlUsersData.mWarehouseID ;
     IdempiereWarehouse warehouse =Memory.sqlUsersData.mWarehouseID!;
     IdempiereMovement? movement = IdempiereMovement(
       movementDate: dateString,
     );
-    if(isIn!=null){
+
+
+    switch(inOut){
+      case 'IN':
+        movement.mWarehouseToID = warehouse;
+        break;
+      case 'OUT':
+        movement.mWarehouseID = warehouse;
+        break;
+      case 'SWAP':
+        movement.mWarehouseID = warehouse;
+        movement.mWarehouseToID = warehouse;
+        break;
+      case 'ALL':
+        movement.mWarehouseID = null;
+        movement.mWarehouseToID = null;
+        break;
+    }
+
+    /*if(isIn!=null){
       if(isIn){
         movement.mWarehouseToID = warehouse;
       } else {
@@ -329,7 +499,7 @@ class MovementListScreenState extends CommonConsumerState<MovementListScreen> {
     } else {
       movement.mWarehouseID = warehouse;
       movement.mWarehouseToID = warehouse;
-    }
+    }*/
     final docType = ref.read(documentTyprFilterProvider);
     widget.movementDateFilter = dateString;
 
@@ -345,101 +515,153 @@ class MovementListScreenState extends CommonConsumerState<MovementListScreen> {
   List<Widget> getActionButtons(BuildContext context, WidgetRef ref) {
     final String docType = ref.watch(documentTyprFilterProvider);
 
-    return [TextButton(
-      style: TextButton.styleFrom(
-        foregroundColor: Colors.black,
-        padding: const EdgeInsets.symmetric(horizontal: 8),
-      ),
-      onPressed: () => _showDocumentTypeFilterSheet(context, ref),
-      child: Text(
-        docType, // DR / IP / CO
-        style: TextStyle(
-          color: Colors.purple,
-          fontSize: themeFontSizeTitle,
-          fontWeight: FontWeight.bold,
+    return [
+
+      Padding(
+        padding: const EdgeInsets.only(right: 10.0),
+        child: OutlinedButton(
+          style: OutlinedButton.styleFrom(
+            visualDensity: VisualDensity.compact,
+            backgroundColor: Colors.white,
+          ),
+          onPressed: () {
+            _showDocumentTypeFilterSheet(context, ref);
+          },
+          child: Text(
+            docType,
+            style: const TextStyle(color: Colors.purple),
+          ),
         ),
       ),
-    )];
+    ];
   }
   void _showDocumentTypeFilterSheet(BuildContext context, WidgetRef ref) {
-    final String current = ref.read(documentTyprFilterProvider);
+    final screenHeight = MediaQuery.of(context).size.height;
 
     showModalBottomSheet(
       context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-      ),
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent, // permite ver el borde redondeado
       builder: (context) {
-        return Consumer(
-          builder: (context, ref, _) {
-            final String selected = ref.watch(documentTyprFilterProvider);
+        return Container(
+          height: screenHeight * 0.7,
+          padding: const EdgeInsets.all(40),
+          decoration: BoxDecoration(
+            color: Colors.white,               // fondo del modal
+            borderRadius: const BorderRadius.vertical(
+              top: Radius.circular(24),
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.25),
+                blurRadius: 12,
+                offset: const Offset(0, -4),
+              ),
+            ],
+          ),
+          child: Consumer(
+            builder: (context, ref, _) {
+              final String selected = ref.watch(documentTyprFilterProvider);
 
-            return Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Text(
-                    Messages.DOCUMENT_TYPE, // crea este mensaje si aún no existe
-                    style: TextStyle(
-                      fontSize: themeFontSizeLarge,
-                      fontWeight: FontWeight.bold,
+                  Center(
+                    child: Container(
+                      width: 40,
+                      height: 5,
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade400,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
                     ),
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 20),
 
-                  // Lista de opciones
-                  ...documentTypeOptions.map((type) {
-                    return ListTile(
-                      title: Text(
-                        type, // por ahora mostramos el código; luego puedes mapearlo a texto bonito
-                        style: TextStyle(
-                          fontWeight: type == selected ? FontWeight.bold : FontWeight.normal,
-                        ),
+                  Center(
+                    child: Text(
+                      Messages.DOCUMENT_TYPE,
+                      style: TextStyle(
+                        fontSize: themeFontSizeLarge,
+                        fontWeight: FontWeight.bold,
                       ),
-                      trailing: type == selected
-                          ? Icon(Icons.check, color: themeColorPrimary)
-                          : null,
-                      onTap: () {
-                        // actualizar provider
-                        ref.read(documentTyprFilterProvider.notifier).state = type;
+                    ),
+                  ),
 
-                        // aquí puedes disparar el reload de movimientos si el filtro afecta la búsqueda
-                        final date = ref.read(selectedDateProvider);
-                        final isIn = ref.read(inOutProvider);
-                        findMovementAfterDate(date, isIn: isIn); // reutilizando tu método
+                  const SizedBox(height: 30),
 
-                        Navigator.of(context).pop();
-                      },
-                    );
-                  }).toList(),
+                  Expanded(
+                    child: ListView(
+                      children: documentTypeOptions.map((type) {
+                        final color = _colorForDocType(type);
 
-                  const SizedBox(height: 12),
+                        return Card(
+                          elevation: 3,
+                          shadowColor: Colors.black26,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: ListTile(
+                            tileColor: color,
+                            title: Text(
+                              type,
+                              style: TextStyle(
+                                fontWeight: type == selected
+                                    ? FontWeight.bold
+                                    : FontWeight.normal,
+                                color: Colors.black,
+                              ),
+                            ),
+                            trailing: type == selected
+                                ? Icon(Icons.check_circle,
+                                color: Colors.purple, size: 26)
+                                : null,
+                            onTap: () {
+                              // actualizar provider
+                              ref.read(documentTyprFilterProvider.notifier).state = type;
+
+                              // recargar búsqueda
+                              final date = ref.read(selectedDateProvider);
+                              final inOut = ref.read(inOutFilterProvider);
+                              findMovementAfterDate(date, inOut: inOut);
+
+                              Navigator.of(context).pop();
+                            },
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                  ),
                 ],
-              ),
-            );
-          },
+              );
+            },
+          ),
         );
       },
     );
   }
 
-  @override
-  Future<void> setDefaultValues(BuildContext context, WidgetRef ref) {
-    // TODO: implement setDefaultValues
-    throw UnimplementedError();
+  /// Colores para cada tipo de documento
+  Color _colorForDocType(String code) {
+    switch (code) {
+      case 'DR': // Draft / Borrador
+        return Colors.grey.shade200;
+      case 'CO': // Completed
+        return Colors.green.shade200;
+      case 'IP': // In Progress
+        return Colors.cyan.shade200;
+      default:
+        return Colors.grey.shade200;
+    }
   }
 
-  @override
-  void changeUsePhoneCameraToScanState(BuildContext context, WidgetRef ref) {
-    // 🧠 Riverpod se encarga del rebuild, sin setState
-    print('usePhoneCamera: $usePhoneCamera');
-    ref.read(usePhoneCameraToScanProvider.notifier).state = !usePhoneCamera;
-    ref.read(isDialogShowedProvider.notifier).state = false;
-  }
 
   @override
-  // TODO: implement actionScanTypeInt
+  Future<void> setDefaultValues(BuildContext context, WidgetRef ref) async {
+  }
+
+
+  @override
   int get actionScanTypeInt => widget.actionTypeInt;
 
 

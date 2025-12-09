@@ -121,7 +121,7 @@ class NewMovementLineCardState extends ConsumerState<NewMovementLineCard> {
                             if (isSuccess) {
                               int id = widget.movementLine.mMovementID?.id ?? -1;
                               if(id>0){
-                                String goToPage =  '${AppRouter.PAGE_MOVEMENTS_SEARCH}/$id';
+                                String goToPage =  '${AppRouter.PAGE_MOVEMENTS_SEARCH}/$id/-1';
                                 showSuccessMessageThenGoTo(context, ref, goToPage);
                               } else {
                                 showErrorMessage(context, ref, '${Messages.ERROR} : $id');

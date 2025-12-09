@@ -30,4 +30,11 @@ class AdEntityId {
         identifier: json["identifier"] ?? '',
         modelName: json["model-name"] ?? '',
       );
+
+  Map<String, dynamic> toJson() => {
+        "propertyLabel": propertyLabel,
+        "id": id,
+        "identifier": identifier,
+        "model-name": modelName,
+      };
 }

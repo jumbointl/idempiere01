@@ -33,7 +33,7 @@ class MovementPrintScreen extends ConsumerWidget {
     MovementAndLines movementAndLines = MovementAndLines.fromJson(jsonDecode(argument));
     final image = await this.image;
     final pdfBytes = await generateMovementDocument(movementAndLines, image);
-    direct ?  ref.read(printerProvider.notifier).printDirectly(bytes: pdfBytes)
+    direct ?  ref.read(movementPrintScreenPrinterProvider.notifier).printDirectly(bytes: pdfBytes)
         : await Printing.sharePdf(bytes: pdfBytes, filename: 'documento.pdf');
   }
   Future<void> openPrintDialog(WidgetRef ref,) async{
@@ -54,7 +54,7 @@ class MovementPrintScreen extends ConsumerWidget {
     MovementAndLines m = MovementAndLines.fromJson(jsonDecode(argument));
 
 
-    final printerState = ref.watch(printerProvider);
+    final printerState = ref.watch(movementPrintScreenPrinterProvider);
 
 
     ipController.text = printerState.ip;
@@ -75,21 +75,21 @@ class MovementPrintScreen extends ConsumerWidget {
               TextField(
                 controller: ipController,
                 decoration: InputDecoration(labelText: Messages.IP),
-                onChanged: ref.read(printerProvider.notifier).setIp,
+                onChanged: ref.read(movementPrintScreenPrinterProvider.notifier).setIp,
               ),
               const SizedBox(height: 10),
               TextField(
                 controller: portController,
                 decoration: InputDecoration(labelText: Messages.PORT),
                 keyboardType: TextInputType.number,
-                onChanged: ref.read(printerProvider.notifier).setPort,
+                onChanged: ref.read(movementPrintScreenPrinterProvider.notifier).setPort,
               ),
               // Widget para seleccionar el tipo de impresión
               DropdownButton<PrinterType>(
                 value: printerState.printType,
                 onChanged: (PrinterType? newValue) {
                   if (newValue != null) {
-                    ref.read(printerProvider.notifier).setPrintType(newValue);
+                    ref.read(movementPrintScreenPrinterProvider.notifier).setPrintType(newValue);
                   }
                 },
                 items: PrinterType.values.map<DropdownMenuItem<PrinterType>>((PrinterType type) {
@@ -102,17 +102,17 @@ class MovementPrintScreen extends ConsumerWidget {
               TextField(
                 controller: nameController,
                 decoration: InputDecoration(labelText: Messages.NAME),
-                onChanged: ref.read(printerProvider.notifier).setName,
+                onChanged: ref.read(movementPrintScreenPrinterProvider.notifier).setName,
               ),
               TextField(
                 controller: serverIpController,
                 decoration: InputDecoration(labelText: Messages.SERVER),
-                onChanged: ref.read(printerProvider.notifier).setName,
+                onChanged: ref.read(movementPrintScreenPrinterProvider.notifier).setName,
               ),
               TextField(
                 controller: serverPortController,
                 decoration: InputDecoration(labelText: Messages.SERVER_PORT),
-                onChanged: ref.read(printerProvider.notifier).setName,
+                onChanged: ref.read(movementPrintScreenPrinterProvider.notifier).setName,
               ),
               const SizedBox(height: 20),
               ElevatedButton(

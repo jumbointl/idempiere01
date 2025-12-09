@@ -3,8 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:monalisa_app_001/features/products/common/messages_dialog.dart';
-import 'package:monalisa_app_001/features/products/common/scan_button_by_action.dart';
-import 'package:monalisa_app_001/features/products/domain/idempiere/idempiere_locator.dart';
 import 'package:monalisa_app_001/features/products/domain/idempiere/idempiere_movement.dart';
 import 'package:monalisa_app_001/features/products/domain/idempiere/idempiere_product.dart';
 import 'package:monalisa_app_001/features/products/domain/idempiere/idempiere_storage_on_hande.dart';
@@ -39,7 +37,6 @@ class ProductStoreOnHandScreen extends ConsumerStatefulWidget {
   int countScannedCamera =0;
   late ProductsScanNotifier productsNotifier ;
   final int actionScanType = Memory.ACTION_FIND_BY_UPC_SKU_FOR_STORE_ON_HAND;
-  late var allowedLocatorId;
   final int pageIndex = Memory.PAGE_INDEX_STORE_ON_HAND;
   String? productId;
   bool isMovementSearchedShowed = false;
@@ -47,8 +44,6 @@ class ProductStoreOnHandScreen extends ConsumerStatefulWidget {
 
   @override
   ConsumerState<ConsumerStatefulWidget> createState() => ProductStoreOnHandScreenState();
-
-
 
 }
 
@@ -63,16 +58,15 @@ class ProductStoreOnHandScreenState extends ConsumerState<ProductStoreOnHandScre
   double goToPosition =0.0;
   late var isDialogShowed;
   late AsyncValue productAsync ;
-  //late AsyncValue productsStoredAsync;
   late var resultOfSameWarehouse;
   late var isScanning;
+  late var showScan;
 
   double? width;
   Warehouse? userWarehouse;
 
    String productUPC ='-1';
   void popScopeAction(BuildContext context, WidgetRef ref) async {
-    print('popScopeAction----------------------------');
     ref.invalidate(homeScreenTitleProvider);
     context.go(AppRouter.PAGE_HOME);
   }
@@ -81,11 +75,8 @@ class ProductStoreOnHandScreenState extends ConsumerState<ProductStoreOnHandScre
   void initState() {
 
     WidgetsBinding.instance.addPostFrameCallback((_) async {
-      //ref.read(isScanningProvider.notifier).update((state) => false);
-      if(widget.productId!=null && widget.productId!.isNotEmpty && widget.productId!='-1'){
-        print('-------widget productId start search ${widget.productId}');
-        widget.productsNotifier.addBarcodeByUPCOrSKUForStoreOnHande(widget.productId!);
-      }
+
+      actionAfterShow(ref);
 
 
     });
@@ -101,8 +92,6 @@ class ProductStoreOnHandScreenState extends ConsumerState<ProductStoreOnHandScre
     width = MediaQuery.of(context).size.width - 30;
     resultOfSameWarehouse = ref.watch(resultOfSameWarehouseProvider);
     userWarehouse = ref.read(authProvider).selectedWarehouse;
-
-
     scrollToTop = ref.watch(scrollToUpProvider);
     final showScan = ref.watch(showScanFixedButtonProvider(widget.actionScanType));
 
@@ -152,16 +141,7 @@ class ProductStoreOnHandScreenState extends ConsumerState<ProductStoreOnHandScre
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 10,vertical: 10),
             child: SingleChildScrollView(
-              child: Column(
-                spacing: 10,
-                children: [
-                  /*getSearchBar(context,ref,Messages.FIND_PRODUCT_BY_UPC_SKU,widget.actionScanType,
-                      widget.productsNotifier.handleInputString),*/
-                  getDataContainer(context),
-
-              
-                ],
-              ),
+              child: getDataContainer(context),
             ),
           ),
         ),
@@ -169,45 +149,9 @@ class ProductStoreOnHandScreenState extends ConsumerState<ProductStoreOnHandScre
     );
   }
 
-  Widget buttonScanWithPhone(BuildContext context,WidgetRef ref) {
-    bool isScanning = ref.watch(isScanningProvider);
-    return TextButton(
 
-      style: TextButton.styleFrom(
-        backgroundColor: isScanning ? Colors.grey : themeColorPrimary,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(0),
-        ),
-
-      ),
-      onPressed: isScanning ? null :  () async {
-          ref.read(isScanningProvider.notifier).state = true;
-          String? result= await SimpleBarcodeScanner.scanBarcode(
-            context,
-            barcodeAppBar: BarcodeAppBar(
-              appBarTitle: Messages.SCANNING,
-              centerTitle: false,
-              enableBackButton: true,
-              backButtonIcon: Icon(Icons.arrow_back_ios),
-            ),
-            isShowFlashIcon: true,
-            delayMillis: 300,
-            cameraFace: CameraFace.back,
-          );
-          if(result!=null){
-            print('findProductByUPCOrSKUForStoreOnHandProvider $result');
-            widget.productsNotifier.addBarcodeByUPCOrSKUForStoreOnHande(result);
-          }
-        },
-      child: Text(Messages.OPEN_CAMERA,style: TextStyle(fontSize: themeFontSizeLarge,
-          color: Colors.white),),
-
-    );
-  }
 
   Widget getStoragesOnHand(List<IdempiereStorageOnHande>? storages, double width) {
-
-
 
     if(storages== null || storages.isEmpty){
       return isScanning ? Text(Messages.PLEASE_WAIT)
@@ -240,7 +184,7 @@ class ProductStoreOnHandScreenState extends ConsumerState<ProductStoreOnHandScre
               ),
               child: ProductResumeCard(storages, width));
         }
-        return StorageOnHandCard(
+        return getStorageOnHandCard(
             widget.productsNotifier,
             storages[index - add],
             index + 1 - add,
@@ -307,22 +251,6 @@ class ProductStoreOnHandScreenState extends ConsumerState<ProductStoreOnHandScre
 
   }
 
-  /*BottomAppBar getScanButton(BuildContext context) {
-      return BottomAppBar(
-          height: Memory.BOTTOM_BAR_HEIGHT,
-          color: themeColorPrimary ,
-          child: ref.watch(usePhoneCameraToScanProvider) ?
-          buttonScanWithPhone(context, ref) :
-          ScanButtonByAction(processor: widget.productsNotifier,
-              actionTypeInt: Memory.ACTION_FIND_BY_UPC_SKU_FOR_STORE_ON_HAND,)
-          *//*ScanProductBarcodeButton(
-             notifier: widget.productsNotifier,
-              actionTypeInt: widget.actionTypeInt,pageIndex: widget.pageIndex)*//*
-      );
-
-
-  }*/
-
   Widget getProductDetails(List<IdempiereProduct> products, double width) {
 
     return SliverList.separated(
@@ -330,9 +258,6 @@ class ProductStoreOnHandScreenState extends ConsumerState<ProductStoreOnHandScre
         itemCount: products.length,
         itemBuilder: (context, index) => ProductDetailCard(
             productsNotifier: widget.productsNotifier, product: products[index]));
-
-
-
 
   }
 
@@ -379,6 +304,22 @@ class ProductStoreOnHandScreenState extends ConsumerState<ProductStoreOnHandScre
 
   }
 
+  void actionAfterShow(WidgetRef ref) {
+    //ref.read(isScanningProvider.notifier).update((state) => false);
+    if(widget.productId!=null && widget.productId!.isNotEmpty && widget.productId!='-1'){
+      print('-------widget productId start search ${widget.productId}');
+      widget.productsNotifier.addBarcodeByUPCOrSKUForStoreOnHande(widget.productId!);
+    }
+  }
+
+  Widget getStorageOnHandCard(ProductsScanNotifier productsNotifier,
+      IdempiereStorageOnHande storage,
+      int index, int length, {required double width}) {
+    return StorageOnHandCard(productsNotifier,storage, index, length, width: width,);
+
+
+
+  }
 
 
 }

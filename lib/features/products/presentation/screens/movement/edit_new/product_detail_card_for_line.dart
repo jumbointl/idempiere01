@@ -6,7 +6,6 @@ import '../../../../../../config/theme/app_theme.dart';
 import '../../../../../shared/data/messages.dart';
 import '../../../../domain/idempiere/idempiere_product.dart';
 import '../../../providers/products_scan_notifier_for_line.dart';
-import '../../../providers/store_on_hand_provider.dart';
 import '../../store_on_hand/memory_products.dart';
 class ProductDetailCardForLine extends ConsumerStatefulWidget {
   final IdempiereProduct product;

@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
 import 'package:monalisa_app_001/features/products/common/messages_dialog.dart';
 import 'package:monalisa_app_001/features/products/domain/idempiere/movement_and_lines.dart';
+import 'package:monalisa_app_001/features/products/presentation/screens/movement/printer/printer_utils.dart';
 
 import '../../../../../shared/data/memory.dart';
 import '../../../../../shared/data/messages.dart';
@@ -167,7 +168,7 @@ class PrinterScanNotifier extends StateNotifier<PrinterState>  {
         state.serverPortController.text = serverPort;
       }
 
-
+      savePrinterToStorage(ref, moPrinter);
       state = PrinterState(
         nameController: state.nameController,
         ipController: state.ipController,
@@ -370,6 +371,6 @@ class PrinterScanNotifier extends StateNotifier<PrinterState>  {
 }
 
 // Proveedor para acceder al Notifier
-final printerProvider = StateNotifierProvider<PrinterScanNotifier, PrinterState>((ref) {
+final printerScanProvider = StateNotifierProvider<PrinterScanNotifier, PrinterState>((ref) {
   return PrinterScanNotifier();
 });

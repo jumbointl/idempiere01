@@ -4,19 +4,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
 import 'package:get_storage/get_storage.dart';
 import 'package:go_router/go_router.dart';
-import 'package:monalisa_app_001/features/products/common/scan_button_by_action.dart';
 import 'package:monalisa_app_001/features/products/common/scan_button_by_action_fixed_short.dart';
 
 import '../../../config/router/app_router.dart';
 import '../../../config/theme/app_theme.dart';
-import '../../home/presentation/screens/home_screen.dart';
 import '../../shared/data/memory.dart';
 import '../../shared/data/messages.dart';
 import '../domain/idempiere/movement_and_lines.dart';
 import '../presentation/providers/common_provider.dart';
-import '../presentation/providers/product_provider_common.dart';
-import '../presentation/providers/store_on_hand_provider.dart';
-import '../presentation/screens/store_on_hand/memory_products.dart';
 import 'app_initializer_overlay.dart';
 import 'input_data_processor.dart';
 import 'input_dialog.dart';
@@ -26,19 +21,10 @@ abstract class CommonConsumerState<T extends ConsumerStatefulWidget> extends Con
     implements InputDataProcessor {
 
 
-  /*late var isScanning = ref.watch(isScanningProvider);
-  late var usePhoneCamera = ref.watch(usePhoneCameraToScanProvider);
-  late AsyncValue mainDataAsync  = getMainDataAsync;
-  late AsyncValue mainDataListAsync = getMainDataListAsync;
-  late var isDialogShowed = ref.watch(isDialogShowedProvider);
-  late var scrollToTop = ref.watch(scrollToUpProvider);*/
 
   late var isScanning ;
-  late var usePhoneCamera ;
   AsyncValue get mainDataAsync ;
-  //AsyncValue get mainDataListAsync;
   late var isDialogShowed;
-  //late var scrollToTop ;
   late var inputString;
   late var pageIndexProdiver;
   late var actionScan;
@@ -74,7 +60,6 @@ abstract class CommonConsumerState<T extends ConsumerStatefulWidget> extends Con
       color: fontForegroundColor, fontWeight: FontWeight.bold);
   late TextStyle textStyleBold = TextStyle(
       color: fontForegroundColor, fontWeight: FontWeight.bold);
-  String get hinText;
   double getWidth();
   Color? getAppBarBackgroundColor(BuildContext context,WidgetRef ref);
   bool get showSearchBar => true;
@@ -96,38 +81,30 @@ abstract class CommonConsumerState<T extends ConsumerStatefulWidget> extends Con
     const threshold = 80.0; // píxeles de tolerancia
     return pos.maxScrollExtent - pos.pixels < threshold;
   }
-  @override
-  Widget build(BuildContext context){
-    initialSetting(context,ref);
-    final showFab = ref.watch(allowScrollFabProvider);
-    return AppInitializerOverlay(
-      child: Scaffold(
-      
-        appBar: getAppBar(context,ref),
-        floatingActionButton: showFab
-            ? FloatingActionButton(
-          onPressed: () {
-            if (!scrollController.hasClients) return;
+  FloatingActionButton get floatingActionButton {
+    return FloatingActionButton(
+      onPressed: () {
+        if (!scrollController.hasClients) return;
 
-            final position = scrollController.position;
+        final position = scrollController.position;
 
-            // Estamos "cerca" del fondo?
-            final bool isAtBottom =
-                (position.maxScrollExtent - position.pixels) < 50;
+        // Estamos "cerca" del fondo?
+        final bool isAtBottom =
+            (position.maxScrollExtent - position.pixels) < 50;
 
-            final double target = isAtBottom
-                ? position.minScrollExtent   // si ya estoy abajo → subo arriba
-                : position.maxScrollExtent;  // si no → bajo al fondo
+        final double target = isAtBottom
+            ? position.minScrollExtent   // si ya estoy abajo → subo arriba
+            : position.maxScrollExtent;  // si no → bajo al fondo
 
-            scrollController.animateTo(
-              target,
-              duration: const Duration(milliseconds: 500),
-              curve: Curves.easeInOut,
-            );
-          },
-          child: Builder(
-            builder: (_) {
-              /*if (!scrollController.hasClients) {
+        scrollController.animateTo(
+          target,
+          duration: const Duration(milliseconds: 500),
+          curve: Curves.easeInOut,
+        );
+      },
+      child: Builder(
+        builder: (_) {
+          /*if (!scrollController.hasClients) {
                 return const Icon(Icons.arrow_downward);
               }
 
@@ -137,12 +114,23 @@ abstract class CommonConsumerState<T extends ConsumerStatefulWidget> extends Con
 
               // Si estoy abajo → muestro flecha hacia arriba
               return Icon(isAtBottom ? Icons.arrow_upward : Icons.arrow_downward);*/
-              return Icon(Icons.swap_vert);
-            },
-          ),
-        ) : null,
+          return Icon(Icons.swap_vert);
+        },
+      ),
+    );
+  }
+  @override
+  Widget build(BuildContext context){
+    initialSetting(context,ref);
+    final showFab = ref.watch(allowScrollFabProvider);
+    return AppInitializerOverlay(
+      child: Scaffold(
+      
+        appBar: getAppBar(context,ref),
+        floatingActionButton: showFab
+            ?  floatingActionButton: null,
 
-
+        bottomNavigationBar: getBottomAppBar(context,ref),
         body: SafeArea(
           child: PopScope(
             canPop: false,
@@ -154,19 +142,20 @@ abstract class CommonConsumerState<T extends ConsumerStatefulWidget> extends Con
       
       
             },
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10,vertical: 10),
-              child: SingleChildScrollView(
-                controller: scrollController,
+            child: scrollManinDataCard ? SingleChildScrollView(
+              controller: scrollController,
+              child: Padding(
+                padding: EdgeInsets.all(10),
                 child: getMainDataCard(context, ref),
               ),
-            ),
+            ) : getMainDataCard(context, ref),
           ),
         ),
       ),
     );
   }
   void executeAfterShown();
+  bool get scrollManinDataCard => true ;
 
   Widget getMainDataCard(BuildContext context,WidgetRef ref);
   //Widget getMainDataList(BuildContext context,WidgetRef ref);
@@ -177,62 +166,54 @@ abstract class CommonConsumerState<T extends ConsumerStatefulWidget> extends Con
 
   void iconBackPressed(BuildContext context, WidgetRef ref) {
     print('iconBackPressed----------------------------');
-    Navigator.pop(context);
+    popScopeAction(context, ref);
   }
 
   void popScopeAction(BuildContext context, WidgetRef ref) async {
-    /*ref.read(isScanningProvider.notifier).update((state) => false);
-    ref.read(actionScanProvider.notifier).update((state)
-    => Memory.ACTION_FIND_MOVEMENT_BY_ID);*/
-    print('popScopeAction----------------------------');
-    ref.invalidate(homeScreenTitleProvider);
     context.go(AppRouter.PAGE_HOME);
-
-
   }
 
-  BottomAppBar getBottomAppBar(BuildContext context, WidgetRef ref) {
-    return BottomAppBar(
+
+
+
+
+  BottomAppBar? getBottomAppBar(BuildContext context, WidgetRef ref) {
+    return null ;
+    /*return BottomAppBar(
         height: Memory.BOTTOM_BAR_HEIGHT,
         color: getColorByActionScan() ,
-        child: usePhoneCamera ? buttonScanWithPhone(context,ref,this)
-            : getScanButton(context,ref)
-    );
-
-
+        child: Container(),
+    );*/
   }
   void initialSetting(BuildContext context, WidgetRef ref);
 
 
 
-
-  Widget getScanButton(BuildContext context, WidgetRef ref) {
-    //return EnterSubmitScreen(processor: this,);
-    print('actionScan ${actionScan}');
-    return ScanButtonByAction(
-        color: getColorByActionScan(),
-        actionTypeInt: actionScan,
-        processor: this);
-
-
-
+  bool get showLeading => false;
+  Widget? get leadingIcon {
+    print('showLeading: $showLeading');
+    return showLeading ?IconButton(
+      onPressed: () {
+        popScopeAction(context, ref);
+      }, icon: Icon(Icons.arrow_back),
+    ) : null;
   }
+
+
 
 
   AppBar? getAppBar(BuildContext context, WidgetRef ref) {
 
     return AppBar(
       backgroundColor: getAppBarBackgroundColor(context,ref),
-      automaticallyImplyLeading: false,
-
-
+      automaticallyImplyLeading: showLeading,
+      leading: leadingIcon ,
       title: getAppBarTitle(context,ref),
       actions: getActionButtons(context,ref),
 
     );
   }
 
-  Widget? getAppBarTitle(BuildContext context, WidgetRef ref);
 
   Future<MovementAndLines> getSavedMovementAndLines () async {
     var movementAndLines = await GetStorage().read(Memory.KEY_MOVEMENT_AND_LINES);
@@ -273,7 +254,7 @@ abstract class CommonConsumerState<T extends ConsumerStatefulWidget> extends Con
 
   }
 
-  void findMovementAfterDate(DateTime date, {required bool isIn}) {}
+  void findMovementAfterDate(DateTime date, {required String inOut}) {}
   int get actionScanTypeInt ;
   List<Widget> getActionButtons(BuildContext context, WidgetRef ref) {
     final showScan = ref.watch(showScanFixedButtonProvider(actionScanTypeInt));
@@ -307,10 +288,9 @@ abstract class CommonConsumerState<T extends ConsumerStatefulWidget> extends Con
   }
   Future<void> setDefaultValues(BuildContext context, WidgetRef ref);
 
-  void changeUsePhoneCameraToScanState(BuildContext context, WidgetRef ref){
-    ref.read(usePhoneCameraToScanProvider.notifier).state = !usePhoneCamera;
-    ref.read(isDialogShowedProvider.notifier).state = false;
-  }
+  Widget? getAppBarTitle(BuildContext context, WidgetRef ref) {return null;}
+
+
 
 }
 
@@ -344,142 +324,182 @@ final selectedDateProvider = StateProvider<DateTime>((ref) {
 
 /// Widget: date selector with "Hoy" and "OK" in one row
 class MovementDateFilterRow extends ConsumerWidget {
+  final bool orientationUpper;
+
   const MovementDateFilterRow({
     super.key,
     required this.onOk,
+    this.orientationUpper = true,
   });
 
-  final void Function(DateTime date, bool? isIn) onOk;
+  /// Agora o callback recebe `String inOut` em vez de `bool?`
+  final void Function(DateTime date, String inOut) onOk;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final selectedDate = ref.watch(selectedDateProvider);
-    final isIn = ref.watch(inOutProvider); // bool?
+    final inOutValue = ref.watch(inOutFilterProvider); // 'ALL', 'IN', 'OUT', 'SWAP'
     final dateText = DateFormat('dd/MM/yyyy').format(selectedDate);
 
-    return Column(
+    // --------- PRIMEIRA LINHA (data / hoje / scan) ----------
+    final firstRow = Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            OutlinedButton(
-              style: OutlinedButton.styleFrom(
-                visualDensity: VisualDensity.compact,
-                backgroundColor: Colors.white,
-              ),
-              onPressed: () async {
-                final picked = await showDatePicker(
-                  context: context,
-                  initialDate: selectedDate,
-                  firstDate: DateTime(2000),
-                  lastDate: DateTime(2100),
-                );
-                if (picked != null) {
-                  ref.read(selectedDateProvider.notifier).state = picked;
-                  final date = ref.read(selectedDateProvider);
-                  final isIn = ref.read(inOutProvider); // bool?
-                  onOk(date, isIn);
-                }
-              },
-              child: Text(dateText, style: TextStyle(color: Colors.purple)),
-              ),
-            OutlinedButton(
-              style: OutlinedButton.styleFrom(
-                visualDensity: VisualDensity.compact,
-                backgroundColor: Colors.white,
-              ),
-              onPressed: () {
-                final now = DateTime.now();
-                final today = DateTime(now.year, now.month, now.day);
-                ref.read(selectedDateProvider.notifier).state = today;
-                final date = ref.read(selectedDateProvider);
-                final isIn = ref.read(inOutProvider); // bool?
-                onOk(date, isIn);
-              },
-              child: Text(
-                Messages.TODAY,
-                style: const TextStyle(color: Colors.purple),
-              ),
-            ),
-            OutlinedButton(
-              onPressed: () {
-                final date = ref.read(selectedDateProvider);
-                final isIn = ref.read(inOutProvider); // bool?
-                onOk(date, isIn);
-              },
-              style: OutlinedButton.styleFrom(
-                visualDensity: VisualDensity.compact,
-                backgroundColor: Colors.white,
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.find_in_page_outlined, color: Colors.purple),
-                  SizedBox(width: 4),
-                  Text(Messages.FIND, style: const TextStyle(color: Colors.purple)),
-                ],
-              ),
-            ),
-          ],
+        OutlinedButton(
+          style: OutlinedButton.styleFrom(
+            visualDensity: VisualDensity.compact,
+            backgroundColor: Colors.white,
+          ),
+          onPressed: () async {
+            final picked = await showDatePicker(
+              context: context,
+              initialDate: selectedDate,
+              firstDate: DateTime(2000),
+              lastDate: DateTime(2100),
+            );
+            if (picked != null) {
+              ref.read(selectedDateProvider.notifier).state = picked;
+              final date = ref.read(selectedDateProvider);
+              final inOut = ref.read(inOutFilterProvider);
+              onOk(date, inOut);
+            }
+          },
+          child: Text(
+            dateText,
+            style: const TextStyle(color: Colors.purple),
+          ),
         ),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Expanded(
-              child: SegmentedButton<bool?>(
-                segments: <ButtonSegment<bool?>>[
-                  ButtonSegment<bool?>(
-                    value: null,
-                    icon: const Icon(Icons.swap_vert, size: 20),
-                    label: Text('ALL',style: TextStyle(fontSize: themeFontSizeSmall),), // crea Messages.ALL = 'ALL' o lo que quieras
-                  ),
-                  ButtonSegment<bool?>(
-                    value: true,
-                    icon: Icon(Icons.arrow_downward, size: 20),
-                    label: Text('IN',style: TextStyle(fontSize: themeFontSizeSmall),),
-                  ),
-                  ButtonSegment<bool?>(
-                    value: false,
-                    icon: Icon(Icons.arrow_upward, size: 20),
-                    label: Text('OUT',style: TextStyle(fontSize: themeFontSizeSmall),),
-                  ),
-                ],
-                // selected no puede estar vacío, así que siempre metemos el valor actual (aunque sea null)
-                selected: <bool?>{isIn},
-                onSelectionChanged: (newSelection) {
-                  // newSelection.first es bool? (null / true / false)
-                  ref.read(inOutProvider.notifier).state = newSelection.first;
-                },
-                style: ButtonStyle(
-                  visualDensity: VisualDensity.compact,
-                  padding: WidgetStateProperty.all(
-                    const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(width: 8),
-            OutlinedButton(
-              onPressed: () {
-                context.go('${AppRouter.PAGE_MOVEMENTS_SEARCH}/-1');
-              },
-              style: OutlinedButton.styleFrom(
-                foregroundColor: Colors.white,
-                backgroundColor: themeColorPrimary,
-                visualDensity: VisualDensity.compact, // Para alinear altura
-              ),
-              child: Text('SCAN',style: TextStyle(color: Colors.white)),
-            ),
-
-          ],
+        OutlinedButton(
+          style: OutlinedButton.styleFrom(
+            visualDensity: VisualDensity.compact,
+            backgroundColor: Colors.white,
+          ),
+          onPressed: () {
+            final now = DateTime.now();
+            final today = DateTime(now.year, now.month, now.day);
+            ref.read(selectedDateProvider.notifier).state = today;
+            final date = ref.read(selectedDateProvider);
+            final inOut = ref.read(inOutFilterProvider);
+            onOk(date, inOut);
+          },
+          child: Text(
+            Messages.TODAY,
+            style: const TextStyle(color: Colors.purple),
+          ),
         ),
+        OutlinedButton(
+          onPressed: () {
+            context.go('${AppRouter.PAGE_MOVEMENTS_SEARCH}/-1/-1');
+          },
+          style: OutlinedButton.styleFrom(
+            foregroundColor: Colors.white,
+            backgroundColor: themeColorPrimary,
+            visualDensity: VisualDensity.compact,
+          ),
+          child: const Text(
+            'SCAN',
+            style: TextStyle(color: Colors.white),
+          ),
+        ),
+
+        Container(
+          height: 32, // Altura similar a OutlinedButton con VisualDensity.compact
+          decoration: BoxDecoration(
+            border: Border.all(color: Colors.grey.shade400),
+            borderRadius: BorderRadius.circular(8.0),
+          ),
+          child: IconButton(
+            padding: EdgeInsets.zero,
+            visualDensity: VisualDensity.compact,
+            icon: const Icon(Icons.refresh, color: Colors.purple),
+            onPressed: () {
+              final date = ref.read(selectedDateProvider);
+              final inOut = ref.read(inOutFilterProvider);
+              onOk(date, inOut);
+            },
+          ),
+        ),
+        /*OutlinedButton(
+          onPressed: () {
+            final date = ref.read(selectedDateProvider);
+            final inOut = ref.read(inOutFilterProvider);
+            onOk(date, inOut);
+          },
+          style: OutlinedButton.styleFrom(
+            visualDensity: VisualDensity.compact,
+            backgroundColor: Colors.white,
+          ),
+          child: const Icon(Icons.refresh, color: Colors.purple),
+        ),*/
       ],
     );
+
+    // --------- SEGUNDA LINHA (filtro IN/OUT/...) ----------
+    final secondRow = Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Expanded(
+          child: SegmentedButton<String>(
+            segments: <ButtonSegment<String>>[
+              ButtonSegment<String>(
+                value: 'ALL',
+                icon: const Icon(Icons.all_inclusive, size: 20),
+                label: Text(
+                  'ALL',
+                  style: TextStyle(fontSize: themeFontSizeSmall),
+                ),
+              ),
+              ButtonSegment<String>(
+                value: 'IN',
+                icon: const Icon(Icons.arrow_downward, size: 20),
+                label: Text(
+                  'IN',
+                  style: TextStyle(fontSize: themeFontSizeSmall),
+                ),
+              ),
+              ButtonSegment<String>(
+                value: 'OUT',
+                icon: const Icon(Icons.arrow_upward, size: 20),
+                label: Text(
+                  'OUT',
+                  style: TextStyle(fontSize: themeFontSizeSmall),
+                ),
+              ),
+              ButtonSegment<String>(
+                value: 'SWAP',
+                icon: const Icon(Icons.swap_horiz, size: 20),
+                label: Text(
+                  'SWAP',
+                  style: TextStyle(fontSize: themeFontSizeSmall),
+                ),
+              ),
+            ],
+            selected: <String>{inOutValue},
+            onSelectionChanged: (newSelection) {
+              final value = newSelection.first; // 'ALL' | 'IN' | 'OUT' | 'SWAP'
+              ref.read(inOutFilterProvider.notifier).state = value;
+
+              final date = ref.read(selectedDateProvider);
+              onOk(date, value);
+            },
+            style: ButtonStyle(
+              visualDensity: VisualDensity.compact,
+              padding: WidgetStateProperty.all(
+                const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              ),
+            ),
+          ),
+        ),
+
+      ],
+    );
+
+    return Column(
+      children: orientationUpper ? [secondRow, firstRow] : [firstRow, secondRow],
+    );
   }
-
-
 }
+
 
 
 

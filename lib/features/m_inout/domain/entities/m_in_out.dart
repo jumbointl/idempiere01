@@ -95,4 +95,22 @@ class MInOut {
       lines: lines ?? this.lines,
     );
   }
+
+  Map<String, dynamic> toJson() => {
+        "id": id,
+        "MovementDate": movementDate?.toIso8601String(),
+        "AD_Org_ID": adOrgId.toJson(),
+        "IsSOTrx": isSoTrx,
+        "DocumentNo": documentNo,
+        "C_BPartner_ID": cBPartnerId.toJson(),
+        "M_Warehouse_ID": mWarehouseId.toJson(),
+        "M_WarehouseTo_ID": mWarehouseToId.toJson(),
+        "C_Order_ID": cOrderId.toJson(),
+        "DateOrdered": dateOrdered?.toIso8601String(),
+        "DocStatus": docStatus.toJson(),
+        "m_inoutline": List<dynamic>.from(lines.map((x) => x.toJson())),
+
+
+  };
+
 }

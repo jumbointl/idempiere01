@@ -2,7 +2,6 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:get_storage/get_storage.dart';
 import 'package:go_router/go_router.dart';
 import 'package:monalisa_app_001/features/products/common/common_screen_state.dart';
 import 'package:monalisa_app_001/features/products/domain/idempiere/idempiere_locator.dart';
@@ -16,17 +15,13 @@ import 'package:monalisa_app_001/features/products/presentation/screens/store_on
 import '../../../../../../config/router/app_router.dart';
 import '../../../../../../config/theme/app_theme.dart';
 import '../../../../../auth/domain/entities/warehouse.dart';
-import '../../../../../home/presentation/screens/home_screen.dart';
 import '../../../../../shared/data/memory.dart';
 import '../../../../../shared/data/messages.dart';
-import '../../../../common/input_dialog.dart';
 import '../../../../common/messages_dialog.dart';
-import '../../../../common/scan_button_by_action.dart';
 import '../../../../domain/idempiere/idempiere_movement_line.dart';
 import '../../../providers/common_provider.dart';
 import '../../../providers/persitent_provider.dart';
 import '../../../providers/product_provider_common.dart';
-import '../../../providers/store_on_hand_provider.dart';
 import '../../../widget/movement_no_data_card.dart';
 import 'new_movement_card_with_locator.dart';
 import 'new_movement_line_card.dart';
@@ -40,11 +35,17 @@ class NewMovementEditScreen extends ConsumerStatefulWidget {
   final int pageIndex = Memory.PAGE_INDEX_MOVEMENTE_EDIT_SCREEN;
   String? movementId;
   bool isMovementSearchedShowed = false;
+  final String fromPage;
+
 
   static const String WAIT_FOR_SCAN_MOVEMENT='-1';
 
+  static const String FROM_PAGE_HOME ='-1';
+  static const String FROM_PAGE_MOVEMENT_LIST ='1';
+
 
   NewMovementEditScreen({
+    required this.fromPage,
     this.movementId,super.key});
 
 
@@ -70,16 +71,14 @@ class NewMovementEditScreenState extends CommonConsumerState<NewMovementEditScre
   Color colorBackgroundHasMovementId = Colors.cyan[200]!;
   Color colorBackgroundNoMovementId = Colors.white;
   int sameLocator = 0;
-  final ScrollController _scrollController = ScrollController();
   final double singleProductDetailCardHeight = 160;
   Warehouse? userWarehouse;
   late var movementAndLines ;
   int movementId =-1;
   @override
   late var isDialogShowed;
+  late String fromPage;
 
-  @override
-  late var usePhoneCamera;
 
 
 
@@ -129,8 +128,14 @@ class NewMovementEditScreenState extends CommonConsumerState<NewMovementEditScre
           if(movement==null) return;
           if(movementAndLines!=null && !movementAndLines.isOnInitialState){
             changeMovementAndLineState(ref, movementAndLines);
+            if(movementAndLines.canCompleteMovement || !movementAndLines.hasMovementLines) {
+              ref.read(showBottomBarProvider.notifier).state = true;
+            } else {
+              ref.read(showBottomBarProvider.notifier).state = false;
+            }
 
           }
+
 
 
         });
@@ -142,7 +147,7 @@ class NewMovementEditScreenState extends CommonConsumerState<NewMovementEditScre
         String argument = jsonEncode(movementAndLines.toJson());
         List<IdempiereMovementLine>? lines = movementAndLines.movementLines;
         return  Column(
-          spacing: 10,
+          spacing: 5,
           children: [
             movement!=null && movementAndLines.hasMovement ?
             //
@@ -154,13 +159,9 @@ class NewMovementEditScreenState extends CommonConsumerState<NewMovementEditScre
               movementAndLines: MemoryProducts.movementAndLines,
             )
             : MovementNoDataCard(),
-            if(movementAndLines.movementConfirms!=null &&
-                movementAndLines.movementConfirms!.isNotEmpty)
+            if(movementAndLines.hasMovementConfirms)
               getMovementConfirm(movementAndLines.movementConfirms!),
-            if(movementAndLines.canCompleteMovement || !movementAndLines.hasMovementLines)
-              SizedBox(
-                width: double.infinity,
-                  child: getAddButton(context,ref)),
+
             lines == null || lines.isEmpty ? Center(child: Text(Messages.NO_DATA_FOUND),)
                 : getMovementLines(lines, getWidth()),
           ],
@@ -189,7 +190,7 @@ class NewMovementEditScreenState extends CommonConsumerState<NewMovementEditScre
           );
         },
         separatorBuilder: (BuildContext context, int index) =>
-        const SizedBox(height: 10,)
+        const SizedBox(height: 5,)
     );
 
   }
@@ -201,10 +202,9 @@ class NewMovementEditScreenState extends CommonConsumerState<NewMovementEditScre
 
   @override
   void initialSetting(BuildContext context, WidgetRef ref) {
-
+    fromPage = widget.fromPage;
     ref.invalidate(persistentLocatorToProvider);
     isScanning = ref.watch(isScanningProvider);
-    usePhoneCamera = ref.watch(usePhoneCameraToScanProvider);
     isDialogShowed = ref.watch(isDialogShowedProvider);
 
     inputString = ref.watch(inputStringProvider);
@@ -258,7 +258,7 @@ class NewMovementEditScreenState extends CommonConsumerState<NewMovementEditScre
     return SizedBox(
       child: TextButton.icon(
         style: TextButton.styleFrom(
-          backgroundColor: Colors.green[800],
+          backgroundColor: themeColorPrimary,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(10),
           ),
@@ -276,8 +276,8 @@ class NewMovementEditScreenState extends CommonConsumerState<NewMovementEditScre
 
             await saveMovementAndLines(movementAndLines);
 
-            print('page index ${pageIndexProdiver}');
-            print('action scan ${actionScan}');
+            print('page index $pageIndexProdiver');
+            print('action scan $actionScan');
             String route = '${AppRouter.PAGE_PRODUCT_STORE_ON_HAND_FOR_LINE}/-1';
 
             if(context.mounted) {
@@ -297,35 +297,20 @@ class NewMovementEditScreenState extends CommonConsumerState<NewMovementEditScre
     );
 
   }
+  @override
+  AppBar? getAppBar(BuildContext context, WidgetRef ref) {
+
+    return AppBar(
+      backgroundColor: getAppBarBackgroundColor(context,ref),
+      automaticallyImplyLeading: showLeading,
+      leading: leadingIcon ,
+      title: getAppBarTitle(context,ref),
+      actions: getActionButtons(context,ref),
+
+    );
+  }
 
   @override
-  /*Widget? getAppBarTitle(BuildContext context, WidgetRef ref) {
-    MovementAndLines movementAndLines = MemoryProducts.movementAndLines;
-    late TextStyle style = textStyleLarge;
-    if(movementAndLines.documentNo!=null && movementAndLines.documentNo!.length>20){
-      style = textStyleTitleMore20C;
-    }
-    if(widget.movementId!=null && widget.movementId!='-1' && movementAndLines.hasMovement){
-      return ListTile(
-        leading:IconButton(
-            icon: const Icon(Icons.arrow_back),
-            onPressed: () async =>
-            {
-              popScopeAction(context, ref),
-            }
-          //
-        ),
-        title: Text(movementAndLines.documentNo ??'',
-          style: style,
-          ),
-        subtitle: Text('${movementAndLines.id ?? ''} ${movementAndLines.docStatus?.id ?? ''}'
-          ,style: style,),
-      );
-    } else {
-      return Text(Messages.MOVEMENT_SEARCH,style: textStyleTitle);
-    }
-
-  }*/
   Widget? getAppBarTitle(BuildContext context, WidgetRef ref) {
     MovementAndLines m = MemoryProducts.movementAndLines;
 
@@ -372,7 +357,20 @@ class NewMovementEditScreenState extends CommonConsumerState<NewMovementEditScre
       );
     }
 
-    return Text(Messages.MOVEMENT_SEARCH, style: textStyleTitle);
+    return Row(
+      children: [
+        IconButton(
+          icon: const Icon(Icons.arrow_back),
+          padding: EdgeInsets.zero,
+          constraints: const BoxConstraints(
+            minWidth: 32,
+            minHeight: 32,
+          ),
+          onPressed: () => popScopeAction(context, ref),
+        ),
+        Text(Messages.MOVEMENT_SEARCH, style: textStyleLarge),
+      ],
+    );
   }
 
 
@@ -408,64 +406,20 @@ class NewMovementEditScreenState extends CommonConsumerState<NewMovementEditScre
 
   }
 
-  Widget getSearchMovement(BuildContext context, WidgetRef ref) {
-    return SizedBox(
-      child: TextButton(
-        style: TextButton.styleFrom(
-          backgroundColor: Colors.yellow[800],
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(10),
-          ),
-        ),
-        onPressed: () async {
-          ref.read(isScanningProvider.notifier).state = false ;
-          ref.read(isDialogShowedProvider.notifier).state = false;
-          ref.read(actionScanProvider.notifier).state = Memory.ACTION_FIND_MOVEMENT_BY_ID;
-          pageIndexProdiver.update((state)=>Memory.PAGE_INDEX_MOVEMENTE_EDIT_SCREEN);
-          widget.movementId = '-1';
-          ref.invalidate(newScannedMovementIdForSearchProvider);
-          ref.invalidate(newFindMovementLinesByMovementIdProvider);
-          MemoryProducts.movementAndLines.clearData();
-          removeMovementAndLines();
-        },
-        child: Text(Messages.FIND_MOVEMENT,style: TextStyle(fontSize: themeFontSizeLarge,
-            color: Colors.white),),
-      ),
-    );
 
-  }
 
   @override
-  BottomAppBar getBottomAppBar(BuildContext context, WidgetRef ref) {
-    return BottomAppBar(
+  BottomAppBar? getBottomAppBar(BuildContext context, WidgetRef ref) {
+    final showBottomBar = ref.watch(showBottomBarProvider);
+    return showBottomBar ?BottomAppBar(
         height: Memory.BOTTOM_BAR_HEIGHT,
-        color: getColorByActionScan() ,
-        child: usePhoneCamera ? buttonScanWithPhone(context,ref,this)
-            : getScanButton(context,ref)
-    );
+        color:themeColorPrimary ,
+        child: getAddButton(context, ref),
+    ) : null;
 
 
   }
-  @override
-  Widget getScanButton(BuildContext context, WidgetRef ref) {
-    return ScanButtonByAction(
-        color: getColorByActionScan(),
-        actionTypeInt: widget.actionTypeInt,
-        processor: this);
-  }
-  @override
-  String get hinText {
-    if(actionScan == Memory.ACTION_FIND_MOVEMENT_BY_ID) {
-      return Messages.FIND_MOVEMENT;
-    } else if(actionScan == Memory.ACTION_GET_LOCATOR_TO_VALUE) {
-      return Messages.FIND_LOCATOR;
-    }  else  if(actionScan == Memory.ACTION_FIND_BY_UPC_SKU_FOR_STORE_ON_HAND) {
-      return Messages.SKU_UPC;
-    }  else {
-      return Messages.INPUT_DATA;
-    }
 
-  }
 
   Widget getMovementConfirm(List<IdempiereMovementConfirm> list) {
     return ListView.separated(
@@ -474,6 +428,8 @@ class NewMovementEditScreenState extends CommonConsumerState<NewMovementEditScre
         itemCount: list.length,
         itemBuilder: (context, index) {
           final data = list[index];
+          String documentStatus = data.docStatus?.id ?? '';
+
           return Container(
               decoration: BoxDecoration(
                 color: Colors.white,
@@ -481,7 +437,7 @@ class NewMovementEditScreenState extends CommonConsumerState<NewMovementEditScre
                 border: Border.all(color: Colors.black),
               ),
 
-              child: ListTile(leading: Text('CO :${index+1}',style: textStyleLarge), title: Text(data.documentNo ??'',style: textStyleLarge)));
+              child: ListTile(leading: Text('$documentStatus :${index+1}',style: textStyleLarge), title: Text(data.documentNo ??'',style: textStyleLarge)));
         },
         separatorBuilder: (BuildContext context, int index) =>
         const SizedBox(height: 5)
@@ -498,16 +454,17 @@ class NewMovementEditScreenState extends CommonConsumerState<NewMovementEditScre
   @override
   void popScopeAction(BuildContext context, WidgetRef ref) async {
     ref.invalidate(newScannedMovementIdForSearchProvider);
-    context.go('${AppRouter.PAGE_MOVEMENTS_LIST}/-1');
+    if(fromPage==NewMovementEditScreen.FROM_PAGE_HOME){
+      context.go(AppRouter.PAGE_HOME);
+    } else {
+      context.go('${AppRouter.PAGE_MOVEMENTS_LIST}/-1');
+    }
+
+
+
   }
 
-  @override
-  void changeUsePhoneCameraToScanState(BuildContext context, WidgetRef ref) {
-    // 🧠 Riverpod se encarga del rebuild, sin setState
-    print('usePhoneCamera: $usePhoneCamera');
-    ref.read(usePhoneCameraToScanProvider.notifier).state = !usePhoneCamera;
-    ref.read(isDialogShowedProvider.notifier).state = false;
-  }
+
 }
 
 

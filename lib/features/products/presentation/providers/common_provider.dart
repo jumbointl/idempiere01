@@ -78,7 +78,11 @@ final isPrintingProvider = StateProvider.autoDispose<bool>((ref) {
 
 final initializingProvider = StateProvider<bool>((ref) => false);
 /// null = ALL, true = IN, false = OUT
-final inOutProvider = StateProvider<bool?>((ref) => null);
+//final inOutProvider = StateProvider<bool?>((ref) => null);
+/// 'ALL', 'IN', 'OUT', 'SWAP'
+final inOutFilterProvider = StateProvider<String>((ref) => 'ALL');
+
+
 
 final colorMovementDocumentTypeProvider = StateProvider.autoDispose<Color?>((ref) {
   return null;
@@ -128,4 +132,16 @@ StateProvider<int>((ref) {
   final box = GetStorage();
   // Lê GetStorage — se não existir, devolve 3
   return box.read(KEY_QTY_ALLOW_INPUT) ?? 3;
+});
+
+final showBottomBarProvider = StateProvider.autoDispose<bool>((ref) {
+  return false;
+});
+
+final movementDocumentProvider = StateProvider.autoDispose<String>((ref) {
+  return '';
+});
+
+final useNumberKeyboardProvider = StateProvider<bool>((ref) {
+  return true;
 });

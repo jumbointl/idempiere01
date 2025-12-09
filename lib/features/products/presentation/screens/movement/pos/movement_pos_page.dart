@@ -69,13 +69,13 @@ class _MovementPosPageState extends ConsumerState<MovementPosPage> {
                           : () async {
                         try {
                           await ref.read(posPrintControllerProvider.notifier).printToSocket();
-                          if (mounted) {
+                          if (context.mounted) {
                             ScaffoldMessenger.of(context).showSnackBar(
                               const SnackBar(content: Text('Enviado a impresora (ESC/POS).')),
                             );
                           }
                         } catch (e) {
-                          if (mounted) {
+                          if (context.mounted) {
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(content: Text('Error al imprimir: $e')),
                             );

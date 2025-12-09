@@ -4,7 +4,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:monalisa_app_001/features/products/common/input_data_processor.dart';
-import 'package:simple_barcode_scanner/simple_barcode_scanner.dart';
 
 import '../../../config/theme/app_theme.dart';
 import '../../shared/data/memory.dart';
@@ -155,7 +154,7 @@ Future<String?> openInputDialogWithResult(
   return result;
 }
 
-Future<void> openInputDialogWithAction({
+/*Future<void> openInputDialogWithAction({
     required WidgetRef ref,
     required bool history,
     required int actionScan,
@@ -194,6 +193,7 @@ Future<void> openInputDialogWithAction({
     isScrollControlled: true,
     context: ref.context,
     builder: (BuildContext context) {
+
       return FractionallySizedBox(
         heightFactor: 0.85,
         child: Padding(
@@ -216,18 +216,34 @@ Future<void> openInputDialogWithAction({
                   ),
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 5.0),
-                    child: TextField(
-                      controller: controller,
-                      style: TextStyle(
-                        fontSize: fontSizeLarge,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.purple,
-                      ),
-                      keyboardType: TextInputType.none,
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: TextField(
+                            controller: controller,
+                            style: TextStyle(
+                              fontSize: fontSizeLarge,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.purple,
+                            ),
+                            keyboardType: TextInputType.none,
+                          ),
+                        ),
+                        SizedBox(width: 8,),
+                        IconButton(onPressed: () async {
+                          bool value = ref.read(useNumberKeyboardProvider.notifier).state;
+                          print(value);
+                          ref.read(useNumberKeyboardProvider.notifier).update((state) => !value);
+
+                          print(useNumberKeyboard);
+                        }, icon: Icon(
+                           useNumberKeyboard ? Icons.numbers : Icons.keyboard)),
+                      ],
                     ),
                   ),
 
-                  keyboardButtons(context, ref, controller),
+                  useNumberKeyboard ? numberButtonsNoProcessor(context, ref, controller)
+                      : keyboardButtons(context, ref, controller),
 
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceEvenly,
@@ -291,7 +307,180 @@ Future<void> openInputDialogWithAction({
   print('Dialog closed with: $result');
 
   //return result; // 🔥 devolvemos el valor final al que llama
+}*/
+
+Future<void> openInputDialogWithAction({
+  required WidgetRef ref,
+  required bool history,
+  required int actionScan,
+  required void Function({
+  required WidgetRef ref,
+  required String inputData,
+  required int actionScan,
+  }) onOk,
+}) async {
+  print('actionScan.state -- $actionScan');
+
+  String title = Messages.INPUT_DATA;
+
+  if (actionScan == Memory.ACTION_FIND_MOVEMENT_BY_ID) {
+    title = Messages.FIND_MOVEMENT_BY_ID;
+  } else if (actionScan == Memory.ACTION_FIND_BY_UPC_SKU_FOR_STORE_ON_HAND) {
+    title = Messages.FIND_PRODUCT_BY_UPC_SKU;
+  } else if (actionScan == Memory.ACTION_GET_LOCATOR_TO_VALUE) {
+    title = Messages.FIND_LOCATOR;
+  }
+
+  final controller = TextEditingController();
+
+  if (history) {
+    String lastSearch = Memory.lastSearch;
+
+    if (actionScan == Memory.ACTION_FIND_MOVEMENT_BY_ID) {
+      lastSearch = Memory.lastSearchMovement;
+    }
+
+    if (lastSearch == '-1') lastSearch = '';
+
+    controller.text =
+    lastSearch.isEmpty ? Messages.NO_RECORDS_FOUND : lastSearch;
+  }
+
+  final result = await showModalBottomSheet<String?>(
+    isScrollControlled: true,
+    context: ref.context,
+    builder: (BuildContext context) {
+      // 👇 Aqui usamos um Consumer para ter um WidgetRef reativo
+      return Consumer(
+        builder: (context, ref, _) {
+          final useNumberKeyboard = ref.watch(useNumberKeyboardProvider);
+
+          return FractionallySizedBox(
+            heightFactor: 0.85,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 20),
+              child: Center(
+                child: SingleChildScrollView(
+                  child: Column(
+                    spacing: 10,
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 5.0),
+                        child: Text(
+                          title,
+                          style: TextStyle(
+                            fontSize: fontSizeLarge,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.purple,
+                          ),
+                        ),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 5.0),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: TextField(
+                                controller: controller,
+                                style: TextStyle(
+                                  fontSize: fontSizeLarge,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.purple,
+                                ),
+                                keyboardType: TextInputType.none,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            IconButton(
+                              onPressed: () {
+                                final oldValue =
+                                ref.read(useNumberKeyboardProvider);
+                                ref
+                                    .read(useNumberKeyboardProvider.notifier)
+                                    .state = !oldValue;
+                              },
+                              icon: Icon(
+                                useNumberKeyboard
+                                    ? Icons.keyboard
+                                    : Icons.numbers,
+                              color: Colors.purple,),
+                            ),
+                          ],
+                        ),
+                      ),
+                      useNumberKeyboard
+                          ? Padding(
+                            padding: const EdgeInsets.all(12.0),
+                            child: numberButtonsNoProcessor(context, ref, controller),
+                          )
+                          : keyboardButtons(context, ref, controller),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                        spacing: 10,
+                        children: [
+                          Expanded(
+                            child: TextButton(
+                              style: TextButton.styleFrom(
+                                foregroundColor: Colors.white,
+                                backgroundColor: Colors.red,
+                              ),
+                              onPressed: () {
+                                Navigator.pop(context, null);
+                              },
+                              child: Text(Messages.CANCEL),
+                            ),
+                          ),
+                          Expanded(
+                            child: TextButton(
+                              style: TextButton.styleFrom(
+                                foregroundColor: Colors.white,
+                                backgroundColor: Colors.green,
+                              ),
+                              onPressed: () {
+                                final text = controller.text;
+
+                                if (text.isEmpty) {
+                                  showErrorMessage(context, ref,
+                                      Messages.TEXT_FIELD_EMPTY);
+                                  return;
+                                }
+
+                                if (actionScan ==
+                                    Memory.ACTION_FIND_MOVEMENT_BY_ID) {
+                                  Memory.lastSearchMovement = text;
+                                } else {
+                                  Memory.lastSearch = text;
+                                }
+
+                                onOk(
+                                  ref: ref,
+                                  inputData: text,
+                                  actionScan: actionScan,
+                                );
+
+                                Navigator.pop(context, text);
+                              },
+                              child: Text(Messages.CONFIRM),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          );
+        },
+      );
+    },
+  );
+
+  ref.read(isDialogShowedProvider.notifier).state = false;
+
+  print('Dialog closed with: $result');
 }
+
 
 Widget keyboardButtons(BuildContext context, WidgetRef ref,TextEditingController textController){
   double widthButton = (MediaQuery.of(context).size.width) /10;
@@ -471,6 +660,391 @@ Widget keyboardButtons(BuildContext context, WidgetRef ref,TextEditingController
 
 
 }
+
+Widget numberButtonsNoProcessor(BuildContext context, WidgetRef ref,TextEditingController textController){
+  double widthButton = 60 ;
+  return Center(
+
+    child: Column(
+      spacing: 10,
+      children: [
+        Row(
+          spacing: 4,
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            TextButton(
+              onPressed: () => addQuantityText(context,ref,textController,0),
+              style: TextButton.styleFrom(
+                  backgroundColor: Colors.white,
+                  minimumSize: Size(widthButton, widthButton),
+                  shape: RoundedRectangleBorder(
+                    side: BorderSide(color: Colors.black),
+                    borderRadius: BorderRadius.circular(5),
+
+                  )
+              ),
+              child: Text(
+                '0',
+                style: TextStyle(
+                    color: Colors.black,
+                    fontSize: fontSizeMedium
+                ),
+              ),
+            ),
+            TextButton(
+              onPressed: () => addQuantityText(context,ref,textController,1),
+              style: TextButton.styleFrom(
+                  backgroundColor: Colors.white,
+                  minimumSize: Size(widthButton, widthButton),
+                  shape: RoundedRectangleBorder(
+                    side: BorderSide(color: Colors.black),
+                    borderRadius: BorderRadius.circular(5),
+
+                  )
+              ),
+              child: Text(
+                '1',
+                style: TextStyle(
+                    color: Colors.black,
+                    fontSize: fontSizeMedium
+                ),
+              ),
+            ),
+            TextButton(
+              onPressed: () => addQuantityText(context,ref,textController,2),
+              style: TextButton.styleFrom(
+                  backgroundColor: Colors.white,
+                  minimumSize: Size(widthButton, widthButton),
+                  shape: RoundedRectangleBorder(
+                    side: BorderSide(color: Colors.black),
+
+                    borderRadius: BorderRadius.circular(5),
+
+                  )
+              ),
+              child: Text(
+                '2',
+                style: TextStyle(
+                    color: Colors.black,
+                    fontSize: fontSizeMedium
+                ),
+              ),
+            ),
+            TextButton(
+              onPressed: () => addQuantityText(context,ref,textController,3),
+              style: TextButton.styleFrom(
+                  backgroundColor: Colors.white,
+                  minimumSize: Size(widthButton, widthButton),
+                  shape: RoundedRectangleBorder(
+                    side: BorderSide(color: Colors.black),
+                    borderRadius: BorderRadius.circular(5),
+
+                  )
+              ),
+              child: Text(
+                '3',
+                style: TextStyle(
+                    color: Colors.black,
+                    fontSize: fontSizeMedium
+                ),
+              ),
+            ),
+            TextButton(
+              onPressed: () => addQuantityText(context,ref,textController,4),
+              style: TextButton.styleFrom(
+                  backgroundColor: Colors.white,
+                  minimumSize: Size(widthButton, widthButton),
+                  shape: RoundedRectangleBorder(
+                    side: BorderSide(color: Colors.black),
+                    borderRadius: BorderRadius.circular(5),
+
+                  )
+              ),
+              child: Text(
+                '4',
+                style: TextStyle(
+                    color: Colors.black,
+                    fontSize: fontSizeMedium
+                ),
+              ),
+            ),
+
+          ],
+        ),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          spacing: 4,
+          children: [
+
+
+            TextButton(
+              onPressed: () => addQuantityText(context,ref,textController,5),
+              style: TextButton.styleFrom(
+                  backgroundColor: Colors.white,
+                  minimumSize: Size(widthButton, widthButton),
+                  shape: RoundedRectangleBorder(
+                    side: BorderSide(color: Colors.black),
+                    borderRadius: BorderRadius.circular(5),
+
+                  )
+              ),
+              child: Text(
+                '5',
+                style: TextStyle(
+                    color: Colors.black,
+                    fontSize: fontSizeMedium
+                ),
+              ),
+            ),
+            TextButton(
+              onPressed: () => addQuantityText(context,ref,textController,6),
+              style: TextButton.styleFrom(
+                  backgroundColor: Colors.white,
+                  minimumSize: Size(widthButton, widthButton),
+                  shape: RoundedRectangleBorder(
+                    side: BorderSide(color: Colors.black),
+                    borderRadius: BorderRadius.circular(5),
+
+                  )
+              ),
+              child: Text(
+                '6',
+                style: TextStyle(
+                    color: Colors.black,
+                    fontSize: fontSizeMedium
+                ),
+              ),
+            ),
+            TextButton(
+              onPressed: () => addQuantityText(context,ref,textController,7),
+              style: TextButton.styleFrom(
+                  backgroundColor: Colors.white,
+                  minimumSize: Size(widthButton, widthButton),
+                  shape: RoundedRectangleBorder(
+                    side: BorderSide(color: Colors.black),
+                    borderRadius: BorderRadius.circular(5),
+
+                  )
+              ),
+              child: Text(
+                '7',
+                style: TextStyle(
+                    color: Colors.black,
+                    fontSize: fontSizeMedium
+                ),
+              ),
+            ),
+            TextButton(
+              onPressed: () => addQuantityText(context,ref,textController,8),
+              style: TextButton.styleFrom(
+                  backgroundColor: Colors.white,
+                  minimumSize: Size(widthButton, widthButton),
+                  shape: RoundedRectangleBorder(
+                    side: BorderSide(color: Colors.black),
+                    borderRadius: BorderRadius.circular(5),
+
+                  )
+              ),
+              child: Text(
+                '8',
+                style: TextStyle(
+                    color: Colors.black,
+                    fontSize: fontSizeMedium
+                ),
+              ),
+            ),
+
+            TextButton(
+              onPressed: () => addQuantityText(context,ref,textController,9),
+              style: TextButton.styleFrom(
+                  backgroundColor: Colors.white,
+                  minimumSize: Size(widthButton, widthButton),
+                  shape: RoundedRectangleBorder(
+                    side: BorderSide(color: Colors.black),
+                    borderRadius: BorderRadius.circular(5),
+
+                  )
+              ),
+              child: Text(
+                '9',
+                style: TextStyle(
+                    color: Colors.black,
+                    fontSize: fontSizeMedium
+                ),
+              ),
+            ),
+
+          ],
+        ),
+        SizedBox(height: 20,),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          //spacing: 4,
+          children: [
+            TextButton(
+              onPressed: () =>addQuantityText(context,ref,textController,-4),
+              style: TextButton.styleFrom(
+                  backgroundColor: Colors.white,
+                  minimumSize: Size(widthButton, widthButton),
+                  shape: RoundedRectangleBorder(
+                    side: BorderSide(color: Colors.black),
+                    borderRadius: BorderRadius.circular(5),
+
+                  )
+              ),
+              child: Text(
+                '-',
+                style: TextStyle(
+                    color: Colors.black,
+                    fontSize: fontSizeMedium
+                ),
+              ),
+            ),
+            TextButton(
+              onPressed: () =>addQuantityText(context,ref,textController,-3),
+              style: TextButton.styleFrom(
+                  backgroundColor: Colors.white,
+                  minimumSize: Size(widthButton, widthButton),
+                  shape: RoundedRectangleBorder(
+                    side: BorderSide(color: Colors.black),
+                    borderRadius: BorderRadius.circular(5),
+
+                  )
+              ),
+              child: Text(
+                '.',
+                style: TextStyle(
+                    color: Colors.black,
+                    fontSize: fontSizeMedium
+                ),
+              ),
+            ),
+            TextButton(
+              onPressed: () =>addQuantityText(context,ref, textController,-2),
+              style: TextButton.styleFrom(
+                  backgroundColor: Colors.white,
+                  minimumSize: Size(widthButton, widthButton),
+                  shape: RoundedRectangleBorder(
+                    side: BorderSide(color: Colors.black),
+                    borderRadius: BorderRadius.circular(5),
+
+                  )
+              ),
+              child: Text(
+                '<=',
+                style: TextStyle(
+                    color: Colors.black,
+                    fontSize: fontSizeMedium
+                ),
+              ),
+            ),
+            SizedBox(
+              width: widthButton*2,
+              height: widthButton,
+              child: TextButton(
+                onPressed: () =>addQuantityText(context,ref,textController,-1),
+                style: TextButton.styleFrom(
+                    backgroundColor: Colors.white,
+                    minimumSize: Size(widthButton*2 + 3*4, widthButton), // width of 5 buttons + 4 spacing
+                    shape: RoundedRectangleBorder(
+                      side: BorderSide(color: Colors.black),
+                      borderRadius: BorderRadius.circular(5),
+
+                    )
+                ),
+
+                child: Text(
+                  Messages.CLEAR,
+                  style: TextStyle(
+                      color: Colors.black,
+                      fontSize: fontSizeMedium
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+        /*SizedBox(
+          width: widthButton*5 + 4*4,
+          height: widthButton,
+          child: TextButton(
+            onPressed: () => addQuantityText(context,ref,textController,-1),
+            style: TextButton.styleFrom(
+                backgroundColor: Colors.white,
+                minimumSize: Size(widthButton*5 + 4*4, widthButton), // width of 5 buttons + 4 spacing
+                shape: RoundedRectangleBorder(
+                  side: BorderSide(color: Colors.black),
+                  borderRadius: BorderRadius.circular(5),
+
+                )
+            ),
+
+            child: Text(
+              Messages.CLEAR,
+              style: TextStyle(
+                  color: Colors.black,
+                  fontSize: fontSizeMedium
+              ),
+            ),
+          ),
+        ),*/
+
+      ],
+    ),
+  );
+
+
+}
+void addQuantityText(BuildContext context, WidgetRef ref,
+    TextEditingController quantityController,int quantity) {
+
+  String currentText = quantityController.text;
+  if(quantity>=0){
+    currentText = '$currentText$quantity';
+    double? newQuantity = double.tryParse(currentText);
+    if (newQuantity != null) {
+      quantityController.text = currentText;
+    }
+  } else if(quantity==-1){
+    quantityController.text ='';
+  } else if(quantity==-2) {
+    quantityController.text = currentText.substring(0, currentText.length - 1);
+  } else if(quantity==-3){
+    quantityController.text = '$currentText.';
+  } else if(quantity==-4){
+    if(!currentText.startsWith('-')) quantityController.text = '-$currentText';
+
+  }
+
+
+  /*if(quantity==-1){
+    quantityController.text = '';
+    return;
+  }
+  String s =  quantityController.text;
+  String s1 = s;
+  String s2 ='';
+  if(s.contains('.')) {
+    s1 = s.split('.').first;
+    s2 = s.split('.').last;
+  }
+
+  String r ='';
+  if(s.contains('.')){
+    r='$s1$quantity.$s2';
+  } else {
+    r='$s1$quantity';
+  }
+
+  int? aux = int.tryParse(r);
+  if(aux==null || aux<=0){
+    String message =  '${Messages.ERROR_QUANTITY} $quantity';
+    showErrorMessage(context, ref, message);
+    return;
+  }
+  quantityController.text = aux.toString();*/
+
+}
 Widget numberButtons(BuildContext context, WidgetRef ref,TextEditingController quantityController, InputDataProcessor processor){
   double widthButton = 40 ;
   return Center(
@@ -485,7 +1059,7 @@ Widget numberButtons(BuildContext context, WidgetRef ref,TextEditingController q
               onPressed: () => processor.addQuantityText(context,ref,quantityController,0),
               style: TextButton.styleFrom(
                   backgroundColor: Colors.white,
-                  minimumSize: Size(widthButton, 37),
+                  minimumSize: Size(widthButton, widthButton),
                   shape: RoundedRectangleBorder(
                     side: BorderSide(color: Colors.black),
                     borderRadius: BorderRadius.circular(5),
@@ -798,49 +1372,7 @@ String getTip(int action) {
 
 }
 
-Widget buttonScanWithPhone(BuildContext context,WidgetRef ref,InputDataProcessor processor) {
-  var isScanning = ref.watch(isScanningProvider);
-  var actionScan = ref.watch(actionScanProvider);
 
-  Color backgroundColor =  Colors.cyan[800]!;
-  return TextButton(
-
-    style: TextButton.styleFrom(
-      backgroundColor: isScanning ? Colors.grey :backgroundColor,
-      foregroundColor: Colors.white,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(0),
-      ),
-
-    ),
-    onPressed: isScanning ? null :  () async {
-      ref.watch(isScanningProvider.notifier).state = true;
-      String? result= await SimpleBarcodeScanner.scanBarcode(
-        context,
-        barcodeAppBar: BarcodeAppBar(
-          appBarTitle: Messages.SCANNING,
-          centerTitle: false,
-          enableBackButton: true,
-          backButtonIcon: Icon(Icons.arrow_back_ios),
-        ),
-        isShowFlashIcon: true,
-        delayMillis: 300,
-        cameraFace: CameraFace.back,
-      );
-      if(result!=null){
-        isScanning = false;
-        if(context.mounted){
-          processor.handleInputString(ref:ref, inputData: result, actionScan: actionScan);
-        }
-      } else {
-        isScanning = false;
-      }
-    },
-    child: Text(Messages.OPEN_CAMERA+getTip(actionScan),style: TextStyle(fontSize: themeFontSizeLarge,
-        color: Colors.white),),
-
-  );
-}
 Future<int?> openInputNumberDialogWithResult(
     BuildContext context,
     WidgetRef ref,

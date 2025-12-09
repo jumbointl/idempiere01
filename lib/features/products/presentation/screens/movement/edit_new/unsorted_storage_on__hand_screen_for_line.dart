@@ -4,14 +4,11 @@ import 'dart:convert';
 import 'package:awesome_dialog/awesome_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_riverpod/legacy.dart';
 import 'package:go_router/go_router.dart';
 import 'package:monalisa_app_001/features/products/common/input_data_processor.dart';
-import 'package:monalisa_app_001/features/products/common/scan_button_by_action.dart';
 import 'package:monalisa_app_001/features/products/domain/idempiere/movement_and_lines.dart';
 import 'package:monalisa_app_001/features/products/presentation/providers/persitent_provider.dart';
 import 'package:monalisa_app_001/features/products/presentation/providers/products_providers.dart';
-import 'package:simple_barcode_scanner/simple_barcode_scanner.dart';
 import 'package:slide_to_confirm/slide_to_confirm.dart';
 
 import '../../../../../../config/router/app_router.dart';
@@ -33,6 +30,7 @@ import '../../locator/search_locator_dialog.dart';
 import '../provider/new_movement_provider.dart';
 import '../provider/products_home_provider.dart';
 import '../../store_on_hand/memory_products.dart';
+import 'custom_app_bar.dart';
 class UnsortedStorageOnHandScreenForLine extends ConsumerStatefulWidget implements InputDataProcessor{
 
   final IdempiereStorageOnHande storage;
@@ -42,9 +40,7 @@ class UnsortedStorageOnHandScreenForLine extends ConsumerStatefulWidget implemen
   double width;
   int pageIndex = Memory.PAGE_INDEX_UNSORTED_STORAGE_ON_HAND;
   final int actionScanType = Memory.ACTION_GET_LOCATOR_TO_VALUE ;
-  //late ProductsScanNotifierForLine scanHandleNotifier;
   MovementAndLines movementAndLines ;
-  //test json
   String argument;
   UnsortedStorageOnHandScreenForLine({required this.index,
     required this.movementAndLines,
@@ -104,7 +100,6 @@ class UnsortedStorageOnHandScreenForLineState extends ConsumerState<UnsortedStor
   late double widthSmall ;
   late AsyncValue findLocatorTo ;
 
-  late var usePhoneCamera ;
   late var quantityToMove;
   late double dialogHeight ;
   late double dialogWidth ;
@@ -126,8 +121,6 @@ class UnsortedStorageOnHandScreenForLineState extends ConsumerState<UnsortedStor
   late var lines ;
   bool showScanButton = false;
   String? productId ;
-  late String title ;
-  late TextStyle textStyle ;
 
 
   MovementAndLines get movementAndLines {
@@ -140,19 +133,25 @@ class UnsortedStorageOnHandScreenForLineState extends ConsumerState<UnsortedStor
   }
   @override
   void initState() {
-    title ='${Messages.MOVEMENT} : ${Messages.CREATE}';
-    textStyle = TextStyle(fontSize: themeFontSizeLarge);
+    if(movementAndLines.hasMovement) {
 
+      if (movementAndLines.hasMovementLines) {
+        allowedLocatorFrom = movementAndLines.lastLocatorFrom;
+        allowedLocatorFrom?.value ??= allowedLocatorFrom?.identifier;
+        locatorTo = movementAndLines.lastLocatorTo;
+        locatorTo.value ??= locatorTo.identifier;
+      } else {
+        findLocatorTo = ref.watch(findLocatorToForLineProvider);
+        locatorTo = ref.watch(persistentLocatorToProvider);
+        showScanButton = true;
+      }
+    }
 
     WidgetsBinding.instance.addPostFrameCallback((_){
         Future.delayed(const Duration(seconds: 1));
         ref.read(isScanningForLineProvider.notifier).update((state) => false);
         ref.read(isDialogShowedProvider.notifier).update((state) => false);
         if(movementAndLines.hasMovement) {
-          title = movementAndLines.documentNo ?? '';
-          if (title.length > 20)
-            textStyle = TextStyle(fontSize: themeFontSizeSmall);
-
           if (movementAndLines.hasMovementLines) {
             Future.delayed(Duration(microseconds: 50), () {
               ref.read(actionScanProvider.notifier).update((state) =>
@@ -162,14 +161,7 @@ class UnsortedStorageOnHandScreenForLineState extends ConsumerState<UnsortedStor
                   .state =
                   Memory.PAGE_INDEX_NO_REQUERED_SCAN_SCREEN;
             });
-            allowedLocatorFrom = movementAndLines.lastLocatorFrom;
-            allowedLocatorFrom?.value ??= allowedLocatorFrom?.identifier;
-            locatorTo = movementAndLines.lastLocatorTo;
-            locatorTo.value ??= locatorTo.identifier;
           } else {
-            findLocatorTo = ref.watch(findLocatorToForLineProvider);
-            locatorTo = ref.watch(persistentLocatorToProvider);
-
             Future.delayed(Duration(microseconds: 50), () {
               showScanButton = true;
               ref.read(actionScanProvider.notifier).update((state) =>
@@ -194,7 +186,6 @@ class UnsortedStorageOnHandScreenForLineState extends ConsumerState<UnsortedStor
     final showScan = ref.watch(showScanFixedButtonProvider(widget.actionScanType));
     isDialogShowed = ref.watch(isDialogShowedProvider);
     isScanning = ref.watch(isScanningLocatorToForLineProvider);
-    usePhoneCamera = ref.watch(usePhoneCameraToScanForLineProvider);
     widget.width = MediaQuery.of(context).size.width;
     quantityToMove = ref.watch(quantityToMoveProvider);
 
@@ -243,12 +234,12 @@ class UnsortedStorageOnHandScreenForLineState extends ConsumerState<UnsortedStor
             ),
 
           ],
-          title: Column(
-            children: [
-              Text(title,style: textStyle,),
-              Text('${Messages.LINES} : (${movementAndLines.movementLines?.length ?? 0})',),
-            ],
+          title: movementAppBarTitle(movementAndLines: movementAndLines,
+              onBack: ()=> popScopeAction,
+              showBackButton: false,
+              subtitle: '${Messages.LINES} : (${movementAndLines.movementLines?.length ?? 0})'
           ),
+
 
 
         ),
@@ -1105,9 +1096,7 @@ class UnsortedStorageOnHandScreenForLineState extends ConsumerState<UnsortedStor
                   Memory.pageFromIndex = ref.read(productsHomeCurrentIndexProvider);
                   ref.read(productsHomeCurrentIndexProvider.notifier).update((state) => Memory.PAGE_INDEX_NO_REQUERED_SCAN_SCREEN);
                   isLocatorScreenShowed.update((state) => true);
-                  MemoryProducts.lastUsePhoneCameraState = usePhoneCamera;
                   ref.read(isDialogShowedProvider.notifier).state = true ;
-                  usePhoneCamera = false;
                   showDialog(
                     context: context,
                     builder: (BuildContext context) {
@@ -1146,9 +1135,7 @@ class UnsortedStorageOnHandScreenForLineState extends ConsumerState<UnsortedStor
                   Memory.pageFromIndex = ref.read(productsHomeCurrentIndexProvider.notifier).state;
                   ref.read(productsHomeCurrentIndexProvider.notifier).update((state) => Memory.PAGE_INDEX_NO_REQUERED_SCAN_SCREEN);
                   isLocatorScreenShowed.update((state) => true);
-                  MemoryProducts.lastUsePhoneCameraState = usePhoneCamera;
                   ref.read(isDialogShowedProvider.notifier).state = true ;
-                  usePhoneCamera = false;
                   showDialog(
                     context: context,
                     builder: (BuildContext context) {

@@ -105,6 +105,7 @@ Future<String?> openDialogSelect3Actions({required BuildContext context,
   required String textButton1,
   required String textButton2,
   required String textButton3,
+  required int buttonsToShow,
 }) async {
   String? action = await showModalBottomSheet<String>(
     context: context,
@@ -163,8 +164,8 @@ Future<String?> openDialogSelect3Actions({required BuildContext context,
                       },
                     ),
                   ),
-                  const SizedBox(width: 8),
-                  Expanded(
+                  if(buttonsToShow == 3)const SizedBox(width: 8),
+                  if(buttonsToShow == 3)Expanded(
                     child: TextButton(
                       style: TextButton.styleFrom(
                         backgroundColor: Colors.cyan[800],
@@ -179,7 +180,6 @@ Future<String?> openDialogSelect3Actions({required BuildContext context,
                 ],
               ),
 
-              const SizedBox(height: 8),
             ],
           ),
         ),

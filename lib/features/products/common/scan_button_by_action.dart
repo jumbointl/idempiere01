@@ -7,8 +7,6 @@ import 'package:monalisa_app_001/config/config.dart';
 
 import '../../shared/data/memory.dart';
 import 'input_data_processor.dart';
-import '../presentation/providers/common_provider.dart';
-import '../presentation/providers/scan_provider.dart';
 import '../../shared/data/messages.dart';
 import '../presentation/providers/product_provider_common.dart';
 class ScanButtonByAction extends ConsumerStatefulWidget {

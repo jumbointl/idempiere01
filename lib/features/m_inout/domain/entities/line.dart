@@ -114,4 +114,20 @@ class Line {
       editLocator: editLocator ?? this.editLocator,
     );
   }
+
+  Map<String, dynamic> toJson() => {
+        "id": id,
+        "Line": line,
+        "MovementQty": movementQty,
+        "TargetQty": targetQty,
+        "ConfirmedQty": confirmedQty,
+        "ScrappedQty": scrappedQty,
+        "M_Locator_ID": mLocatorId?.toJson(),
+        "M_LocatorTo_ID": mLocatorToId?.toJson(),
+        "M_Product_ID": mProductId?.toJson(),
+        "UPC": upc,
+        "SKU": sku,
+        "ProductName": productName,
+  };
+
 }

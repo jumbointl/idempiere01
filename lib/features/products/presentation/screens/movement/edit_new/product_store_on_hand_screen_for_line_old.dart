@@ -32,7 +32,7 @@ import '../../../widget/no_data_card.dart';
 import '../../store_on_hand/product_resume_card.dart';
 
 
-class ProductStoreOnHandScreenForLine extends ConsumerStatefulWidget implements InputDataProcessor{
+class ProductStoreOnHandScreenForLineOld extends ConsumerStatefulWidget implements InputDataProcessor{
 
 
   int countScannedCamera =0;
@@ -43,14 +43,14 @@ class ProductStoreOnHandScreenForLine extends ConsumerStatefulWidget implements 
   bool isMovementSearchedShowed = false;
   String productId;
   MovementAndLines movementAndLines;
-  ProductStoreOnHandScreenForLine({
+  ProductStoreOnHandScreenForLineOld({
     required this.productId,
     required this.argument,
     required this.movementAndLines,
     super.key});
 
   @override
-  ConsumerState<ConsumerStatefulWidget> createState() => ProductStoreOnHandScreenForLineState();
+  ConsumerState<ConsumerStatefulWidget> createState() => ProductStoreOnHandScreenForLineStateOld();
 
   @override
   void addQuantityText(BuildContext context, WidgetRef ref,
@@ -105,8 +105,8 @@ class ProductStoreOnHandScreenForLine extends ConsumerStatefulWidget implements 
 
 }
 
-class ProductStoreOnHandScreenForLineState
-    extends ConsumerState<ProductStoreOnHandScreenForLine> {
+class ProductStoreOnHandScreenForLineStateOld
+    extends ConsumerState<ProductStoreOnHandScreenForLineOld> {
   Color colorBackgroundHasMovementId = Colors.yellow[200]!;
   Color colorBackgroundNoMovementId = Colors.white;
 
@@ -142,17 +142,52 @@ class ProductStoreOnHandScreenForLineState
     });
 
   }
+  void showErrorMessage(BuildContext context, WidgetRef ref, String message) {
+    if (!context.mounted) {
+      Future.delayed(const Duration(seconds: 1));
+      if(!context.mounted) return;
+    }
+    AwesomeDialog(
+      context: context,
+      animType: AnimType.scale,
+      dialogType: DialogType.error,
+      body: Center(child: Column(
+        children: [
+          Text(message,
+            style: TextStyle(fontStyle: FontStyle.italic),
+          ),
+        ],
+      ),),
+      title:  message,
+      desc:   '',
+      autoHide: const Duration(seconds: 3),
+      btnOkOnPress: () {},
+      btnOkColor: Colors.amber,
+      btnCancelText: Messages.CANCEL,
+      btnOkText: Messages.OK,
+    ).show();
+    return;
+  }
 
   @override
   Widget build(BuildContext context){
     widget.productsNotifier = ref.watch(scanStateNotifierForLineProvider.notifier);
     isScanning = ref.watch(isScanningForLineProvider);
     showResultCard = ref.watch(showResultCardProvider);
+    String lines = '0';
+    lines = movementAndLines.movementLines?.length.toString() ?? '0';
     movementId = movementAndLines.id ?? -1;
     isDialogShowed = ref.watch(isDialogShowedProvider);
     final productAsync = ref.watch(findProductByUPCOrSKUForStoreOnHandProvider);
+    final productsStoredAsync = ref.watch(findProductsStoreOnHandProvider);
 
+    final double width = MediaQuery.of(context).size.width - 30;
     Warehouse? userWarehouse = ref.read(authProvider).selectedWarehouse;
+    int userWarehouseId = userWarehouse?.id ?? 0;
+    String userWarehouseName = userWarehouse?.name ?? '';
+    String title = movementAndLines.documentNo ?? '';
+    TextStyle textStyle = TextStyle(fontSize: themeFontSizeLarge);
+    if(title.length>20) textStyle = TextStyle(fontSize: themeFontSizeSmall);
     final showScan = ref.watch(showScanFixedButtonProvider(widget.actionTypeInt));
 
     return Scaffold(
@@ -167,12 +202,13 @@ class ProductStoreOnHandScreenForLineState
             {
               popScopeAction(context, ref),
             }
+          //
         ),
 
         title: movementAppBarTitle(movementAndLines: movementAndLines,
             onBack: ()=> popScopeAction,
             showBackButton: false,
-            subtitle: '${Messages.LINES} : (${movementAndLines.movementLines?.length ?? 0})'
+            subtitle: lines
         ),
         actions: [
           if(showScan) ScanButtonByActionFixedShort(
@@ -201,41 +237,59 @@ class ProductStoreOnHandScreenForLineState
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 10,vertical: 10),
             child: SingleChildScrollView(
-              child: productAsync.when(
-                data: (result) {
-                  if(result.id==null || result.id! ==-1){
-                    return NoDataCard();
-                  }
-                  final double width = MediaQuery.of(context).size.width - 30;
-
-                  WidgetsBinding.instance.addPostFrameCallback((_) async {
-                    int userWarehouseId = userWarehouse?.id ?? 0;
-                    String userWarehouseName = userWarehouse?.name ?? '';
-                    double quantity = 0;
-                    if(result.hasListStorageOnHande){
-                      for (var data in result.sortedStorageOnHande!) {
-                        int warehouseID = data.mLocatorID?.mWarehouseID?.id ?? 0;
-
-                        if (warehouseID == userWarehouseId) {
-                          quantity += data.qtyOnHand ?? 0;
+              child: Column(
+                spacing: 10,
+                children: [
+                  productAsync.when(
+                    data: (products) {
+                      return NoDataCard();
+                      /*WidgetsBinding.instance.addPostFrameCallback((_) async {
+                        ref.read(isScanningForLineProvider.notifier).update((state) => false);
+                        if(products.isNotEmpty && products[0].id != null && products[0].id! > 0){
+                          ref.read(showResultCardProvider.notifier).update((state) => true);
+                        } else {
+                          ref.read(showResultCardProvider.notifier).update((state) => false);
                         }
-                      }
-                    }
-                    String aux = Memory.numberFormatter0Digit.format(quantity);
-                    ref.read(resultOfSameWarehouseProvider.notifier).update((state) =>  [aux,userWarehouseName]);
+                      });
+                      if(products.isEmpty || products[0].id == null || products[0].id! <= 0) return NoDataCard();
 
-                  });
-                  MemoryProducts.productWithStock = result;
-                  return Column(
-                    spacing: 10,
-                    children: [
-                      ProductDetailCardForLine(
-                          productsNotifier: widget.productsNotifier, product: result),
-                      if(result.hasListStorageOnHande) getStoragesOnHand(result.sortedStorageOnHande!, width),
-                    ],
-                  );
-                },error: (error, stackTrace) => Text('Error: $error'),
-                loading: () => const LinearProgressIndicator(),
+                      return ProductDetailCardForLine(
+                          productsNotifier: widget.productsNotifier, product: products[0]);*/
+
+
+                    },error: (error, stackTrace) => Text('Error: $error'),
+                    loading: () => const LinearProgressIndicator(),
+                  ),
+
+                  productsStoredAsync.when(
+                    data: (storages) {
+                      WidgetsBinding.instance.addPostFrameCallback((_) async {
+                        // deley 1 secund
+                        ref.read(isScanningForLineProvider.notifier).update((state) => false);
+                        ref.read(isScanningProvider.notifier).update((state) => false);
+
+                        double quantity = 0;
+                        for (var data in storages) {
+                          int warehouseID = data.mLocatorID?.mWarehouseID?.id ?? 0;
+
+                          if (warehouseID == userWarehouseId) {
+                            quantity += data.qtyOnHand ?? 0;
+                          }
+                        }
+
+                        String aux = Memory.numberFormatter0Digit.format(quantity);
+                        ref.read(resultOfSameWarehouseProvider.notifier).update((state) =>  [aux,userWarehouseName]);
+                      });
+                      return getStoragesOnHand(storages, width);
+
+                    },
+                    error: (error, stackTrace) => Text('Error: $error'),
+                    loading: () => const LinearProgressIndicator(
+                      minHeight: 36,
+                    ),
+                  ),
+
+                ],
               ),
             ),
           ),
@@ -302,18 +356,12 @@ class ProductStoreOnHandScreenForLineState
 
 
   void popScopeAction(BuildContext context, WidgetRef ref) {
-
-    // Restaurar configuración de navegación del Home
     ref.read(productsHomeCurrentIndexProvider.notifier).state =
         Memory.PAGE_INDEX_MOVEMENTE_EDIT_SCREEN;
+    ref.read(actionScanProvider.notifier).state = Memory.ACTION_FIND_MOVEMENT_BY_ID;
+    context.go('${AppRouter.PAGE_MOVEMENTS_SEARCH}/$movementId/-1');
 
-    ref.read(actionScanProvider.notifier).state =
-        Memory.ACTION_FIND_MOVEMENT_BY_ID;
-
-    // Redirigir
-    context.go('${AppRouter.PAGE_MOVEMENTS_SEARCH}/$movementId/1');
   }
-
   Future<void> setDefaultValues(BuildContext context, WidgetRef ref) async {
 
     ref.read(isScanningFromDialogProvider.notifier).update((state) => false);

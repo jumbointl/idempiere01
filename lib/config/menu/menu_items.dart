@@ -109,7 +109,7 @@ final appHomeOptionCol3Items = <MenuItem>[
   MenuItem(
     title: Messages.MOVEMENT_EDIT,
     subTitle: '',
-    link: '${AppRouter.PAGE_MOVEMENTS_SEARCH}/:movementId',
+    link: '${AppRouter.PAGE_MOVEMENTS_SEARCH}/-1/-1',
     icon: Icons.move_up
     ,
   ),

@@ -117,6 +117,6 @@ class PrinterNotifier extends StateNotifier<PrinterConnectionState> {
   }
 }
 
-final printerProvider = StateNotifierProvider<PrinterNotifier, PrinterConnectionState>((ref) {
+final movementPrintScreenPrinterProvider = StateNotifierProvider<PrinterNotifier, PrinterConnectionState>((ref) {
   return PrinterNotifier();
 });

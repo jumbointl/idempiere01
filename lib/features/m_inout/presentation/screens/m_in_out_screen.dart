@@ -4,6 +4,8 @@ import 'package:get_storage/get_storage.dart';
 import 'package:monalisa_app_001/config/config.dart';
 import 'package:monalisa_app_001/features/m_inout/domain/entities/m_in_out.dart';
 import 'package:monalisa_app_001/features/m_inout/domain/entities/m_in_out_confirm.dart';
+import 'package:monalisa_app_001/features/products/common/messages_dialog.dart';
+import 'package:monalisa_app_001/features/shared/data/messages.dart';
 import 'package:monalisa_app_001/features/shared/shared.dart';
 import 'package:monalisa_app_001/features/m_inout/domain/entities/line.dart';
 import 'package:monalisa_app_001/features/m_inout/presentation/widgets/barcode_list.dart';
@@ -16,8 +18,9 @@ import '../widgets/enter_barcode_button.dart';
 
 class MInOutScreen extends ConsumerStatefulWidget {
   final String type;
+  final String documentNo;
 
-  const MInOutScreen({super.key, required this.type});
+  const MInOutScreen({super.key, required this.type,required this.documentNo});
 
   @override
   MInOutScreenState createState() => MInOutScreenState();
@@ -25,10 +28,13 @@ class MInOutScreen extends ConsumerStatefulWidget {
 
 class MInOutScreenState extends ConsumerState<MInOutScreen> {
   late MInOutNotifier mInOutNotifier;
+  late String documentNo;
+
 
   @override
   void initState() {
     super.initState();
+    documentNo = widget.documentNo ;
     int quantityToAllow = ref.read(
       quantityOfMovementAndScannedToAllowInputScannedQuantityProvider,
     );
@@ -38,7 +44,14 @@ class MInOutScreenState extends ConsumerState<MInOutScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       mInOutNotifier = ref.read(mInOutProvider.notifier);
       mInOutNotifier.setParameters(widget.type);
-      mInOutNotifier.cargarLista(ref);
+      if(documentNo.isNotEmpty && documentNo !='-1'){
+        //print('----documentNo: $documentNo');
+        String message = Messages.PASTE_THE_DOCUMENT_NUMBER_IN_THE_FIELD_THEN_SEARCH ;
+        showWarningMessage(context, ref, message);
+      } else {
+        mInOutNotifier.cargarLista(ref);
+      }
+
     });
   }
 
@@ -106,15 +119,25 @@ class MInOutScreenState extends ConsumerState<MInOutScreen> {
                           MInOutType.receipt ||
                       mInOutState.mInOutType ==
                           MInOutType.move
-                      ? () => mInOutNotifier.setDocAction(ref)
-                      : () =>
-                      mInOutNotifier.setDocActionConfirm(ref)
-                      : () => _showConfirmMInOut(context)
-                      : () => _showWithoutRole(context),
+                      ? () {
+                              print(' mInOutNotifier.setDocAction');
+                              mInOutNotifier.setDocAction(ref);
+                            }
+                      : () {
+                      mInOutNotifier.setDocActionConfirm(ref);}
+                      : () {
+                              print(' mInOutNotifier._showConfirmMInOut');
+                              _showConfirmMInOut(context);
+                            }
+                      : () {
+                            print(' mInOutNotifier._showWithoutRole');
+                            _showWithoutRole(context);
+                            },
                   icon: Icon(
                     Icons.check,
                     color: mInOutNotifier.isConfirmMInOut()
-                        ? themeColorSuccessful
+                        //? themeColorSuccessful
+                        ? Colors.purple
                         : null,
                   ),
                 ),
@@ -291,6 +314,7 @@ class _MInOutView extends ConsumerWidget {
         mInOutState.mInOutType == MInOutType.pickConfirm ||
         mInOutState.mInOutType == MInOutType.qaConfirm) {
       _showScreenLoading(context);
+
       try {
         final mInOut = await mInOutNotifier.getMInOutAndLine(ref);
         if (mInOut.id != null) {
@@ -340,6 +364,25 @@ class _MInOutView extends ConsumerWidget {
     final docStatusId = mInOutState.mInOut?.docStatus.id.toString();
     final confirmStatusId = mInOutState.mInOutConfirm?.docStatus.id.toString();
 
+
+    print('mInoutColor ${mInOutState.mInOutType}');
+    if (mInOutState.mInOutType == MInOutType.move
+        || mInOutState.mInOutType == MInOutType.moveConfirm) {
+      print('mInoutColor1 ${MInOutType.move}');
+      print('docStatus $docStatusId');
+      print('confirmStatusId $confirmStatusId');
+
+      if (docStatusId == 'DR') {
+        return themeColorWarningLight;
+      } else if (docStatusId == 'IP') {
+        return Colors.cyan.shade200;
+      } else if (docStatusId == 'CO') {
+        return themeColorSuccessfulLight;
+      } else {
+        return Colors.grey.shade200;
+      }
+    }
+
     if (mInOutState.mInOutType != MInOutType.shipment &&
         mInOutState.mInOutType != MInOutType.receipt &&
         mInOutState.mInOutType != MInOutType.move &&
@@ -350,6 +393,8 @@ class _MInOutView extends ConsumerWidget {
         return themeColorSuccessfulLight;
       }
     } else {
+
+
       if (docStatusId == 'IP') {
         return themeColorWarningLight;
       } else if (docStatusId == 'CO') {
@@ -368,7 +413,9 @@ class _MInOutView extends ConsumerWidget {
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(themeBorderRadius),
-              color: _getHeaderBackgroundColor(mInOutState),
+              //color: _getHeaderBackgroundColor(mInOutState),
+              color: ref.watch(mInOutHeaderColorProvider(mInOutState)),
+
             ),
             child: Row(
               children: [
@@ -714,8 +761,109 @@ class _MInOutView extends ConsumerWidget {
       ),
     );
   }
-
   Future<void> _showSelectMInOutConfirm(
+      List<MInOutConfirm> mInOutConfirmList,
+      BuildContext context,
+      MInOutNotifier mInOutNotifier,
+      MInOutStatus mInOutState,
+      WidgetRef ref,
+      ) {
+    return showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (context) {
+        return FractionallySizedBox(
+          heightFactor: 0.7, // ocupa el 70% de la pantalla
+          child: Column(
+            children: [
+              // ---------- HEADER ----------
+              Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Text(
+                  'Seleccione el ${mInOutState.title}',
+                  style: const TextStyle(
+                    fontSize: themeFontSizeLarge,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+
+              const Divider(height: 0),
+
+              // ---------- LISTA O MENSAJE ----------
+              Expanded(
+                child: mInOutConfirmList.isNotEmpty
+                    ? ListView.builder(
+                  itemCount: mInOutConfirmList.length,
+                  itemBuilder: (context, index) {
+                    final item = mInOutConfirmList[index];
+
+                    return InkWell(
+                      onTap: () {
+                        if (mInOutState.mInOutType == MInOutType.moveConfirm) {
+                          mInOutNotifier.getMovementConfirmAndLine(item.id!, ref);
+                        } else {
+                          mInOutNotifier.getMInOutConfirmAndLine(item.id!, ref);
+                        }
+                        Navigator.of(context).pop();
+                      },
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              item.documentNo.toString(),
+                              style: const TextStyle(
+                                fontSize: themeFontSizeLarge,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            Text(
+                              item.mInOutId.identifier ?? '',
+                              style: TextStyle(
+                                fontSize: themeFontSizeSmall,
+                                color: themeColorGray,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            const Divider(height: 0),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                )
+                    : const Center(
+                  child: Text(
+                    'No hay confirmaciones pendientes.',
+                    style: TextStyle(fontSize: themeFontSizeNormal),
+                  ),
+                ),
+              ),
+
+              // ---------- BOTONES ----------
+              Padding(
+                padding: const EdgeInsets.all(16),
+                child: CustomFilledButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  label: 'Cerrar',
+                  icon: const Icon(Icons.close_rounded),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+
+  /*Future<void> _showSelectMInOutConfirm(
       List<MInOutConfirm> mInOutConfirmList,
       BuildContext context,
       MInOutNotifier mInOutNotifier,
@@ -784,8 +932,7 @@ class _MInOutView extends ConsumerWidget {
         );
       },
     );
-  }
-
+  }*/
   Future<void> _showMInOutData(BuildContext context, MInOut mInOut) {
     return showDialog(
       context: context,

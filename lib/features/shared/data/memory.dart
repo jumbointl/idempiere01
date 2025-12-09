@@ -3,9 +3,7 @@ import 'package:awesome_dialog/awesome_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:monalisa_app_001/features/products/domain/idempiere/idempiere_document_type.dart';
-import 'package:monalisa_app_001/features/products/domain/idempiere/idempiere_locator.dart';
 import 'package:monalisa_app_001/features/products/domain/idempiere/idempiere_product.dart';
-import 'package:monalisa_app_001/features/products/domain/idempiere/idempiere_warehouse.dart';
 import 'package:monalisa_app_001/features/products/domain/sql/sql_users_data.dart';
 
 import '../../products/domain/idempiere/idempiere_movement.dart';
@@ -131,7 +129,7 @@ class Memory {
 
   static String URL_CUPS_SERVER ='http://192.168.188.108:3100/print';
 
-  static String VERSIONS='1.01.036';
+  static String VERSIONS='1.01.042';
 
   static String getUrlCupsServerWithPrinter({required String ip,
     required String port,required String printerName}){
@@ -193,9 +191,9 @@ class Memory {
       name: 'MM Nota Remisión Electrónica'
   );
 
-  static get IDEMPIERE_DOC_TYPE_MATERIAL_MOVEMENT => materialMovement.id;
-  static get IDEMPIERE_DOC_TYPE_MATERIAL_MOVEMENT_WITH_CONFIRM => materialMovementWithConfirm.id;
-  static get IDEMPIERE_DOC_TYPE_ELECTRONIC_DELIVERY_NOTE => electronicDeliveryNote.id;
+  static int? get IDEMPIERE_DOC_TYPE_MATERIAL_MOVEMENT => materialMovement.id;
+  static int? get IDEMPIERE_DOC_TYPE_MATERIAL_MOVEMENT_WITH_CONFIRM => materialMovementWithConfirm.id;
+  static int? get IDEMPIERE_DOC_TYPE_ELECTRONIC_DELIVERY_NOTE => electronicDeliveryNote.id;
 
 
 

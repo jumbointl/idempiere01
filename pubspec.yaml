@@ -13,7 +13,7 @@ dependencies:
   dio: ^5.7.0
   dotenv: ^4.2.0
   flutter_dotenv: ^6.0.0
-  material_symbols_icons: ^4.2873.0
+  material_symbols_icons: ^4.2892.0
   flutter_riverpod: ^3.0.0
   formz: ^0.8.0
   go_router: ^16.3.0
@@ -53,6 +53,7 @@ dependencies:
   barcode: any
   http: any
   permission_handler: any
+  barcode_widget: ^2.0.4
 dev_dependencies:
   flutter_test:
     sdk: flutter

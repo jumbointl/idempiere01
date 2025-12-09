@@ -1,7 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
-import 'package:monalisa_app_001/features/products/domain/idempiere/idempiere_organization.dart';
 import 'package:monalisa_app_001/features/products/presentation/providers/persitent_provider.dart';
 import 'package:monalisa_app_001/features/products/presentation/providers/product_provider_common.dart';
 
@@ -137,10 +136,17 @@ final findLocatorToForLineProvider = FutureProvider<IdempiereLocator>((ref) asyn
         ref.read(isScanningLocatorToForLineProvider.notifier).state = false;
         return  productsList[0];
       } else {
+        String message = '${Messages.NOT_FOUND} $scannedCode';
+        if(warehouseTo>0){
+          message = '${Messages.ERROR_DIFFERENT_WAREHOUSE} : $scannedCode';
+        }
         ref.read(isScanningProvider.notifier).state =false;
-        ref.read(persistentLocatorToProvider.notifier).state = IdempiereLocator(id:Memory.NOT_FOUND_ID,value: '${Messages.NOT_FOUND} $scannedCode'  );
+        ref.read(persistentLocatorToProvider.notifier).state =
+            IdempiereLocator(id:Memory.NOT_FOUND_ID,
+            value: message );
         ref.read(isScanningLocatorToForLineProvider.notifier).state = false;
-        return IdempiereLocator(value: Messages.NOT_FOUND, name: scannedCode,id: Memory.NOT_FOUND_ID);
+
+        return IdempiereLocator(value: Messages.NOT_FOUND, name: message,id: Memory.NOT_FOUND_ID);
 
       }
     } else {

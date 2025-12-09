@@ -2,12 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:monalisa_app_001/config/config.dart';
-import 'package:monalisa_app_001/features/products/common/input_dialog.dart';
 import 'package:monalisa_app_001/features/products/common/messages_dialog.dart';
 import 'package:simple_barcode_scanner/simple_barcode_scanner.dart';
 
-import '../../shared/data/memory.dart';
-import '../presentation/providers/common_provider.dart';
 import '../../shared/data/messages.dart';
 import '../presentation/providers/product_provider_common.dart';
 
@@ -20,7 +17,7 @@ class ScanButtonByActionFixedShort extends ConsumerStatefulWidget {
   final void Function({required WidgetRef ref
   , required String inputData,required int actionScan}) onOk;
 
-  ScanButtonByActionFixedShort({
+  const ScanButtonByActionFixedShort({
     super.key,
     required this.actionTypeInt,
     required this.onOk,
