@@ -8,6 +8,9 @@ import 'package:monalisa_app_001/features/products/presentation/providers/produc
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../m_inout/presentation/providers/m_in_out_providers.dart';
+import '../../../shared/data/memory.dart';
+import '../../../shared/data/messages.dart';
+import '../../domain/idempiere/idempiere_locator.dart';
 import '../../domain/idempiere/movement_and_lines.dart';
 import '../screens/movement/printer/mo_printer.dart';
 import '../screens/movement/provider/new_movement_provider.dart';
@@ -144,4 +147,118 @@ final movementDocumentProvider = StateProvider.autoDispose<String>((ref) {
 
 final useNumberKeyboardProvider = StateProvider<bool>((ref) {
   return true;
+});
+
+
+final movementColorProvider =
+Provider.family<Color, IdempiereLocator?>((ref, locatorFrom) {
+  final asyncLocatorTo = ref.watch(findLocatorToProvider);
+  final selectedLocatorTo = ref.watch(selectedLocatorToProvider);
+
+  // Valor por defecto mientras carga / error
+  Color defaultColor = Colors.grey.shade200;
+
+  return asyncLocatorTo.when(
+    loading: () {
+      // mientras busca el locatorTo sugerido → gris clarito
+      return defaultColor;
+    },
+    error: (error, stack) {
+      // en error también algo neutro
+      return defaultColor;
+    },
+    data: (autoLocatorTo) {
+      // MISMA lógica que en getLocatorTo:
+      final IdempiereLocator locatorTo =
+      selectedLocatorTo.id != Memory.INITIAL_STATE_ID
+          ? selectedLocatorTo
+          : autoLocatorTo;
+
+      final warehouseFrom = locatorFrom?.mWarehouseID;
+      final warehouseTo   = locatorTo.mWarehouseID;
+
+      final warehouseID   = warehouseFrom?.id ?? 0;
+      final warehouseToID = warehouseTo?.id ?? 0;
+      final org           = locatorFrom?.aDOrgID?.id ?? 0;
+      final orgTo         = locatorTo.aDOrgID?.id ?? 0;
+
+      if (warehouseID <= 0 || warehouseToID <= 0 || org <= 0 || orgTo <= 0) {
+        return Colors.grey.shade200;
+      } else if (warehouseID == warehouseToID) {
+        return Colors.green.shade200;
+      } else if (org == orgTo) {
+        return Colors.cyan.shade200;
+      } else if (orgTo > 0) {
+        return Colors.amber.shade200;
+      }
+
+      return Colors.white;
+    },
+  );
+});
+
+/*final movementColorProvider =
+Provider.family<Color, IdempiereLocator?>((ref, locatorFrom) {
+  final locatorTo = ref.watch(selectedLocatorToProvider);
+
+  // locatorFrom é fixo — veio do widget
+  final warehouseFrom = locatorFrom?.mWarehouseID;
+  final warehouseTo   = locatorTo.mWarehouseID;
+
+  final warehouseID   = warehouseFrom?.id ?? 0;
+  final warehouseToID = warehouseTo?.id ?? 0;
+  final org           = locatorFrom?.aDOrgID?.id ?? 0;
+  final orgTo         = locatorTo.aDOrgID?.id ?? 0;
+
+  Color color = Colors.white;
+
+  if (warehouseID <= 0 || warehouseToID <= 0 || org <= 0 || orgTo <= 0) {
+    color = Colors.grey.shade200;
+  } else if (warehouseID == warehouseToID) {
+    color = Colors.green.shade200;
+  } else if (org == orgTo) {
+    color = Colors.cyan.shade200;
+  } else if (orgTo > 0) {
+    color = Colors.amber.shade200;
+  }
+
+  return color;
+});*/
+
+final movementTypeProvider =
+Provider.family<String, IdempiereLocator?>((ref, locatorFrom) {
+  final locatorTo = ref.watch(selectedLocatorToProvider);
+
+  final warehouseFrom = locatorFrom?.mWarehouseID;
+  final warehouseTo   = locatorTo.mWarehouseID;
+
+  final warehouseID   = warehouseFrom?.id ?? 0;
+  final warehouseToID = warehouseTo?.id ?? 0;
+  final org           = locatorFrom?.aDOrgID?.id ?? 0;
+  final orgTo         = locatorTo.aDOrgID?.id ?? 0;
+
+  String title = Messages.MOVEMENT_CREATE;
+
+  if (warehouseID <= 0 || warehouseToID <= 0 || org <= 0 || orgTo <= 0) {
+  } else if (warehouseID == warehouseToID) {
+    title = Messages.MATERIAL_MOVEMENT;
+  } else if (org == orgTo) {
+    title = Messages.MATERIAL_MOVEMENT_WITH_CONFIRM;
+  } else if (orgTo > 0) {
+    title = Messages.MM_ELECTROCIC_REMITTANCE;
+  }
+
+  return title;
+});
+
+final colorLocatorProvider = Provider<Color>((ref) {
+  final locatorTo = ref.watch(selectedLocatorToProvider);
+
+  final id = locatorTo.id ?? 0;
+
+  if (id > 0) {
+    return Colors.green.shade200;
+  } else {
+    return Colors.grey.shade200;
+  }
 });

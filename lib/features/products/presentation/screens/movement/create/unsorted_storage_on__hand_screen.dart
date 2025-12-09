@@ -9,6 +9,7 @@ import 'package:monalisa_app_001/features/products/common/scan_button_by_action.
 import 'package:monalisa_app_001/features/products/common/scan_button_by_action_fixed_short.dart';
 import 'package:monalisa_app_001/features/products/domain/idempiere/idempiere_organization.dart';
 import 'package:monalisa_app_001/features/products/presentation/providers/products_providers.dart';
+import 'package:monalisa_app_001/features/products/presentation/screens/movement/edit_new/custom_app_bar.dart';
 import 'package:simple_barcode_scanner/simple_barcode_scanner.dart';
 import 'package:slide_to_confirm/slide_to_confirm.dart';
 
@@ -182,7 +183,8 @@ class UnsortedStorageOnHandScreenState extends ConsumerState<UnsortedStorageOnHa
         element.mProductID?.id == widget.storage.mProductID?.id &&
         element.mLocatorID?.id == widget.storage.mLocatorID?.id )
         .toList();
-    String title ='${Messages.MOVEMENT} : ${Messages.CREATE}';
+    final String title = ref.watch(movementTypeProvider(widget.storage.mLocatorID));
+
     if (isCardsSelected.isEmpty && storageList.isNotEmpty) {
       isCardsSelected = List<bool>.filled(storageList.length, false);
     }
@@ -211,7 +213,10 @@ class UnsortedStorageOnHandScreenState extends ConsumerState<UnsortedStorageOnHa
             ),
 
           ],
-          title: Text(title),
+          title: Text(title,style: TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.bold,
+            color: Colors.black,),),
 
 
         ),
@@ -773,63 +778,16 @@ class UnsortedStorageOnHandScreenState extends ConsumerState<UnsortedStorageOnHa
     ).show();
   }
 
-  Widget getScanButton(BuildContext context) {
-    return usePhoneCamera.state ? buttonScanWithPhone(context, ref):
-    ScanButtonByAction(processor: widget,
-        actionTypeInt: widget.actionScanType);
 
-  }
-  Widget buttonScanWithPhone(BuildContext context,WidgetRef ref) {
-    int a = widget.actionScanType;
-    int b = actionScan.state;
-    String tip = '(Loc)';
-    if(a!=b){
-      tip ='(X)';
-    }
-    return TextButton(
-
-      style: TextButton.styleFrom(
-        backgroundColor: themeColorPrimary,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(0),
-        ),
-
-      ),
-      onPressed:  () async {
-
-        isScanning.state = true;
-        String? result= await SimpleBarcodeScanner.scanBarcode(
-          context,
-          barcodeAppBar: BarcodeAppBar(
-            appBarTitle: Messages.SCANNING,
-            centerTitle: false,
-            enableBackButton: true,
-            backButtonIcon: Icon(Icons.arrow_back_ios),
-          ),
-          isShowFlashIcon: true,
-          delayMillis: 300,
-          cameraFace: CameraFace.back,
-        );
-
-        result = result?.trim();
-        if(result!=null && result.isNotEmpty){
-          isScanning.state = true;
-          ref.read(scannedLocatorToProvider.notifier).update((state) => result!);
-        } else {
-          Future.delayed(const Duration(milliseconds: 500));
-          isScanning.state = false;
-        }
-
-      },
-      child: Text('${Messages.OPEN_CAMERA}$tip',style: TextStyle(color: Colors.white,
-          fontSize: themeFontSizeLarge),),
-    );
-  }
   Widget getMovementCard(BuildContext context, WidgetRef ref) {
+
+    // 👇 Provider recebe o locatorFrom fixo
+    final color       = ref.watch(movementColorProvider(locatorFrom));
+
 
     return Container(
       decoration: BoxDecoration(
-        color: Colors.grey[200],
+        color: color,
         border: Border.all(
           color: Colors.black, // Specify the border color
         ),

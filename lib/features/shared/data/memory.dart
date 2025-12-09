@@ -180,14 +180,19 @@ class Memory {
     String description = '${Messages.APP_DESCRIPTION} $userName';
     return description;
   }
+  static const MATERIAL_MOVEMENT_ID = 1000022;
+  static const MATERIAL_MOVEMENT_WITH_CONFIRM_ID = 1000064;
+  static const MM_ELECTRONIC_DELIVERY_NOTE_ID = 1000047;
+
+
   static final IdempiereDocumentType materialMovement = IdempiereDocumentType(
-    id: 1000022, identifier: 'Material Movement', name: 'Material Movement'
+    id: MATERIAL_MOVEMENT_ID, identifier: 'Material Movement', name: 'Material Movement'
   );
   static final IdempiereDocumentType materialMovementWithConfirm = IdempiereDocumentType(
-      id: 1000064, identifier: 'Material Movement w/Confirm', name: 'Material Movement w/Confirm'
+      id: MATERIAL_MOVEMENT_WITH_CONFIRM_ID, identifier: 'Material Movement w/Confirm', name: 'Material Movement w/Confirm'
   );
   static final IdempiereDocumentType electronicDeliveryNote = IdempiereDocumentType(
-      id: 1000047, identifier: 'MM Nota Remisión Electrónica',
+      id: MM_ELECTRONIC_DELIVERY_NOTE_ID , identifier: 'MM Nota Remisión Electrónica',
       name: 'MM Nota Remisión Electrónica'
   );
 

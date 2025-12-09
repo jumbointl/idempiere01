@@ -41,8 +41,7 @@ class UnsortedStorageOnHandSelectLocatorScreen extends ConsumerStatefulWidget im
   final Color colorDifferentWarehouse = themeColorGrayLight;
   double width;
   final int pageIndex = Memory.PAGE_INDEX_UNSORTED_STORAGE_ON_HAND;
-  //final int actionScanType = Memory.ACTION_GET_LOCATOR_TO_VALUE; // get 5 isntead of 4
-  final int actionScanType = 5;
+  final int actionScanType = Memory.ACTION_GET_LOCATOR_TO_VALUE;
   String? productUPC ;
   String? argument;
 
@@ -135,27 +134,38 @@ class UnsortedStorageOnHandScreenSelectLocatorState extends ConsumerState<Unsort
   late var copyLastLocatorTo ;
   late var documentColor;
   double trailingWidth = 60;
+  late var movementColor ;
 
   @override
   void initState() {
     super.initState();
     movementAndLines = widget.movementAndLines;
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      final copyLast = ref.read(copyLastLocatorToProvider);
+
+
+
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+
       final from = widget.storage.mLocatorID;
 
       final int id = from?.id ?? -1;
-      ref.read(actualLocatorFromProvider.notifier).state = id;
-      ref.read(actionScanProvider.notifier).state = 5;
-      ref.read(isDialogShowedProvider.notifier).state = false;
-      int warehouseToID = movementAndLines.mWarehouseToID?.id ?? 0;
-      ref.read(actualWarehouseToProvider.notifier).state = warehouseToID;
-      if (copyLast) {
-        final lastLocatorTo = widget.movementAndLines.lastLocatorTo;
-        if (lastLocatorTo != null) {
-          ref.read(selectedLocatorToProvider.notifier).state = lastLocatorTo;
+
+      await Future.delayed(const Duration(milliseconds: 100),(){
+        ref.read(actualLocatorFromProvider.notifier).state = id;
+        ref.read(actionScanProvider.notifier).state = 5;
+        ref.read(isDialogShowedProvider.notifier).state = false;
+        int warehouseToID = movementAndLines.mWarehouseToID?.id ?? 0;
+        ref.read(actualWarehouseToProvider.notifier).state = warehouseToID;
+        if(copyLastLocatorTo){
+          if(movementAndLines.hasLastLocatorTo){
+            ref.read(selectedLocatorToProvider.notifier).state = movementAndLines.lastLocatorTo!;
+          }
         }
-      }
+
+      });
+
+
+
+
     });
   }
 
@@ -164,6 +174,7 @@ class UnsortedStorageOnHandScreenSelectLocatorState extends ConsumerState<Unsort
   Widget build(BuildContext context) {
     actionScan = ref.watch(actionScanProvider);
     copyLastLocatorTo = ref.watch(copyLastLocatorToProvider);
+
 
     locatorFrom = widget.storage.mLocatorID ;
 
@@ -933,14 +944,16 @@ class UnsortedStorageOnHandScreenSelectLocatorState extends ConsumerState<Unsort
   }
 
   Widget getMovementCard(BuildContext context, WidgetRef ref) {
-    final documentColor = ref.watch(colorMovementDocumentTypeProvider);
+
     IdempiereLocator? lastLocatorTo = movementAndLines.lastLocatorTo;
     if(lastLocatorTo != null){
       lastLocatorTo.value ??= lastLocatorTo.identifier;
+    }
+    Color color = ref.watch(colorLocatorProvider);
 
-    }    return Container(
+    return Container(
       decoration: BoxDecoration(
-        color: documentColor,
+        color: color,
         border: Border.all(
           color: Colors.black, // Specify the border color
         ),
@@ -988,18 +1001,18 @@ class UnsortedStorageOnHandScreenSelectLocatorState extends ConsumerState<Unsort
                           if (value == null) return;
                           ref.read(copyLastLocatorToProvider.notifier).state = value;
 
-                          if (value) {
+                          /*if (value) {
                             // copiar último locator al seleccionado
                             ref.read(selectedLocatorToProvider.notifier).state =
                                 lastLocatorTo;
-                                                    } else {
+                          } else {
                             // resetear locator seleccionado
                             ref.read(selectedLocatorToProvider.notifier).state =
                                 IdempiereLocator(
                                   id: Memory.INITIAL_STATE_ID,
                                   value: Messages.FIND,
                                 );
-                          }
+                          }*/
                         },
                       ),
                     ),
@@ -1027,6 +1040,9 @@ class UnsortedStorageOnHandScreenSelectLocatorState extends ConsumerState<Unsort
                       // acción opcional extra si quieres forzar copia manual
                       ref.read(selectedLocatorToProvider.notifier).state =
                           lastLocatorTo;
+                      setState(() {
+
+                      });
                     },
                   ),
                 ),
@@ -1040,15 +1056,17 @@ class UnsortedStorageOnHandScreenSelectLocatorState extends ConsumerState<Unsort
   }
 
   Widget getLocatorTo(BuildContext context, WidgetRef ref) {
-    locatorTo = ref.watch(selectedLocatorToProvider);
+
+
     return findLocatorTo.when(
       data: (locatorFromFuture) {
         IdempiereLocator locator;
         if (locatorTo.id != Memory.INITIAL_STATE_ID) {
+          print('Hay locator elegido manualmente');
           // Hay locator elegido manualmente (LocatorCard)
-          print(locatorTo.toJson());
           locator = locatorTo;
         } else {
+          print('No Hay locator elegido manualmente locatorFromFuture');
           // Usar el que viene del escaneo / FutureProvider
           locator = locatorFromFuture;
         }

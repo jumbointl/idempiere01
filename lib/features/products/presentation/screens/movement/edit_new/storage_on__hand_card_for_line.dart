@@ -18,6 +18,7 @@ import '../../../../../shared/data/messages.dart';
 import '../../../../domain/idempiere/idempiere_movement_line.dart';
 import '../../../../domain/idempiere/idempiere_storage_on_hande.dart';
 import '../../../../domain/idempiere/idempiere_warehouse.dart';
+import '../../../providers/locator_provider.dart';
 import '../../../providers/product_provider_common.dart';
 import '../../../providers/products_scan_notifier_for_line.dart';
 class StorageOnHandCardForLine extends ConsumerStatefulWidget {
@@ -217,6 +218,11 @@ class StorageOnHandCardForLineState extends ConsumerState<StorageOnHandCardForLi
     if(ref.context.mounted) {
       if(movementAndLines.canChangeLocatorForEachLine){
         print(' PAGE_UNSORTED_STORAGE_ON_HAND_FOR_LINE_SELECT_LOCATOR');
+        ref.invalidate(selectedLocatorToProvider);
+        await Future.delayed(const Duration(milliseconds: 100),(){
+
+        });
+
         ref.context.go(
             '${AppRouter.PAGE_UNSORTED_STORAGE_ON_HAND_FOR_LINE_SELECT_LOCATOR}/$argument',
             extra: movementAndLines);
