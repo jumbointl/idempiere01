@@ -1,8 +1,8 @@
 import 'package:awesome_dialog/awesome_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:monalisa_app_001/features/products/presentation/screens/update_upc/product_result_with_photo_card.dart';
-import 'package:monalisa_app_001/features/products/presentation/screens/update_upc/scan_barcode_for_update_upc_button.dart';
+import 'package:monalisa_app_001/features/products/presentation/screens/search/product_result_with_photo_card.dart';
+import 'package:monalisa_app_001/features/products/presentation/screens/search/scan_barcode_for_update_upc_button.dart';
 import 'package:simple_barcode_scanner/simple_barcode_scanner.dart';
 
 import '../../../../shared/data/memory.dart';

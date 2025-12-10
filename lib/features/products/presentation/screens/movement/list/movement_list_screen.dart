@@ -22,7 +22,7 @@ import '../../../../common/messages_dialog.dart';
 import '../../../providers/common_provider.dart';
 import '../../../providers/persitent_provider.dart';
 import '../../../providers/product_provider_common.dart';
-import '../../../widget/movement_no_data_card.dart';
+import '../movement_no_data_card.dart';
 
 
 class MovementListScreen extends ConsumerStatefulWidget {

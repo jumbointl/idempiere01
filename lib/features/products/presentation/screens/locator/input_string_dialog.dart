@@ -5,9 +5,9 @@ import 'package:flutter_riverpod/legacy.dart';
 import 'package:monalisa_app_001/features/products/common/input_dialog.dart';
 import 'package:monalisa_app_001/features/products/presentation/providers/product_provider_common.dart';
 
-import '../../common/input_data_processor.dart';
-import '../../../shared/data/memory.dart';
-import '../../../shared/data/messages.dart';
+import '../../../common/input_data_processor.dart';
+import '../../../../shared/data/memory.dart';
+import '../../../../shared/data/messages.dart';
 class InputStringDialog extends ConsumerStatefulWidget implements InputDataProcessor {
   int dialogType = Memory.TYPE_DIALOG_SEARCH;
   String title = Messages.INPUT_DIALOG_TITLE;

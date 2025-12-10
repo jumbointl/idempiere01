@@ -3,8 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:monalisa_app_001/features/products/presentation/screens/search/product_detail_with_photo_card.dart';
-import 'package:monalisa_app_001/features/products/presentation/screens/update_upc/update_product_upc_screen3.dart';
-import 'package:monalisa_app_001/features/products/presentation/screens/update_upc/update_product_upc_view.dart';
+import 'package:monalisa_app_001/features/products/presentation/screens/search/update_product_upc_screen3.dart';
+import 'package:monalisa_app_001/features/products/presentation/screens/search/update_product_upc_view.dart';
 import 'package:simple_barcode_scanner/simple_barcode_scanner.dart';
 
 import '../../../../../config/router/app_router.dart';
@@ -18,7 +18,7 @@ import '../../providers/product_provider_common.dart';
 import '../../providers/product_search_provider.dart';
 import '../../providers/products_scan_notifier.dart';
 import '../../widget/no_data_card.dart';
-import '../../widget/scan_product_barcode_button.dart';
+import 'scan_product_barcode_button.dart';
 
 
 class ProductSearchScreen extends ConsumerStatefulWidget implements Scanner {

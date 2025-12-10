@@ -6,12 +6,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:monalisa_app_001/config/config.dart';
 
-import '../providers/product_provider_common.dart';
-import '../screens/movement/provider/products_home_provider.dart';
-import '../../../shared/data/memory.dart';
-import '../../../shared/data/messages.dart';
-import '../providers/products_scan_notifier.dart';
-import '../screens/store_on_hand/memory_products.dart';
+import '../../providers/product_provider_common.dart';
+import '../movement/provider/products_home_provider.dart';
+import '../../../../shared/data/memory.dart';
+import '../../../../shared/data/messages.dart';
+import '../../providers/products_scan_notifier.dart';
+import '../store_on_hand/memory_products.dart';
 class ScanProductBarcodeButton extends ConsumerStatefulWidget {
   int actionTypeInt;
   final int pageIndex;

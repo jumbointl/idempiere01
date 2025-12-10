@@ -13,7 +13,6 @@ import 'package:monalisa_app_001/features/auth/auth.dart';
 import 'package:monalisa_app_001/features/auth/presentation/providers/auth_provider.dart';
 import 'package:monalisa_app_001/features/home/presentation/screens/home_screen.dart';
 import 'package:monalisa_app_001/features/m_inout/presentation/screens/m_in_out_screen.dart';
-import 'package:monalisa_app_001/features/products/common/scanner_screen.dart';
 import 'package:monalisa_app_001/features/products/domain/idempiere/put_away_movement.dart';
 import 'package:monalisa_app_001/features/products/presentation/screens/movement/edit_new/movement_barcode_list_screen.dart';
 import 'package:monalisa_app_001/features/products/presentation/screens/movement/list/movement_list_screen.dart';
@@ -40,8 +39,7 @@ import '../../features/products/presentation/screens/search/product_search_scree
 import '../../features/products/presentation/screens/store_on_hand/product_store_on_hand_screen.dart';
 import '../../features/products/presentation/screens/movement/create/unsorted_storage_on__hand_screen.dart';
 import '../../features/products/presentation/screens/movement/edit_new/unsorted_storage_on__hand_screen_for_line.dart';
-import '../../features/products/presentation/screens/update_upc/update_product_upc_screen3.dart';
-import '../../features/products/presentation/widget/barcode_scanner_screen.dart';
+import '../../features/products/presentation/screens/search/update_product_upc_screen3.dart';
 import '../../features/shared/data/memory.dart';
 import '../../features/shared/data/messages.dart';
 
@@ -53,7 +51,7 @@ class AppRouter {
   static const String PAGE_HOME = '/home';
   static const String PAGE_PRODUCT_SEARCH = '/product/search';
   static const String PAGE_PRODUCT_STORE_ON_HAND = '/storeOnHand';
-  static const String PAGE_PRODUCT_SEARCH_UPDATE_UPC = '/product/searchUpdateProductUPC';
+  //static const String PAGE_PRODUCT_SEARCH_UPDATE_UPC = '/product/searchUpdateProductUPC';
   static const String PAGE_LOGIN = '/login';
   static const String PAGE_AUTH_DATA = '/authData';
   static const String PAGE_SPLASH = '/splash';
@@ -75,7 +73,6 @@ class AppRouter {
   static const String PAGE_CREATE_MOVEMENT_LINE = '/create_movement_line';
   static const String PAGE_MOVEMENTS_CONFIRM_SCREEN = '/movement_confirm_screen';
   static const String PAGE_CREATE_PUT_AWAY_MOVEMENT='/movement_create_put_away';
-  static const String PAGE_BARCODE_SCANER='/barcode_scanner';
   static const String PAGE_PDF_MOVEMENT_AND_LINE='/pdf_movement_and_line';
 
   static const String PAGE_PRODUCT_STORE_ON_HAND_FOR_LINE = '/store_on_hand_for_line';
@@ -293,21 +290,6 @@ final goRouterProvider = Provider((ref) {
 
 
       ),
-
-      GoRoute(
-          path: AppRouter.PAGE_BARCODE_SCANER,
-          builder: (context, state){
-            if( RolesApp.hasStockPrivilege){
-
-              return BarcodeScannerScreen();
-
-            } else{
-              return const HomeScreen();
-            }
-          }
-
-      ),
-
       GoRoute(
         path: AppRouter.PAGE_MOVEMENT_PRINT_POS,
         builder: (ctx, state) {
@@ -502,13 +484,6 @@ final goRouterProvider = Provider((ref) {
       GoRoute(
         path: AppRouter.PAGE_PRODUCT_SEARCH,
         builder: (context, state) => RolesApp.hasStockPrivilege ? ProductSearchScreen() : const HomeScreen(),
-      ),
-      GoRoute(
-        path: AppRouter.PAGE_PRODUCT_SEARCH_UPDATE_UPC,
-        builder: (context, state) => RolesApp.hasStockPrivilege ?
-        ScannerScreen()
-        //UpdateProductUpcScreen()
-            : const HomeScreen(),
       ),
       GoRoute(
         path: '${AppRouter.PAGE_UNSORTED_STORAGE_ON_HAND}/:productUPC',

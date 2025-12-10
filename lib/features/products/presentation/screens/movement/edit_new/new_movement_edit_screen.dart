@@ -22,7 +22,7 @@ import '../../../../domain/idempiere/idempiere_movement_line.dart';
 import '../../../providers/common_provider.dart';
 import '../../../providers/persitent_provider.dart';
 import '../../../providers/product_provider_common.dart';
-import '../../../widget/movement_no_data_card.dart';
+import '../movement_no_data_card.dart';
 import 'new_movement_card_with_locator.dart';
 import 'new_movement_line_card.dart';
 

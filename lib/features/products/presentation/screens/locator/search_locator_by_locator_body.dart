@@ -5,7 +5,7 @@ import 'package:monalisa_app_001/features/products/presentation/providers/locato
 import '../../../../shared/data/memory.dart';
 import '../../../../shared/data/messages.dart';
 import '../../providers/product_provider_common.dart';
-import '../../widget/input_string_dialog.dart';
+import 'input_string_dialog.dart';
 import 'locator_card.dart';
 
 

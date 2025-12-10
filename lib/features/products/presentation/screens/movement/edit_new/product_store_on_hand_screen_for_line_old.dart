@@ -10,7 +10,7 @@ import 'package:monalisa_app_001/features/products/domain/idempiere/movement_and
 import 'package:monalisa_app_001/features/products/presentation/screens/store_on_hand/memory_products.dart';
 import 'package:monalisa_app_001/features/products/presentation/screens/movement/edit_new/storage_on__hand_card_for_line.dart';
 import 'package:monalisa_app_001/features/products/presentation/widget/no_records_card.dart';
-import 'package:monalisa_app_001/features/products/presentation/widget/no_storage_on_hand_records_card.dart';
+import 'package:monalisa_app_001/features/products/presentation/screens/movement/edit_new/no_storage_on_hand_records_card.dart';
 
 import '../../../../../../config/router/app_router.dart';
 import '../../../../../../config/theme/app_theme.dart';
