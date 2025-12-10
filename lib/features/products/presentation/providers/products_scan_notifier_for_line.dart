@@ -129,7 +129,7 @@ class ProductsScanNotifierForLine  extends StateNotifier<List<IdempiereProduct>>
         findLocatorToByValue(ref,inputData);
         break;
       case Memory.ACTION_GO_TO_MOVEMENT_EDIT_PAGE_WITH_ID:
-        if(ref.context.mounted) ref.context.go('${AppRouter.PAGE_MOVEMENTS_SEARCH}/$inputData/-1');
+        if(ref.context.mounted) ref.context.go('${AppRouter.PAGE_MOVEMENTS_EDIT}/$inputData/-1');
 
         break;
       case Memory.ACTION_GO_TO_STORAGE_ON_HAND_PAGE_WITH_UPC:

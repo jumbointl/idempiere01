@@ -454,7 +454,9 @@ class NewMovementEditScreenState extends CommonConsumerState<NewMovementEditScre
   @override
   void popScopeAction(BuildContext context, WidgetRef ref) async {
     ref.invalidate(newScannedMovementIdForSearchProvider);
-    if(fromPage==NewMovementEditScreen.FROM_PAGE_HOME){
+    int pageFrom = ref.read(pageFromProvider);
+    print('page from $pageFrom');
+    if(pageFrom <=0){
       context.go(AppRouter.PAGE_HOME);
     } else {
       context.go('${AppRouter.PAGE_MOVEMENTS_LIST}/-1');

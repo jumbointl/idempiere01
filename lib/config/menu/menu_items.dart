@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../features/products/presentation/screens/store_on_hand/product_store_on_hand_screen.dart';
 import '../../features/shared/data/messages.dart';
 import '../constants/roles_app.dart';
 import '../router/app_router.dart';
@@ -52,6 +53,13 @@ var appHomeOptionCol1Items = <MenuItem>[
       link: '/mInOut/pickconfirm',
       icon: Icons.upload,
     ),
+  if (RolesApp.canUpdateProductUPC)
+  MenuItem(
+    title: Messages.SEARCH_PRODUCT,
+    subTitle: '',
+    link: AppRouter.PAGE_PRODUCT_SEARCH,
+    icon: Icons.search,
+  ),
 ];
 
 var appHomeOptionCol2Items = <MenuItem>[
@@ -76,9 +84,26 @@ var appHomeOptionCol2Items = <MenuItem>[
       link: '/mInOut/qaconfirm',
       icon: Icons.download,
     ),
+  if (RolesApp.canEditMovement || RolesApp.canSearchMovement)
+    MenuItem(
+      title: Messages.TITLE_MOVEMENT_LIST,
+      subTitle: '',
+      link: '${AppRouter.PAGE_MOVEMENTS_LIST}/-1',
+      icon: Icons.list
+      ,
+    ),
+  if (RolesApp.canEditMovement)
+    MenuItem(
+      title: Messages.MOVEMENT_EDIT,
+      subTitle: '',
+      link: '${AppRouter.PAGE_MOVEMENTS_EDIT}/-1/-1',
+      icon: Icons.move_up
+      ,
+    ),
 ];
 
 final appHomeOptionCol3Items = <MenuItem>[
+  if (RolesApp.cantConfirmMovement)
   const MenuItem(
     title: 'Inventory Move',
     subTitle: '',
@@ -86,47 +111,39 @@ final appHomeOptionCol3Items = <MenuItem>[
     icon: Icons.swap_horiz,
 
   ),
+  if (RolesApp.canConfirmMovementWithConfirm)
   const MenuItem(
     title: 'Move Confirm',
     subTitle: '',
     link: '/mInOut/moveconfirm',
     icon: Icons.swap_horiz,
   ),
+
+  if (RolesApp.canCreateMovementInSameOrganization)
   MenuItem(
     title: Messages.MOVEMENT_CREATE_OR_STOCK,
     subTitle: '',
     link: '${AppRouter.PAGE_PRODUCT_STORE_ON_HAND}/-1',
     icon: Icons.inventory,
   ),
+  if (RolesApp.showProductSearchScreen)
+    MenuItem(
+      title: Messages.STORE_ON_HAND,
+      subTitle: '',
+      link: '${AppRouter.PAGE_PRODUCT_STORE_ON_HAND}/${ProductStoreOnHandScreen.READ_STOCK_ONLY}',
+      icon: Icons.inventory,
+    ),
+  if (RolesApp.canCreateDeliveryNote)
   MenuItem(
-    title: Messages.MOVEMENT_LIST_DR,
+    title: Messages.TITLE_DELIVERY_CREATE,
     subTitle: '',
-    link: '${AppRouter.PAGE_MOVEMENTS_LIST}/-1',
-    icon: Icons.list
-    ,
+    link: '${AppRouter.PAGE_PRODUCT_STORE_ON_HAND}/${ProductStoreOnHandScreen.MOVEMENT_DELIVERY_NOTE}',
+    icon: Icons.inventory,
   ),
 
-  MenuItem(
-    title: Messages.MOVEMENT_EDIT,
-    subTitle: '',
-    link: '${AppRouter.PAGE_MOVEMENTS_SEARCH}/-1/-1',
-    icon: Icons.move_up
-    ,
-  ),
-  /*MenuItem(
-    title: Messages.ADD_UPC,
-    subTitle: '',
-    link: AppRouter.PAGE_PRODUCT_SEARCH_UPDATE_UPC,
-    icon: Icons.search,
-  ),
 
-   */
-  MenuItem(
-    title: Messages.SEARCH_PRODUCT,
-    subTitle: '',
-    link: AppRouter.PAGE_PRODUCT_SEARCH,
-    icon: Icons.search,
-  ),
+
+
 ];
 
 const appTemplateMenuItems = <MenuItem>[

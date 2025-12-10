@@ -210,7 +210,7 @@ class UnsortedStorageOnHandScreenForLineState extends ConsumerState<UnsortedStor
     if (isCardsSelected.isEmpty && storageList.isNotEmpty) {
       isCardsSelected = List<bool>.filled(storageList.length, false);
     }
-    final canShowBottomBar = ref.watch(canShowUnsortedBottomBarProvider);
+    final canShowBottomBar = ref.watch(canShowCreateLineBottomBarProvider);
     return Scaffold(
         appBar: AppBar(
           backgroundColor: movementAndLines.hasMovement ? Colors.yellow[200] : Colors.white,

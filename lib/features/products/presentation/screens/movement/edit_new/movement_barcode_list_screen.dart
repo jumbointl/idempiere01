@@ -656,7 +656,7 @@ class MovementBarcodeListScreenState extends CommonConsumerState<MovementBarcode
   void popScopeAction(BuildContext context, WidgetRef ref) async {
     int movementId = movementAndLines.id ?? -1;
     String pageFrom = NewMovementEditScreen.FROM_PAGE_MOVEMENT_LIST;
-    context.go('${AppRouter.PAGE_MOVEMENTS_SEARCH}/$movementId/$pageFrom');
+    context.go('${AppRouter.PAGE_MOVEMENTS_EDIT}/$movementId/$pageFrom');
   }
 
 

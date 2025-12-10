@@ -212,7 +212,7 @@ class UnsortedStorageOnHandScreenSelectLocatorState extends ConsumerState<Unsort
       isCardsSelected = List<bool>.filled(storageList.length, false);
     }
 
-    final canShowBottomBar = ref.watch(canShowUnsortedBottomBarProvider);
+    final canShowBottomBar = ref.watch(canShowCreateLineBottomBarProvider);
     return Scaffold(
       appBar: AppBar(
           backgroundColor: Colors.white,

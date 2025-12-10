@@ -129,7 +129,7 @@ class Memory {
 
   static String URL_CUPS_SERVER ='http://192.168.188.108:3100/print';
 
-  static String VERSIONS='1.01.042';
+  static String VERSIONS='1.01.046';
 
   static String getUrlCupsServerWithPrinter({required String ip,
     required String port,required String printerName}){
@@ -195,6 +195,8 @@ class Memory {
       id: MM_ELECTRONIC_DELIVERY_NOTE_ID , identifier: 'MM Nota Remisión Electrónica',
       name: 'MM Nota Remisión Electrónica'
   );
+
+  static int NO_MM_ELECTRONIC_DELIVERY_NOTE_ID =-2;
 
   static int? get IDEMPIERE_DOC_TYPE_MATERIAL_MOVEMENT => materialMovement.id;
   static int? get IDEMPIERE_DOC_TYPE_MATERIAL_MOVEMENT_WITH_CONFIRM => materialMovementWithConfirm.id;

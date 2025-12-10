@@ -888,7 +888,7 @@ class Messages{
 
   static String MOVEMENT_LIST='Movement List';
 
-  static String MOVEMENT_LIST_DR='Movement List DR';
+  static String TITLE_MOVEMENT_LIST='Movement List';
 
   static String ALL='TODOS';
 
@@ -987,7 +987,7 @@ class Messages{
   static String INVENTORY_MOVE ='INVENTORY MOVE';
   static String MATERIAL_MOVEMENT ='MATERIAL MOVEMENT';
   static String MATERIAL_MOVEMENT_WITH_CONFIRM ='MATERIAL MOVEMENT w/CONFIRM';
-    static String MM_ELECTROCIC_REMITTANCE='MM ELECTROCIC REMITTANCE';
+    static String MM_DELIVERY_NOTE='MM ELECTROCIC REMITTANCE';
 
   static String VIEW_MOVEMENT ='VER MOVIMIENTO';
 
@@ -1005,6 +1005,13 @@ class Messages{
   static String INVENTORY_MOVE_WITH_CONFIRM='INVENTORY MOVE w/ CONFIRM';
 
   static String ERROR_INVENTORY_MOVE_WITH_CONFIRM='ERROR INVENTORY MOVE w/ CONFIRM';
+
+  static String DELIVELY_NOTE_CREATE='DELIVERY NOTE CREATE';
+  static String TITLE_DELIVERY_CREATE='Delivery note create';
+
+  static String ERROR_REMITTANCE_CREATE='ERROR REMITTANCE CREATE';
+
+  static String DELIVELY_NOTE='NOTA DE REMISION';
 
 
 

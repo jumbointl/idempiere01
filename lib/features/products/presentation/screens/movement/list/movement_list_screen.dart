@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter/services.dart';
 import 'package:monalisa_app_001/config/config.dart';
+import 'package:monalisa_app_001/config/constants/roles_app.dart';
 import 'package:monalisa_app_001/features/products/common/common_screen_state.dart';
 import 'package:monalisa_app_001/features/products/domain/idempiere/idempiere_document_status.dart';
 import 'package:monalisa_app_001/features/products/domain/idempiere/idempiere_locator.dart';
@@ -63,6 +64,7 @@ class MovementListScreenState extends CommonConsumerState<MovementListScreen> {
     final date = ref.read(selectedDateProvider);
     final isIn = ref.read(inOutFilterProvider);
     findMovementAfterDate(date, inOut: isIn);
+    ref.read(pageFromProvider.notifier).state = 1 ;
   }
 
   @override
@@ -195,12 +197,28 @@ class MovementListScreenState extends CommonConsumerState<MovementListScreen> {
             ));*/
             String docStatus = movement.docStatus?.id ?? '';
 
-            if(movement.docStatus?.id == 'IP' || movement.docStatus?.id == 'DR'){
+            if(movement.docStatus?.id == 'DR'){
               String documentNo = movement.documentNo ?? '-1';
-              showMovementOptionsSheet(context: context, documentNo: documentNo, movementId: movementId, docStatus:docStatus);
+              if(RolesApp.cantConfirmMovement){
+                showMovementOptionsSheet(context: context, documentNo: documentNo, movementId:
+                   movementId, docStatus:docStatus);
+              } else {
+                context.go('${AppRouter.PAGE_MOVEMENTS_EDIT}/$movementId/1');
+              }
+
+
+            } else if(movement.docStatus?.id == 'IP'){
+              String documentNo = movement.documentNo ?? '-1';
+              if(RolesApp.canConfirmMovementWithConfirm){
+                showMovementOptionsSheet(context: context, documentNo: documentNo, movementId:
+                movementId, docStatus:docStatus);
+              } else {
+                context.go('${AppRouter.PAGE_MOVEMENTS_EDIT}/$movementId/1');
+              }
+
 
             } else {
-              context.go('${AppRouter.PAGE_MOVEMENTS_SEARCH}/$movementId/1');
+              context.go('${AppRouter.PAGE_MOVEMENTS_EDIT}/$movementId/1');
             }
 
           },
@@ -303,7 +321,7 @@ class MovementListScreenState extends CommonConsumerState<MovementListScreen> {
                       ),
                       onTap: () {
                         Navigator.of(context).pop();
-                        context.go('${AppRouter.PAGE_MOVEMENTS_SEARCH}/$movementId/1');
+                        context.go('${AppRouter.PAGE_MOVEMENTS_EDIT}/$movementId/1');
                       },
                     ),
                   ),
@@ -489,17 +507,6 @@ class MovementListScreenState extends CommonConsumerState<MovementListScreen> {
         movement.mWarehouseToID = null;
         break;
     }
-
-    /*if(isIn!=null){
-      if(isIn){
-        movement.mWarehouseToID = warehouse;
-      } else {
-        movement.mWarehouseID = warehouse;
-      }
-    } else {
-      movement.mWarehouseID = warehouse;
-      movement.mWarehouseToID = warehouse;
-    }*/
     final docType = ref.read(documentTyprFilterProvider);
     widget.movementDateFilter = dateString;
 
@@ -537,6 +544,12 @@ class MovementListScreenState extends CommonConsumerState<MovementListScreen> {
   }
   void _showDocumentTypeFilterSheet(BuildContext context, WidgetRef ref) {
     final screenHeight = MediaQuery.of(context).size.height;
+    var documentTypeOptions = documentTypeOptionsAll;
+    /*if(RolesApp.canDoAppInventory){
+      documentTypeOptions = documentTypeOptionsForInventory ;
+    } else if (RolesApp.canConfirmMovementWithConfirm){
+      documentTypeOptions = documentTypeOptionsForMovementConfirm ;
+    }*/
 
     showModalBottomSheet(
       context: context,

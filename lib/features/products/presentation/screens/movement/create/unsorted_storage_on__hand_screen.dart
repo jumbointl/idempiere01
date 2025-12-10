@@ -3,6 +3,7 @@ import 'package:awesome_dialog/awesome_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:monalisa_app_001/config/constants/roles_app.dart';
 import 'package:monalisa_app_001/features/products/common/input_data_processor.dart';
 import 'package:monalisa_app_001/features/products/common/input_dialog.dart';
 import 'package:monalisa_app_001/features/products/common/scan_button_by_action.dart';
@@ -155,8 +156,9 @@ class UnsortedStorageOnHandScreenState extends ConsumerState<UnsortedStorageOnHa
   @override
   Widget build(BuildContext context) {
 
+    final allowedMovementDocumentType = ref.read(allowedMovementDocumentTypeProvider);
 
-
+    print('allowedMovementDocumentType $allowedMovementDocumentType');
     widget.notifier = ref.read(scanHandleNotifierProvider.notifier);
     locatorFrom = widget.storage.mLocatorID;
     locatorTo = ref.watch(selectedLocatorToProvider.notifier);
@@ -188,7 +190,8 @@ class UnsortedStorageOnHandScreenState extends ConsumerState<UnsortedStorageOnHa
     if (isCardsSelected.isEmpty && storageList.isNotEmpty) {
       isCardsSelected = List<bool>.filled(storageList.length, false);
     }
-    final canShowBottomBar = ref.watch(canShowUnsortedBottomBarProvider);
+    final canCreate = RolesApp.canCreateMovementInSameOrganization || RolesApp.canCreateDeliveryNote;
+    final canShowBottomBar = ref.watch(canShowCreateLineBottomBarProvider);
     final showScan = ref.watch(showScanFixedButtonProvider(widget.actionScanType));
     return Scaffold(
         appBar: AppBar(
@@ -202,9 +205,9 @@ class UnsortedStorageOnHandScreenState extends ConsumerState<UnsortedStorageOnHa
               }
           ),
           actions: [
-            if(showScan) ScanButtonByActionFixedShort(actionTypeInt: widget.actionScanType,
+            if(showScan && canCreate) ScanButtonByActionFixedShort(actionTypeInt: widget.actionScanType,
               onOk: widget.handleInputString,),
-            if(showScan) IconButton(
+            if(showScan && canCreate) IconButton(
               icon: const Icon(Icons.keyboard,color: Colors.purple),
               onPressed: () => {
                 openInputDialogWithAction(ref: ref, history: false, actionScan: widget.actionScanType,
@@ -241,8 +244,8 @@ class UnsortedStorageOnHandScreenState extends ConsumerState<UnsortedStorageOnHa
                 child: CustomScrollView(
                     controller: _scrollController,
                     slivers: [
-                      SliverToBoxAdapter(child: getMovementCard(context, ref)),
-                      SliverPadding(
+                      if(canCreate)SliverToBoxAdapter(child: getMovementCard(context, ref)),
+                      if(canCreate)SliverPadding(
                         padding: EdgeInsets.only(top: 5),
                         sliver: SliverToBoxAdapter(
                           child: Container(
@@ -259,7 +262,7 @@ class UnsortedStorageOnHandScreenState extends ConsumerState<UnsortedStorageOnHa
                         ),
                       ),
 
-                      SliverPadding(
+                      if(canCreate)SliverPadding(
                         padding: EdgeInsets.only(top: 5),
                         sliver: SliverToBoxAdapter(
                           child: Container(
@@ -336,6 +339,16 @@ class UnsortedStorageOnHandScreenState extends ConsumerState<UnsortedStorageOnHa
           textStyle: TextStyle(fontSize: themeFontSizeLarge, color: Colors.purple,fontWeight: FontWeight.bold),
           onConfirmation: () {
             print('----------------------------ConfirmationSlide');
+            final allowedDocumentType = ref.read(allowedMovementDocumentTypeProvider);
+            if(allowedDocumentType!=Memory.MM_ELECTRONIC_DELIVERY_NOTE_ID &&
+                allowedDocumentType!=Memory.NO_MM_ELECTRONIC_DELIVERY_NOTE_ID){
+              showErrorMessage(context, ref, '${Messages.ERROR_DOCUMENT_TYPE} : $allowedDocumentType');
+              return;
+
+            }
+            print('allowedDocumentType--to create----------$allowedDocumentType');
+
+
             if (putAwayMovement!=null && putAwayMovement!.movementLineToCreate!=null) {
               putAwayMovement!.movementLineToCreate!.movementQty = ref.read(quantityToMoveProvider);
               widget.notifier.prepareToCreatePutawayMovement(ref, putAwayMovement);

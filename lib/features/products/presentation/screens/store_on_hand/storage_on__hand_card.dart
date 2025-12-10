@@ -26,13 +26,14 @@ class StorageOnHandCard extends ConsumerStatefulWidget {
   final Color colorDifferentWarehouse = themeColorGrayLight;
   final double width;
   final double height = 120;
+  final bool readStockOnly;
   IdempiereLocator? locatorFilter;
 
 
 
   StorageOnHandCard(this.notifier, this.storage, this.index, this.listLength, {
 
-    required this.width,this.locatorFilter, super.key,});
+    required this.width,this.locatorFilter, required this.readStockOnly, super.key,});
 
 
   @override
@@ -40,12 +41,12 @@ class StorageOnHandCard extends ConsumerStatefulWidget {
 }
 
 class StorageOnHandCardState extends ConsumerState<StorageOnHandCard> {
-  late var usePhoneCamera ;
   late var isScanning ;
   late var allowedLocatorId;
+  bool readStockOnly = false ;
   @override
   Widget build(BuildContext context) {
-    usePhoneCamera = ref.watch(usePhoneCameraToScanProvider.notifier);
+    readStockOnly = widget.readStockOnly;
     isScanning = ref.watch(isScanningProvider.notifier);
 
     allowedLocatorId = widget.locatorFilter?.id ?? -1;
@@ -158,10 +159,16 @@ class StorageOnHandCardState extends ConsumerState<StorageOnHandCard> {
       String productUPC = widget.storage.mProductID?.identifier ?? '-1';
       productUPC = productUPC.split('_').first;
       if(ref.context.mounted) {
+        if(readStockOnly){
+          ref.context.push(
+              '${AppRouter.PAGE_UNSORTED_STORAGE_ON_HAND_READ_ONLY}/$productUPC',
+              extra: widget.notifier);
+        } else {
+          ref.context.go(
+              '${AppRouter.PAGE_UNSORTED_STORAGE_ON_HAND}/$productUPC',
+              extra: widget.notifier);
+        }
 
-        ref.context.go(
-            '${AppRouter.PAGE_UNSORTED_STORAGE_ON_HAND}/$productUPC',
-            extra: widget.notifier);
       }
     } else {
       showErrorMessage(context, ref, Messages.ERROR_LOCATOR_FROM);

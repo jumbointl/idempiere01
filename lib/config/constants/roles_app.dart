@@ -58,6 +58,8 @@ class RolesApp {
     'APP_INVENTORY_COMPLETE': false,
     //STOCK
     'APP_STOCK': false,
+    //PRODUCTUPC
+    'APP_PRODUCTUPC_UPDATE': false,
   };
 
   // SHIPMENT
@@ -113,6 +115,9 @@ class RolesApp {
   static bool get appInventoryComplete => _roles['APP_INVENTORY_COMPLETE']!;
   //STOCK
   static bool get appStock => _roles['APP_STOCK']!;
+  //PRODUCTUPC
+  static bool get appProductUPCUpdate => _roles['APP_PRODUCTUPC_UPDATE']!;
+
 
   static void set(List<Role> roles) {
     for (var role in roles) {
@@ -123,11 +128,49 @@ class RolesApp {
   static String getString() {
     return 'RolesApp{${_roles.entries.map((e) => '${e.key}: ${e.value}').join(', ')}}';
   }
-  static bool hasStockPrivilege() {
-    if(Environment.apiUrl.contains('idempiere-api')){
-      return true;
+  static bool get hasStockPrivilege {
+    return appStock;
+  }
+  static bool get canSearchProductStock {
+    return RolesApp.appStock ;
+  }
+  static bool get canUpdateProductUPC {
+    return  RolesApp.appProductUPCUpdate ;
+  }
+  static bool get canCreateMovementInSameOrganization {
+        return  appMovementComplete;
+  }
+  static bool get canCreateDeliveryNote {
+    return  appMovementComplete;
+  }
+  static bool get canEditMovement {
+    bool b = canCreateMovementInSameOrganization || canCreateDeliveryNote;
+    if(b) return true ;
+    //editar cantidad
+    //agregar linea
+    return  false ;
+  }
+  static bool get cantConfirmMovement {
+    return  RolesApp.appMovementComplete;
+
+  }
+  static bool get canConfirmMovementWithConfirm {
+
+    return  RolesApp.appMovementconfirmComplete ;
+
+  }
+
+  static bool get canSearchMovement {
+    bool b =(appMovementComplete || appMovementconfirmComplete);
+    if(b) return b;
+    return RolesApp.appMovement;
+  }
+
+  static bool get showProductSearchScreen {
+    if(canCreateMovementInSameOrganization){
+      return false ;
     }
-    return  RolesApp.appStock ;
+    return canSearchProductStock ;
   }
 
 }

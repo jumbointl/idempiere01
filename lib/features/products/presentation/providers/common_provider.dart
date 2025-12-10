@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/legacy.dart';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:get_storage/get_storage.dart';
+import 'package:monalisa_app_001/config/constants/roles_app.dart';
 import 'package:monalisa_app_001/features/products/presentation/providers/product_provider_common.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -95,7 +96,10 @@ final allowScrollFabProvider = StateProvider.autoDispose<bool>((ref) {
   return false;
 });
 
-final canShowUnsortedBottomBarProvider = Provider.autoDispose<bool>((ref) {
+final canShowCreateLineBottomBarProvider = Provider.autoDispose<bool>((ref) {
+  bool b = RolesApp.canEditMovement || RolesApp.canCreateMovementInSameOrganization || RolesApp.canCreateMovementInSameOrganization;
+  if(!b) return false;
+
   final qty = ref.watch(quantityToMoveProvider);          // double
   final locatorTo = ref.watch(selectedLocatorToProvider); // IdempiereLocator
   final isDialogShowed = ref.watch(isDialogShowedProvider);
@@ -228,6 +232,12 @@ Provider.family<Color, IdempiereLocator?>((ref, locatorFrom) {
 final movementTypeProvider =
 Provider.family<String, IdempiereLocator?>((ref, locatorFrom) {
   final locatorTo = ref.watch(selectedLocatorToProvider);
+  final documentType = ref.watch(allowedMovementDocumentTypeProvider);
+  if(documentType!=Memory.MM_ELECTRONIC_DELIVERY_NOTE_ID){
+    return Messages.MM_DELIVERY_NOTE;
+  }
+
+
 
   final warehouseFrom = locatorFrom?.mWarehouseID;
   final warehouseTo   = locatorTo.mWarehouseID;
@@ -237,6 +247,9 @@ Provider.family<String, IdempiereLocator?>((ref, locatorFrom) {
   final org           = locatorFrom?.aDOrgID?.id ?? 0;
   final orgTo         = locatorTo.aDOrgID?.id ?? 0;
 
+
+
+
   String title = Messages.MOVEMENT_CREATE;
 
   if (warehouseID <= 0 || warehouseToID <= 0 || org <= 0 || orgTo <= 0) {
@@ -245,7 +258,7 @@ Provider.family<String, IdempiereLocator?>((ref, locatorFrom) {
   } else if (org == orgTo) {
     title = Messages.MATERIAL_MOVEMENT_WITH_CONFIRM;
   } else if (orgTo > 0) {
-    title = Messages.MM_ELECTROCIC_REMITTANCE;
+    title = Messages.MM_DELIVERY_NOTE;
   }
 
   return title;
@@ -261,4 +274,12 @@ final colorLocatorProvider = Provider<Color>((ref) {
   } else {
     return Colors.grey.shade200;
   }
+});
+
+final allowedMovementDocumentTypeProvider = StateProvider<int>((ref) {
+  return -1;
+});
+
+final pageFromProvider = StateProvider<int>((ref) {
+  return 0;
 });

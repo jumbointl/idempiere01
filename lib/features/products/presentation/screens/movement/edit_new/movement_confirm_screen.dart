@@ -122,10 +122,10 @@ class MovementConfirmScreenState extends ConsumerState<MovementConfirmScreen> {
                 Memory.ACTION_FIND_MOVEMENT_BY_ID);
 
                 int? id =  widget.movementAndLines.id ??-1 ;
-                print('${AppRouter.PAGE_MOVEMENTS_SEARCH}/$id/-1');
+                print('${AppRouter.PAGE_MOVEMENTS_EDIT}/$id/-1');
                 await Future.delayed(Duration(seconds: MemoryProducts.delayOnSwitchPageInSeconds));
                 if(context.mounted){
-                  context.go('${AppRouter.PAGE_MOVEMENTS_SEARCH}/$id/-1');
+                  context.go('${AppRouter.PAGE_MOVEMENTS_EDIT}/$id/-1');
                 }
               }
             }

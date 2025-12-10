@@ -33,13 +33,16 @@ import 'storage_on__hand_card.dart';
 
 class ProductStoreOnHandScreen extends ConsumerStatefulWidget {
 
-
-  int countScannedCamera =0;
+  static const String MOVEMENT_DELIVERY_NOTE = 'remittance';
+  static const String READ_STOCK_ONLY = 'read_stock_only';
+  static const String MOVEMENT_OTHER ='other';
+  int countScannedCamera =0 ;
   late ProductsScanNotifier productsNotifier ;
   final int actionScanType = Memory.ACTION_FIND_BY_UPC_SKU_FOR_STORE_ON_HAND;
   final int pageIndex = Memory.PAGE_INDEX_STORE_ON_HAND;
   String? productId;
   bool isMovementSearchedShowed = false;
+
   ProductStoreOnHandScreen({this.productId,super.key});
 
   @override
@@ -61,10 +64,11 @@ class ProductStoreOnHandScreenState extends ConsumerState<ProductStoreOnHandScre
   late var resultOfSameWarehouse;
   late var isScanning;
   late var showScan;
-
   double? width;
   Warehouse? userWarehouse;
-
+  bool readStockOnly = false;
+  late String movementType = ProductStoreOnHandScreen.MOVEMENT_OTHER;
+  late String title;
    String productUPC ='-1';
   void popScopeAction(BuildContext context, WidgetRef ref) async {
     ref.invalidate(homeScreenTitleProvider);
@@ -73,11 +77,32 @@ class ProductStoreOnHandScreenState extends ConsumerState<ProductStoreOnHandScre
 
   @override
   void initState() {
+    title = Messages.PRODUCT ;
+
+    if(widget.productId==ProductStoreOnHandScreen.MOVEMENT_DELIVERY_NOTE){
+      widget.productId = '-1';
+      movementType = ProductStoreOnHandScreen.MOVEMENT_DELIVERY_NOTE;
+      title = Messages.DELIVELY_NOTE ;
+    } else if(widget.productId==ProductStoreOnHandScreen.READ_STOCK_ONLY){
+        widget.productId = '-1';
+        movementType = ProductStoreOnHandScreen.READ_STOCK_ONLY;
+        title = Messages.STOCK ;
+        readStockOnly = true;
+    }
+
 
     WidgetsBinding.instance.addPostFrameCallback((_) async {
 
-      actionAfterShow(ref);
 
+      actionAfterShow(ref);
+      Future.delayed(Duration(microseconds: 100), () {
+        if(movementType==ProductStoreOnHandScreen.MOVEMENT_DELIVERY_NOTE){
+          ref.read(allowedMovementDocumentTypeProvider.notifier).update((state) => Memory.MM_ELECTRONIC_DELIVERY_NOTE_ID);
+          print('allowedMovementDocumentTypeProvider--------------${ref.read(allowedMovementDocumentTypeProvider)}');
+        } else {
+          ref.read(allowedMovementDocumentTypeProvider.notifier).update((state) => Memory.NO_MM_ELECTRONIC_DELIVERY_NOTE_ID);
+        }
+      });
 
     });
     super.initState();
@@ -111,7 +136,7 @@ class ProductStoreOnHandScreenState extends ConsumerState<ProductStoreOnHandScre
             //
         ),
 
-        title: Text(Messages.PRODUCT),
+        title: Text(title,style: TextStyle(fontSize: themeFontSizeLarge),),
           actions: [
             if(showScan) ScanButtonByActionFixedShort(
               actionTypeInt: widget.actionScanType,
@@ -315,7 +340,7 @@ class ProductStoreOnHandScreenState extends ConsumerState<ProductStoreOnHandScre
   Widget getStorageOnHandCard(ProductsScanNotifier productsNotifier,
       IdempiereStorageOnHande storage,
       int index, int length, {required double width}) {
-    return StorageOnHandCard(productsNotifier,storage, index, length, width: width,);
+    return StorageOnHandCard(productsNotifier,storage, index, length, width: width,readStockOnly: readStockOnly);
 
 
 

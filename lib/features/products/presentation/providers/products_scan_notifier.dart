@@ -23,6 +23,7 @@ import '../../domain/idempiere/movement_and_lines.dart';
 import '../../domain/sql/sql_data_movement_line.dart';
 import '../screens/movement/provider/new_movement_provider.dart';
 import '../screens/store_on_hand/memory_products.dart';
+import 'common_provider.dart';
 import 'locator_provider.dart';
 import 'movement_provider_old.dart';
 import 'movement_provider_for_line.dart';
@@ -176,13 +177,22 @@ class ProductsScanNotifier  extends StateNotifier<List<IdempiereProduct>> implem
   void createPutAwayMovement(WidgetRef ref,PutAwayMovement movement){
     ref.read(startedCreateNewPutAwayMovementProvider.notifier).update((state) => true);
     print('----------------------------------newSqlDataPutAwayMovementProvider.notifier');
+    int docType = ref.read(allowedMovementDocumentTypeProvider);
+    if(docType==Memory.MM_ELECTRONIC_DELIVERY_NOTE_ID){
+      print('FORCE TO MM_ELECTRONIC_DELIVERY_NOTE_ID $docType')  ;
+      movement.movementToCreate!.cDocTypeID = Memory.electronicDeliveryNote;
+    }
     ref.read(putAwayMovementCreateProvider.notifier).update((state) => movement);
-    /*ref.read(newSqlDataPutAwayMovementProvider.notifier).update((state) =>
-    MemoryProducts.newSqlDataMovementToCreate);*/
   }
   void prepareToCreatePutawayMovement(WidgetRef ref,PutAwayMovement putAwayMovement){
     int check = putAwayMovement.canCreatePutAwayMovement();
     print('----------------------------------ERROR = $check');
+    /*int docType = ref.read(allowedMovementDocumentTypeProvider);
+    if(docType==Memory.MM_ELECTRONIC_DELIVERY_NOTE_ID){
+      print('FORCE TO MM_ELECTRONIC_DELIVERY_NOTE_ID $docType')  ;
+      putAwayMovement.movementToCreate!.cDocTypeID = Memory.electronicDeliveryNote;
+    }*/
+
     switch (check) {
       case PutAwayMovement.ERROR_START_CREATE:
         showErrorMessage(ref.context, ref, Messages.ERROR_START_CREATE);

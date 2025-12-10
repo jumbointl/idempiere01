@@ -21,8 +21,10 @@ import 'package:monalisa_app_001/features/products/presentation/screens/movement
 import 'package:monalisa_app_001/features/products/presentation/screens/movement/printer/printer_setup_screen.dart';
 import 'package:monalisa_app_001/features/products/presentation/screens/store_on_hand/memory_products.dart';
 import 'package:monalisa_app_001/features/products/presentation/screens/movement/edit_new/product_store_on_hand_screen_for_line.dart';
+import 'package:monalisa_app_001/features/products/presentation/screens/store_on_hand/unsorted_storage_on__hand_read_only_screen.dart';
 import '../../features/auth/presentation/screens/auth_data_screen.dart';
 import '../../features/products/domain/idempiere/movement_and_lines.dart';
+import '../../features/products/presentation/providers/common_provider.dart';
 import '../../features/products/presentation/providers/locator_provider.dart';
 import '../../features/products/presentation/providers/product_provider_common.dart';
 import '../../features/products/presentation/screens/locator/search_locator_screen.dart';
@@ -63,7 +65,7 @@ class AppRouter {
   static const String PAGE_M_IN_OUT_INVENTORY = '/mInOut/inventory';
   static const String PAGE_UNSORTED_STORAGE_ON_HAND = '/product/unsortedStorageOnHand';
 
-  static const String PAGE_MOVEMENTS_SEARCH = '/movement_search';
+  static const String PAGE_MOVEMENTS_EDIT = '/movement_search';
   static const String PAGE_MOVEMENTS_LIST = '/movement_list';
 
   static const String PAGE_SEARCH_LOCATOR_FROM = '/product/movement/createMovement/searchLocatorFrom';
@@ -85,6 +87,8 @@ class AppRouter {
 
 
   static String PAGE_MOVEMENT_QR_LIST='/movement_qr_list';
+
+  static String PAGE_UNSORTED_STORAGE_ON_HAND_READ_ONLY='/unsorted_store_on_hand_read_only';
 
 
 
@@ -157,7 +161,7 @@ final goRouterProvider = Provider((ref) {
         path: '${AppRouter.PAGE_PRODUCT_STORE_ON_HAND}/:productId',
         pageBuilder: (context, state) {
           final productId = state.pathParameters['productId'] ?? '';
-          final hasPrivilege = RolesApp.hasStockPrivilege();
+          final hasPrivilege = RolesApp.canCreateMovementInSameOrganization || RolesApp.canSearchProductStock;
 
           if (hasPrivilege) {
             // Use a FutureBuilder to show a loading indicator for 2 seconds
@@ -166,12 +170,15 @@ final goRouterProvider = Provider((ref) {
               child: FutureBuilder(
                 future: Future.delayed(Duration(milliseconds: transitionTimeMilliseconds)),
                 builder: (context, snapshot) {
+
+
                   if (snapshot.connectionState == ConnectionState.done) {
                     return ProductStoreOnHandScreen(productId: productId);
                   }
 
-                  Future.microtask(() async {
 
+                  Future.microtask(() async {
+                    ref.invalidate(actualWarehouseToProvider);
                     ref.read(homeScreenTitleProvider.notifier).state = Messages.NEW_MOVEMENT;
                     ref.read(productsHomeCurrentIndexProvider.notifier)
                         .update((state) => Memory.PAGE_INDEX_STORE_ON_HAND);
@@ -202,9 +209,11 @@ final goRouterProvider = Provider((ref) {
       GoRoute(
           path: '${AppRouter.PAGE_PRODUCT_STORE_ON_HAND_FOR_LINE}/:productUPC',
           builder: (context, state){
-            if( RolesApp.hasStockPrivilege()){
+            if( RolesApp.canCreateMovementInSameOrganization ||
+                RolesApp.canCreateDeliveryNote || RolesApp.canEditMovement){
               final productUPC = state.pathParameters['productUPC'] ?? '';
               Future.delayed(Duration.zero, () {
+                ref.invalidate(allowedMovementDocumentTypeProvider);
                 ref.read(productsHomeCurrentIndexProvider.notifier).update((state) =>
                 Memory.PAGE_INDEX_STORE_ON_HAND);
                 ref.read(actionScanProvider.notifier).update((state) =>
@@ -232,7 +241,7 @@ final goRouterProvider = Provider((ref) {
       GoRoute(
           path: AppRouter.PAGE_PDF_MOVEMENT_AND_LINE,
           builder: (context, state){
-            if( RolesApp.hasStockPrivilege()){
+            if( RolesApp.hasStockPrivilege){
               MovementAndLines movementAndLines = state.extra as MovementAndLines;
               var m = ref.read(movementAndLinesProvider.notifier);
               m.state = movementAndLines;
@@ -252,7 +261,7 @@ final goRouterProvider = Provider((ref) {
       GoRoute(
           path: AppRouter.PAGE_MOVEMENT_PRINTER_SETUP,
           builder: (context, state){
-            if( RolesApp.hasStockPrivilege()){
+            if( RolesApp.hasStockPrivilege){
               MovementAndLines movementAndLines = state.extra as MovementAndLines;
               var m = ref.read(movementAndLinesProvider.notifier);
               m.state = movementAndLines;
@@ -271,7 +280,7 @@ final goRouterProvider = Provider((ref) {
       GoRoute(
           path: AppRouter.PAGE_MOVEMENT_QR_LIST,
           builder: (context, state){
-            if( RolesApp.hasStockPrivilege()){
+            if( RolesApp.hasStockPrivilege){
               MovementAndLines movementAndLines = state.extra as MovementAndLines;
               return MovementBarcodeListScreen(
                   argument: jsonEncode(movementAndLines.toJson()),
@@ -288,7 +297,7 @@ final goRouterProvider = Provider((ref) {
       GoRoute(
           path: AppRouter.PAGE_BARCODE_SCANER,
           builder: (context, state){
-            if( RolesApp.hasStockPrivilege()){
+            if( RolesApp.hasStockPrivilege){
 
               return BarcodeScannerScreen();
 
@@ -313,7 +322,7 @@ final goRouterProvider = Provider((ref) {
       GoRoute(
         path: '${AppRouter.PAGE_MOVEMENTS_LIST}/:movementDateFilter',
         pageBuilder: (context, state) {
-          if (RolesApp.hasStockPrivilege()) {
+          if (RolesApp.canSearchMovement || RolesApp.canEditMovement) {
 
             return CustomTransitionPage(
               key: state.pageKey,
@@ -344,15 +353,16 @@ final goRouterProvider = Provider((ref) {
         },
       ),
       GoRoute(
-        path: '${AppRouter.PAGE_MOVEMENTS_SEARCH}/:movementId',
+        path: '${AppRouter.PAGE_MOVEMENTS_EDIT}/:movementId',
         pageBuilder: (context, state) {
-          if (RolesApp.hasStockPrivilege()) {
+          if (RolesApp.canEditMovement) {
 
             String movementId = state.pathParameters['movementId'] ??
                 NewMovementEditScreen.WAIT_FOR_SCAN_MOVEMENT;
             String fromPage = '-1';
 
             Future.delayed(Duration.zero, () {
+              ref.invalidate(allowedMovementDocumentTypeProvider);
               MemoryProducts.movementAndLines.clearData();
               GetStorage().remove(Memory.KEY_MOVEMENT_AND_LINES);
               ref.read(homeScreenTitleProvider.notifier).state = Messages.MOVEMENT_SEARCH;
@@ -390,9 +400,9 @@ final goRouterProvider = Provider((ref) {
         },
       ),
       GoRoute(
-        path: '${AppRouter.PAGE_MOVEMENTS_SEARCH}/:movementId/:fromPage',
+        path: '${AppRouter.PAGE_MOVEMENTS_EDIT}/:movementId/:fromPage',
         pageBuilder: (context, state) {
-          if (RolesApp.hasStockPrivilege()) {
+          if (RolesApp.canEditMovement) {
 
             String movementId = state.pathParameters['movementId'] ??
                 NewMovementEditScreen.WAIT_FOR_SCAN_MOVEMENT;
@@ -400,6 +410,8 @@ final goRouterProvider = Provider((ref) {
                 NewMovementEditScreen.FROM_PAGE_HOME;
 
             Future.delayed(Duration.zero, () {
+
+              ref.invalidate(allowedMovementDocumentTypeProvider);
               MemoryProducts.movementAndLines.clearData();
               GetStorage().remove(Memory.KEY_MOVEMENT_AND_LINES);
               ref.read(homeScreenTitleProvider.notifier).state = Messages.MOVEMENT_SEARCH;
@@ -441,7 +453,7 @@ final goRouterProvider = Provider((ref) {
         path: '${AppRouter.PAGE_CREATE_MOVEMENT_LINE}/:argument',
 
         builder: (context, state) {
-              if(RolesApp.hasStockPrivilege()) {
+              if(RolesApp.canCreateMovementInSameOrganization || RolesApp.canCreateDeliveryNote) {
                 MovementAndLines movementAndLines = state.extra as MovementAndLines;
                 //print(movementAndLines.toJson());
                 String argument = jsonEncode(movementAndLines.toJson());
@@ -454,26 +466,11 @@ final goRouterProvider = Provider((ref) {
               } else { return const HomeScreen();}
         }
       ),
-      GoRoute(
-          path: AppRouter.PAGE_MOVEMENTS_CONFIRM_SCREEN,
-          builder: (context, state) {
-            if(RolesApp.hasStockPrivilege()) {
-
-              MovementAndLines movementAndLines = state.extra as MovementAndLines;
-              String argument = jsonEncode(movementAndLines.toJson());
-
-              return MovementConfirmScreen(
-                argument: argument,
-                movementAndLines: state.extra as MovementAndLines,
-                );
-            } else { return const HomeScreen();}
-          }
-      ),
 
       GoRoute(
           path: AppRouter.PAGE_CREATE_PUT_AWAY_MOVEMENT,
           builder: (context, state) {
-            if(RolesApp.hasStockPrivilege()) {
+            if(RolesApp.canCreateMovementInSameOrganization || RolesApp.canCreateDeliveryNote) {
               return MovementsCreateScreen(
                 putAwayMovement: state.extra as PutAwayMovement,
               );
@@ -483,32 +480,32 @@ final goRouterProvider = Provider((ref) {
 
       GoRoute(
         path: AppRouter.PAGE_SEARCH_LOCATOR_FROM,
-        builder: (context, state) => RolesApp.hasStockPrivilege() ?
+        builder: (context, state) => RolesApp.hasStockPrivilege ?
         SearchLocatorScreen(searchLocatorFrom: true,forCreateLine: false) : const HomeScreen(),
       ),
       GoRoute(
         path: AppRouter.PAGE_SEARCH_LOCATOR_TO,
-        builder: (context, state) => RolesApp.hasStockPrivilege() ?
+        builder: (context, state) => RolesApp.hasStockPrivilege ?
         SearchLocatorScreen( searchLocatorFrom: false,forCreateLine: false) : const HomeScreen(),
       ),
       GoRoute(
         path: AppRouter.PAGE_SEARCH_LOCATOR_FROM_FOR_LINE,
-        builder: (context, state) => RolesApp.hasStockPrivilege() ?
+        builder: (context, state) => RolesApp.hasStockPrivilege ?
         SearchLocatorScreen(searchLocatorFrom: true,forCreateLine: true) : const HomeScreen(),
       ),
       GoRoute(
         path: AppRouter.PAGE_SEARCH_LOCATOR_TO_FOR_LINE,
-        builder: (context, state) => RolesApp.hasStockPrivilege() ?
+        builder: (context, state) => RolesApp.hasStockPrivilege ?
         SearchLocatorScreen( searchLocatorFrom: false,forCreateLine: true) : const HomeScreen(),
       ),
 
       GoRoute(
         path: AppRouter.PAGE_PRODUCT_SEARCH,
-        builder: (context, state) => RolesApp.hasStockPrivilege() ? ProductSearchScreen() : const HomeScreen(),
+        builder: (context, state) => RolesApp.hasStockPrivilege ? ProductSearchScreen() : const HomeScreen(),
       ),
       GoRoute(
         path: AppRouter.PAGE_PRODUCT_SEARCH_UPDATE_UPC,
-        builder: (context, state) => RolesApp.hasStockPrivilege() ?
+        builder: (context, state) => RolesApp.hasStockPrivilege ?
         ScannerScreen()
         //UpdateProductUpcScreen()
             : const HomeScreen(),
@@ -517,7 +514,8 @@ final goRouterProvider = Provider((ref) {
         path: '${AppRouter.PAGE_UNSORTED_STORAGE_ON_HAND}/:productUPC',
         builder: (context, state) {
           {
-            if(!RolesApp.hasStockPrivilege()){
+            if(!RolesApp.canCreateMovementInSameOrganization
+                && !RolesApp.canCreateDeliveryNote && !RolesApp.canSearchProductStock){
               return const HomeScreen();
             }
             final productUPC = state.pathParameters['productUPC'] ?? '';
@@ -540,10 +538,27 @@ final goRouterProvider = Provider((ref) {
         },
       ),
       GoRoute(
+        path: '${AppRouter.PAGE_UNSORTED_STORAGE_ON_HAND_READ_ONLY}/:productUPC',
+        builder: (context, state) {
+          {
+            if(!RolesApp.canSearchProductStock){
+              return const HomeScreen();
+            }
+            final productUPC = state.pathParameters['productUPC'] ?? '';
+
+            return UnsortedStorageOnHandReadOnlyScreen(
+              productUPC: productUPC,
+              index:MemoryProducts.index,
+              storage: MemoryProducts.storage,
+              width: MemoryProducts.width,);
+          }
+        },
+      ),
+      GoRoute(
         path: '${AppRouter.PAGE_UNSORTED_STORAGE_ON_HAND_FOR_LINE_SELECT_LOCATOR}/:argument',
         builder: (context, state) {
           {
-            if(!RolesApp.hasStockPrivilege()){
+            if(!RolesApp.canCreateMovementInSameOrganization && !RolesApp.canCreateDeliveryNote){
               return const HomeScreen();
             }
             //final argument = state.pathParameters['argument'] ?? '';
@@ -571,7 +586,7 @@ final goRouterProvider = Provider((ref) {
         path: '${AppRouter.PAGE_UNSORTED_STORAGE_ON_HAND_FOR_LINE}/:argument',
         builder: (context, state) {
           {
-            if(!RolesApp.hasStockPrivilege()){
+            if(!RolesApp.canCreateMovementInSameOrganization && !RolesApp.canCreateDeliveryNote){
               return const HomeScreen();
             }
             //final argument = state.pathParameters['argument'] ?? '';
@@ -601,7 +616,7 @@ final goRouterProvider = Provider((ref) {
 
           return CustomTransitionPage(
             key: state.pageKey,
-            child: RolesApp.hasStockPrivilege()
+            child: RolesApp.canUpdateProductUPC
                 ? UpdateProductUpcScreen3()
                 : const HomeScreen(),
             transitionDuration: Duration(milliseconds: transitionTimeMilliseconds),

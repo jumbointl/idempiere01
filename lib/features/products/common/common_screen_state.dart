@@ -389,7 +389,7 @@ class MovementDateFilterRow extends ConsumerWidget {
         ),
         OutlinedButton(
           onPressed: () {
-            context.go('${AppRouter.PAGE_MOVEMENTS_SEARCH}/-1/-1');
+            context.go('${AppRouter.PAGE_MOVEMENTS_EDIT}/-1/-1');
           },
           style: OutlinedButton.styleFrom(
             foregroundColor: Colors.white,

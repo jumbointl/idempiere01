@@ -311,7 +311,7 @@ class ProductStoreOnHandScreenForLineState
         Memory.ACTION_FIND_MOVEMENT_BY_ID;
 
     // Redirigir
-    context.go('${AppRouter.PAGE_MOVEMENTS_SEARCH}/$movementId/1');
+    context.go('${AppRouter.PAGE_MOVEMENTS_EDIT}/$movementId/1');
   }
 
   Future<void> setDefaultValues(BuildContext context, WidgetRef ref) async {

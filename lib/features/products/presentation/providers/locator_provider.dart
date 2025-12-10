@@ -12,6 +12,7 @@ import '../../../shared/domain/entities/response_api.dart';
 import '../../../shared/infrastructure/errors/custom_error.dart';
 import '../../domain/idempiere/idempiere_locator.dart';
 import '../../domain/idempiere/idempiere_warehouse.dart';
+import 'common_provider.dart';
 
 final scannedBarcodeProvider = StateProvider<String?>((ref) => null);
 
@@ -109,10 +110,21 @@ final findLocatorToProvider = FutureProvider<IdempiereLocator>((ref) async {
     return IdempiereLocator(id:Memory.INITIAL_STATE_ID,value: Messages.FIND);
   }
 
+  final int allowedDocumentTypeId = ref.read(allowedMovementDocumentTypeProvider);
+
   String searchField ='Value';
   String idempiereModelName ='m_locator';
   int excludedLocatorId = ref.watch(actualLocatorFromProvider);
-  int warehouseId = ref.watch(actualWarehouseToProvider);
+  int allowedWarehouseId = ref.watch(actualWarehouseToProvider);
+
+  int  excludedWarehouseId = 0;
+  if(allowedDocumentTypeId==Memory.MM_ELECTRONIC_DELIVERY_NOTE_ID){
+    excludedWarehouseId = Memory.sqlUsersData.mWarehouseID?.id ?? 0;
+  }
+  int  allowedOrganizationId = 0;
+  if(allowedDocumentTypeId==Memory.NO_MM_ELECTRONIC_DELIVERY_NOTE_ID){
+    allowedOrganizationId = Memory.sqlUsersData.aDOrgID?.id ?? 0;
+  }
 
   Dio dio = await DioClient.create();
   try {
@@ -120,9 +132,19 @@ final findLocatorToProvider = FutureProvider<IdempiereLocator>((ref) async {
         "/api/v1/models/$idempiereModelName?\$expand=M_Warehouse_ID&\$filter=$searchField eq '$scannedCode'";
 
     url='$url AND M_Locator_ID neq $excludedLocatorId';
-    if(warehouseId>0){
-      url='$url AND M_Warehouse_ID eq $warehouseId';
+
+    if(allowedWarehouseId>0){
+      url='$url AND M_Warehouse_ID eq $allowedWarehouseId';
+    } else {
+      if(excludedWarehouseId>0){
+        url='$url AND M_Warehouse_ID neq $excludedWarehouseId';
+      }
+      if(allowedOrganizationId>0){
+        url='$url AND AD_Org_ID eq $allowedOrganizationId';
+      }
     }
+
+
     print(url);
     url = url.replaceAll(' ', '%20');
     print(url);
@@ -141,7 +163,7 @@ final findLocatorToProvider = FutureProvider<IdempiereLocator>((ref) async {
         return productsList[0];
       } else {
         String message = '${Messages.NOT_FOUND} $scannedCode';
-        if(warehouseId>0){
+        if(allowedWarehouseId>0){
           message = '${Messages.ERROR_DIFFERENT_WAREHOUSE} : $scannedCode';
         }
         Future.delayed(const Duration(seconds: 1), () {

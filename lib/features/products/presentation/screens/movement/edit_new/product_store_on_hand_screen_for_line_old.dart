@@ -359,7 +359,7 @@ class ProductStoreOnHandScreenForLineStateOld
     ref.read(productsHomeCurrentIndexProvider.notifier).state =
         Memory.PAGE_INDEX_MOVEMENTE_EDIT_SCREEN;
     ref.read(actionScanProvider.notifier).state = Memory.ACTION_FIND_MOVEMENT_BY_ID;
-    context.go('${AppRouter.PAGE_MOVEMENTS_SEARCH}/$movementId/-1');
+    context.go('${AppRouter.PAGE_MOVEMENTS_EDIT}/$movementId/-1');
 
   }
   Future<void> setDefaultValues(BuildContext context, WidgetRef ref) async {

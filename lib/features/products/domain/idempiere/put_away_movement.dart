@@ -52,6 +52,7 @@ class PutAwayMovement {
     int  canCreatePutAwayMovement() {
       if(movementToCreate == null) return ERROR_MOVEMENT_NULL;
     createMovementDocumentType();
+
     if(startCreate==true) return ERROR_START_CREATE;
     if(!hasMovement) return ERROR_MOVEMENT;
     if(movementToCreate!.id != null && movementToCreate!.id!>0) return ERROR_MOVEMENT;
