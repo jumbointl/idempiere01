@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_addons/flutter_addons.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:monalisa_app_001/config/constants/roles_app.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
@@ -57,14 +58,14 @@ class MovementHeaderCardWithLocatorState extends ConsumerState<NewMovementCardWi
     String date='';
     String id='';
     String documentType = widget.movementAndLines.cDocTypeID?.identifier ?? 'DOC';
-
+    bool canCompleteMovement = widget.movementAndLines.canCompleteMovement && RolesApp.cantConfirmMovement;
     if(widget.movementAndLines.hasMovement){      //id = movement.documentNo ?? '';
       id = widget.movementAndLines.id.toString();
       date = widget.movementAndLines.movementDate?.toString() ?? '';
       titleLeft = '${Messages.FROM}:${widget.movementAndLines.mWarehouseID?.identifier ?? ''}';
       titleRight = '${Messages.TO}:${widget.movementAndLines.mWarehouseToID?.identifier ?? ''}';
       subtitleLeft = '${Messages.DOC_STATUS}: ${widget.movementAndLines.docStatus?.identifier ?? ''}';
-      subtitleRight = '';//canCompleteMovement ? Messages.CONFIRM : '';
+      subtitleRight = widget.movementAndLines.canCompleteMovement ? Messages.CONFIRM : '';
     } else {
       id = widget.movementAndLines.name ?? Messages.EMPTY;
       titleLeft =widget.movementAndLines.identifier ?? Messages.EMPTY;
@@ -166,7 +167,65 @@ class MovementHeaderCardWithLocatorState extends ConsumerState<NewMovementCardWi
                   style: widget.movementStyle,
                   overflow: TextOverflow.ellipsis,
                 ),
-                Text(
+                canCompleteMovement ? GestureDetector(
+                  onTap: (){
+                    if(!widget.movementAndLines.canComplete){
+                      AwesomeDialog(
+                        context: context,
+                        animType: AnimType.scale,
+                        dialogType: DialogType.error,
+                        body: Center(child: Text(
+                          Messages.MOVEMENT_ALREADY_COMPLETED,
+                          //style: TextStyle(fontStyle: FontStyle.italic),
+                        ),), // correct here
+                        title: Messages.MOVEMENT_ALREADY_COMPLETED,
+                        desc:   '',
+                        autoHide: const Duration(seconds: 3),
+                        btnOkOnPress: () {},
+                        btnOkColor: themeColorSuccessful,
+                        btnCancelColor: themeColorError,
+                        btnCancelText: Messages.CANCEL,
+                        btnOkText: Messages.OK,
+                      ).show();
+                      return;
+                    } else {
+                      AwesomeDialog(
+                        context: context,
+                        animType: AnimType.scale,
+                        dialogType: DialogType.question,
+                        body: Center(child: Text(
+                          Messages.CONFIRM_MOVEMENT,
+                          //style: TextStyle(fontStyle: FontStyle.italic),
+                        ),), // correct here
+                        title: '${Messages.CONFIRM_MOVEMENT}?',
+                        desc:   '',
+                        //autoHide: const Duration(seconds: 3),
+                        btnOkOnPress: () {
+                          GoRouterHelper(context).go(
+                              AppRouter.PAGE_MOVEMENTS_CONFIRM_SCREEN,
+                              extra: widget.movementAndLines);
+                        },
+                        btnCancelOnPress: () {},
+                        btnOkColor: themeColorSuccessful,
+                        btnCancelColor: themeColorError,
+                        btnCancelText: Messages.CANCEL,
+                        btnOkText: Messages.OK,
+                      ).show();
+                      return;
+
+                    }
+
+                  },
+                  child: Container(
+                    color: canCompleteMovement ? Colors.green : themeColorPrimary,
+                    child: Text(
+                      subtitleRight ,
+                      textAlign: TextAlign.end,
+                      style: widget.movementStyle,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ) :Text(
                   subtitleRight ,
                   textAlign: TextAlign.end,
                   style: widget.movementStyle,

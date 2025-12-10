@@ -49,7 +49,6 @@ class InputStringDialog extends ConsumerStatefulWidget implements InputDataProce
     } else {
       var textState = ref.read(textStateProvider.notifier);
       textState.update((state) => inputData);
-      print('-----------------R Locator handleInputString$inputData $actionScan');
     }
   }
 

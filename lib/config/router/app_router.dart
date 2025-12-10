@@ -27,6 +27,7 @@ import '../../features/products/presentation/providers/common_provider.dart';
 import '../../features/products/presentation/providers/locator_provider.dart';
 import '../../features/products/presentation/providers/product_provider_common.dart';
 import '../../features/products/presentation/screens/locator/search_locator_screen.dart';
+import '../../features/products/presentation/screens/movement/edit_new/movement_confirm_screen.dart';
 import '../../features/products/presentation/screens/movement/edit_new/new_movement_edit_screen.dart';
 import '../../features/products/presentation/screens/movement/edit_new/movement_lines_create_screen.dart';
 import '../../features/products/presentation/screens/movement/create/movements_create_screen.dart';
@@ -132,6 +133,21 @@ final goRouterProvider = Provider((ref) {
                 return FadeTransition(
                     opacity: animation, child: child);
               });
+          }
+      ),
+      GoRoute(
+          path: AppRouter.PAGE_MOVEMENTS_CONFIRM_SCREEN,
+          builder: (context, state) {
+            if(RolesApp.appMovementComplete) {
+
+              MovementAndLines movementAndLines = state.extra as MovementAndLines;
+              String argument = jsonEncode(movementAndLines.toJson());
+
+              return MovementConfirmScreen(
+                argument: argument,
+                movementAndLines: state.extra as MovementAndLines,
+              );
+            } else { return const HomeScreen();}
           }
       ),
 

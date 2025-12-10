@@ -8,6 +8,7 @@ import 'package:monalisa_app_001/features/products/presentation/providers/produc
 
 import '../../../../config/http/dio_client.dart';
 import '../../../auth/presentation/providers/auth_provider.dart';
+import '../../../shared/data/memory.dart';
 import '../../../shared/domain/entities/response_api.dart';
 import '../../../shared/infrastructure/errors/custom_error.dart';
 import '../../domain/idempiere/idempiere_product.dart';
@@ -127,8 +128,23 @@ final findProductByUPCOrSKUForStoreOnHandProvider = FutureProvider.autoDispose<P
               for (var warehouseID in sortedWarehouseIDs) {
                 sortedProductsList.addAll(groupedByWarehouse[warehouseID]!.where((product) => product.qtyOnHand != 0));
               }
-
+              final userWarehouse = ref.read(authProvider).selectedWarehouse;
               productWithStock.sortedStorageOnHande = sortedProductsList;
+              final ProductWithStock result = productWithStock;
+              int userWarehouseId = userWarehouse?.id ?? 0;
+              String userWarehouseName = userWarehouse?.name ?? '';
+              double quantity = 0;
+              if(result.hasListStorageOnHande){
+                for (var data in result.sortedStorageOnHande!) {
+                  int warehouseID = data.mLocatorID?.mWarehouseID?.id ?? 0;
+
+                  if (warehouseID == userWarehouseId) {
+                    quantity += data.qtyOnHand ?? 0;
+                  }
+                }
+              }
+              String aux = Memory.numberFormatter0Digit.format(quantity);
+              ref.read(resultOfSameWarehouseProvider.notifier).update((state) =>  [aux,userWarehouseName]);
             }
           }
 
@@ -294,7 +310,7 @@ final findProductsStoreOnHandProvider = FutureProvider.autoDispose<List<Idempier
 
 
 
-final resultOfSameWarehouseProvider = StateProvider.autoDispose<List<String>>((ref) {
+final resultOfSameWarehouseProvider = StateProvider<List<String>>((ref) {
   return [];
 });
 

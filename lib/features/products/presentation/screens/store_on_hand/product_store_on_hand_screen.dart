@@ -94,21 +94,14 @@ class ProductStoreOnHandScreenState extends ConsumerState<ProductStoreOnHandScre
 
 
       actionAfterShow(ref);
-      Future.delayed(Duration(microseconds: 100), () {
-        if(movementType==ProductStoreOnHandScreen.MOVEMENT_DELIVERY_NOTE){
-          ref.read(allowedMovementDocumentTypeProvider.notifier).update((state) => Memory.MM_ELECTRONIC_DELIVERY_NOTE_ID);
-          print('allowedMovementDocumentTypeProvider--------------${ref.read(allowedMovementDocumentTypeProvider)}');
-        } else {
-          ref.read(allowedMovementDocumentTypeProvider.notifier).update((state) => Memory.NO_MM_ELECTRONIC_DELIVERY_NOTE_ID);
-        }
-      });
+
 
     });
     super.initState();
   }
   @override
   Widget build(BuildContext context){
-    ref.invalidate(persistentLocatorToProvider);
+
     isDialogShowed = ref.watch(isDialogShowedProvider);
     isScanning = ref.watch(isScanningProvider);
     productAsync = ref.watch(findProductForPutAwayMovementProvider);
@@ -165,6 +158,7 @@ class ProductStoreOnHandScreenState extends ConsumerState<ProductStoreOnHandScre
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 10,vertical: 10),
             child: SingleChildScrollView(
+              controller: _scrollController,
               child: getDataContainer(context),
             ),
           ),
@@ -193,7 +187,7 @@ class ProductStoreOnHandScreenState extends ConsumerState<ProductStoreOnHandScre
     int add =1 ;
 
     return ListView.separated(
-      controller: _scrollController,
+      physics: const NeverScrollableScrollPhysics(),
       shrinkWrap: true,
       itemCount: length+add,
       separatorBuilder: (context, index) => const SizedBox(height: 10),
@@ -219,62 +213,6 @@ class ProductStoreOnHandScreenState extends ConsumerState<ProductStoreOnHandScre
       );
 
   }
-  Future<void> getBarCode(BuildContext context, bool history) async{
-    TextEditingController controller = TextEditingController();
-    if(history){
-      String lastSearch = Memory.lastSearch;
-      if(lastSearch.isEmpty){
-        controller.text = Messages.NO_RECORDS_FOUND;
-      } else {
-        controller.text = lastSearch;
-      }
-
-    }
-    AwesomeDialog(
-      context: context,
-      headerAnimationLoop: false,
-      dialogType: DialogType.noHeader,
-      body: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 40),
-        child: Center(
-          child: Column(
-            spacing: 10,
-            children: [
-              Text(Messages.FIND_PRODUCT_BY_UPC_SKU),
-              TextField(
-                controller: controller,
-                style: const TextStyle(fontStyle: FontStyle.italic),
-                keyboardType: TextInputType.text,
-              ),
-            ],
-          ),
-        ),
-      ),
-      title: Messages.FIND_PRODUCT_BY_UPC_SKU,
-      desc: Messages.FIND_PRODUCT_BY_UPC_SKU,
-      btnCancelText: Messages.CANCEL,
-      btnOkText: Messages.OK,
-      btnOkOnPress: () async {
-        isDialogShowed = false;
-        setState(() {});
-
-        final result = controller.text;
-        if(result==''){
-          showErrorMessage(context, ref, Messages.ERROR_UPC_EMPTY);
-          return;
-        }
-        print('findProductByUPCOrSKUForStoreOnHandProvider $result');
-        widget.productsNotifier.addBarcodeByUPCOrSKUForStoreOnHande(result);
-      },
-      btnCancelOnPress: (){
-        isDialogShowed = false;
-        setState(() {});
-        return ;
-      }
-    ).show();
-
-  }
-
   Widget getProductDetails(List<IdempiereProduct> products, double width) {
 
     return SliverList.separated(
@@ -296,20 +234,30 @@ class ProductStoreOnHandScreenState extends ConsumerState<ProductStoreOnHandScre
          WidgetsBinding.instance.addPostFrameCallback((_) async {
            //ref.read(isScanningProvider.notifier).update((state) => false);
            //ref.read(productIdForPutAwayMovementProvider.notifier) = products[0].id!;
+           /*
            int userWarehouseId = userWarehouse?.id ?? 0;
            String userWarehouseName = userWarehouse?.name ?? '';
            double quantity = 0;
+           if(result.sortedStorageOnHande!=null){
+             for (var data in result.sortedStorageOnHande) {
+               int warehouseID = data?.mLocatorID?.mWarehouseID?.id ?? 0;
 
-           for (var data in result.sortedStorageOnHande) {
-             int warehouseID = data.mLocatorID?.mWarehouseID?.id ?? 0;
-
-             if (warehouseID == userWarehouseId) {
-               quantity += data.qtyOnHand ?? 0;
+               if (warehouseID == userWarehouseId) {
+                 quantity += data.qtyOnHand ?? 0;
+               }
              }
            }
-
            String aux = Memory.numberFormatter0Digit.format(quantity);
-           ref.read(resultOfSameWarehouseProvider.notifier).update((state) =>  [aux,userWarehouseName]);
+           final newValue = [aux, userWarehouseName];
+           // 👇 só atualiza provider se o valor realmente mudou
+           final current = ref.read(resultOfSameWarehouseProvider);
+
+           if (current.length != newValue.length ||
+               current[0] != newValue[0] ||
+               current[1] != newValue[1]) {
+             ref.read(resultOfSameWarehouseProvider.notifier).state = newValue;
+           }
+           ref.read(resultOfSameWarehouseProvider.notifier).update((state) =>  [aux,userWarehouseName]);*/
 
          });
          MemoryProducts.productWithStock = result;
@@ -318,7 +266,7 @@ class ProductStoreOnHandScreenState extends ConsumerState<ProductStoreOnHandScre
            children: [
              ProductDetailCard(
                productsNotifier: widget.productsNotifier, product: result),
-             getStoragesOnHand(result.sortedStorageOnHande, width),
+             if(result.hasListStorageOnHande) getStoragesOnHand(result.sortedStorageOnHande, width),
            ],
          );
        },error: (error, stackTrace) => Text('Error: $error'),
@@ -328,8 +276,16 @@ class ProductStoreOnHandScreenState extends ConsumerState<ProductStoreOnHandScre
 
   }
 
-  void actionAfterShow(WidgetRef ref) {
-    //ref.read(isScanningProvider.notifier).update((state) => false);
+  Future<void> actionAfterShow(WidgetRef ref) async {
+    ref.invalidate(persistentLocatorToProvider);
+    await Future.delayed(Duration(microseconds: 100), () {
+      if(movementType==ProductStoreOnHandScreen.MOVEMENT_DELIVERY_NOTE){
+        ref.read(allowedMovementDocumentTypeProvider.notifier).update((state) => Memory.MM_ELECTRONIC_DELIVERY_NOTE_ID);
+        print('allowedMovementDocumentTypeProvider--------------${ref.read(allowedMovementDocumentTypeProvider)}');
+      } else {
+        ref.read(allowedMovementDocumentTypeProvider.notifier).update((state) => Memory.NO_MM_ELECTRONIC_DELIVERY_NOTE_ID);
+      }
+    });
     if(widget.productId!=null && widget.productId!.isNotEmpty && widget.productId!='-1'){
       print('-------widget productId start search ${widget.productId}');
       widget.productsNotifier.addBarcodeByUPCOrSKUForStoreOnHande(widget.productId!);

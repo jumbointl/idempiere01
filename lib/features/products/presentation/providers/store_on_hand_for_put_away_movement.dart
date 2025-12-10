@@ -8,6 +8,7 @@ import 'package:monalisa_app_001/features/products/presentation/providers/store_
 
 import '../../../../config/http/dio_client.dart';
 import '../../../auth/presentation/providers/auth_provider.dart';
+import '../../../shared/data/memory.dart';
 import '../../../shared/domain/entities/response_api.dart';
 import '../../../shared/infrastructure/errors/custom_error.dart';
 import '../../domain/idempiere/idempiere_product.dart';
@@ -38,6 +39,8 @@ final findProductForPutAwayMovementProvider = FutureProvider.autoDispose<Product
   if(aux==null){
     searchField = 'sku';
   }
+  final int userWarehouseId = ref.read(authProvider).selectedWarehouse?.id ?? 0;
+  final String userWarehouseName = ref.read(authProvider).selectedWarehouse?.name ?? '';
   Dio dio = await DioClient.create();
   ref.read(showResultCardProvider.notifier).state = true;
   try {
@@ -137,8 +140,26 @@ final findProductForPutAwayMovementProvider = FutureProvider.autoDispose<Product
               }
 
               productWithStock.sortedStorageOnHande = sortedProductsList;
+              final ProductWithStock result = productWithStock;
+              double quantity = 0;
+              if(result.sortedStorageOnHande!=null){
+                for (var data in result.sortedStorageOnHande!) {
+                  int warehouseID = data.mLocatorID?.mWarehouseID?.id ?? 0;
+
+                  if (warehouseID == userWarehouseId) {
+                    quantity += data.qtyOnHand ?? 0;
+                  }
+                }
+              }
+              String aux = Memory.numberFormatter0Digit.format(quantity);
+              ref.read(resultOfSameWarehouseProvider.notifier).update((state) =>  [aux,userWarehouseName]);
+
             }
           }
+
+
+
+
 
 
           print('200---------------------findProductWithStock---');

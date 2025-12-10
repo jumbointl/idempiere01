@@ -150,7 +150,6 @@ class ProductStoreOnHandScreenForLineState
     isDialogShowed = ref.watch(isDialogShowedProvider);
     final productAsync = ref.watch(findProductByUPCOrSKUForStoreOnHandProvider);
 
-    Warehouse? userWarehouse = ref.read(authProvider).selectedWarehouse;
     final showScan = ref.watch(showScanFixedButtonProvider(widget.actionTypeInt));
 
     return Scaffold(
@@ -207,20 +206,7 @@ class ProductStoreOnHandScreenForLineState
                   final double width = MediaQuery.of(context).size.width - 30;
 
                   WidgetsBinding.instance.addPostFrameCallback((_) async {
-                    int userWarehouseId = userWarehouse?.id ?? 0;
-                    String userWarehouseName = userWarehouse?.name ?? '';
-                    double quantity = 0;
-                    if(result.hasListStorageOnHande){
-                      for (var data in result.sortedStorageOnHande!) {
-                        int warehouseID = data.mLocatorID?.mWarehouseID?.id ?? 0;
-
-                        if (warehouseID == userWarehouseId) {
-                          quantity += data.qtyOnHand ?? 0;
-                        }
-                      }
-                    }
-                    String aux = Memory.numberFormatter0Digit.format(quantity);
-                    ref.read(resultOfSameWarehouseProvider.notifier).update((state) =>  [aux,userWarehouseName]);
+                     print('result from search ----------');
 
                   });
                   MemoryProducts.productWithStock = result;

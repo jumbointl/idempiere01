@@ -17,6 +17,7 @@ double get fontSizeLarge => themeFontSizeLarge;
 
 
 
+
 Future<String?> openInputDialogWithResult(
     BuildContext context,
     WidgetRef ref,
@@ -313,6 +314,7 @@ Future<void> openInputDialogWithAction({
   required WidgetRef ref,
   required bool history,
   required int actionScan,
+  bool? numberOnly,
   required void Function({
   required WidgetRef ref,
   required String inputData,
@@ -408,10 +410,14 @@ Future<void> openInputDialogWithAction({
                           ],
                         ),
                       ),
+                      (numberOnly==true)  ? numberButtonsNoProcessor(
+                          context: context, ref: ref, textController: controller,
+                          numberOnly: true):
                       useNumberKeyboard
                           ? Padding(
                             padding: const EdgeInsets.all(12.0),
-                            child: numberButtonsNoProcessor(context, ref, controller),
+                            child: numberButtonsNoProcessor
+                              (context: context, ref: ref, textController: controller,)
                           )
                           : keyboardButtons(context, ref, controller),
                       Row(
@@ -662,7 +668,9 @@ Widget keyboardButtons(BuildContext context, WidgetRef ref,TextEditingController
 }
 
 Widget numberButtonsNoProcessor(
-    BuildContext context, WidgetRef ref, TextEditingController textController) {
+    {required BuildContext context,required WidgetRef ref,
+      required TextEditingController textController,
+      bool? numberOnly =false }) {
   final double keyboardWidth = MediaQuery.of(context).size.width * 0.7;
 
   // Definimos los botones numéricos
@@ -700,8 +708,12 @@ Widget numberButtonsNoProcessor(
                 return const SizedBox.shrink();
               }
               return TextButton(
-                onPressed: () =>
-                    addQuantityText(context, ref, textController, btn.value),
+                onPressed: () =>{
+                  (numberOnly==true) ?
+                 addQuantityText(context, ref, textController, btn.value)
+                  : addText(context, ref, textController, btn.value.toString()),
+                },
+
                 style: TextButton.styleFrom(
                   backgroundColor: Colors.white,
                   shape: RoundedRectangleBorder(

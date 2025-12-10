@@ -18,7 +18,7 @@ class CustomTextFormField extends StatelessWidget {
   final TextAlign textAlign;
   final bool autofocus;
 
-  const CustomTextFormField({
+  CustomTextFormField({
     super.key,
     this.label,
     this.hint,

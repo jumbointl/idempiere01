@@ -198,13 +198,14 @@ class MovementListScreenState extends CommonConsumerState<MovementListScreen> {
             String docStatus = movement.docStatus?.id ?? '';
 
             if(movement.docStatus?.id == 'DR'){
-              String documentNo = movement.documentNo ?? '-1';
+              context.go('${AppRouter.PAGE_MOVEMENTS_EDIT}/$movementId/1');
+              /*String documentNo = movement.documentNo ?? '-1';
               if(RolesApp.cantConfirmMovement){
                 showMovementOptionsSheet(context: context, documentNo: documentNo, movementId:
                    movementId, docStatus:docStatus);
               } else {
                 context.go('${AppRouter.PAGE_MOVEMENTS_EDIT}/$movementId/1');
-              }
+              }*/
 
 
             } else if(movement.docStatus?.id == 'IP'){
@@ -283,17 +284,7 @@ class MovementListScreenState extends CommonConsumerState<MovementListScreen> {
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
-                    child: docStatus=='DR' ? ListTile(
-                      leading: const Icon(Icons.inventory, color: Colors.white),
-                      title: Text(
-                        Messages.INVENTORY_MOVE,
-                        style: const TextStyle(color: Colors.white),
-                      ),
-                      onTap: () {
-                        Navigator.of(context).pop();
-                        context.push('/mInOut/move/$documentNo');
-                      },
-                    ) : docStatus=='IP' ? ListTile(
+                    child: docStatus=='IP' ? ListTile(
                       leading: const Icon(Icons.inventory, color: Colors.white),
                       title: Text(
                         Messages.MOVE_CONFIRM,
