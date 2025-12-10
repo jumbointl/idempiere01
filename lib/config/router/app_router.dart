@@ -28,7 +28,6 @@ import '../../features/products/presentation/providers/locator_provider.dart';
 import '../../features/products/presentation/providers/product_provider_common.dart';
 import '../../features/products/presentation/screens/locator/search_locator_screen.dart';
 import '../../features/products/presentation/screens/movement/edit_new/new_movement_edit_screen.dart';
-import '../../features/products/presentation/screens/movement/edit_new/movement_confirm_screen.dart';
 import '../../features/products/presentation/screens/movement/edit_new/movement_lines_create_screen.dart';
 import '../../features/products/presentation/screens/movement/create/movements_create_screen.dart';
 import '../../features/products/presentation/screens/movement/edit_new/unsorted_storage_on__hand_select_locator_screen.dart';
@@ -39,7 +38,7 @@ import '../../features/products/presentation/screens/search/product_search_scree
 import '../../features/products/presentation/screens/store_on_hand/product_store_on_hand_screen.dart';
 import '../../features/products/presentation/screens/movement/create/unsorted_storage_on__hand_screen.dart';
 import '../../features/products/presentation/screens/movement/edit_new/unsorted_storage_on__hand_screen_for_line.dart';
-import '../../features/products/presentation/screens/search/update_product_upc_screen3.dart';
+import '../../features/products/presentation/screens/search/update_product_upc_screen.dart';
 import '../../features/shared/data/memory.dart';
 import '../../features/shared/data/messages.dart';
 
@@ -483,7 +482,13 @@ final goRouterProvider = Provider((ref) {
 
       GoRoute(
         path: AppRouter.PAGE_PRODUCT_SEARCH,
-        builder: (context, state) => RolesApp.hasStockPrivilege ? ProductSearchScreen() : const HomeScreen(),
+        builder: (context, state){
+          Future.delayed(Duration.zero, () {
+            ref.read(actionScanProvider.notifier).state =
+                Memory.ACTION_FIND_BY_UPC_SKU;
+          });
+          return RolesApp.hasStockPrivilege ? ProductSearchScreen() : const HomeScreen();
+        }
       ),
       GoRoute(
         path: '${AppRouter.PAGE_UNSORTED_STORAGE_ON_HAND}/:productUPC',
@@ -592,7 +597,7 @@ final goRouterProvider = Provider((ref) {
           return CustomTransitionPage(
             key: state.pageKey,
             child: RolesApp.canUpdateProductUPC
-                ? UpdateProductUpcScreen3()
+                ? UpdateProductUpcScreen()
                 : const HomeScreen(),
             transitionDuration: Duration(milliseconds: transitionTimeMilliseconds),
             transitionsBuilder:

@@ -6,12 +6,9 @@ import 'package:go_router/go_router.dart';
 import 'package:monalisa_app_001/config/constants/roles_app.dart';
 import 'package:monalisa_app_001/features/products/common/input_data_processor.dart';
 import 'package:monalisa_app_001/features/products/common/input_dialog.dart';
-import 'package:monalisa_app_001/features/products/common/scan_button_by_action.dart';
 import 'package:monalisa_app_001/features/products/common/scan_button_by_action_fixed_short.dart';
 import 'package:monalisa_app_001/features/products/domain/idempiere/idempiere_organization.dart';
 import 'package:monalisa_app_001/features/products/presentation/providers/products_providers.dart';
-import 'package:monalisa_app_001/features/products/presentation/screens/movement/edit_new/custom_app_bar.dart';
-import 'package:simple_barcode_scanner/simple_barcode_scanner.dart';
 import 'package:slide_to_confirm/slide_to_confirm.dart';
 
 import '../../../../../../config/router/app_router.dart';

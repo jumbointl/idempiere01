@@ -10,7 +10,6 @@ import '../../../../config/constants/roles_app.dart';
 import '../../../../config/theme/app_theme.dart';
 import '../../../products/common/number_sum_panel.dart';
 import '../../../products/common/selections_dialog.dart';
-import '../../../products/presentation/providers/common_provider.dart';
 import '../../domain/entities/barcode.dart';
 import '../../domain/entities/line_confirm.dart';
 import '../../infrastructure/repositories/m_in_out_repository_impl.dart';

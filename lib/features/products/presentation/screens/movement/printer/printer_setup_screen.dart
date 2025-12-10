@@ -44,7 +44,7 @@ class PrinterSetupScreen extends ConsumerStatefulWidget {
 
 class _PrinterSetupScreenState extends ConsumerState<PrinterSetupScreen> {
   // El FocusNode es esencial para que KeyboardListener funcione.
-  bool _noDeleteFlag = false; // state
+  final bool _noDeleteFlag = false; // state
   final FocusNode _focusNode = FocusNode();
   late MovementAndLines movementAndLines;
   late var actionScan;

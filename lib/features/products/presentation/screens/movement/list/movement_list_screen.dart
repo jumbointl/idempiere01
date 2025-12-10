@@ -121,8 +121,8 @@ class MovementListScreenState extends CommonConsumerState<MovementListScreen> {
       itemBuilder: (context, index) {
         final movement = movements[index];
         int movementId = movement.id ?? -1;
-        late var iconData;
-        late var textColor;
+        late IconData iconData;
+        late Color textColor;
         switch(inOut) {
           case 'IN':
             iconData = Icons.arrow_downward;

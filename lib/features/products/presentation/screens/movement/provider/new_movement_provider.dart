@@ -1,7 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
-import 'package:monalisa_app_001/features/auth/presentation/providers/auth_provider.dart';
 import 'package:monalisa_app_001/features/products/domain/idempiere/put_away_movement.dart';
 import 'package:get_storage/get_storage.dart';
 import 'package:monalisa_app_001/features/shared/data/memory.dart';

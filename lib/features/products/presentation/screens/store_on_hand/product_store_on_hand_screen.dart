@@ -8,7 +8,6 @@ import 'package:monalisa_app_001/features/products/domain/idempiere/idempiere_pr
 import 'package:monalisa_app_001/features/products/domain/idempiere/idempiere_storage_on_hande.dart';
 import 'package:monalisa_app_001/features/products/presentation/screens/store_on_hand/memory_products.dart';
 import 'package:monalisa_app_001/features/products/presentation/widget/no_records_card.dart';
-import 'package:simple_barcode_scanner/simple_barcode_scanner.dart';
 
 import '../../../../../config/router/app_router.dart';
 import '../../../../../config/theme/app_theme.dart';

@@ -6,7 +6,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:monalisa_app_001/features/m_inout/domain/entities/line_confirm.dart';
 import 'package:monalisa_app_001/features/m_inout/domain/entities/locate.dart';
-import 'package:monalisa_app_001/features/shared/domain/entities/ad_entity_id.dart';
 import 'package:monalisa_app_001/features/shared/domain/entities/model_crud.dart';
 import 'package:monalisa_app_001/features/shared/domain/entities/model_crud_request.dart';
 import 'package:monalisa_app_001/features/shared/domain/entities/response_api.dart';

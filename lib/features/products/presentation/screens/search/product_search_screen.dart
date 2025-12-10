@@ -1,16 +1,16 @@
-import 'package:awesome_dialog/awesome_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:monalisa_app_001/features/products/presentation/screens/search/product_detail_with_photo_card.dart';
-import 'package:monalisa_app_001/features/products/presentation/screens/search/update_product_upc_screen3.dart';
+import 'package:monalisa_app_001/features/products/presentation/screens/search/update_product_upc_screen.dart';
 import 'package:monalisa_app_001/features/products/presentation/screens/search/update_product_upc_view.dart';
-import 'package:simple_barcode_scanner/simple_barcode_scanner.dart';
 
 import '../../../../../config/router/app_router.dart';
 import '../../../../../config/theme/app_theme.dart';
-import '../../../../shared/common/scan_button.dart';
 import '../../../../shared/common/scanner.dart';
+import '../../../common/input_dialog.dart';
+import '../../../common/scan_button_by_action_fixed_short.dart';
+import '../../providers/common_provider.dart';
 import '../movement/provider/products_home_provider.dart';
 import '../../../../shared/data/memory.dart';
 import '../../../../shared/data/messages.dart';
@@ -18,16 +18,15 @@ import '../../providers/product_provider_common.dart';
 import '../../providers/product_search_provider.dart';
 import '../../providers/products_scan_notifier.dart';
 import '../../widget/no_data_card.dart';
-import 'scan_product_barcode_button.dart';
 
 
 class ProductSearchScreen extends ConsumerStatefulWidget implements Scanner {
   int countScannedCamera =0;
   late ProductsScanNotifier productsNotifier ;
   final int actionTypeInt = Memory.ACTION_FIND_BY_UPC_SKU ;
-  int scanAction = ScanButton.SCAN_TO_SEARCH;
-  late bool usePhoneCamera = false;
   late int pageIndex = Memory.PAGE_INDEX_SEARCH;
+
+  final int actionScanType=Memory.ACTION_FIND_BY_UPC_SKU;
 
   ProductSearchScreen({super.key});
 
@@ -50,7 +49,6 @@ class ProductSearchScreen extends ConsumerStatefulWidget implements Scanner {
 class _ProductSearchScreenState extends ConsumerState<ProductSearchScreen> {
   @override
   void initState() {
-    widget.usePhoneCamera = ref.read(usePhoneCameraToScanProvider); // bo
     super.initState();
   }
   @override
@@ -60,9 +58,7 @@ class _ProductSearchScreenState extends ConsumerState<ProductSearchScreen> {
     widget.productsNotifier = ref.watch(scanHandleNotifierProvider.notifier);
     final double width = MediaQuery.of(context).size.width - 30;
     final double bodyHeight = MediaQuery.of(context).size.height - 200;
-    final isScanning = ref.watch(isScanningProvider);
-    final usePhoneCamera = ref.watch(usePhoneCameraToScanProvider);
-
+    final showScan = ref.watch(showScanFixedButtonProvider(widget.actionScanType));
 
     String imageUrl =Memory.IMAGE_HTTP_SAMPLE_1; // Example image URL
     widget.countScannedCamera = ref.watch(scannedCodeTimesProvider.notifier).state;
@@ -106,8 +102,18 @@ class _ProductSearchScreenState extends ConsumerState<ProductSearchScreen> {
                   unselectedLabelStyle: TextStyle(fontSize: themeFontSizeLarge),
                 ),
                 const Spacer(),
-
+                if(showScan) ScanButtonByActionFixedShort(
+                  actionTypeInt: widget.actionScanType,
+                  onOk: widget.productsNotifier.handleInputString,),
                 IconButton(
+                  icon: const Icon(Icons.keyboard,color: Colors.purple),
+                  onPressed: () => {
+                    openInputDialogWithAction(ref: ref, history: false,
+                        onOk: widget.productsNotifier.handleInputString,
+                        actionScan:  widget.actionScanType)
+                  },
+                ),
+                /*IconButton(
                   onPressed: () {
                     // toggle del provider
                     final notifier =
@@ -120,28 +126,68 @@ class _ProductSearchScreenState extends ConsumerState<ProductSearchScreen> {
                         : Icons.camera,
                     color: Colors.black,
                   ),
-                ),
+                ),*/
               ],
             ),
           ),
-          bottomNavigationBar: BottomAppBar(
-            color: themeColorPrimary,
-            height: Memory.BOTTOM_BAR_HEIGHT,
-            child: getScanButton(context),
-          ),
+
           body: PopScope(
             onPopInvokedWithResult: (bool didPop, Object? result) async {
               if (didPop) {
                 return;
               }
-              ref.read(usePhoneCameraToScanProvider.notifier).state = widget.usePhoneCamera;
               context.go(AppRouter.PAGE_HOME);
             },
             child: TabBarView(
 
               children: [
-
                 SizedBox(
+                  height: bodyHeight,
+                  child: Column(
+                    spacing: 10,
+                    children: [
+                      Container(
+                        width: width,
+                        //height: singleProductDetailCardHeight,
+                        margin: EdgeInsets.symmetric(horizontal: 10),
+                        decoration: BoxDecoration(
+                          color: Colors.grey[200],
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: productAsync.when(
+                          data: (products) {
+                            WidgetsBinding.instance.addPostFrameCallback((_) async {
+                              ref.read(isScanningProvider.notifier).state = false;
+                            });
+                            return  (products.id != null && products.id! > 0) ?
+                            getProductDetailCard(productsNotifier: widget.productsNotifier,
+                                product: products.copyWith(imageURL: imageUrl,uPC: null)) : NoDataCard();
+
+                          },error: (error, stackTrace) => Text('Error: $error'),
+                          loading: () =>  LinearProgressIndicator(),
+                        ),
+                      ),
+                      if(isCanEditUPC())Padding(
+                          padding: const EdgeInsets.all(20.0),
+                          child: SizedBox(
+                            width: MediaQuery.of(context).size.width,
+                            child: TextButton(
+                                style: TextButton.styleFrom(
+                                  backgroundColor: Colors.purple,
+                                  foregroundColor: Colors.white,
+                                ),
+                                onPressed: (){
+                                  Navigator.of(context).push(MaterialPageRoute(builder: (context)
+                                  => UpdateProductUpcScreen()));
+                                },
+                                child: Text(Messages.UPDATE_UPC)),
+                          )),
+
+                    ],
+                  ),
+                ),
+
+                /*SizedBox(
                   height: bodyHeight,
                   child: ListView.separated(
                     itemCount: 6, // Adjust the number of items as needed
@@ -151,13 +197,14 @@ class _ProductSearchScreenState extends ConsumerState<ProductSearchScreen> {
                         //return getScanButton(context);
                         return Container();
                       } else if (index == 1) {
-                        return isScanning
+                        return Container();
+                        *//*return isScanning
                             ? LinearProgressIndicator(
                           backgroundColor: Colors.cyan,
                           color: foreGroundProgressBar,
                           minHeight: 36,
                         )
-                            : getSearchBar(context);
+                            : getSearchBar(context);*//*
                       }
                       else if (index == 2) {
                         return Container(
@@ -200,16 +247,11 @@ class _ProductSearchScreenState extends ConsumerState<ProductSearchScreen> {
                         return SizedBox(height: 40);
                       }
 
-                      /*else if (index == 5) {
-                        return ref.watch(usePhoneCameraToScanProvider) ?_buttonScanWithPhone(context, ref):
-                               Container() ;
-                      }*/
-
                       return SizedBox.shrink(); // Should not happen with proper itemCount
                     },
 
                   ),
-                ),
+                ),*/
                 // Add more TabBarView children if you have more tabs
                 UpdateProductUpcView(),
               ],
@@ -220,7 +262,7 @@ class _ProductSearchScreenState extends ConsumerState<ProductSearchScreen> {
     );
   }
 
-  Widget _buttonScanWithPhone(BuildContext context,WidgetRef ref) {
+  /*Widget _buttonScanWithPhone(BuildContext context,WidgetRef ref) {
     bool isScanning = ref.watch(isScanningProvider);
     return GestureDetector(
       onTap: isScanning ? null :  () async {
@@ -375,7 +417,7 @@ class _ProductSearchScreenState extends ConsumerState<ProductSearchScreen> {
         cameraNotifier.state = stateActual;
       },
     ).show();
-  }
+  }*/
 
   Widget getProductDetailCard({required ProductsScanNotifier productsNotifier, required product}) {
     switch(widget.actionTypeInt){
@@ -421,7 +463,7 @@ class _ProductSearchScreenState extends ConsumerState<ProductSearchScreen> {
             ),
             height: MediaQuery.of(context).size.height,
             width: MediaQuery.of(context).size.width,
-            child: UpdateProductUpcScreen3(),
+            child: UpdateProductUpcScreen(),
 
           ),
           actions: <Widget>[
@@ -473,16 +515,5 @@ class _ProductSearchScreenState extends ConsumerState<ProductSearchScreen> {
       }),
     );
   }
-  Widget getScanButton(BuildContext context) {
 
-    if(ref.read(productsHomeCurrentIndexProvider.notifier).state==widget.pageIndex){
-      return ref.watch(isDialogShowedProvider)? Container() :
-      ref.watch(usePhoneCameraToScanProvider) ?_buttonScanWithPhone(context, ref):
-      ScanProductBarcodeButton(
-          notifier: widget.productsNotifier,
-          actionTypeInt: widget.actionTypeInt,pageIndex: widget.pageIndex);
-    } else {
-      return Container();
-    }
-  }
 }

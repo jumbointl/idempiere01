@@ -1,6 +1,5 @@
 import 'dart:convert';
 
-import 'package:awesome_dialog/awesome_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -13,7 +12,6 @@ import 'package:monalisa_app_001/features/products/presentation/widget/no_record
 import 'package:monalisa_app_001/features/products/presentation/screens/movement/edit_new/no_storage_on_hand_records_card.dart';
 
 import '../../../../../../config/router/app_router.dart';
-import '../../../../../../config/theme/app_theme.dart';
 import '../../../../common/input_dialog.dart';
 import '../../../../common/messages_dialog.dart';
 import '../../../../common/scan_button_by_action_fixed_short.dart';

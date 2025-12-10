@@ -1,6 +1,5 @@
 import 'package:monalisa_app_001/features/auth/domain/entities/role.dart';
 
-import 'environment.dart';
 
 class RolesApp {
   static final Map<String, bool> _roles = {

@@ -2,32 +2,34 @@ import 'package:awesome_dialog/awesome_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:monalisa_app_001/features/products/presentation/screens/search/product_result_with_photo_card.dart';
-import 'package:monalisa_app_001/features/products/presentation/screens/search/scan_barcode_for_update_upc_button.dart';
 import 'package:simple_barcode_scanner/simple_barcode_scanner.dart';
 
 import '../../../../shared/data/memory.dart';
 import '../../../../shared/data/messages.dart';
+import '../../../common/input_dialog.dart';
+import '../../../common/scan_button_by_action_fixed_short.dart';
 import '../../../domain/idempiere/idempiere_product.dart';
+import '../../providers/common_provider.dart';
 import '../../providers/product_provider_common.dart';
 import '../../providers/product_search_provider.dart';
 import '../../providers/product_update_upc_provider.dart';
 import '../../providers/products_update_notifier.dart';
 
 
-class UpdateProductUpcScreen3 extends ConsumerStatefulWidget {
+class UpdateProductUpcScreen extends ConsumerStatefulWidget {
   int countScannedCamera =0;
   late ProductsUpdateNotifier productsNotifier ;
   final int actionTypeInt = Memory.ACTION_UPDATE_UPC ;
 
-  UpdateProductUpcScreen3({super.key});
+  UpdateProductUpcScreen({super.key});
 
   @override
-  ConsumerState<ConsumerStatefulWidget> createState() => UpdateProductUpcScreen3State();
+  ConsumerState<ConsumerStatefulWidget> createState() => UpdateProductUpcScreenState();
 
 
 }
 
-class UpdateProductUpcScreen3State extends ConsumerState<UpdateProductUpcScreen3> {
+class UpdateProductUpcScreenState extends ConsumerState<UpdateProductUpcScreen> {
    late IdempiereProduct product;
    late var newUPCProvider ;
    late AsyncValue updateAsync;
@@ -50,24 +52,14 @@ class UpdateProductUpcScreen3State extends ConsumerState<UpdateProductUpcScreen3
     product = ref.watch(productForUpcUpdateProvider);
     updateAsync = ref.watch(updateProductUPCProvider);
     widget.productsNotifier = ref.watch(productUpdateStateNotifierProvider.notifier);
-    final double width = MediaQuery.of(context).size.width - 30;
     final double bodyHeight = MediaQuery.of(context).size.height - 100;
     final isScanning = ref.watch(isScanningProvider);
-    final usePhoneCamera = ref.watch(usePhoneCameraToScanProvider.notifier);
-    double singleProductDetailCardHeight = Memory.SIZE_PRODUCT_IMAGE_HEIGHT+20;
     newUPCProvider = ref.watch(newUPCToUpdateProvider);
-    String imageUrl =Memory.IMAGE_HTTP_SAMPLE_1; // Example image URL
     widget.countScannedCamera = ref.watch(scannedCodeTimesProvider.notifier).state;
-    if(widget.countScannedCamera.isEven){
-       imageUrl = Memory.IMAGE_HTTP_SAMPLE_2;
-    } else {
-      imageUrl = Memory.IMAGE_HTTP_SAMPLE_1;
-    }
+
     Color foreGroundProgressBar = Colors.amber[600]!;
-
+    final showScan = ref.watch(showScanFixedButtonProvider(widget.actionTypeInt));
     return Scaffold(
-
-
       appBar: AppBar(
         title: Text(Messages.PRODUCT),
           leading:IconButton(
@@ -79,16 +71,24 @@ class UpdateProductUpcScreen3State extends ConsumerState<UpdateProductUpcScreen3
              },
           ),
           actions: [
+          if(showScan) ScanButtonByActionFixedShort(
+              actionTypeInt: widget.actionTypeInt,
+              onOk: widget.productsNotifier.handleInputString,),
+            IconButton(
+              icon: const Icon(Icons.keyboard,color: Colors.purple),
+              onPressed: () => {
+              openInputDialogWithAction(ref: ref, history: false,
+              onOk: widget.productsNotifier.handleInputString,
+              actionScan:  widget.actionTypeInt)
+              },
+            ),
 
-            usePhoneCamera.state ? IconButton(
+           /* usePhoneCamera.state ? IconButton(
               icon: const Icon(Icons.barcode_reader),
               onPressed: () => { usePhoneCamera.state = false},
             ) :  IconButton(
             icon: const Icon(Icons.camera),
-            onPressed: () => { usePhoneCamera.state = true},
-
-          ),
-
+            onPressed: () => { usePhoneCamera.state = true},),*/
         ],
 
       ),
@@ -122,11 +122,7 @@ class UpdateProductUpcScreen3State extends ConsumerState<UpdateProductUpcScreen3
             _getUpdateUPCCard(context, product),
           ),
 
-            PreferredSize(
-                preferredSize: Size(double.infinity,30),
-                child: SizedBox(width: MediaQuery.of(context).size.width, child:
-                ref.watch(usePhoneCameraToScanProvider) ? _buttonScanWithPhone(context, ref):
-                ScanBarcodeForUpdateUpcButton(widget.productsNotifier, actionTypeInt: widget.actionTypeInt,))),
+
           ],
         ),
       ),

@@ -661,7 +661,175 @@ Widget keyboardButtons(BuildContext context, WidgetRef ref,TextEditingController
 
 }
 
-Widget numberButtonsNoProcessor(BuildContext context, WidgetRef ref,TextEditingController textController){
+Widget numberButtonsNoProcessor(
+    BuildContext context, WidgetRef ref, TextEditingController textController) {
+  final double keyboardWidth = MediaQuery.of(context).size.width * 0.7;
+
+  // Definimos los botones numéricos
+  final List<_NumButtonData?> numericButtons = [
+    _NumButtonData(label: '1', value: 1),
+    _NumButtonData(label: '2', value: 2),
+    _NumButtonData(label: '3', value: 3),
+    _NumButtonData(label: '4', value: 4),
+    _NumButtonData(label: '5', value: 5),
+    _NumButtonData(label: '6', value: 6),
+    _NumButtonData(label: '7', value: 7),
+    _NumButtonData(label: '8', value: 8),
+    _NumButtonData(label: '9', value: 9),
+    null, // celda vacía para completar 3x4
+    _NumButtonData(label: '0', value: 0),
+    null, // celda vacía para completar 3x4
+  ];
+
+  return Center(
+    child: Column(
+      spacing: 20,
+      children: [
+        // ⬇️ Grid 3x4 con los números
+        SizedBox(
+          width: keyboardWidth,
+          child: GridView.count(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            crossAxisCount: 3,
+            mainAxisSpacing: 8,
+            crossAxisSpacing: 8,
+            childAspectRatio: 1, // cuadrado
+            children: numericButtons.map((btn) {
+              if (btn == null) {
+                return const SizedBox.shrink();
+              }
+              return TextButton(
+                onPressed: () =>
+                    addQuantityText(context, ref, textController, btn.value),
+                style: TextButton.styleFrom(
+                  backgroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    side: const BorderSide(color: Colors.black),
+                    borderRadius: BorderRadius.circular(5),
+                  ),
+                ),
+                child: Text(
+                  btn.label,
+                  style: TextStyle(
+                    color: Colors.black,
+                    fontSize: fontSizeMedium,
+                  ),
+                ),
+              );
+            }).toList(),
+          ),
+        ),
+
+        // ⬇️ Fila de controles especiales: -, ., <=, CLEAR
+        SizedBox(
+          width: keyboardWidth,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              // -
+              TextButton(
+                onPressed: () =>
+                    addQuantityText(context, ref, textController, -4),
+                style: TextButton.styleFrom(
+                  backgroundColor: Colors.white,
+                  minimumSize: const Size(60, 60),
+                  shape: RoundedRectangleBorder(
+                    side: const BorderSide(color: Colors.black),
+                    borderRadius: BorderRadius.circular(5),
+                  ),
+                ),
+                child: Text(
+                  '-',
+                  style: TextStyle(
+                    color: Colors.black,
+                    fontSize: fontSizeMedium,
+                  ),
+                ),
+              ),
+
+              // .
+              TextButton(
+                onPressed: () =>
+                    addQuantityText(context, ref, textController, -3),
+                style: TextButton.styleFrom(
+                  backgroundColor: Colors.white,
+                  minimumSize: const Size(60, 60),
+                  shape: RoundedRectangleBorder(
+                    side: const BorderSide(color: Colors.black),
+                    borderRadius: BorderRadius.circular(5),
+                  ),
+                ),
+                child: Text(
+                  '.',
+                  style: TextStyle(
+                    color: Colors.black,
+                    fontSize: fontSizeMedium,
+                  ),
+                ),
+              ),
+
+              // <=
+              TextButton(
+                onPressed: () =>
+                    addQuantityText(context, ref, textController, -2),
+                style: TextButton.styleFrom(
+                  backgroundColor: Colors.white,
+                  minimumSize: const Size(60, 60),
+                  shape: RoundedRectangleBorder(
+                    side: const BorderSide(color: Colors.black),
+                    borderRadius: BorderRadius.circular(5),
+                  ),
+                ),
+                child: Text(
+                  '<=',
+                  style: TextStyle(
+                    color: Colors.black,
+                    fontSize: fontSizeMedium,
+                  ),
+                ),
+              ),
+
+              // CLEAR (ocupa más ancho)
+              SizedBox(
+                width: keyboardWidth * 0.35,
+                height: 60,
+                child: TextButton(
+                  onPressed: () =>
+                      addQuantityText(context, ref, textController, -1),
+                  style: TextButton.styleFrom(
+                    backgroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      side: const BorderSide(color: Colors.black),
+                      borderRadius: BorderRadius.circular(5),
+                    ),
+                  ),
+                  child: Text(
+                    Messages.CLEAR,
+                    style: TextStyle(
+                      color: Colors.black,
+                      fontSize: fontSizeMedium,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    ),
+  );
+}
+
+// Clasecita interna solo para organizar datos de los botones
+class _NumButtonData {
+  final String label;
+  final int value;
+
+  _NumButtonData({required this.label, required this.value});
+}
+
+/*Widget numberButtonsNoProcessor(BuildContext context, WidgetRef ref,TextEditingController textController){
   double widthButton = 60 ;
   return Center(
 
@@ -964,7 +1132,7 @@ Widget numberButtonsNoProcessor(BuildContext context, WidgetRef ref,TextEditingC
             ),
           ],
         ),
-        /*SizedBox(
+        *//*SizedBox(
           width: widthButton*5 + 4*4,
           height: widthButton,
           child: TextButton(
@@ -987,14 +1155,14 @@ Widget numberButtonsNoProcessor(BuildContext context, WidgetRef ref,TextEditingC
               ),
             ),
           ),
-        ),*/
+        ),*//*
 
       ],
     ),
   );
 
 
-}
+}*/
 void addQuantityText(BuildContext context, WidgetRef ref,
     TextEditingController quantityController,int quantity) {
 

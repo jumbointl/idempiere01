@@ -66,5 +66,19 @@ class ProductsUpdateNotifier  extends StateNotifier<List<IdempiereProduct>>{
   }
 
 
+
+  void handleInputString({required int actionScan, required String inputData,
+             required WidgetRef ref}) {
+    switch(actionScan){
+      case Memory.ACTION_FIND_BY_UPC_SKU:
+        addBarcodeByUPCOrSKUForSearch(inputData);
+        break;
+      case Memory.ACTION_UPDATE_UPC:
+        updateProductUPC(ref.context);
+        break;
+
+
+    }
+  }
 }
 
