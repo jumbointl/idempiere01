@@ -49,4 +49,17 @@ class LineConfirm {
       scrappedQty: scrappedQty ?? this.scrappedQty,
     );
   }
+
+  Map<String, dynamic> toJson() {
+    return {
+      "id": id,
+      "M_InOutLine_ID": mInOutLineId?.toJson(),
+      "M_MovementLine_ID": mMovementLineId?.toJson(),
+      "TargetQty": targetQty,
+      "ConfirmedQty": confirmedQty,
+      "DifferenceQty": differenceQty,
+      "ScrappedQty": scrappedQty,
+    };
+  }
+
 }

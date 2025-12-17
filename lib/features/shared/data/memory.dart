@@ -76,7 +76,7 @@ class Memory {
 
   static String KEY_SCAN_ACTION='scan_action';
 
-  static const String IDEMPIERE_DOC_TYPE_DRAFT = 'DR';
+
 
   static const int TYPE_DIALOG_SEARCH = 1;
   static const int TYPE_DIALOG_HISTOY = 2;
@@ -129,7 +129,7 @@ class Memory {
 
   static String URL_CUPS_SERVER ='http://192.168.188.108:3100/print';
 
-  static String VERSIONS='1.01.049';
+  static String VERSIONS='1.01.056';
 
   static String getUrlCupsServerWithPrinter({required String ip,
     required String port,required String printerName}){
@@ -197,6 +197,10 @@ class Memory {
   );
 
   static int NO_MM_ELECTRONIC_DELIVERY_NOTE_ID =-2;
+  static const String IDEMPIERE_DOC_TYPE_DRAFT = 'DR';
+  static String IDEMPIERE_DOC_TYPE_COMPLETED='CO';
+  static String IDEMPIERE_DOC_TYPE_CANCEL='VO';
+  static String IDEMPIERE_DOC_TYPE_IN_PROCESS='IP';
 
   static int? get IDEMPIERE_DOC_TYPE_MATERIAL_MOVEMENT => materialMovement.id;
   static int? get IDEMPIERE_DOC_TYPE_MATERIAL_MOVEMENT_WITH_CONFIRM => materialMovementWithConfirm.id;

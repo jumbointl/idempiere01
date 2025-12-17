@@ -16,7 +16,6 @@ import '../../../../../../config/theme/app_theme.dart';
 import '../../../../../auth/presentation/providers/auth_provider.dart';
 import '../../../../../shared/data/memory.dart';
 import '../../../../../shared/data/messages.dart';
-import '../../../../common/messages_dialog.dart';
 import '../../../../domain/idempiere/idempiere_locator.dart';
 import '../../../../domain/idempiere/idempiere_storage_on_hande.dart';
 import '../../../../domain/idempiere/idempiere_warehouse.dart';
@@ -57,38 +56,6 @@ class UnsortedStorageOnHandScreen extends ConsumerStatefulWidget implements Inpu
     notifier.handleInputString(ref:ref, inputData:inputData,actionScan:actionScan);
 
   }
-  @override
-  void addQuantityText(BuildContext context, WidgetRef ref,
-      TextEditingController quantityController,int quantity) {
-    if(quantity==-1){
-      quantityController.text = '';
-      return;
-    }
-    String s =  quantityController.text;
-    String s1 = s;
-    String s2 ='';
-    if(s.contains('.')) {
-      s1 = s.split('.').first;
-      s2 = s.split('.').last;
-    }
-
-    String r ='';
-    if(s.contains('.')){
-      r='$s1$quantity.$s2';
-    } else {
-      r='$s1$quantity';
-    }
-
-    int? aux = int.tryParse(r);
-    if(aux==null || aux<=0){
-      String message =  '${Messages.ERROR_QUANTITY} $quantity';
-      showErrorMessage(context, ref, message);
-      return;
-    }
-    quantityController.text = aux.toString();
-
-  }
-
 
 }
 
@@ -129,8 +96,6 @@ class UnsortedStorageOnHandScreenState extends ConsumerState<UnsortedStorageOnHa
       final id = locatorFrom?.id ?? -1;
       ref.read(actualLocatorFromProvider.notifier).state = id;
       ref.read(actualWarehouseToProvider.notifier).state = 0;
-
-
     });
     super.initState();
     putAwayMovement = PutAwayMovement();
@@ -381,7 +346,9 @@ class UnsortedStorageOnHandScreenState extends ConsumerState<UnsortedStorageOnHa
           isCardsSelected[index] = !isCardsSelected[index]; // Update the corresponding index in isCardsSelected
         });
         FocusScope.of(context).unfocus();
-        _getQuantityToMoveDialog(context, ref, index);
+        getDoubleDialog(ref:  ref, quantity:  qtyOnHand ?? 0,
+          targetProvider: quantityToMoveProvider,
+        );
       },
       child: Container(
         //margin: EdgeInsets.all(5),
@@ -461,331 +428,6 @@ class UnsortedStorageOnHandScreenState extends ConsumerState<UnsortedStorageOnHa
       btnOkText: Messages.OK,
     ).show();
     return;
-  }
-
-
-
-  Widget _numberButtons(BuildContext context, WidgetRef ref,TextEditingController quantityController){
-    double widthButton = 40 ;
-    return Center(
-
-      //margin: EdgeInsets.only(left: 10, right: 10,),
-      child: Column(
-        children: [
-          Row(
-            spacing: 4,
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              TextButton(
-                onPressed: () => widget.addQuantityText(context,ref,quantityController,0),
-                style: TextButton.styleFrom(
-                    backgroundColor: Colors.white,
-                    minimumSize: Size(widthButton, 37),
-                    shape: RoundedRectangleBorder(
-                      side: BorderSide(color: Colors.black),
-                      borderRadius: BorderRadius.circular(5),
-
-                    )
-                ),
-                child: Text(
-                  '0',
-                  style: TextStyle(
-                      color: Colors.black,
-                      fontSize: fontSizeMedium
-                  ),
-                ),
-              ),
-              TextButton(
-                onPressed: () => widget.addQuantityText(context,ref,quantityController,1),
-                style: TextButton.styleFrom(
-                    backgroundColor: Colors.white,
-                    minimumSize: Size(widthButton, 37),
-                    shape: RoundedRectangleBorder(
-                      side: BorderSide(color: Colors.black),
-                      borderRadius: BorderRadius.circular(5),
-
-                    )
-                ),
-                child: Text(
-                  '1',
-                  style: TextStyle(
-                      color: Colors.black,
-                      fontSize: fontSizeMedium
-                  ),
-                ),
-              ),
-              TextButton(
-                onPressed: () => widget.addQuantityText(context,ref,quantityController,2),
-                style: TextButton.styleFrom(
-                    backgroundColor: Colors.white,
-                    minimumSize: Size(widthButton, 37),
-                    shape: RoundedRectangleBorder(
-                      side: BorderSide(color: Colors.black),
-
-                      borderRadius: BorderRadius.circular(5),
-
-                    )
-                ),
-                child: Text(
-                  '2',
-                  style: TextStyle(
-                      color: Colors.black,
-                      fontSize: fontSizeMedium
-                  ),
-                ),
-              ),
-              TextButton(
-                onPressed: () => widget.addQuantityText(context,ref,quantityController,3),
-                style: TextButton.styleFrom(
-                    backgroundColor: Colors.white,
-                    minimumSize: Size(widthButton, 37),
-                    shape: RoundedRectangleBorder(
-                      side: BorderSide(color: Colors.black),
-                      borderRadius: BorderRadius.circular(5),
-
-                    )
-                ),
-                child: Text(
-                  '3',
-                  style: TextStyle(
-                      color: Colors.black,
-                      fontSize: fontSizeMedium
-                  ),
-                ),
-              ),
-              TextButton(
-                onPressed: () => widget.addQuantityText(context,ref,quantityController,4),
-                style: TextButton.styleFrom(
-                    backgroundColor: Colors.white,
-                    minimumSize: Size(widthButton, 37),
-                    shape: RoundedRectangleBorder(
-                      side: BorderSide(color: Colors.black),
-                      borderRadius: BorderRadius.circular(5),
-
-                    )
-                ),
-                child: Text(
-                  '4',
-                  style: TextStyle(
-                      color: Colors.black,
-                      fontSize: fontSizeMedium
-                  ),
-                ),
-              ),
-
-            ],
-          ),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            spacing: 4,
-            children: [
-
-
-              TextButton(
-                onPressed: () => widget.addQuantityText(context,ref,quantityController,5),
-                style: TextButton.styleFrom(
-                    backgroundColor: Colors.white,
-                    minimumSize: Size(widthButton, 37),
-                    shape: RoundedRectangleBorder(
-                      side: BorderSide(color: Colors.black),
-                      borderRadius: BorderRadius.circular(5),
-
-                    )
-                ),
-                child: Text(
-                  '5',
-                  style: TextStyle(
-                      color: Colors.black,
-                      fontSize: fontSizeMedium
-                  ),
-                ),
-              ),
-              TextButton(
-                onPressed: () => widget.addQuantityText(context,ref,quantityController,6),
-                style: TextButton.styleFrom(
-                    backgroundColor: Colors.white,
-                    minimumSize: Size(widthButton, 37),
-                    shape: RoundedRectangleBorder(
-                      side: BorderSide(color: Colors.black),
-                      borderRadius: BorderRadius.circular(5),
-
-                    )
-                ),
-                child: Text(
-                  '6',
-                  style: TextStyle(
-                      color: Colors.black,
-                      fontSize: fontSizeMedium
-                  ),
-                ),
-              ),
-              TextButton(
-                onPressed: () => widget.addQuantityText(context,ref,quantityController,7),
-                style: TextButton.styleFrom(
-                    backgroundColor: Colors.white,
-                    minimumSize: Size(widthButton, 37),
-                    shape: RoundedRectangleBorder(
-                      side: BorderSide(color: Colors.black),
-                      borderRadius: BorderRadius.circular(5),
-
-                    )
-                ),
-                child: Text(
-                  '7',
-                  style: TextStyle(
-                      color: Colors.black,
-                      fontSize: fontSizeMedium
-                  ),
-                ),
-              ),
-              TextButton(
-                onPressed: () => widget.addQuantityText(context,ref,quantityController,4),
-                style: TextButton.styleFrom(
-                    backgroundColor: Colors.white,
-                    minimumSize: Size(widthButton, 37),
-                    shape: RoundedRectangleBorder(
-                      side: BorderSide(color: Colors.black),
-                      borderRadius: BorderRadius.circular(5),
-
-                    )
-                ),
-                child: Text(
-                  '8',
-                  style: TextStyle(
-                      color: Colors.black,
-                      fontSize: fontSizeMedium
-                  ),
-                ),
-              ),
-
-              TextButton(
-                onPressed: () => widget.addQuantityText(context,ref,quantityController,9),
-                style: TextButton.styleFrom(
-                    backgroundColor: Colors.white,
-                    minimumSize: Size(widthButton, 37),
-                    shape: RoundedRectangleBorder(
-                      side: BorderSide(color: Colors.black),
-                      borderRadius: BorderRadius.circular(5),
-
-                    )
-                ),
-                child: Text(
-                  '9',
-                  style: TextStyle(
-                      color: Colors.black,
-                      fontSize: fontSizeMedium
-                  ),
-                ),
-              ),
-
-            ],
-          ),
-          SizedBox(height: 20,),
-          SizedBox(
-            width: widthButton*5 + 4*4,
-            height: 37,
-            child: TextButton(
-              onPressed: () => widget.addQuantityText(context,ref,quantityController,-1),
-              style: TextButton.styleFrom(
-                  backgroundColor: Colors.white,
-                  minimumSize: Size(widthButton*5 + 4*4, 37), // width of 5 buttons + 4 spacing
-                  shape: RoundedRectangleBorder(
-                    side: BorderSide(color: Colors.black),
-                    borderRadius: BorderRadius.circular(5),
-
-                  )
-              ),
-
-              child: Text(
-                Messages.CLEAR,
-                style: TextStyle(
-                    color: Colors.black,
-                    fontSize: fontSizeMedium
-                ),
-              ),
-            ),
-          ),
-
-        ],
-      ),
-    );
-
-
-  }
-  Future<void> _getQuantityToMoveDialog(BuildContext context, WidgetRef ref,int index) async {
-    TextEditingController quantityController = TextEditingController();
-    double qtyOnHand = storageList[index].qtyOnHand ?? 0;
-    quantityController.text = Memory.numberFormatter0Digit.format(storageList[index].qtyOnHand);
-    AwesomeDialog(
-      context: context,
-      animType: AnimType.scale,
-      dialogType: DialogType.noHeader,
-      body: SizedBox(
-        height: 300,
-        width: 350,//Set the desired height for the AlertDialog
-        child: Column(
-          spacing: 5,
-          children: [
-            Text(Messages.QUANTITY_TO_MOVE,style: TextStyle(
-              fontSize: fontSizeLarge,
-              fontWeight: FontWeight.bold,
-            ),),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 30.0),
-              child: TextField(
-                autofocus: false,
-                enabled: false,
-                controller: quantityController,
-                textAlign: TextAlign.end,
-                style: TextStyle(
-                  fontSize: fontSizeLarge,
-                  color: Colors.purple,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ),
-            SizedBox(height: 10,),
-            _numberButtons(context, ref,quantityController),
-          ],
-        ),
-      ),
-      title:  Messages.QUANTITY_TO_MOVE,
-      desc:   '',
-      btnOkOnPress: () {
-        String quantity = quantityController.text;
-        if(quantity.isEmpty){
-          String message =  '${Messages.ERROR_QUANTITY} ${Messages.EMPTY}';
-          showErrorMessage(context, ref, message);
-          return;
-        }
-
-        double? aux = double.tryParse(quantity);
-        if(aux!=null && aux>0){
-          if(aux<=qtyOnHand){
-            ref.read(quantityToMoveProvider.notifier).state = aux;
-          } else {
-            String message =  aux>0 ? '${Messages.ERROR_QUANTITY} ${Memory.numberFormatter0Digit.format(aux)}>${Memory.numberFormatter0Digit.format(qtyOnHand)}' :
-            '${Messages.ERROR_QUANTITY} $quantity';
-            showErrorMessage(context, ref, message);
-            quantityController.text = Memory.numberFormatter0Digit.format(qtyOnHand);
-            return;
-          }
-        } else {
-          String message =  '${Messages.ERROR_QUANTITY} ${aux==null ? Messages.EMPTY : quantity}';
-          showErrorMessage(context, ref, message);
-          return;
-        }
-
-      },
-      btnOkColor: Colors.green,
-      buttonsTextStyle: const TextStyle(color: Colors.white),
-      btnCancelText: Messages.CANCEL,
-      btnCancelOnPress: (){
-        ref.read(quantityToMoveProvider.notifier).state = 0;
-      },
-      btnCancelColor: Colors.red,
-      btnOkText: Messages.OK,
-    ).show();
   }
 
 
@@ -927,3 +569,6 @@ class UnsortedStorageOnHandScreenState extends ConsumerState<UnsortedStorageOnHa
   }
 
 }
+
+
+// Clasecita interna solo para organizar datos de los botones

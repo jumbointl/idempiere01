@@ -13,15 +13,12 @@ import 'package:monalisa_app_001/features/products/presentation/screens/movement
 
 import '../../../../../../config/router/app_router.dart';
 import '../../../../common/input_dialog.dart';
-import '../../../../common/messages_dialog.dart';
 import '../../../../common/scan_button_by_action_fixed_short.dart';
 import '../../../providers/common_provider.dart';
 import '../../../providers/products_scan_notifier_for_line.dart';
 import 'custom_app_bar.dart';
 import 'product_detail_card_for_line.dart';
 import '../provider/products_home_provider.dart';
-import '../../../../../auth/domain/entities/warehouse.dart';
-import '../../../../../auth/presentation/providers/auth_provider.dart';
 import '../../../../../shared/data/memory.dart';
 import '../../../../../shared/data/messages.dart';
 import '../../../providers/product_provider_common.dart';
@@ -41,6 +38,7 @@ class ProductStoreOnHandScreenForLine extends ConsumerStatefulWidget implements 
   bool isMovementSearchedShowed = false;
   String productId;
   MovementAndLines movementAndLines;
+  bool asyncResultHandled = false ;
   ProductStoreOnHandScreenForLine({
     required this.productId,
     required this.argument,
@@ -50,56 +48,14 @@ class ProductStoreOnHandScreenForLine extends ConsumerStatefulWidget implements 
   @override
   ConsumerState<ConsumerStatefulWidget> createState() => ProductStoreOnHandScreenForLineState();
 
-  @override
-  void addQuantityText(BuildContext context, WidgetRef ref,
-      TextEditingController quantityController,int quantity) {
-    if(quantity==-1){
-      quantityController.text = '';
-      return;
-    }
-    String s =  quantityController.text;
-    String s1 = s;
-    String s2 ='';
-    if(s.contains('.')) {
-      s1 = s.split('.').first;
-      s2 = s.split('.').last;
-    }
-
-    String r ='';
-    if(s.contains('.')){
-      r='$s1$quantity.$s2';
-    } else {
-      r='$s1$quantity';
-    }
-
-    int? aux = int.tryParse(r);
-    if(aux==null || aux<=0){
-      String message =  '${Messages.ERROR_QUANTITY} $quantity';
-      showErrorMessage(context, ref, message);
-      return;
-    }
-    quantityController.text = aux.toString();
-
-  }
-
-
-  void confirmMovementButtonPressed(BuildContext context, WidgetRef ref, String string) {
-
-  }
-
-  void lastMovementButtonPressed(BuildContext context, WidgetRef ref, String lastSearch) {}
-
-  void findMovementButtonPressed(BuildContext context, WidgetRef ref, String s) {}
-
-  void newMovementButtonPressed(BuildContext context, WidgetRef ref, String s) {}
 
   @override
   Future<void> handleInputString({required WidgetRef ref,required  String inputData,required int actionScan}) async {
+    asyncResultHandled = false ;
     print('handleInputString result scan: $inputData');
     productsNotifier.handleInputString(ref: ref, inputData: inputData,
         actionScan: actionTypeInt);
   }
-
 
 }
 
@@ -113,6 +69,7 @@ class ProductStoreOnHandScreenForLineState
   late var isScanning;
   late var showResultCard;
   int movementId =-1;
+
 
   MovementAndLines get movementAndLines {
 
@@ -205,10 +162,13 @@ class ProductStoreOnHandScreenForLineState
                   }
                   final double width = MediaQuery.of(context).size.width - 30;
 
-                  WidgetsBinding.instance.addPostFrameCallback((_) async {
-                     print('result from search ----------');
+                    WidgetsBinding.instance.addPostFrameCallback((_) async {
+                      if(!widget.asyncResultHandled) {
+                        widget.asyncResultHandled = true;
+                        print('result from search ----------');
+                      }
+                    });
 
-                  });
                   MemoryProducts.productWithStock = result;
                   return Column(
                     spacing: 10,

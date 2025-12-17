@@ -58,36 +58,98 @@ void showSuccessMessage(BuildContext context, WidgetRef ref, String message) {
   ).show();
   return;
 }
+/*Future<void> showSuccessMessageThenGoTo({
+  required WidgetRef ref,
+  required String message,
+  required String goToPage,
+}) async {
+  final BuildContext context = ref.context;
 
-void showSuccessMessageThenGoTo(BuildContext context, WidgetRef ref, String goToPage) {
+  if (!context.mounted) return;
+
+  // Esperamos a que el bottom sheet se cierre
+  await showModalBottomSheet(
+    context: context,
+    isDismissible: false,
+    enableDrag: false,
+    backgroundColor: Colors.white,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+    ),
+    builder: (sheetContext) {
+      return FractionallySizedBox(
+        heightFactor: 0.5,
+        widthFactor: 1,
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.check_circle, size: 40, color: Colors.green),
+            const SizedBox(height: 10),
+            Text(
+              message,
+              style: const TextStyle(
+                fontStyle: FontStyle.italic,
+                fontSize: 18,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 20),
+
+            // ---- BOTÓN OK ----
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.green,
+                foregroundColor: Colors.white,
+              ),
+              onPressed: () {
+                Navigator.of(sheetContext).pop(); // Cerrar bottom sheet
+              },
+              child: const Text("OK"),
+            ),
+          ],
+        ),
+      );
+    },
+  );
+
+  // Cuando el sheet ya se cerró, recién ahí navegamos
+  if (!context.mounted) return;
+  context.go(goToPage);
+}*/
+
+
+
+
+Future<void> showSuccessMessageThenGoTo({required WidgetRef ref,required String message,required String goToPage})  async{
+  BuildContext context = ref.context ;
   if (!context.mounted) {
-    Future.delayed(const Duration(seconds: 1));
+    Future.delayed(const Duration(microseconds: 500));
     if(!context.mounted) return;
   }
   AwesomeDialog(
+    dismissOnTouchOutside: false,
+    dismissOnBackKeyPress: false,
     context: context,
     animType: AnimType.scale,
     dialogType: DialogType.success,
     body: Center(child: Column(
       children: [
-        Text(goToPage,
+        Text(message,
           style: TextStyle(fontStyle: FontStyle.italic),
         ),
       ],
     ),),
     title:  Messages.SUCCESS,
     desc:   '',
-    autoHide: const Duration(seconds: 2),
-    btnOkOnPress: () {},
+    btnOkOnPress: () {
+      if(context.mounted) {
+        context.go(goToPage);
+      }
+    },
     btnOkColor: Colors.amber,
     btnCancelText: Messages.CANCEL,
     btnOkText: Messages.OK,
-  ).show().then((value) => {
-    if(context.mounted) {
-      context.go(goToPage)
-    }
-  })
-;
+  );
   return;
 }
 

@@ -334,6 +334,13 @@ class SqlDataMovementLine extends IdempiereMovementLine implements SqlData {
     mProductID = IdempiereProduct(id: id);
   }
   Map<String, dynamic> getUpdateMovementQuantityJson() {
-    return {"MovementQty": movementQty};
+    String aux ='0.0';
+    if(movementQty == null || movementQty == 0){
+      aux = '0.0';
+    }else{
+      aux = movementQty.toString();
+    }
+
+    return {"MovementQty": aux};
   }
 }

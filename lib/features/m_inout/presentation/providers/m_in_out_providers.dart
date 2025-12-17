@@ -1,3 +1,4 @@
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
@@ -5,6 +6,7 @@ import 'package:monalisa_app_001/features/m_inout/domain/entities/line.dart';
 import 'package:monalisa_app_001/features/m_inout/domain/entities/m_in_out.dart';
 import 'package:monalisa_app_001/features/m_inout/domain/entities/m_in_out_confirm.dart';
 import 'package:monalisa_app_001/features/m_inout/domain/repositories/m_in_out_repositiry.dart';
+import 'package:monalisa_app_001/features/products/common/messages_dialog.dart';
 import 'package:monalisa_app_001/features/products/common/number_input_panel.dart';
 import '../../../../config/constants/roles_app.dart';
 import '../../../../config/theme/app_theme.dart';
@@ -13,14 +15,16 @@ import '../../../products/common/selections_dialog.dart';
 import '../../domain/entities/barcode.dart';
 import '../../domain/entities/line_confirm.dart';
 import '../../infrastructure/repositories/m_in_out_repository_impl.dart';
-
+import 'm_in_ot_utils.dart';
 
 int quantityOfMovementAndScannedToAllowInputScannedQuantity = 3;
-const String KEY_QTY_ALLOW_INPUT = 'qtyOfMovementAndScannedToAllowInputScannedQuantity';
+const String KEY_QTY_ALLOW_INPUT =
+    'qtyOfMovementAndScannedToAllowInputScannedQuantity';
 final adjustScannedQtyProvider = StateProvider<bool>((ref) => true);
 
-final mInOutProvider =
-StateNotifierProvider<MInOutNotifier, MInOutStatus>((ref) {
+final mInOutProvider = StateNotifierProvider<MInOutNotifier, MInOutStatus>((
+  ref,
+) {
   return MInOutNotifier(mInOutRepository: MInOutRepositoryImpl());
 });
 
@@ -29,16 +33,18 @@ class MInOutNotifier extends StateNotifier<MInOutStatus> {
   final ScrollController scanBarcodeListScrollController = ScrollController();
 
   MInOutNotifier({required this.mInOutRepository})
-      : super(MInOutStatus(
-    mInOutList: [],
-    doc: '',
-    scanBarcodeListTotal: [],
-    scanBarcodeListUnique: [],
-    linesOver: [],
-    uniqueView: false,
-    viewMInOut: false,
-    isComplete: false,
-  ));
+    : super(
+        MInOutStatus(
+          mInOutList: [],
+          doc: '',
+          scanBarcodeListTotal: [],
+          scanBarcodeListUnique: [],
+          linesOver: [],
+          uniqueView: false,
+          viewMInOut: false,
+          isComplete: false,
+        ),
+      );
 
   void setParameters(String type) {
     if (type == 'shipment') {
@@ -168,10 +174,7 @@ class MInOutNotifier extends StateNotifier<MInOutStatus> {
     try {
       final mInOutResponse = await mInOutRepository.getMInOutList(ref);
       if (mInOutResponse.isEmpty) {
-        state = state.copyWith(
-          mInOutList: [],
-          isLoadingMInOutList: false,
-        );
+        state = state.copyWith(mInOutList: [], isLoadingMInOutList: false);
         return;
       }
       state = state.copyWith(
@@ -188,10 +191,14 @@ class MInOutNotifier extends StateNotifier<MInOutStatus> {
   }
 
   Future<List<MInOutConfirm>> getMInOutConfirmList(
-      int mInOutId, WidgetRef ref) async {
+    int mInOutId,
+    WidgetRef ref,
+  ) async {
     try {
-      final mInOutConfirmResponse =
-      await mInOutRepository.getMInOutConfirmList(mInOutId, ref);
+      final mInOutConfirmResponse = await mInOutRepository.getMInOutConfirmList(
+        mInOutId,
+        ref,
+      );
       if (mInOutConfirmResponse.isEmpty) {
         return [];
       }
@@ -209,10 +216,7 @@ class MInOutNotifier extends StateNotifier<MInOutStatus> {
     try {
       final mInOutResponse = await mInOutRepository.getMovementList(ref);
       if (mInOutResponse.isEmpty) {
-        state = state.copyWith(
-          mInOutList: [],
-          isLoadingMInOutList: false,
-        );
+        state = state.copyWith(mInOutList: [], isLoadingMInOutList: false);
         return;
       }
       state = state.copyWith(
@@ -229,10 +233,12 @@ class MInOutNotifier extends StateNotifier<MInOutStatus> {
   }
 
   Future<List<MInOutConfirm>> getMovementConfirmList(
-      int movementId, WidgetRef ref) async {
+    int movementId,
+    WidgetRef ref,
+  ) async {
     try {
-      final mInOutConfirmResponse =
-      await mInOutRepository.getMovementConfirmList(movementId, ref);
+      final mInOutConfirmResponse = await mInOutRepository
+          .getMovementConfirmList(movementId, ref);
       if (mInOutConfirmResponse.isEmpty) {
         return [];
       }
@@ -254,18 +260,21 @@ class MInOutNotifier extends StateNotifier<MInOutStatus> {
   Future<MInOut> getMInOutAndLine(WidgetRef ref) async {
     if (state.doc.trim().isEmpty) {
       state = state.copyWith(
-          errorMessage: 'Por favor ingrese un número de documento válido');
+        errorMessage: 'Por favor ingrese un número de documento válido',
+      );
       throw Exception('Por favor ingrese un número de documento válido');
     }
     if (state.mInOutType == MInOutType.shipment ||
         state.mInOutType == MInOutType.receipt) {
-      state =
-          state.copyWith(isLoading: true, viewMInOut: true, errorMessage: '');
+      state = state.copyWith(
+        isLoading: true,
+        viewMInOut: true,
+        errorMessage: '',
+      );
     }
 
     try {
-      final mInOutResponse =
-      await mInOutRepository.getMInOut(state.doc, ref);
+      final mInOutResponse = await mInOutRepository.getMInOut(state.doc, ref);
       final filteredLines = mInOutResponse.lines
           .where((line) => line.mProductId?.id != null)
           .toList();
@@ -279,7 +288,8 @@ class MInOutNotifier extends StateNotifier<MInOutStatus> {
         }
       }
       state = state.copyWith(
-        viewMInOut: state.mInOutType == MInOutType.receipt ||
+        viewMInOut:
+            state.mInOutType == MInOutType.receipt ||
             state.mInOutType == MInOutType.shipment,
         mInOut: mInOutResponse.copyWith(lines: filteredLines),
         isLoading: false,
@@ -296,30 +306,36 @@ class MInOutNotifier extends StateNotifier<MInOutStatus> {
   }
 
   Future<MInOutConfirm> getMInOutConfirmAndLine(
-      int mInOutConfirmId, WidgetRef ref) async {
+    int mInOutConfirmId,
+    WidgetRef ref,
+  ) async {
     state = state.copyWith(isLoading: true, viewMInOut: true, errorMessage: '');
     try {
-      final mInOutConfirmResponse =
-      await mInOutRepository.getMInOutConfirm(mInOutConfirmId, ref);
+      final mInOutConfirmResponse = await mInOutRepository.getMInOutConfirm(
+        mInOutConfirmId,
+        ref,
+      );
 
       final updatedLines = state.mInOut!.lines.map((line) {
-        final matchingConfirmLine =
-        mInOutConfirmResponse.linesConfirm.firstWhere(
+        final matchingConfirmLine = mInOutConfirmResponse.linesConfirm
+            .firstWhere(
               (confirmLine) =>
-          confirmLine.mInOutLineId!.id.toString() == line.id.toString(),
-          orElse: () => LineConfirm(id: -1),
-        );
+                  confirmLine.mInOutLineId!.id.toString() == line.id.toString(),
+              orElse: () => LineConfirm(id: -1),
+            );
         return line.copyWith(
-          confirmId:
-          matchingConfirmLine.id! > 0 ? matchingConfirmLine.id : null,
+          confirmId: matchingConfirmLine.id! > 0
+              ? matchingConfirmLine.id
+              : null,
           targetQty: matchingConfirmLine.targetQty,
           confirmedQty: matchingConfirmLine.confirmedQty,
           scrappedQty: matchingConfirmLine.scrappedQty,
         );
       }).toList();
 
-      final filteredLines =
-      updatedLines.where((line) => line.confirmId != null).toList();
+      final filteredLines = updatedLines
+          .where((line) => line.confirmId != null)
+          .toList();
 
       state = state.copyWith(
         mInOutConfirm: mInOutConfirmResponse,
@@ -340,17 +356,20 @@ class MInOutNotifier extends StateNotifier<MInOutStatus> {
   Future<MInOut> getMovementAndLine(WidgetRef ref) async {
     if (state.doc.trim().isEmpty) {
       state = state.copyWith(
-          errorMessage: 'Por favor ingrese un número de documento válido');
+        errorMessage: 'Por favor ingrese un número de documento válido',
+      );
       throw Exception('Por favor ingrese un número de documento válido');
     }
     if (state.mInOutType == MInOutType.move) {
-      state =
-          state.copyWith(isLoading: true, viewMInOut: true, errorMessage: '');
+      state = state.copyWith(
+        isLoading: true,
+        viewMInOut: true,
+        errorMessage: '',
+      );
     }
 
     try {
-      final mInOutResponse =
-      await mInOutRepository.getMovement(state.doc, ref);
+      final mInOutResponse = await mInOutRepository.getMovement(state.doc, ref);
       final filteredLines = mInOutResponse.lines
           .where((line) => line.mProductId?.id != null)
           .toList();
@@ -379,30 +398,39 @@ class MInOutNotifier extends StateNotifier<MInOutStatus> {
   }
 
   Future<MInOutConfirm> getMovementConfirmAndLine(
-      int movementConfirmId, WidgetRef ref) async {
+
+    int movementConfirmId,
+    WidgetRef ref,
+  ) async {
+    print('getMovementConfirmAndLine $movementConfirmId');
     state = state.copyWith(isLoading: true, viewMInOut: true, errorMessage: '');
     try {
-      final mInOutConfirmResponse = await mInOutRepository
-          .getMovementConfirm(movementConfirmId, ref);
+      final mInOutConfirmResponse = await mInOutRepository.getMovementConfirm(
+        movementConfirmId,
+        ref,
+      );
 
       final updatedLines = state.mInOut!.lines.map((line) {
-        final matchingConfirmLine =
-        mInOutConfirmResponse.linesConfirm.firstWhere(
+        final matchingConfirmLine = mInOutConfirmResponse.linesConfirm
+            .firstWhere(
               (confirmLine) =>
-          confirmLine.mMovementLineId!.id.toString() == line.id.toString(),
-          orElse: () => LineConfirm(id: -1),
-        );
+                  confirmLine.mMovementLineId!.id.toString() ==
+                  line.id.toString(),
+              orElse: () => LineConfirm(id: -1),
+            );
         return line.copyWith(
-          confirmId:
-          matchingConfirmLine.id! > 0 ? matchingConfirmLine.id : null,
+          confirmId: matchingConfirmLine.id! > 0
+              ? matchingConfirmLine.id
+              : null,
           targetQty: matchingConfirmLine.targetQty,
           confirmedQty: matchingConfirmLine.confirmedQty,
           scrappedQty: matchingConfirmLine.scrappedQty,
         );
       }).toList();
 
-      final filteredLines =
-      updatedLines.where((line) => line.confirmId != null).toList();
+      final filteredLines = updatedLines
+          .where((line) => line.confirmId != null)
+          .toList();
 
       state = state.copyWith(
         mInOutConfirm: mInOutConfirmResponse,
@@ -421,12 +449,15 @@ class MInOutNotifier extends StateNotifier<MInOutStatus> {
   }
 
   void clearMInOutData() {
+    print('clearMInOutData');
     state = state.copyWith(
       doc: '',
       mInOut: state.mInOut?.copyWith(id: null, lines: null),
       mInOutList: [],
-      mInOutConfirm:
-      state.mInOutConfirm?.copyWith(id: null, linesConfirm: null),
+      mInOutConfirm: state.mInOutConfirm?.copyWith(
+        id: null,
+        linesConfirm: null,
+      ),
       isSOTrx: false,
       scanBarcodeListTotal: [],
       scanBarcodeListUnique: [],
@@ -451,36 +482,37 @@ class MInOutNotifier extends StateNotifier<MInOutStatus> {
   }
 
   void confirmManualLine(BuildContext context, Line line) {
-    line = line.copyWith(
-      verifiedStatus: 'manually',
-    );
+    line = line.copyWith(verifiedStatus: 'manually');
     final List<Line> updatedLines = state.mInOut!.lines;
     final int index = updatedLines.indexWhere((l) => l.id == line.id);
     if (index != -1) {
       final Line verifyLine = _verifyLineStatusQty(
-          line,
-          line.scanningQty?.toDouble() ?? 0.0,
-          state.manualQty,
-          state.scrappedQty);
+        line,
+        line.scanningQty?.toDouble() ?? 0.0,
+        state.manualQty,
+        state.scrappedQty,
+      );
       updatedLines[index] = verifyLine;
-      state =
-          state.copyWith(mInOut: state.mInOut!.copyWith(lines: updatedLines));
+      state = state.copyWith(
+        mInOut: state.mInOut!.copyWith(lines: updatedLines),
+      );
       updatedMInOutLine('');
     }
   }
-
 
   void resetManualLine(Line line) {
     final List<Line> updatedLines = state.mInOut!.lines;
     final int index = updatedLines.indexWhere((l) => l.id == line.id);
     if (index != -1) {
       updatedLines[index] = line.copyWith(
-          manualQty: 0,
-          confirmedQty: 0,
-          scrappedQty: 0,
-          verifiedStatus: 'pending');
-      state =
-          state.copyWith(mInOut: state.mInOut!.copyWith(lines: updatedLines));
+        manualQty: 0,
+        confirmedQty: 0,
+        scrappedQty: 0,
+        verifiedStatus: 'pending',
+      );
+      state = state.copyWith(
+        mInOut: state.mInOut!.copyWith(lines: updatedLines),
+      );
       updatedMInOutLine('');
     }
   }
@@ -492,8 +524,10 @@ class MInOutNotifier extends StateNotifier<MInOutStatus> {
   Future<void> confirmEditLocator(Line line, WidgetRef ref) async {
     String locator = line.mLocatorId!.identifier!.split(' => ').first.trim();
     try {
-      final idLocator =
-      await mInOutRepository.getLocator(state.editLocator, ref);
+      final idLocator = await mInOutRepository.getLocator(
+        state.editLocator,
+        ref,
+      );
       final updatedLocator = line.mLocatorId?.copyWith(
         identifier: '$locator => ${state.editLocator}',
       );
@@ -504,12 +538,14 @@ class MInOutNotifier extends StateNotifier<MInOutStatus> {
       final updatedLines = state.mInOut!.lines
           .map((l) => l.id == line.id ? updatedLine : l)
           .toList();
-      state =
-          state.copyWith(mInOut: state.mInOut!.copyWith(lines: updatedLines));
+      state = state.copyWith(
+        mInOut: state.mInOut!.copyWith(lines: updatedLines),
+      );
       updatedMInOutLine('');
     } catch (e) {
       state = state.copyWith(
-          errorMessage: 'Error al actualizar la ubicación: ${e.toString()}');
+        errorMessage: 'Error al actualizar la ubicación: ${e.toString()}',
+      );
     }
   }
 
@@ -535,12 +571,16 @@ class MInOutNotifier extends StateNotifier<MInOutStatus> {
   }
 
   bool isConfirmMInOut() {
-    print('state.mInOut?.docStatus.id ${state.mInOut?.docStatus.id?.toString() ?? 'NULL'}');
+    print(
+      'state.mInOut?.docStatus.id ${state.mInOut?.docStatus.id?.toString() ?? 'NULL'}',
+    );
     if (((state.mInOutType == MInOutType.shipment ||
-        state.mInOutType == MInOutType.receipt) &&
-        state.mInOut?.docStatus.id.toString() == 'IP') ||
+                state.mInOutType == MInOutType.receipt) &&
+            state.mInOut?.docStatus.id.toString() == 'IP') ||
         state.mInOutType == MInOutType.move) {
-      print('state.mInOut?.docStatus.id ${state.mInOut?.docStatus.id?.toString() ?? 'NULL'}');
+      print(
+        'state.mInOut?.docStatus.id ${state.mInOut?.docStatus.id?.toString() ?? 'NULL'}',
+      );
       return true;
     }
     final validStatuses = {
@@ -552,9 +592,11 @@ class MInOutNotifier extends StateNotifier<MInOutStatus> {
       if (state.rolCompleteOver) 'manually-over',
     };
 
-    return state.mInOut?.lines.every((line) =>
-    line.verifiedStatus != 'pending' &&
-        validStatuses.contains(line.verifiedStatus)) ??
+    return state.mInOut?.lines.every(
+          (line) =>
+              line.verifiedStatus != 'pending' &&
+              validStatuses.contains(line.verifiedStatus),
+        ) ??
         false;
   }
 
@@ -569,17 +611,19 @@ class MInOutNotifier extends StateNotifier<MInOutStatus> {
       return;
     }
     try {
-      print('try setDocAction');
+      print('try setDocAction lines ${state.mInOut!.lines.length}');
       for (final line in state.mInOut!.lines) {
         print('try setDocAction ${line.id ?? '--'}');
         if (line.editLocator != null) {
           print('try setDocAction line.editLocator ${line.editLocator}');
           final update = await mInOutRepository.updateLocator(line, ref);
-          print('update  mInOutRepository ${line.id} ${update ? 'true':'no true'}');
+          print(
+            'update  mInOutRepository ${line.id} ${update ? 'true' : 'no true'}',
+          );
           if (!update) {
             state = state.copyWith(
               errorMessage:
-              'Error al actualizar la ubicación: ${line.mLocatorId!.identifier}',
+                  'Error al actualizar la ubicación: ${line.mLocatorId!.identifier}',
               isLoading: false,
             );
             return;
@@ -589,12 +633,44 @@ class MInOutNotifier extends StateNotifier<MInOutStatus> {
       print('mInOutResponse');
       final mInOutResponse = await mInOutRepository.setDocAction(ref);
       print('update  mInOutRepository ${mInOutResponse.docStatus.identifier}');
+      print('setDocAction showMInOutResultModalBottomSheet');
+
+      showMInOutResultModalBottomSheet(
+        ref: ref,
+        data: mInOutResponse,
+        type: MInOutType.move,
+        text: '',
+        onOk: () async {
+          /*print('setDocAction onOk');
+          if(mInOutResponse.docStatus.id=='CO' || mInOutResponse.docStatus.id=='IP'){
+
+            onDocChange(state.doc);
+
+            //getMInOutAndLine(ref);
+            if(state.mInOutType == MInOutType.moveConfirm || state.mInOutType == MInOutType.move){
+                print('setDocAction clearMInOutData');
+                await getMovementAndLine(ref);
+            }
+
+
+
+          }
+        */
+          /*if(state.mInOutType == MInOutType.moveConfirm || state.mInOutType == MInOutType.move){
+            print('setDocAction clearMInOutData');
+            await getMovementAndLine(ref);
+          }*/
+        },
+      );
       state = state.copyWith(
         mInOut: mInOutResponse.copyWith(lines: state.mInOut!.lines),
         isLoading: false,
         isComplete: true,
+
       );
-      print('update  mInOutRepository ${mInOutResponse.documentNo?.toString() ?? '--'}');
+      print(
+        'update  mInOutRepository ${mInOutResponse.documentNo?.toString() ?? '--'}',
+      );
     } catch (e) {
       state = state.copyWith(
         errorMessage: e.toString().replaceAll('Exception: ', ''),
@@ -605,6 +681,85 @@ class MInOutNotifier extends StateNotifier<MInOutStatus> {
 
   Future<void> setDocActionConfirm(WidgetRef ref) async {
     state = state.copyWith(isLoading: true, errorMessage: '');
+    print('setDocActionConfirm');
+
+    try {
+      for (final line in state.mInOut!.lines) {
+        if (line.editLocator != null) {
+          print('setDocActionConfirm updateLocator');
+          final update = await mInOutRepository.updateLocator(line, ref);
+          if (!update) {
+            state = state.copyWith(
+              errorMessage:
+                  'Error al actualizar la ubicación: ${line.mLocatorId!.identifier}',
+              isLoading: false,
+            );
+            return;
+          }
+        }
+        final lineConfirmResponse = await mInOutRepository.updateLineConfirm(
+          line,
+          ref,
+        );
+        if (lineConfirmResponse.id == null) {
+          state = state.copyWith(
+            errorMessage: 'Error al confirmar la línea ${line.line}',
+            isLoading: false,
+          );
+          return;
+        }
+      }
+      print('setDocActionConfirm setDocAction');
+      late MInOut result;
+      try {
+        result = await mInOutRepository.setDocAction(ref);
+        print('setDocActionConfirm result ${result.toJson()}');
+
+      } catch (e) {
+        print('setDocActionConfirm Error: ${e.toString()}');
+        if(ref.context.mounted){
+          showErrorMessage(ref.context, ref, e.toString());
+        }
+        return ;
+      }
+
+      state = state.copyWith(
+        errorMessage: '',
+        isLoading: false,
+        isComplete: true,
+      );
+
+      showMInOutResultModalBottomSheet(
+        ref: ref,
+        data: result,
+        type: MInOutType.move,
+        text: '',
+        onOk: () async {
+
+          late MInOutConfirm result2 ;
+          if (state.mInOutType == MInOutType.moveConfirm) {
+            print('getMovementConfirmAndLine ${state.mInOutConfirm!.id!}');
+            result2 = await getMovementConfirmAndLine(state.mInOutConfirm!.id!, ref);
+          } else {
+            print('getMInOutConfirmAndLine ${state.mInOutConfirm!.id!}');
+            result2 = await getMInOutConfirmAndLine(state.mInOutConfirm!.id!, ref);
+          }
+          print('setDocActionConfirm result2 ${result2.toJson()}');
+
+        },
+      );
+
+    } catch (e) {
+      print('setDocActionConfirm error ${e.toString()}');
+      state = state.copyWith(
+        errorMessage: e.toString().replaceAll('Exception: ', ''),
+        isLoading: false,
+      );
+    }
+  }
+
+ /* Future<void> setDocActionConfirm(WidgetRef ref) async {
+    state = state.copyWith(isLoading: true, errorMessage: '');
 
     try {
       for (final line in state.mInOut!.lines) {
@@ -613,14 +768,16 @@ class MInOutNotifier extends StateNotifier<MInOutStatus> {
           if (!update) {
             state = state.copyWith(
               errorMessage:
-              'Error al actualizar la ubicación: ${line.mLocatorId!.identifier}',
+                  'Error al actualizar la ubicación: ${line.mLocatorId!.identifier}',
               isLoading: false,
             );
             return;
           }
         }
-        final lineConfirmResponse =
-        await mInOutRepository.updateLineConfirm(line, ref);
+        final lineConfirmResponse = await mInOutRepository.updateLineConfirm(
+          line,
+          ref,
+        );
         if (lineConfirmResponse.id == null) {
           state = state.copyWith(
             errorMessage: 'Error al confirmar la línea ${line.line}',
@@ -648,43 +805,56 @@ class MInOutNotifier extends StateNotifier<MInOutStatus> {
         isLoading: false,
       );
     }
-  }
+  }*/
 
   void addBarcode(String code, BuildContext context) {
     if (code.trim().isEmpty) return;
     final List<Barcode> updatedTotalList = [...state.scanBarcodeListTotal];
-    final existingBarcodes =
-    updatedTotalList.where((barcode) => barcode.code == code).toList();
+    final existingBarcodes = updatedTotalList
+        .where((barcode) => barcode.code == code)
+        .toList();
 
     if (existingBarcodes.isNotEmpty) {
       final int newRepetitions = existingBarcodes.first.repetitions + 1;
       for (int i = 0; i < updatedTotalList.length; i++) {
         if (updatedTotalList[i].code == code) {
-          updatedTotalList[i] =
-              updatedTotalList[i].copyWith(repetitions: newRepetitions);
+          updatedTotalList[i] = updatedTotalList[i].copyWith(
+            repetitions: newRepetitions,
+          );
         }
       }
-      updatedTotalList.add(Barcode(
-        index: updatedTotalList.length + 1,
-        code: code,
-        repetitions: newRepetitions,
-        coloring: false,
-      ));
+      updatedTotalList.add(
+        Barcode(
+          index: updatedTotalList.length + 1,
+          code: code,
+          repetitions: newRepetitions,
+          coloring: false,
+        ),
+      );
     } else {
-      updatedTotalList.add(Barcode(
-        index: updatedTotalList.length + 1,
-        code: code,
-        repetitions: 1,
-        coloring: false,
-      ));
+      updatedTotalList.add(
+        Barcode(
+          index: updatedTotalList.length + 1,
+          code: code,
+          repetitions: 1,
+          coloring: false,
+        ),
+      );
     }
 
-    updatedBarcodeList(updatedTotalList: updatedTotalList
-        , barcode: code, context: context);
+    updatedBarcodeList(
+      updatedTotalList: updatedTotalList,
+      barcode: code,
+      context: context,
+    );
     moveScrollToBottom();
   }
 
-  void removeBarcode({required Barcode barcode, bool isOver = false, required BuildContext context}) {
+  void removeBarcode({
+    required Barcode barcode,
+    bool isOver = false,
+    required BuildContext context,
+  }) {
     final int index = barcode.index - 1;
     if (index < 0 || index >= state.scanBarcodeListTotal.length) return;
 
@@ -697,23 +867,29 @@ class MInOutNotifier extends StateNotifier<MInOutStatus> {
       int newRepetitions = barcodeToRemove.repetitions - 1;
       for (int i = 0; i < updatedTotalList.length; i++) {
         if (updatedTotalList[i].code == barcodeToRemove.code) {
-          updatedTotalList[i] =
-              updatedTotalList[i].copyWith(repetitions: newRepetitions);
+          updatedTotalList[i] = updatedTotalList[i].copyWith(
+            repetitions: newRepetitions,
+          );
         }
       }
     }
 
-    final filteredTotalList =
-    updatedTotalList.where((barcode) => barcode.repetitions > 0).toList();
+    final filteredTotalList = updatedTotalList
+        .where((barcode) => barcode.repetitions > 0)
+        .toList();
     updatedBarcodeList(
-        updatedTotalList: filteredTotalList,
-        barcode: barcode.code,
-        context: context);
+      updatedTotalList: filteredTotalList,
+      barcode: barcode.code,
+      context: context,
+    );
     moveScrollToBottom();
   }
 
-  void updatedBarcodeList(
-      {required List<Barcode> updatedTotalList, required String barcode, required BuildContext context}) {
+  void updatedBarcodeList({
+    required List<Barcode> updatedTotalList,
+    required String barcode,
+    required BuildContext context,
+  }) {
     for (int i = 0; i < updatedTotalList.length; i++) {
       updatedTotalList[i] = updatedTotalList[i].copyWith(index: i + 1);
     }
@@ -722,8 +898,9 @@ class MInOutNotifier extends StateNotifier<MInOutStatus> {
     for (final barcode in updatedTotalList) {
       if (!uniqueMap.containsKey(barcode.code) ||
           uniqueMap[barcode.code]!.repetitions < barcode.repetitions) {
-        uniqueMap[barcode.code] =
-            barcode.copyWith(repetitions: barcode.repetitions);
+        uniqueMap[barcode.code] = barcode.copyWith(
+          repetitions: barcode.repetitions,
+        );
       }
     }
 
@@ -736,31 +913,35 @@ class MInOutNotifier extends StateNotifier<MInOutStatus> {
       scanBarcodeListTotal: updatedTotalList,
       scanBarcodeListUnique: updatedUniqueList,
     );
-    updatedMInOutLine(barcode,context: context);
+    updatedMInOutLine(barcode, context: context);
   }
-  bool showUpdateScannedQuantity({required int scannedQty, required double totalMovementQty}){
 
+  bool showUpdateScannedQuantity({
+    required int scannedQty,
+    required double totalMovementQty,
+  }) {
     double dif = totalMovementQty - scannedQty;
-    if(dif<0) return true;
-    if(totalMovementQty>quantityOfMovementAndScannedToAllowInputScannedQuantity) {
-      if(dif<=quantityOfMovementAndScannedToAllowInputScannedQuantity){
+    if (dif < 0) return true;
+    if (totalMovementQty >
+        quantityOfMovementAndScannedToAllowInputScannedQuantity) {
+      if (dif <= quantityOfMovementAndScannedToAllowInputScannedQuantity) {
         return false;
       } else {
         return true;
       }
-
     }
 
     return false;
   }
-  Icon getBarcodeExpressionIcon(Barcode barcode){
-    if(state.mInOut == null || state.mInOut!.lines.isEmpty) {
-      return Icon(Icons.dangerous,color: Colors.red,);
+
+  Icon getBarcodeExpressionIcon(Barcode barcode) {
+    if (state.mInOut == null || state.mInOut!.lines.isEmpty) {
+      return Icon(Icons.dangerous, color: Colors.red);
     }
     List<Line> lines = state.mInOut!.lines;
     List<Line> linesWithSameUPC = [];
     for (int i = 0; i < lines.length; i++) {
-      if ( lines[i].upc == barcode.code) {
+      if (lines[i].upc == barcode.code) {
         linesWithSameUPC.add(lines[i]);
       }
     }
@@ -770,21 +951,22 @@ class MInOutNotifier extends StateNotifier<MInOutStatus> {
       qty += linesWithSameUPC[i].movementQty?.toInt() ?? 0;
     }
 
-    if(qty==barcode.repetitions) {
-      color = Colors.green ;
-      return Icon(Icons.check_circle,color: color,);
-    } else if(qty>barcode.repetitions){
+    if (qty == barcode.repetitions) {
+      color = Colors.green;
+      return Icon(Icons.check_circle, color: color);
+    } else if (qty > barcode.repetitions) {
       color = Colors.amber[800]!;
-      return Icon(Icons.indeterminate_check_box,color: color,);
+      return Icon(Icons.indeterminate_check_box, color: color);
     } else {
       color = Colors.red;
-      return Icon(Icons.add_box,color: color,);
+      return Icon(Icons.add_box, color: color);
     }
-
   }
 
-  Future<void> updatedMInOutLine(String barcodeString, {BuildContext? context}) async {
-
+  Future<void> updatedMInOutLine(
+    String barcodeString, {
+    BuildContext? context,
+  }) async {
     if (state.mInOut != null && state.viewMInOut) {
       List<Line> lines = state.mInOut!.lines;
       List<Barcode> linesOver = [];
@@ -793,7 +975,7 @@ class MInOutNotifier extends StateNotifier<MInOutStatus> {
       double sumOfOtherLinesWithSameUPC = 0;
       double totalMovementQty = 0;
       Barcode? barcode;
-      for(int i = 0; i <state.scanBarcodeListUnique.length; i++) {
+      for (int i = 0; i < state.scanBarcodeListUnique.length; i++) {
         if (state.scanBarcodeListUnique[i].code == barcodeString) {
           barcode = state.scanBarcodeListUnique[i];
           break;
@@ -803,84 +985,89 @@ class MInOutNotifier extends StateNotifier<MInOutStatus> {
       int qtyScanned = 0;
       int lineIndex = -1;
       for (int i = 0; i < lines.length; i++) {
-        if ( lines[i].upc == barcodeString) {
+        if (lines[i].upc == barcodeString) {
           linesWithSameUPC.add(lines[i]);
           linesIndexWithSameUPC.add(i);
-
         }
       }
 
-      if(linesWithSameUPC.length == 1){
+      if (linesWithSameUPC.length == 1) {
         lineIndex = linesIndexWithSameUPC[0];
       } else {
-        if(context != null && context.mounted) {
-          lineIndex = await showDialog<int>(
-            context: context,
-            builder: (BuildContext context) {
-              return AlertDialog(
-                title: const Text('Seleccionar Línea'),
-                content: SizedBox(
-                  width: double.maxFinite,
-                  child: ListView.builder(
-                    shrinkWrap: true,
-                    itemCount: linesWithSameUPC.length,
-                    itemBuilder: (BuildContext context, int i) {
-                      final currentLine = linesWithSameUPC[i];
+        if (context != null && context.mounted) {
+          lineIndex =
+              await showDialog<int>(
+                context: context,
+                builder: (BuildContext context) {
+                  return AlertDialog(
+                    title: const Text('Seleccionar Línea'),
+                    content: SizedBox(
+                      width: double.maxFinite,
+                      child: ListView.builder(
+                        shrinkWrap: true,
+                        itemCount: linesWithSameUPC.length,
+                        itemBuilder: (BuildContext context, int i) {
+                          final currentLine = linesWithSameUPC[i];
 
-                      return Card(
-                        color: Colors.grey[200],
-                        child: ListTile(
-                          title: Text('Línea: ${currentLine.line}'),
-                          subtitle: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text('Cant. Movement: ${currentLine.movementQty ??
-                                  0}'),
-                              Text('Cant. Manual: ${currentLine.manualQty ?? 0}'),
-                              Text('Cant. Escaneada: ${currentLine.scanningQty ??
-                                  0}'),
-                              Text(
-                                  'Cant. Confirmada: ${currentLine.confirmedQty ??
-                                      0}'),
-                              Text('Cant. Desecho: ${currentLine.scrappedQty ??
-                                  0}'),
-                            ],
-                          ),
-                          onTap: () {
-                            Navigator.of(context).pop(linesIndexWithSameUPC[i]);
-                          },
-                        ),
-                      );
-                    },
-                  ),
-                ),
-                actions: <Widget>[
-                  TextButton(
-                    child: const Text('Cancelar'),
-                    onPressed: () {
-                      Navigator.of(context).pop(-1);
-                    },
-                  ),
-                ],
-              );
-            },
-          ) ?? -1;
-          if(lineIndex >= 0) {
-            showUpdateDialog = true ;
+                          return Card(
+                            color: Colors.grey[200],
+                            child: ListTile(
+                              title: Text('Línea: ${currentLine.line}'),
+                              subtitle: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Cant. Movement: ${currentLine.movementQty ?? 0}',
+                                  ),
+                                  Text(
+                                    'Cant. Manual: ${currentLine.manualQty ?? 0}',
+                                  ),
+                                  Text(
+                                    'Cant. Escaneada: ${currentLine.scanningQty ?? 0}',
+                                  ),
+                                  Text(
+                                    'Cant. Confirmada: ${currentLine.confirmedQty ?? 0}',
+                                  ),
+                                  Text(
+                                    'Cant. Desecho: ${currentLine.scrappedQty ?? 0}',
+                                  ),
+                                ],
+                              ),
+                              onTap: () {
+                                Navigator.of(
+                                  context,
+                                ).pop(linesIndexWithSameUPC[i]);
+                              },
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                    actions: <Widget>[
+                      TextButton(
+                        child: const Text('Cancelar'),
+                        onPressed: () {
+                          Navigator.of(context).pop(-1);
+                        },
+                      ),
+                    ],
+                  );
+                },
+              ) ??
+              -1;
+          if (lineIndex >= 0) {
+            showUpdateDialog = true;
           }
-
         }
-
-
       }
 
-      if(lineIndex<0) return ;
+      if (lineIndex < 0) return;
 
       Line line;
       line = lines[lineIndex];
       for (int i = 0; i < linesWithSameUPC.length; i++) {
         totalMovementQty += (linesWithSameUPC[i].movementQty ?? 0);
-        if(line.id != linesWithSameUPC[i].id) {
+        if (line.id != linesWithSameUPC[i].id) {
           sumOfOtherLinesWithSameUPC += (linesWithSameUPC[i].movementQty ?? 0);
         }
       }
@@ -888,74 +1075,88 @@ class MInOutNotifier extends StateNotifier<MInOutStatus> {
       int qty = 0;
       qty = line.scanningQty ?? 0;
 
-      if(barcode!=null){
+      if (barcode != null) {
         qty = barcode.repetitions;
       }
-      if(!showUpdateDialog) {
-        showUpdateDialog = showUpdateScannedQuantity(scannedQty: qty,totalMovementQty: totalMovementQty);
+      if (!showUpdateDialog) {
+        showUpdateDialog = showUpdateScannedQuantity(
+          scannedQty: qty,
+          totalMovementQty: totalMovementQty,
+        );
       }
-      if(linesWithSameUPC.length==1){
-        if (context != null && context.mounted){
+      if (linesWithSameUPC.length == 1) {
+        if (context != null && context.mounted) {
           final container = ProviderScope.containerOf(context, listen: false);
           final adjustScannedQty = container.read(adjustScannedQtyProvider);
-          if(!adjustScannedQty) showUpdateDialog = false ;
+          if (!adjustScannedQty) showUpdateDialog = false;
         }
       }
-      if (context!=null && context.mounted && line.movementQty!=null
-          && showUpdateDialog) {
-        int lastQty = qty-1;
-        final TextEditingController qtyToSumController = TextEditingController(text: '1');
-        final TextEditingController qtyController = TextEditingController(text: qty.toString());
-        final TextEditingController lastQtyController = TextEditingController(text: (qty > 0 ? qty - 1 : 0).toString());
+      if (context != null &&
+          context.mounted &&
+          line.movementQty != null &&
+          showUpdateDialog) {
+        int lastQty = qty - 1;
+        final TextEditingController qtyToSumController = TextEditingController(
+          text: '1',
+        );
+        final TextEditingController qtyController = TextEditingController(
+          text: qty.toString(),
+        );
+        final TextEditingController lastQtyController = TextEditingController(
+          text: (qty > 0 ? qty - 1 : 0).toString(),
+        );
 
-        String subtitle ='UPC: ${line.upc ?? ''}';
-        if(qty==1){
-          String title ='Editar : Linea : ${line.line ?? 0}';
+        String subtitle = 'UPC: ${line.upc ?? ''}';
+        if (qty == 1) {
+          String title = 'Editar : Linea : ${line.line ?? 0}';
           qty = await openSetLineScannedQuantityDialog(
-              context: context,
-              qtyController: qtyController,
-              title: title,
-              subtitle: subtitle,
-              quantity: qty);
+            context: context,
+            qtyController: qtyController,
+            title: title,
+            subtitle: subtitle,
+            quantity: qty,
+          );
         } else {
           String title = 'UPC con cantidad existente';
-          String subtitle = '¿Desea definir una nueva cantidad o sumar a la existente?';
+          String subtitle =
+              '¿Desea definir una nueva cantidad o sumar a la existente?';
           String textButton1 = 'Cancelar';
           String textButton2 = 'Definir';
           String textButton3 = 'Sumar';
           final container = ProviderScope.containerOf(context, listen: false);
-          final defaultAction = container.read(defaultActionWhenUPCIsScannedProvider);
+          final defaultAction = container.read(
+            defaultActionWhenUPCIsScannedProvider,
+          );
           int buttonsToShow = 2;
-          if(linesWithSameUPC.length<2){
-            buttonsToShow = 3 ;
+          if (linesWithSameUPC.length < 2) {
+            buttonsToShow = 3;
           }
           switch (defaultAction) {
             case DefaultActionWhenUPCIsScanned.ask:
-
               String? action = await openDialogSelect3Actions(
-                  context: context,
-                  title: title,
-                  subtitle: subtitle,
-                  textButton1: textButton1,
-                  textButton2: textButton2,
-                  textButton3: textButton3,
-                  buttonsToShow: buttonsToShow,
+                context: context,
+                title: title,
+                subtitle: subtitle,
+                textButton1: textButton1,
+                textButton2: textButton2,
+                textButton3: textButton3,
+                buttonsToShow: buttonsToShow,
               );
-
 
               if (action == textButton2) {
                 if (context.mounted) {
-                  String title ='Editar : Linea : ${line.line ?? 0}';
+                  String title = 'Editar : Linea : ${line.line ?? 0}';
                   qty = await openSetLineScannedQuantityDialog(
-                      context: context,
-                      qtyController: qtyController,
-                      title: title,
-                      subtitle: subtitle,
-                      quantity: qty);
+                    context: context,
+                    qtyController: qtyController,
+                    title: title,
+                    subtitle: subtitle,
+                    quantity: qty,
+                  );
                 }
               } else if (action == textButton3) {
                 if (context.mounted) {
-                  String title ='Sumar : Linea : ${line.line ?? 0}';
+                  String title = 'Sumar : Linea : ${line.line ?? 0}';
                   qty = await openSumLineScannedQuantityDialog(
                     context: context,
                     lastQtyController: lastQtyController,
@@ -963,21 +1164,23 @@ class MInOutNotifier extends StateNotifier<MInOutStatus> {
                     resultController: qtyController,
                     title: title,
                     subtitle: subtitle,
-                    lastQty: lastQty,);
+                    lastQty: lastQty,
+                  );
                 }
               }
               break;
             case DefaultActionWhenUPCIsScanned.edit:
-              String title ='Editar : Linea : ${line.line ?? 0}';
+              String title = 'Editar : Linea : ${line.line ?? 0}';
               qty = await openSetLineScannedQuantityDialog(
-                  context: context,
-                  qtyController: qtyController,
-                  title: title,
-                  subtitle: subtitle,
-                  quantity: qty);
+                context: context,
+                qtyController: qtyController,
+                title: title,
+                subtitle: subtitle,
+                quantity: qty,
+              );
               break;
             case DefaultActionWhenUPCIsScanned.sum:
-              String title ='Sumar : Linea : ${line.line ?? 0}';
+              String title = 'Sumar : Linea : ${line.line ?? 0}';
               qty = await openSumLineScannedQuantityDialog(
                 context: context,
                 lastQtyController: lastQtyController,
@@ -985,55 +1188,59 @@ class MInOutNotifier extends StateNotifier<MInOutStatus> {
                 resultController: qtyController,
                 title: title,
                 subtitle: subtitle,
-                lastQty: lastQty,);
+                lastQty: lastQty,
+              );
               break;
             case DefaultActionWhenUPCIsScanned.ignore:
-            // No abrir nada, sólo registrar / loguear
+              // No abrir nada, sólo registrar / loguear
               break;
           }
         }
 
-        if(qty>0) {
+        if (qty > 0) {
           qtyScanned = qty;
-          if(barcode!=null){
+          if (barcode != null) {
             barcode.repetitions = qty + sumOfOtherLinesWithSameUPC.toInt();
             print('------- Repetitions ${barcode.repetitions}');
           }
-          for(int i = 0; i <state.scanBarcodeListTotal.length; i++) {
+          for (int i = 0; i < state.scanBarcodeListTotal.length; i++) {
             if (state.scanBarcodeListTotal[i].code == barcodeString) {
               Barcode barcode = state.scanBarcodeListTotal[i];
               barcode.repetitions = qty + sumOfOtherLinesWithSameUPC.toInt();
               print('------- Repetitions Total ${barcode.repetitions}');
             }
           }
-
         }
       }
 
-      if(qtyScanned <= 0){
-        if(barcode!=null) qtyScanned = barcode.repetitions;
+      if (qtyScanned <= 0) {
+        if (barcode != null) qtyScanned = barcode.repetitions;
       }
       if (lineIndex >= 0) {
         Line line = lines[lineIndex];
         line = line.copyWith(
-            manualQty: 0,
-            scanningQty: 0,
-            confirmedQty: 0,
-            scrappedQty: 0,
-            verifiedStatus: 'pending');
+          manualQty: 0,
+          scanningQty: 0,
+          confirmedQty: 0,
+          scrappedQty: 0,
+          verifiedStatus: 'pending',
+        );
 
         lines[lineIndex] = _verifyLineStatusQty(
-            line,
-            qtyScanned.toDouble(),
-            line.manualQty ?? 0,
-            line.scrappedQty ?? 0);
+          line,
+          qtyScanned.toDouble(),
+          line.manualQty ?? 0,
+          line.scrappedQty ?? 0,
+        );
       } else {
-        if(barcode!=null){
+        if (barcode != null) {
           linesOver.add(barcode.copyWith(index: linesOver.length + 1));
         }
       }
       state = state.copyWith(
-          mInOut: state.mInOut!.copyWith(lines: lines), linesOver: linesOver);
+        mInOut: state.mInOut!.copyWith(lines: lines),
+        linesOver: linesOver,
+      );
     }
   }
 
@@ -1047,11 +1254,12 @@ class MInOutNotifier extends StateNotifier<MInOutStatus> {
             !lines[i].verifiedStatus!.contains('manually') ||
             lines[i].upc == barcode) {
           lines[i] = lines[i].copyWith(
-              manualQty: 0,
-              scanningQty: 0,
-              confirmedQty: 0,
-              scrappedQty: 0,
-              verifiedStatus: 'pending');
+            manualQty: 0,
+            scanningQty: 0,
+            confirmedQty: 0,
+            scrappedQty: 0,
+            verifiedStatus: 'pending',
+          );
         }
       }
 
@@ -1060,17 +1268,20 @@ class MInOutNotifier extends StateNotifier<MInOutStatus> {
         if (lineIndex != -1) {
           final line = lines[lineIndex];
           lines[lineIndex] = _verifyLineStatusQty(
-              line,
-              barcode.repetitions.toDouble(),
-              line.manualQty ?? 0,
-              line.scrappedQty ?? 0);
+            line,
+            barcode.repetitions.toDouble(),
+            line.manualQty ?? 0,
+            line.scrappedQty ?? 0,
+          );
         } else {
           linesOver.add(barcode.copyWith(index: linesOver.length + 1));
         }
       }
 
       state = state.copyWith(
-          mInOut: state.mInOut!.copyWith(lines: lines), linesOver: linesOver);
+        mInOut: state.mInOut!.copyWith(lines: lines),
+        linesOver: linesOver,
+      );
     }
   }
 
@@ -1117,16 +1328,24 @@ class MInOutNotifier extends StateNotifier<MInOutStatus> {
     if (state.orderBy == orderBy) {
       sortedLines.sort((a, b) => a.line!.compareTo(b.line!));
       state = state.copyWith(
-          orderBy: 'line', mInOut: state.mInOut!.copyWith(lines: sortedLines));
+        orderBy: 'line',
+        mInOut: state.mInOut!.copyWith(lines: sortedLines),
+      );
     } else {
       _sortLinesByStatus(sortedLines, orderBy);
       state = state.copyWith(
-          orderBy: orderBy, mInOut: state.mInOut!.copyWith(lines: sortedLines));
+        orderBy: orderBy,
+        mInOut: state.mInOut!.copyWith(lines: sortedLines),
+      );
     }
   }
 
   Line _verifyLineStatusQty(
-      Line line, double scanningQty, double manualQty, double scrappedQty) {
+    Line line,
+    double scanningQty,
+    double manualQty,
+    double scrappedQty,
+  ) {
     String status = 'pending';
     double confirmedQty = 0;
     if (manualQty > 0) {
@@ -1167,7 +1386,6 @@ class MInOutNotifier extends StateNotifier<MInOutStatus> {
     }
   }
 
-
   void _sortLinesByStatus(List<Line> lines, String orderBy) {
     final statuses = ['manually-minor', 'manually-over', 'manually-correct'];
     if (orderBy == 'manually') {
@@ -1194,9 +1412,6 @@ class MInOutNotifier extends StateNotifier<MInOutStatus> {
       });
     }
   }
-
-
-
 }
 
 enum MInOutType {
@@ -1303,38 +1518,36 @@ class MInOutStatus {
     bool? rolCompleteOver,
     bool? rolPrepare,
     bool? rolComplete,
-  }) =>
-      MInOutStatus(
-        doc: doc ?? this.doc,
-        mInOutType: mInOutType ?? this.mInOutType,
-        mInOutList: mInOutList ?? this.mInOutList,
-        mInOut: mInOut ?? this.mInOut,
-        mInOutConfirm: mInOutConfirm ?? this.mInOutConfirm,
-        isSOTrx: isSOTrx ?? this.isSOTrx,
-        title: title ?? this.title,
-        scanBarcodeListTotal: scanBarcodeListTotal ?? this.scanBarcodeListTotal,
-        scanBarcodeListUnique:
-        scanBarcodeListUnique ?? this.scanBarcodeListUnique,
-        linesOver: linesOver ?? this.linesOver,
-        viewMInOut: viewMInOut ?? this.viewMInOut,
-        orderBy: orderBy ?? this.orderBy,
-        manualQty: manualQty ?? this.manualQty,
-        scrappedQty: scrappedQty ?? this.scrappedQty,
-        editLocator: editLocator ?? this.editLocator,
-        uniqueView: uniqueView ?? this.uniqueView,
-        errorMessage: errorMessage ?? this.errorMessage,
-        isLoading: isLoading ?? this.isLoading,
-        isLoadingMInOutList: isLoadingMInOutList ?? this.isLoadingMInOutList,
-        isComplete: isComplete ?? this.isComplete,
-        rolShowQty: rolShowQty ?? this.rolShowQty,
-        rolShowScrap: rolShowScrap ?? this.rolShowScrap,
-        rolManualQty: rolManualQty ?? this.rolManualQty,
-        rolManualScrap: rolManualScrap ?? this.rolManualScrap,
-        rolCompleteLow: rolCompleteLow ?? this.rolCompleteLow,
-        rolCompleteOver: rolCompleteOver ?? this.rolCompleteOver,
-        rolPrepare: rolPrepare ?? this.rolPrepare,
-        rolComplete: rolComplete ?? this.rolComplete,
-      );
+  }) => MInOutStatus(
+    doc: doc ?? this.doc,
+    mInOutType: mInOutType ?? this.mInOutType,
+    mInOutList: mInOutList ?? this.mInOutList,
+    mInOut: mInOut ?? this.mInOut,
+    mInOutConfirm: mInOutConfirm ?? this.mInOutConfirm,
+    isSOTrx: isSOTrx ?? this.isSOTrx,
+    title: title ?? this.title,
+    scanBarcodeListTotal: scanBarcodeListTotal ?? this.scanBarcodeListTotal,
+    scanBarcodeListUnique: scanBarcodeListUnique ?? this.scanBarcodeListUnique,
+    linesOver: linesOver ?? this.linesOver,
+    viewMInOut: viewMInOut ?? this.viewMInOut,
+    orderBy: orderBy ?? this.orderBy,
+    manualQty: manualQty ?? this.manualQty,
+    scrappedQty: scrappedQty ?? this.scrappedQty,
+    editLocator: editLocator ?? this.editLocator,
+    uniqueView: uniqueView ?? this.uniqueView,
+    errorMessage: errorMessage ?? this.errorMessage,
+    isLoading: isLoading ?? this.isLoading,
+    isLoadingMInOutList: isLoadingMInOutList ?? this.isLoadingMInOutList,
+    isComplete: isComplete ?? this.isComplete,
+    rolShowQty: rolShowQty ?? this.rolShowQty,
+    rolShowScrap: rolShowScrap ?? this.rolShowScrap,
+    rolManualQty: rolManualQty ?? this.rolManualQty,
+    rolManualScrap: rolManualScrap ?? this.rolManualScrap,
+    rolCompleteLow: rolCompleteLow ?? this.rolCompleteLow,
+    rolCompleteOver: rolCompleteOver ?? this.rolCompleteOver,
+    rolPrepare: rolPrepare ?? this.rolPrepare,
+    rolComplete: rolComplete ?? this.rolComplete,
+  );
 }
 
 // import 'package:flutter/material.dart';
@@ -1343,8 +1556,10 @@ class MInOutStatus {
 // import 'tu_path/minout_status.dart'; // donde esté MInOutStatus + MInOutType
 
 /// Provider que devuelve el color de fondo del header según el estado del MInOut
-final mInOutHeaderColorProvider =
-Provider.family<Color, MInOutStatus>((ref, mInOutState) {
+final mInOutHeaderColorProvider = Provider.family<Color, MInOutStatus>((
+  ref,
+  mInOutState,
+) {
   final docStatusId = mInOutState.mInOut?.docStatus.id?.toString();
   final confirmStatusId = mInOutState.mInOutConfirm?.docStatus.id?.toString();
 
@@ -1372,8 +1587,8 @@ Provider.family<Color, MInOutStatus>((ref, mInOutState) {
     if (confirmStatusId == 'DR') {
       return themeColorWarningLight;
     } else if (confirmStatusId == 'IP') {
-      return  Colors.cyan.shade200;
-    } else if (confirmStatusId  == 'CO') {
+      return Colors.cyan.shade200;
+    } else if (confirmStatusId == 'CO') {
       return themeColorSuccessfulLight;
     } else {
       return Colors.grey.shade200;
@@ -1384,9 +1599,9 @@ Provider.family<Color, MInOutStatus>((ref, mInOutState) {
 
   final esInOutNormal =
       type == MInOutType.shipment ||
-          type == MInOutType.receipt ||
-          type == MInOutType.move ||
-          type == MInOutType.moveConfirm;
+      type == MInOutType.receipt ||
+      type == MInOutType.move ||
+      type == MInOutType.moveConfirm;
 
   if (!esInOutNormal) {
     // usar docStatus del confirm

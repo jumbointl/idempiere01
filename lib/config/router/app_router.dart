@@ -27,6 +27,7 @@ import '../../features/products/presentation/providers/common_provider.dart';
 import '../../features/products/presentation/providers/locator_provider.dart';
 import '../../features/products/presentation/providers/product_provider_common.dart';
 import '../../features/products/presentation/screens/locator/search_locator_screen.dart';
+import '../../features/products/presentation/screens/movement/edit_new/movement_cancel_screen.dart';
 import '../../features/products/presentation/screens/movement/edit_new/movement_confirm_screen.dart';
 import '../../features/products/presentation/screens/movement/edit_new/new_movement_edit_screen.dart';
 import '../../features/products/presentation/screens/movement/edit_new/movement_lines_create_screen.dart';
@@ -51,7 +52,6 @@ class AppRouter {
   static const String PAGE_HOME = '/home';
   static const String PAGE_PRODUCT_SEARCH = '/product/search';
   static const String PAGE_PRODUCT_STORE_ON_HAND = '/storeOnHand';
-  //static const String PAGE_PRODUCT_SEARCH_UPDATE_UPC = '/product/searchUpdateProductUPC';
   static const String PAGE_LOGIN = '/login';
   static const String PAGE_AUTH_DATA = '/authData';
   static const String PAGE_SPLASH = '/splash';
@@ -86,6 +86,10 @@ class AppRouter {
   static String PAGE_MOVEMENT_QR_LIST='/movement_qr_list';
 
   static String PAGE_UNSORTED_STORAGE_ON_HAND_READ_ONLY='/unsorted_store_on_hand_read_only';
+
+  static String PAGE_MOVEMENT_REPAINT='/movement_repaint';
+
+  static String PAGE_MOVEMENTS_CANCEL_SCREEN='/movement_cancel';
 
 
 
@@ -144,6 +148,21 @@ final goRouterProvider = Provider((ref) {
               String argument = jsonEncode(movementAndLines.toJson());
 
               return MovementConfirmScreen(
+                argument: argument,
+                movementAndLines: state.extra as MovementAndLines,
+              );
+            } else { return const HomeScreen();}
+          }
+      ),
+      GoRoute(
+          path: AppRouter.PAGE_MOVEMENTS_CANCEL_SCREEN,
+          builder: (context, state) {
+            if(RolesApp.appMovementComplete) {
+
+              MovementAndLines movementAndLines = state.extra as MovementAndLines;
+              String argument = jsonEncode(movementAndLines.toJson());
+
+              return MovementCancelScreen(
                 argument: argument,
                 movementAndLines: state.extra as MovementAndLines,
               );
@@ -330,6 +349,53 @@ final goRouterProvider = Provider((ref) {
                     String movementDateFilter = state.pathParameters['movementDateFilter'] ??
                         MovementListScreen.COMMAND_DO_NOTHING;
                     return MovementListScreen(movementDateFilter: movementDateFilter);
+                  }
+                  return const Scaffold(
+                    body: Center(child: CircularProgressIndicator()),
+                  );
+                },
+              ),
+              transitionDuration:Duration(microseconds: transitionTimeMilliseconds),
+              transitionsBuilder: (context, animation, secondaryAnimation, child) {
+                const begin = Offset(-1.0, 0.0);
+                const end = Offset.zero;
+                final tween = Tween(begin: begin, end: end).chain(CurveTween(curve: Curves.easeInOut));
+                return SlideTransition(position: animation.drive(tween), child: child);
+              },
+            );
+          } else {
+            return const NoTransitionPage(child: HomeScreen());
+          }
+        },
+      ),
+      GoRoute(
+        path: '${AppRouter.PAGE_MOVEMENT_REPAINT}/:movementId',
+        pageBuilder: (context, state) {
+          if (RolesApp.canEditMovement) {
+
+            String movementId = state.pathParameters['movementId'] ??
+                NewMovementEditScreen.WAIT_FOR_SCAN_MOVEMENT;
+            String fromPage = '1';
+
+            Future.delayed(Duration.zero, () {
+              ref.invalidate(allowedMovementDocumentTypeProvider);
+              MemoryProducts.movementAndLines.clearData();
+              GetStorage().remove(Memory.KEY_MOVEMENT_AND_LINES);
+              ref.read(homeScreenTitleProvider.notifier).state = Messages.MOVEMENT_SEARCH;
+              ref.read(productsHomeCurrentIndexProvider.notifier).update(
+                      (state) => Memory.PAGE_INDEX_MOVEMENTE_EDIT_SCREEN);
+              ref.read(actionScanProvider.notifier).update(
+                      (state) => Memory.ACTION_FIND_MOVEMENT_BY_ID);
+            });
+            return CustomTransitionPage(
+              key: state.pageKey,
+              child: FutureBuilder(
+                future: Future.delayed(Duration(milliseconds: transitionTimeMilliseconds)),
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.done) {
+                    return NewMovementEditScreen(
+                        fromPage: fromPage,
+                        movementId: movementId);
                   }
                   return const Scaffold(
                     body: Center(child: CircularProgressIndicator()),

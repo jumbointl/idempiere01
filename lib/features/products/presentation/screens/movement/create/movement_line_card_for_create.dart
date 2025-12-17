@@ -23,6 +23,7 @@ class _MovementLineCardForCreateState extends ConsumerState<MovementLineCardForC
       fontWeight: FontWeight.bold);
   @override
   Widget build(BuildContext context) {
+    print('print Movement Line Create MovementLineCardForCreate');
     IdempiereProduct product = widget.movementLine.mProductID ?? IdempiereProduct();
     String id = widget.movementLine.mProductID?.identifier.toString() ?? '';
     String quantity = Memory.numberFormatter0Digit.format(widget.movementLine.movementQty ?? 0);
@@ -31,6 +32,7 @@ class _MovementLineCardForCreateState extends ConsumerState<MovementLineCardForC
     String locatorFom=widget.movementLine.mLocatorID?.value ?? '';
     String locatorTo=widget.movementLine.mLocatorToID?.value ?? '';
     Icon icon = Icon(Icons.new_releases, color: Colors.green, size: 40);
+    print('print Movement Line Create MovementLineCardForCreate');
     return Container(
       padding: const EdgeInsets.all(10),
       height: 170,

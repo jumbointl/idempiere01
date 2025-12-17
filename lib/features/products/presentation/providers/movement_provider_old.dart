@@ -4,7 +4,6 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
-import 'package:monalisa_app_001/features/products/domain/idempiere/movement_and_lines.dart';
 import 'package:monalisa_app_001/features/products/domain/sql/sql_data_movement.dart';
 import 'package:monalisa_app_001/features/products/presentation/providers/products_scan_notifier.dart';
 
@@ -14,14 +13,11 @@ import '../../../shared/data/memory.dart';
 import '../../../shared/data/messages.dart';
 import '../../domain/idempiere/idempiere_movement.dart';
 import '../../domain/idempiere/idempiere_movement_line.dart';
-import '../../domain/sql/common_sql_data.dart';
 import '../../domain/sql/sql_data_movement_line.dart';
 import '../screens/store_on_hand/memory_products.dart';
 
 
-final movementIdForConfirmProvider = StateProvider.autoDispose<int?>((ref) {
-  return null;
-});
+
 
 final isMovementShowedProvider = StateProvider<bool>((ref) {
   return false;
@@ -143,53 +139,6 @@ final scannedConfirmMovementProvider = StateProvider.autoDispose<int>((ref) {
   return -1;
 });
 
-final confirmMovementProvider = FutureProvider.autoDispose<MovementAndLines?>((ref) async {
-
-  int id = ref.watch(movementIdForConfirmProvider) ?? -1;
-  if(id <=0) return null;
-  Dio dio = await DioClient.create();
-  try {
-    SqlDataMovement movement = SqlDataMovement(id:id);
-    Memory.sqlUsersData.copyToSqlData(movement);
-
-    String url =movement.getUpdateUrl();
-    print(url);
-    print(movement.getUpdateDocStatusJson(CommonSqlData.DOC_COMPLETE_STATUS));
-    print('---start-------------confirmMovementProvider');
-    final response = await dio.put(url, data: movement.getUpdateDocStatusJson(CommonSqlData.DOC_COMPLETE_STATUS));
-    print('---result-------------confirmMovementProvider ${response.statusCode}');
-
-    if (response.statusCode == 200) {
-      movement =  SqlDataMovement.fromJson(response.data);
-      MovementAndLines movementAndLines = MovementAndLines();
-      movementAndLines.cloneMovement(movement);
-      MemoryProducts.movementAndLines = movementAndLines;
-      print('---result-------------confirmMovementProvider ${movement.docStatus?.id ?? 'doc null'}');
-
-      return movementAndLines;
-    } else {
-      return MovementAndLines(id: Memory.ERROR_ID,
-          name: '${Messages.ERROR }${response.statusCode} : ${response.statusMessage}' );
-      throw Exception(
-          'Error al obtener la lista de $url: ${response.statusCode}');
-    }
-
-
-
-  } on DioException catch (e) {
-    ref.invalidate(movementIdForConfirmProvider);
-    return MovementAndLines(id: Memory.ERROR_ID,
-        name: '${Messages.ERROR } ${e.toString()}' );
-    //final authDataNotifier = ref.read(authProvider.notifier);
-    //throw CustomErrorDioException(e, authDataNotifier);
-  } catch (e) {
-    ref.invalidate(movementIdForConfirmProvider);
-    return MovementAndLines(id: Memory.ERROR_ID,
-        name: '${Messages.ERROR } ${e.toString()}' );
-    //throw Exception(e.toString());
-  }
-
-});
 
 
 

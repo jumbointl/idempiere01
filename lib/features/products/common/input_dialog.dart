@@ -3,7 +3,8 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:monalisa_app_001/features/products/common/input_data_processor.dart';
+import 'package:flutter_riverpod/legacy.dart';
+import 'package:material_symbols_icons/symbols.dart';
 
 import '../../../config/theme/app_theme.dart';
 import '../../shared/data/memory.dart';
@@ -19,134 +20,259 @@ double get fontSizeLarge => themeFontSizeLarge;
 
 
 Future<String?> openInputDialogWithResult(
+
     BuildContext context,
     WidgetRef ref,
     bool history,
-    {required String text}
+    {required String title , required String value,
+      required bool numberOnly}
 
     ) async {
-  var actionScan = ref.watch(actionScanProvider.notifier);
-  print('actionScan.state -- ${actionScan.state}');
-
-  String title = Messages.INPUT_DATA;
-
-  if (actionScan.state == Memory.ACTION_FIND_MOVEMENT_BY_ID) {
-    title = Messages.FIND_MOVEMENT_BY_ID;
-  } else if (actionScan.state ==
-      Memory.ACTION_FIND_BY_UPC_SKU_FOR_STORE_ON_HAND) {
-    title = Messages.FIND_PRODUCT_BY_UPC_SKU;
-  } else if (actionScan.state == Memory.ACTION_GET_LOCATOR_TO_VALUE) {
-    title = Messages.FIND_LOCATOR;
-  }
 
   TextEditingController controller = TextEditingController();
-  controller.text = text ;
+  if(numberOnly){
+    double? aux = double.tryParse(value);
+    if(aux!=null){
+      int valueInt = aux.toInt() ;
+      controller.text = valueInt.toString() ;
+    }
+
+  } else {
+    controller.text = value;
+  }
+
+
   if (history) {
     String lastSearch = Memory.lastSearch;
 
-    if (actionScan.state == Memory.ACTION_FIND_MOVEMENT_BY_ID) {
-      lastSearch = Memory.lastSearchMovement;
-    }
 
     if (lastSearch == '-1') lastSearch = '';
 
     controller.text =
     lastSearch.isEmpty ? Messages.NO_RECORDS_FOUND : lastSearch;
   }
+  if(numberOnly) ref.read(useNumberKeyboardProvider.notifier).state = true;
 
   final result = await showModalBottomSheet<String?>(
     isScrollControlled: true,
     context: context,
     builder: (BuildContext context) {
-      return FractionallySizedBox(
-        heightFactor: 0.85,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 20),
-          child: Center(
-            child: SingleChildScrollView(
-              child: Column(
-                spacing: 10,
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 5.0),
-                    child: Text(
-                      title,
-                      style: TextStyle(
-                        fontSize: fontSizeLarge,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.purple,
-                      ),
-                    ),
-                  ),
 
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 5.0),
-                    child: TextField(
-                      controller: controller,
-                      style: TextStyle(
-                        fontSize: fontSizeLarge,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.purple,
-                      ),
-                      keyboardType: TextInputType.none,
-                    ),
-                  ),
 
-                  keyboardButtons(context, ref, controller),
-
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                    spacing: 10,
+      return Consumer(
+        builder: (context, ref, child) {
+          final useNumberKeyboard = ref.watch(useNumberKeyboardProvider);
+          return FractionallySizedBox(
+            heightFactor: 0.9,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 20),
+              child: Center(
+                child: SingleChildScrollView(
+                  child: Column(
+                    spacing: 5,
                     children: [
-                      Expanded(
-                        child: TextButton(
-                          style: TextButton.styleFrom(
-                            foregroundColor: Colors.white,
-                            backgroundColor: Colors.red,
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 20.0),
+                        child: Text(
+                          title,
+                          style: TextStyle(
+                            fontSize: fontSizeLarge,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.purple,
                           ),
-                          onPressed: () {
-                            Navigator.pop(context, null);
-                          },
-                          child: Text(Messages.CANCEL),
                         ),
                       ),
-                      Expanded(
-                        child: TextButton(
-                          style: TextButton.styleFrom(
-                            foregroundColor: Colors.white,
-                            backgroundColor: Colors.green,
-                          ),
-                          onPressed: () {
-                            final text = controller.text;
 
-                            if (text.isEmpty) {
-                              showErrorMessage(
-                                  context, ref, Messages.TEXT_FIELD_EMPTY);
-                              return;
-                            }
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 40.0),
+                        child: Row(
+                          children: [
+                            SizedBox(width: 60,),
+                            Expanded(
+                              child: TextField(
+                                controller: controller,
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
 
-                            if (actionScan.state ==
-                                Memory.ACTION_FIND_MOVEMENT_BY_ID) {
-                              Memory.lastSearchMovement = text;
-                            } else {
-                              Memory.lastSearch = text;
-                            }
+                                  fontSize: fontSizeLarge,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.purple,
+                                ),
+                                keyboardType: TextInputType.none,
+                              ),
+                            ),
+                            SizedBox(
+                              width: 60,
+                              child: (numberOnly ==true) ? Container(): IconButton(
+                                onPressed: () {
+                                  final oldValue =
+                                  ref.read(useNumberKeyboardProvider);
+                                  ref
+                                      .read(useNumberKeyboardProvider.notifier)
+                                      .state = !oldValue;
+                                  print(ref.read(useNumberKeyboardProvider));
+                                },
+                                icon: Icon(
+                                  useNumberKeyboard
+                                      ? Icons.keyboard
+                                      : Icons.numbers,
+                                  color: Colors.purple,),
+                              ) ,
+                            ),
+                          ],
+                        ),
+                      ),
 
-                            // 🔥 ahora se usa la función callback
-                            //onOk(context, ref, text);
+                      useNumberKeyboard ? numberButtonsNoProcessor(ref: ref, context:
+                      context, textController: controller)
+                          : keyboardButtons(context, ref, controller),
 
-                            Navigator.pop(context, text);
-                          },
-                          child: Text(Messages.CONFIRM),
+                      Padding(
+                        padding: const EdgeInsets.all(40.0),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                          spacing: 10,
+                          children: [
+                            Expanded(
+                              child: TextButton(
+                                style: TextButton.styleFrom(
+                                  foregroundColor: Colors.white,
+                                  backgroundColor: Colors.red,
+                                ),
+                                onPressed: ()
+                                {
+                                  Navigator.pop(context, null);
+                                },
+                                child: Text(Messages.CANCEL),
+                              ),
+                            ),
+                            SizedBox(width: 10),
+                            Expanded(
+                              child: TextButton(
+                                style: TextButton.styleFrom(
+                                  foregroundColor: Colors.white,
+                                  backgroundColor: Colors.green,
+                                ),
+                                onPressed: () {
+                                  String text = controller.text;
+                                  Navigator.pop(context, text);
+                                },
+                                child: Text(Messages.CONFIRM),
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ],
                   ),
-                ],
+                ),
               ),
             ),
-          ),
-        ),
+          );
+        },
+      );
+    },
+  );
+
+  ref.read(isDialogShowedProvider.notifier).state = false;
+  return result;
+}
+Future<bool?> openBottomSheetConfirmationDialog(
+
+
+    {required  WidgetRef ref, required String title ,
+      required String message,String? subtitle ='',
+      }
+
+    ) async {
+
+
+  final result = await showModalBottomSheet<bool?>(
+    isScrollControlled: true,
+    context: ref.context,
+    builder: (BuildContext context) {
+
+
+      return Consumer(
+        builder: (context, ref, child) {
+          return FractionallySizedBox(
+            heightFactor: 0.9,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 20),
+              child: Center(
+                child: SingleChildScrollView(
+                  child: Padding(
+                    padding: const EdgeInsets.all(40.0),
+                    child: Column(
+                      spacing: 5,
+                      children: [
+                        Icon(Symbols.live_help,size: 60,color: Colors.amber.shade700),
+                        Text(
+                          title,
+                          style: TextStyle(
+                            fontSize: fontSizeLarge,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.purple,
+                          ),
+                        ),
+                        if(subtitle!=null && subtitle.isNotEmpty)Text(
+                          subtitle,
+                          style: TextStyle(
+                            fontSize: fontSizeLarge,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.purple,
+                          ),
+                        ),
+                        Text(
+                          message,
+                          style: TextStyle(
+                            fontSize: fontSizeLarge,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.purple,
+                          ),
+                        ),
+
+
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                          spacing: 10,
+                          children: [
+                            Expanded(
+                              child: TextButton(
+                                style: TextButton.styleFrom(
+                                  foregroundColor: Colors.white,
+                                  backgroundColor: Colors.red,
+                                ),
+                                onPressed: ()
+                                {
+                                  Navigator.pop(context, null);
+                                },
+                                child: Text(Messages.CANCEL),
+                              ),
+                            ),
+                            SizedBox(width: 10),
+                            Expanded(
+                              child: TextButton(
+                                style: TextButton.styleFrom(
+                                  foregroundColor: Colors.white,
+                                  backgroundColor: Colors.green,
+                                ),
+                                onPressed: () {
+                                  Navigator.pop(context, true);
+                                },
+                                child: Text(Messages.CONFIRM),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          );
+        },
       );
     },
   );
@@ -155,160 +281,6 @@ Future<String?> openInputDialogWithResult(
   return result;
 }
 
-/*Future<void> openInputDialogWithAction({
-    required WidgetRef ref,
-    required bool history,
-    required int actionScan,
-    required void Function({required WidgetRef ref,required String inputData,required int actionScan}) onOk,
-}) async {
-  print('actionScan.state -- $actionScan');
-
-  String title = Messages.INPUT_DATA;
-
-  if (actionScan == Memory.ACTION_FIND_MOVEMENT_BY_ID) {
-    title = Messages.FIND_MOVEMENT_BY_ID;
-  } else if (actionScan ==
-      Memory.ACTION_FIND_BY_UPC_SKU_FOR_STORE_ON_HAND) {
-    title = Messages.FIND_PRODUCT_BY_UPC_SKU;
-  } else if (actionScan == Memory.ACTION_GET_LOCATOR_TO_VALUE) {
-    title = Messages.FIND_LOCATOR;
-  }
-
-  TextEditingController controller = TextEditingController();
-
-  if (history) {
-    String lastSearch = Memory.lastSearch;
-
-    if (actionScan == Memory.ACTION_FIND_MOVEMENT_BY_ID) {
-      lastSearch = Memory.lastSearchMovement;
-    }
-
-    if (lastSearch == '-1') lastSearch = '';
-
-    controller.text =
-    lastSearch.isEmpty ? Messages.NO_RECORDS_FOUND : lastSearch;
-  }
-
-  // ⬇️ Ahora retornamos el Future<String?>
-  final result = await showModalBottomSheet<String?>(
-    isScrollControlled: true,
-    context: ref.context,
-    builder: (BuildContext context) {
-
-      return FractionallySizedBox(
-        heightFactor: 0.85,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 20),
-          child: Center(
-            child: SingleChildScrollView(
-              child: Column(
-                spacing: 10,
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 5.0),
-                    child: Text(
-                      title,
-                      style: TextStyle(
-                        fontSize: fontSizeLarge,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.purple,
-                      ),
-                    ),
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 5.0),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: TextField(
-                            controller: controller,
-                            style: TextStyle(
-                              fontSize: fontSizeLarge,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.purple,
-                            ),
-                            keyboardType: TextInputType.none,
-                          ),
-                        ),
-                        SizedBox(width: 8,),
-                        IconButton(onPressed: () async {
-                          bool value = ref.read(useNumberKeyboardProvider.notifier).state;
-                          print(value);
-                          ref.read(useNumberKeyboardProvider.notifier).update((state) => !value);
-
-                          print(useNumberKeyboard);
-                        }, icon: Icon(
-                           useNumberKeyboard ? Icons.numbers : Icons.keyboard)),
-                      ],
-                    ),
-                  ),
-
-                  useNumberKeyboard ? numberButtonsNoProcessor(context, ref, controller)
-                      : keyboardButtons(context, ref, controller),
-
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                    spacing: 10,
-                    children: [
-                      Expanded(
-                        child: TextButton(
-                          style: TextButton.styleFrom(
-                            foregroundColor: Colors.white,
-                            backgroundColor: Colors.red,
-                          ),
-                          onPressed: () {
-                            Navigator.pop(context, null); // ❗ devolvemos null
-                          },
-                          child: Text(Messages.CANCEL),
-                        ),
-                      ),
-                      Expanded(
-                        child: TextButton(
-                          style: TextButton.styleFrom(
-                            foregroundColor: Colors.white,
-                            backgroundColor: Colors.green,
-                          ),
-                          onPressed: () {
-                            final text = controller.text;
-
-                            if (text.isEmpty) {
-                              showErrorMessage(
-                                  context, ref, Messages.TEXT_FIELD_EMPTY);
-                              return;
-                            }
-
-                            if (actionScan ==
-                                Memory.ACTION_FIND_MOVEMENT_BY_ID) {
-                              Memory.lastSearchMovement = text;
-                            } else {
-                              Memory.lastSearch = text;
-                            }
-
-                            onOk(ref: ref, inputData: text,
-                                actionScan: actionScan); // ❗ llamamos a onOk
-
-                            Navigator.pop(context, text); // <-- 🔥 devolvemos text
-                          },
-                          child: Text(Messages.CONFIRM),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-      );
-    },
-  );
-
-  ref.read(isDialogShowedProvider.notifier).state = false;
-
-  print('Dialog closed with: $result');
-
-  //return result; // 🔥 devolvemos el valor final al que llama
-}*/
 
 Future<void> openInputDialogWithAction({
   required WidgetRef ref,
@@ -321,8 +293,6 @@ Future<void> openInputDialogWithAction({
   required int actionScan,
   }) onOk,
 }) async {
-  print('actionScan.state -- $actionScan');
-
   String title = Messages.INPUT_DATA;
 
   if (actionScan == Memory.ACTION_FIND_MOVEMENT_BY_ID) {
@@ -358,13 +328,13 @@ Future<void> openInputDialogWithAction({
           final useNumberKeyboard = ref.watch(useNumberKeyboardProvider);
 
           return FractionallySizedBox(
-            heightFactor: 0.85,
+            heightFactor: 0.9,
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 20),
               child: Center(
                 child: SingleChildScrollView(
                   child: Column(
-                    spacing: 10,
+                    spacing: 5,
                     children: [
                       Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 5.0),
@@ -671,27 +641,29 @@ Widget numberButtonsNoProcessor(
     {required BuildContext context,required WidgetRef ref,
       required TextEditingController textController,
       bool? numberOnly =false }) {
-  final double keyboardWidth = MediaQuery.of(context).size.width * 0.7;
+  final double keyboardWidth = MediaQuery.of(context).size.width * 0.56;
+  final double buttonWidth = keyboardWidth/5.5;
+
 
   // Definimos los botones numéricos
-  final List<_NumButtonData?> numericButtons = [
-    _NumButtonData(label: '1', value: 1),
-    _NumButtonData(label: '2', value: 2),
-    _NumButtonData(label: '3', value: 3),
-    _NumButtonData(label: '4', value: 4),
-    _NumButtonData(label: '5', value: 5),
-    _NumButtonData(label: '6', value: 6),
-    _NumButtonData(label: '7', value: 7),
-    _NumButtonData(label: '8', value: 8),
-    _NumButtonData(label: '9', value: 9),
+  final List<NumButtonData?> numericButtons = [
+    NumButtonData(label: '1', value: 1),
+    NumButtonData(label: '2', value: 2),
+    NumButtonData(label: '3', value: 3),
+    NumButtonData(label: '4', value: 4),
+    NumButtonData(label: '5', value: 5),
+    NumButtonData(label: '6', value: 6),
+    NumButtonData(label: '7', value: 7),
+    NumButtonData(label: '8', value: 8),
+    NumButtonData(label: '9', value: 9),
     null, // celda vacía para completar 3x4
-    _NumButtonData(label: '0', value: 0),
+    NumButtonData(label: '0', value: 0),
     null, // celda vacía para completar 3x4
   ];
 
   return Center(
     child: Column(
-      spacing: 20,
+      spacing: 10,
       children: [
         // ⬇️ Grid 3x4 con los números
         SizedBox(
@@ -745,7 +717,7 @@ Widget numberButtonsNoProcessor(
                     addQuantityText(context, ref, textController, -4),
                 style: TextButton.styleFrom(
                   backgroundColor: Colors.white,
-                  minimumSize: const Size(60, 60),
+                  minimumSize: Size(buttonWidth, buttonWidth),
                   shape: RoundedRectangleBorder(
                     side: const BorderSide(color: Colors.black),
                     borderRadius: BorderRadius.circular(5),
@@ -766,7 +738,7 @@ Widget numberButtonsNoProcessor(
                     addQuantityText(context, ref, textController, -3),
                 style: TextButton.styleFrom(
                   backgroundColor: Colors.white,
-                  minimumSize: const Size(60, 60),
+                  minimumSize: Size(buttonWidth, buttonWidth),
                   shape: RoundedRectangleBorder(
                     side: const BorderSide(color: Colors.black),
                     borderRadius: BorderRadius.circular(5),
@@ -787,7 +759,7 @@ Widget numberButtonsNoProcessor(
                     addQuantityText(context, ref, textController, -2),
                 style: TextButton.styleFrom(
                   backgroundColor: Colors.white,
-                  minimumSize: const Size(60, 60),
+                  minimumSize: Size(buttonWidth, buttonWidth),
                   shape: RoundedRectangleBorder(
                     side: const BorderSide(color: Colors.black),
                     borderRadius: BorderRadius.circular(5),
@@ -804,8 +776,8 @@ Widget numberButtonsNoProcessor(
 
               // CLEAR (ocupa más ancho)
               SizedBox(
-                width: keyboardWidth * 0.35,
-                height: 60,
+                height: buttonWidth,
+                width: buttonWidth*2,
                 child: TextButton(
                   onPressed: () =>
                       addQuantityText(context, ref, textController, -1),
@@ -820,7 +792,7 @@ Widget numberButtonsNoProcessor(
                     Messages.CLEAR,
                     style: TextStyle(
                       color: Colors.black,
-                      fontSize: fontSizeMedium,
+                      fontSize: 10,
                     ),
                   ),
                 ),
@@ -832,349 +804,135 @@ Widget numberButtonsNoProcessor(
     ),
   );
 }
+Future<void> getDoubleDialog({
+  required WidgetRef ref,
+  required double quantity,
+  required StateProvider<double> targetProvider,   // 👈 NUEVO
+}) async {
+  final TextEditingController quantityController = TextEditingController();
+  final double qtyOnHand = quantity;
+  BuildContext context = ref.context;
 
-// Clasecita interna solo para organizar datos de los botones
-class _NumButtonData {
-  final String label;
-  final int value;
+  quantityController.text = quantity.toStringAsFixed(0);
 
-  _NumButtonData({required this.label, required this.value});
-}
-
-/*Widget numberButtonsNoProcessor(BuildContext context, WidgetRef ref,TextEditingController textController){
-  double widthButton = 60 ;
-  return Center(
-
-    child: Column(
-      spacing: 10,
-      children: [
-        Row(
-          spacing: 4,
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            TextButton(
-              onPressed: () => addQuantityText(context,ref,textController,0),
-              style: TextButton.styleFrom(
-                  backgroundColor: Colors.white,
-                  minimumSize: Size(widthButton, widthButton),
-                  shape: RoundedRectangleBorder(
-                    side: BorderSide(color: Colors.black),
-                    borderRadius: BorderRadius.circular(5),
-
-                  )
-              ),
-              child: Text(
-                '0',
-                style: TextStyle(
-                    color: Colors.black,
-                    fontSize: fontSizeMedium
-                ),
-              ),
-            ),
-            TextButton(
-              onPressed: () => addQuantityText(context,ref,textController,1),
-              style: TextButton.styleFrom(
-                  backgroundColor: Colors.white,
-                  minimumSize: Size(widthButton, widthButton),
-                  shape: RoundedRectangleBorder(
-                    side: BorderSide(color: Colors.black),
-                    borderRadius: BorderRadius.circular(5),
-
-                  )
-              ),
-              child: Text(
-                '1',
-                style: TextStyle(
-                    color: Colors.black,
-                    fontSize: fontSizeMedium
-                ),
-              ),
-            ),
-            TextButton(
-              onPressed: () => addQuantityText(context,ref,textController,2),
-              style: TextButton.styleFrom(
-                  backgroundColor: Colors.white,
-                  minimumSize: Size(widthButton, widthButton),
-                  shape: RoundedRectangleBorder(
-                    side: BorderSide(color: Colors.black),
-
-                    borderRadius: BorderRadius.circular(5),
-
-                  )
-              ),
-              child: Text(
-                '2',
-                style: TextStyle(
-                    color: Colors.black,
-                    fontSize: fontSizeMedium
-                ),
-              ),
-            ),
-            TextButton(
-              onPressed: () => addQuantityText(context,ref,textController,3),
-              style: TextButton.styleFrom(
-                  backgroundColor: Colors.white,
-                  minimumSize: Size(widthButton, widthButton),
-                  shape: RoundedRectangleBorder(
-                    side: BorderSide(color: Colors.black),
-                    borderRadius: BorderRadius.circular(5),
-
-                  )
-              ),
-              child: Text(
-                '3',
-                style: TextStyle(
-                    color: Colors.black,
-                    fontSize: fontSizeMedium
-                ),
-              ),
-            ),
-            TextButton(
-              onPressed: () => addQuantityText(context,ref,textController,4),
-              style: TextButton.styleFrom(
-                  backgroundColor: Colors.white,
-                  minimumSize: Size(widthButton, widthButton),
-                  shape: RoundedRectangleBorder(
-                    side: BorderSide(color: Colors.black),
-                    borderRadius: BorderRadius.circular(5),
-
-                  )
-              ),
-              child: Text(
-                '4',
-                style: TextStyle(
-                    color: Colors.black,
-                    fontSize: fontSizeMedium
-                ),
-              ),
-            ),
-
-          ],
-        ),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          spacing: 4,
-          children: [
-
-
-            TextButton(
-              onPressed: () => addQuantityText(context,ref,textController,5),
-              style: TextButton.styleFrom(
-                  backgroundColor: Colors.white,
-                  minimumSize: Size(widthButton, widthButton),
-                  shape: RoundedRectangleBorder(
-                    side: BorderSide(color: Colors.black),
-                    borderRadius: BorderRadius.circular(5),
-
-                  )
-              ),
-              child: Text(
-                '5',
-                style: TextStyle(
-                    color: Colors.black,
-                    fontSize: fontSizeMedium
-                ),
-              ),
-            ),
-            TextButton(
-              onPressed: () => addQuantityText(context,ref,textController,6),
-              style: TextButton.styleFrom(
-                  backgroundColor: Colors.white,
-                  minimumSize: Size(widthButton, widthButton),
-                  shape: RoundedRectangleBorder(
-                    side: BorderSide(color: Colors.black),
-                    borderRadius: BorderRadius.circular(5),
-
-                  )
-              ),
-              child: Text(
-                '6',
-                style: TextStyle(
-                    color: Colors.black,
-                    fontSize: fontSizeMedium
-                ),
-              ),
-            ),
-            TextButton(
-              onPressed: () => addQuantityText(context,ref,textController,7),
-              style: TextButton.styleFrom(
-                  backgroundColor: Colors.white,
-                  minimumSize: Size(widthButton, widthButton),
-                  shape: RoundedRectangleBorder(
-                    side: BorderSide(color: Colors.black),
-                    borderRadius: BorderRadius.circular(5),
-
-                  )
-              ),
-              child: Text(
-                '7',
-                style: TextStyle(
-                    color: Colors.black,
-                    fontSize: fontSizeMedium
-                ),
-              ),
-            ),
-            TextButton(
-              onPressed: () => addQuantityText(context,ref,textController,8),
-              style: TextButton.styleFrom(
-                  backgroundColor: Colors.white,
-                  minimumSize: Size(widthButton, widthButton),
-                  shape: RoundedRectangleBorder(
-                    side: BorderSide(color: Colors.black),
-                    borderRadius: BorderRadius.circular(5),
-
-                  )
-              ),
-              child: Text(
-                '8',
-                style: TextStyle(
-                    color: Colors.black,
-                    fontSize: fontSizeMedium
-                ),
-              ),
-            ),
-
-            TextButton(
-              onPressed: () => addQuantityText(context,ref,textController,9),
-              style: TextButton.styleFrom(
-                  backgroundColor: Colors.white,
-                  minimumSize: Size(widthButton, widthButton),
-                  shape: RoundedRectangleBorder(
-                    side: BorderSide(color: Colors.black),
-                    borderRadius: BorderRadius.circular(5),
-
-                  )
-              ),
-              child: Text(
-                '9',
-                style: TextStyle(
-                    color: Colors.black,
-                    fontSize: fontSizeMedium
-                ),
-              ),
-            ),
-
-          ],
-        ),
-        SizedBox(height: 20,),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          //spacing: 4,
-          children: [
-            TextButton(
-              onPressed: () =>addQuantityText(context,ref,textController,-4),
-              style: TextButton.styleFrom(
-                  backgroundColor: Colors.white,
-                  minimumSize: Size(widthButton, widthButton),
-                  shape: RoundedRectangleBorder(
-                    side: BorderSide(color: Colors.black),
-                    borderRadius: BorderRadius.circular(5),
-
-                  )
-              ),
-              child: Text(
-                '-',
-                style: TextStyle(
-                    color: Colors.black,
-                    fontSize: fontSizeMedium
-                ),
-              ),
-            ),
-            TextButton(
-              onPressed: () =>addQuantityText(context,ref,textController,-3),
-              style: TextButton.styleFrom(
-                  backgroundColor: Colors.white,
-                  minimumSize: Size(widthButton, widthButton),
-                  shape: RoundedRectangleBorder(
-                    side: BorderSide(color: Colors.black),
-                    borderRadius: BorderRadius.circular(5),
-
-                  )
-              ),
-              child: Text(
-                '.',
-                style: TextStyle(
-                    color: Colors.black,
-                    fontSize: fontSizeMedium
-                ),
-              ),
-            ),
-            TextButton(
-              onPressed: () =>addQuantityText(context,ref, textController,-2),
-              style: TextButton.styleFrom(
-                  backgroundColor: Colors.white,
-                  minimumSize: Size(widthButton, widthButton),
-                  shape: RoundedRectangleBorder(
-                    side: BorderSide(color: Colors.black),
-                    borderRadius: BorderRadius.circular(5),
-
-                  )
-              ),
-              child: Text(
-                '<=',
-                style: TextStyle(
-                    color: Colors.black,
-                    fontSize: fontSizeMedium
-                ),
-              ),
-            ),
-            SizedBox(
-              width: widthButton*2,
-              height: widthButton,
-              child: TextButton(
-                onPressed: () =>addQuantityText(context,ref,textController,-1),
-                style: TextButton.styleFrom(
-                    backgroundColor: Colors.white,
-                    minimumSize: Size(widthButton*2 + 3*4, widthButton), // width of 5 buttons + 4 spacing
-                    shape: RoundedRectangleBorder(
-                      side: BorderSide(color: Colors.black),
-                      borderRadius: BorderRadius.circular(5),
-
-                    )
-                ),
-
-                child: Text(
-                  Messages.CLEAR,
+  await showModalBottomSheet(
+    context: context,
+    isScrollControlled: true,
+    backgroundColor: Colors.white,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+    ),
+    builder: (ctx) {
+      return FractionallySizedBox(
+        heightFactor: 0.9,
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: SingleChildScrollView(
+            child: Column(
+              spacing: 5,
+              children: [
+                Text(
+                  Messages.QUANTITY_TO_MOVE,
                   style: TextStyle(
-                      color: Colors.black,
-                      fontSize: fontSizeMedium
+                    fontSize: fontSizeLarge,
+                    fontWeight: FontWeight.bold,
                   ),
                 ),
-              ),
-            ),
-          ],
-        ),
-        *//*SizedBox(
-          width: widthButton*5 + 4*4,
-          height: widthButton,
-          child: TextButton(
-            onPressed: () => addQuantityText(context,ref,textController,-1),
-            style: TextButton.styleFrom(
-                backgroundColor: Colors.white,
-                minimumSize: Size(widthButton*5 + 4*4, widthButton), // width of 5 buttons + 4 spacing
-                shape: RoundedRectangleBorder(
-                  side: BorderSide(color: Colors.black),
-                  borderRadius: BorderRadius.circular(5),
 
-                )
-            ),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 50.0),
+                  child: TextField(
+                    enabled: false,
+                    controller: quantityController,
+                    textAlign: TextAlign.end,
+                    style: TextStyle(
+                      fontSize: fontSizeLarge,
+                      color: Colors.purple,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
 
-            child: Text(
-              Messages.CLEAR,
-              style: TextStyle(
-                  color: Colors.black,
-                  fontSize: fontSizeMedium
-              ),
+                numberButtonsNoProcessor(
+                  ref: ref,
+                  textController: quantityController,
+                  context: ctx,
+                  numberOnly: true,
+                ),
+
+
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: Colors.red,
+                        ),
+                        onPressed: () {
+                          ref.read(targetProvider.notifier).state = 0;
+                          Navigator.of(ctx).pop();
+                        },
+                        child: Text(Messages.CANCEL),
+                      ),
+                    ),
+                    SizedBox(width: 12),
+                    Expanded(
+                      child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.green,
+                          foregroundColor: Colors.white,
+                        ),
+                        onPressed: () {
+                          final txt = quantityController.text.trim();
+
+                          if (txt.isEmpty) {
+                            showErrorMessage(ctx, ref,
+                                '${Messages.ERROR_QUANTITY} ${Messages.EMPTY}');
+                            return;
+                          }
+
+                          final double? aux = double.tryParse(txt);
+
+                          if (aux != null && aux > 0) {
+                            if (aux <= qtyOnHand) {
+                              ref.read(targetProvider.notifier).state = aux;
+                              Navigator.of(ctx).pop();
+                            } else {
+                              final msg =
+                                  '${Messages.ERROR_QUANTITY} ${Memory.numberFormatter0Digit.format(aux)} > ${Memory.numberFormatter0Digit.format(qtyOnHand)}';
+
+                              showErrorMessage(ctx, ref, msg);
+
+                              quantityController.text =
+                                  Memory.numberFormatter0Digit.format(qtyOnHand);
+                              return;
+                            }
+                          } else {
+                            showErrorMessage(
+                                ctx,
+                                ref,
+                                '${Messages.ERROR_QUANTITY} '
+                                    '${aux == null ? Messages.EMPTY : txt}');
+                            return;
+                          }
+                        },
+                        child: Text(Messages.OK),
+                      ),
+                    ),
+                  ],
+                ),
+
+                //SizedBox(height: Memory.BOTTOM_BAR_HEIGHT),
+              ],
             ),
           ),
-        ),*//*
-
-      ],
-    ),
+        ),
+      );
+    },
   );
+}
 
 
-}*/
 void addQuantityText(BuildContext context, WidgetRef ref,
     TextEditingController quantityController,int quantity) {
 
@@ -1197,280 +955,8 @@ void addQuantityText(BuildContext context, WidgetRef ref,
   }
 
 
-  /*if(quantity==-1){
-    quantityController.text = '';
-    return;
-  }
-  String s =  quantityController.text;
-  String s1 = s;
-  String s2 ='';
-  if(s.contains('.')) {
-    s1 = s.split('.').first;
-    s2 = s.split('.').last;
-  }
-
-  String r ='';
-  if(s.contains('.')){
-    r='$s1$quantity.$s2';
-  } else {
-    r='$s1$quantity';
-  }
-
-  int? aux = int.tryParse(r);
-  if(aux==null || aux<=0){
-    String message =  '${Messages.ERROR_QUANTITY} $quantity';
-    showErrorMessage(context, ref, message);
-    return;
-  }
-  quantityController.text = aux.toString();*/
-
 }
-Widget numberButtons(BuildContext context, WidgetRef ref,TextEditingController quantityController, InputDataProcessor processor){
-  double widthButton = 40 ;
-  return Center(
 
-    child: Column(
-      children: [
-        Row(
-          spacing: 4,
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            TextButton(
-              onPressed: () => processor.addQuantityText(context,ref,quantityController,0),
-              style: TextButton.styleFrom(
-                  backgroundColor: Colors.white,
-                  minimumSize: Size(widthButton, widthButton),
-                  shape: RoundedRectangleBorder(
-                    side: BorderSide(color: Colors.black),
-                    borderRadius: BorderRadius.circular(5),
-
-                  )
-              ),
-              child: Text(
-                '0',
-                style: TextStyle(
-                    color: Colors.black,
-                    fontSize: fontSizeMedium
-                ),
-              ),
-            ),
-            TextButton(
-              onPressed: () => processor.addQuantityText(context,ref,quantityController,1),
-              style: TextButton.styleFrom(
-                  backgroundColor: Colors.white,
-                  minimumSize: Size(widthButton, 37),
-                  shape: RoundedRectangleBorder(
-                    side: BorderSide(color: Colors.black),
-                    borderRadius: BorderRadius.circular(5),
-
-                  )
-              ),
-              child: Text(
-                '1',
-                style: TextStyle(
-                    color: Colors.black,
-                    fontSize: fontSizeMedium
-                ),
-              ),
-            ),
-            TextButton(
-              onPressed: () => processor.addQuantityText(context,ref,quantityController,2),
-              style: TextButton.styleFrom(
-                  backgroundColor: Colors.white,
-                  minimumSize: Size(widthButton, 37),
-                  shape: RoundedRectangleBorder(
-                    side: BorderSide(color: Colors.black),
-
-                    borderRadius: BorderRadius.circular(5),
-
-                  )
-              ),
-              child: Text(
-                '2',
-                style: TextStyle(
-                    color: Colors.black,
-                    fontSize: fontSizeMedium
-                ),
-              ),
-            ),
-            TextButton(
-              onPressed: () => processor.addQuantityText(context,ref,quantityController,3),
-              style: TextButton.styleFrom(
-                  backgroundColor: Colors.white,
-                  minimumSize: Size(widthButton, 37),
-                  shape: RoundedRectangleBorder(
-                    side: BorderSide(color: Colors.black),
-                    borderRadius: BorderRadius.circular(5),
-
-                  )
-              ),
-              child: Text(
-                '3',
-                style: TextStyle(
-                    color: Colors.black,
-                    fontSize: fontSizeMedium
-                ),
-              ),
-            ),
-            TextButton(
-              onPressed: () => processor.addQuantityText(context,ref,quantityController,4),
-              style: TextButton.styleFrom(
-                  backgroundColor: Colors.white,
-                  minimumSize: Size(widthButton, 37),
-                  shape: RoundedRectangleBorder(
-                    side: BorderSide(color: Colors.black),
-                    borderRadius: BorderRadius.circular(5),
-
-                  )
-              ),
-              child: Text(
-                '4',
-                style: TextStyle(
-                    color: Colors.black,
-                    fontSize: fontSizeMedium
-                ),
-              ),
-            ),
-
-          ],
-        ),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          spacing: 4,
-          children: [
-
-
-            TextButton(
-              onPressed: () => processor.addQuantityText(context,ref,quantityController,5),
-              style: TextButton.styleFrom(
-                  backgroundColor: Colors.white,
-                  minimumSize: Size(widthButton, 37),
-                  shape: RoundedRectangleBorder(
-                    side: BorderSide(color: Colors.black),
-                    borderRadius: BorderRadius.circular(5),
-
-                  )
-              ),
-              child: Text(
-                '5',
-                style: TextStyle(
-                    color: Colors.black,
-                    fontSize: fontSizeMedium
-                ),
-              ),
-            ),
-            TextButton(
-              onPressed: () => processor.addQuantityText(context,ref,quantityController,6),
-              style: TextButton.styleFrom(
-                  backgroundColor: Colors.white,
-                  minimumSize: Size(widthButton, 37),
-                  shape: RoundedRectangleBorder(
-                    side: BorderSide(color: Colors.black),
-                    borderRadius: BorderRadius.circular(5),
-
-                  )
-              ),
-              child: Text(
-                '6',
-                style: TextStyle(
-                    color: Colors.black,
-                    fontSize: fontSizeMedium
-                ),
-              ),
-            ),
-            TextButton(
-              onPressed: () => processor.addQuantityText(context,ref,quantityController,7),
-              style: TextButton.styleFrom(
-                  backgroundColor: Colors.white,
-                  minimumSize: Size(widthButton, 37),
-                  shape: RoundedRectangleBorder(
-                    side: BorderSide(color: Colors.black),
-                    borderRadius: BorderRadius.circular(5),
-
-                  )
-              ),
-              child: Text(
-                '7',
-                style: TextStyle(
-                    color: Colors.black,
-                    fontSize: fontSizeMedium
-                ),
-              ),
-            ),
-            TextButton(
-              onPressed: () => processor.addQuantityText(context,ref,quantityController,8),
-              style: TextButton.styleFrom(
-                  backgroundColor: Colors.white,
-                  minimumSize: Size(widthButton, 37),
-                  shape: RoundedRectangleBorder(
-                    side: BorderSide(color: Colors.black),
-                    borderRadius: BorderRadius.circular(5),
-
-                  )
-              ),
-              child: Text(
-                '8',
-                style: TextStyle(
-                    color: Colors.black,
-                    fontSize: fontSizeMedium
-                ),
-              ),
-            ),
-
-            TextButton(
-              onPressed: () => processor.addQuantityText(context,ref,quantityController,9),
-              style: TextButton.styleFrom(
-                  backgroundColor: Colors.white,
-                  minimumSize: Size(widthButton, 37),
-                  shape: RoundedRectangleBorder(
-                    side: BorderSide(color: Colors.black),
-                    borderRadius: BorderRadius.circular(5),
-
-                  )
-              ),
-              child: Text(
-                '9',
-                style: TextStyle(
-                    color: Colors.black,
-                    fontSize: fontSizeMedium
-                ),
-              ),
-            ),
-
-          ],
-        ),
-        SizedBox(height: 20,),
-        SizedBox(
-          width: widthButton*5 + 4*4,
-          height: 37,
-          child: TextButton(
-            onPressed: () => processor.addQuantityText(context,ref,quantityController,-1),
-            style: TextButton.styleFrom(
-                backgroundColor: Colors.white,
-                minimumSize: Size(widthButton*5 + 4*4, 37), // width of 5 buttons + 4 spacing
-                shape: RoundedRectangleBorder(
-                  side: BorderSide(color: Colors.black),
-                  borderRadius: BorderRadius.circular(5),
-
-                )
-            ),
-
-            child: Text(
-              Messages.CLEAR,
-              style: TextStyle(
-                  color: Colors.black,
-                  fontSize: fontSizeMedium
-              ),
-            ),
-          ),
-        ),
-
-      ],
-    ),
-  );
-
-
-}
 void addText(BuildContext context,WidgetRef ref,TextEditingController textController,
     String text){
   textController.text = textController.text+text;
@@ -1479,212 +965,6 @@ void removeText(BuildContext context,WidgetRef ref,TextEditingController textCon
   textController.text = textController.text.substring(0,textController.text.length-1);
 }
 
-Widget getSearchBar(BuildContext context,WidgetRef ref,String hintText, int actionScan,
-    void Function({required WidgetRef ref,required String inputData,required int actionScan
-     }) onOk, ){
-  var isScanning = ref.watch(isScanningProvider.notifier);
-  var usePhoneCamera = ref.watch(usePhoneCameraToScanProvider.notifier);
-  var inputString = ref.watch(inputStringProvider.notifier);
 
 
 
-  return
-    SizedBox(
-      //width: double.infinity,
-      width: MediaQuery.of(context).size.width - 30,
-      height: 36,
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        spacing: 5,
-        children: [
-          IconButton(onPressed: (){
-            isScanning.state = false ;
-            usePhoneCamera.state = !usePhoneCamera.state;
-            ref.read(isDialogShowedProvider.notifier).state = false;
-          }, icon: Icon(usePhoneCamera.state?
-          Icons.camera : Icons.barcode_reader, color:
-          ref.watch(isDialogShowedProvider.notifier).state? Colors.red : Colors.purple,)),
-          Expanded(
-            child: Text(
-              inputString.state =='' ? hintText : inputString.state,
-              textAlign: TextAlign.center,
-            ),
-          ) ,
-          IconButton(onPressed:() async {
-            if(context.mounted){
-              openInputDialogWithAction(ref: ref,history: true,onOk:onOk,
-                  actionScan:actionScan);
-            }
-          },
-              icon: Icon( Icons.search, color:isScanning.state ?Colors.grey: Colors.purple,)),
-          IconButton(onPressed:() async {
-            //isScanning.state = false ;
-            //isDialogShowed.state = true;
-            //await Future.delayed(const Duration(microseconds: 100));
-            if(context.mounted){
-              openInputDialogWithAction(ref: ref,history: false,onOk:onOk, actionScan: actionScan);
-            }
-          },
-              icon: Icon( Icons.history, color:isScanning.state?Colors.grey: Colors.purple,)),
-
-        ],
-      ),
-    );
-
-}
-String getTip(int action) {
-  switch(action){
-    case Memory.ACTION_FIND_BY_UPC_SKU_FOR_STORE_ON_HAND:
-      return ' (UPC)';
-    case Memory.ACTION_GET_LOCATOR_TO_VALUE:
-      return ' (LOC)';
-    case Memory.ACTION_FIND_MOVEMENT_BY_ID:
-      return ' (MV)';
-    case Memory.ACTION_GO_TO_STORAGE_ON_HAND_PAGE_WITH_UPC:
-      return ' (GO UPC)';
-    case Memory.ACTION_FIND_PRINTER_BY_QR:
-      return ' (PRINTER)';
-    default:
-      return '';
-
-
-  }
-
-}
-
-
-Future<int?> openInputNumberDialogWithResult(
-    BuildContext context,
-    WidgetRef ref,
-    bool history,
-
-    ) async {
-  var actionScan = ref.watch(actionScanProvider.notifier);
-  print('actionScan.state -- ${actionScan.state}');
-
-  String title = Messages.INPUT_DATA;
-
-  if (actionScan.state == Memory.ACTION_FIND_MOVEMENT_BY_ID) {
-    title = Messages.FIND_MOVEMENT_BY_ID;
-  } else if (actionScan.state ==
-      Memory.ACTION_FIND_BY_UPC_SKU_FOR_STORE_ON_HAND) {
-    title = Messages.FIND_PRODUCT_BY_UPC_SKU;
-  } else if (actionScan.state == Memory.ACTION_GET_LOCATOR_TO_VALUE) {
-    title = Messages.FIND_LOCATOR;
-  }
-
-  TextEditingController controller = TextEditingController();
-
-  if (history) {
-    String lastSearch = Memory.lastSearch;
-
-    if (actionScan.state == Memory.ACTION_FIND_MOVEMENT_BY_ID) {
-      lastSearch = Memory.lastSearchMovement;
-    }
-
-    if (lastSearch == '-1') lastSearch = '';
-
-    controller.text =
-    lastSearch.isEmpty ? Messages.NO_RECORDS_FOUND : lastSearch;
-  }
-
-  final int? result = await showModalBottomSheet<int?>(
-    isScrollControlled: true,
-    context: context,
-    builder: (BuildContext context) {
-      return FractionallySizedBox(
-        heightFactor: 0.85,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 20),
-          child: Center(
-            child: SingleChildScrollView(
-              child: Column(
-                spacing: 10,
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 5.0),
-                    child: Text(
-                      title,
-                      style: TextStyle(
-                        fontSize: fontSizeLarge,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.purple,
-                      ),
-                    ),
-                  ),
-
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 5.0),
-                    child: TextField(
-                      controller: controller,
-                      style: TextStyle(
-                        fontSize: fontSizeLarge,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.purple,
-                      ),
-                      keyboardType: TextInputType.none,
-                    ),
-                  ),
-
-                  keyboardButtons(context, ref, controller),
-
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                    spacing: 10,
-                    children: [
-                      Expanded(
-                        child: TextButton(
-                          style: TextButton.styleFrom(
-                            foregroundColor: Colors.white,
-                            backgroundColor: Colors.red,
-                          ),
-                          onPressed: () {
-                            Navigator.pop(context, null);
-                          },
-                          child: Text(Messages.CANCEL),
-                        ),
-                      ),
-                      Expanded(
-                        child: TextButton(
-                          style: TextButton.styleFrom(
-                            foregroundColor: Colors.white,
-                            backgroundColor: Colors.green,
-                          ),
-                          onPressed: () {
-                            final text = controller.text;
-
-                            if (text.isEmpty) {
-                              showErrorMessage(
-                                  context, ref, Messages.TEXT_FIELD_EMPTY);
-                              return;
-                            }
-
-                            if (actionScan.state ==
-                                Memory.ACTION_FIND_MOVEMENT_BY_ID) {
-                              Memory.lastSearchMovement = text;
-                            } else {
-                              Memory.lastSearch = text;
-                            }
-
-                            // 🔥 ahora se usa la función callback
-                            //onOk(context, ref, text);
-
-                            Navigator.pop(context, int.tryParse(text));
-                          },
-                          child: Text(Messages.CONFIRM),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-      );
-    },
-  );
-
-  ref.read(isDialogShowedProvider.notifier).state = false;
-  return result;
-}

@@ -56,6 +56,9 @@ final findProductForPutAwayMovementProvider = FutureProvider.autoDispose<Product
 
       if (responseApi.records != null && responseApi.records!.isNotEmpty) {
         final productsList = responseApi.records!;
+        if(productsList.isEmpty){
+          return productWithStock;
+        }
         IdempiereProduct product = productsList[0];
         productWithStock.copyWithProduct(product);
 

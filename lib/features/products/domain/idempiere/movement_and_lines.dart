@@ -7,6 +7,8 @@ import 'package:monalisa_app_001/features/products/domain/sql/sql_data_movement_
 import 'package:monalisa_app_001/features/products/presentation/screens/store_on_hand/memory_products.dart';
 
 import '../../../shared/data/memory.dart';
+import '../../presentation/screens/movement/printer/zpl/label_utils.dart';
+import '../../presentation/screens/movement/printer/zpl/new/template_zpl_models.dart';
 import '../sql/sql_users_data.dart';
 import 'idempiere_business_partner_location.dart';
 import 'idempiere_document_status.dart';
@@ -250,8 +252,28 @@ class MovementAndLines extends IdempiereMovement {
     return warehouseFrom!.id == warehouseTo!.id;
   }
   bool  get canCompleteMovement {
+    print('canCompleteMovement?');
+    print('hasMovement $hasMovement');
     if(!hasMovement) return false;
+    print('hasMovementLines $hasMovementLines');
     if(!hasMovementLines) return false;
+    print('docStatus ${docStatus?.id}');
+    print('docStatus ${docStatus?.id} = ${Memory.IDEMPIERE_DOC_TYPE_DRAFT} ?');
+
+    if(docStatus != null && docStatus!.id
+        == Memory.IDEMPIERE_DOC_TYPE_DRAFT) {
+      return true;
+    }
+    return false;
+  }
+  bool  get canCancelMovement {
+    print('canDeleteMovement?');
+    if(!hasMovement) return false;
+    print('hasMovementLines $hasMovementLines');
+    if(hasMovementLines) return false;
+    print('docStatus ${docStatus?.id}');
+    print('docStatus ${docStatus?.id} = ${Memory.IDEMPIERE_DOC_TYPE_DRAFT} ?');
+
     if(docStatus != null && docStatus!.id
         == Memory.IDEMPIERE_DOC_TYPE_DRAFT) {
       return true;
@@ -412,6 +434,69 @@ class MovementAndLines extends IdempiereMovement {
       return true ;
     }
         return false;
+
+  }
+
+  double get totalMovementQty {
+    if(movementLines == null) return 0;
+    if(movementLines!.isEmpty) return 0;
+    double total = 0;
+    for(IdempiereMovementLine line in movementLines!){
+      total += line.movementQty ?? 0;
+    }
+    return total;
+
+  }
+
+  List<CategoryAgg> get movementLineByCategories{
+    if(movementLines == null) return [];
+    if(movementLines!.isEmpty) return [];
+    // ===== Lines =====
+    final List<IdempiereMovementLine> lines =  movementLines ??<IdempiereMovementLine>[];
+
+    // ===== Agrupar por categoría + sumar qty =====
+    final Map<String, CategoryAgg> map = {};
+
+    for (final r in lines) {
+      final String categoryName = safe(
+        r.mProductID?.mProductCategoryID?.identifier ?? 'category null',
+      );
+      final String categoryId = safe(
+        r.mProductID?.mProductCategoryID?.id?.toString() ?? 'category id null',
+      );
+
+      final String key = '$categoryId|$categoryName';
+
+      final num q = (r.movementQty as num?) ?? 0;
+
+      map.update(
+        key,
+            (old) => old.copyWith(totalQty: old.totalQty + q),
+        ifAbsent: () => CategoryAgg(
+          categoryId: categoryId,
+          categoryName: categoryName,
+          totalQty: q,
+        ),
+      );
+    }
+
+    final List<CategoryAgg> categories = map.values.toList()
+      ..sort((a, b) => a.categoryName.toLowerCase().compareTo(b.categoryName.toLowerCase()));
+
+    for(int i=0; i<categories.length; i++){
+      categories[i].sequence = i+1;
+    }
+    return categories;
+
+
+  }
+
+
+  int pageInfo(int rowsPerLabel) {
+    if(movementLines == null) return 0;
+    if(movementLines!.isEmpty) return 0;
+    int totalPages = (movementLines!.length / rowsPerLabel).ceil();
+    return totalPages;
 
   }
 

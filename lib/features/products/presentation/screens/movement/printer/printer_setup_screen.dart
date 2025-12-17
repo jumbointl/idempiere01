@@ -10,10 +10,23 @@ import 'package:go_router/go_router.dart';
 import 'package:monalisa_app_001/config/config.dart';
 import 'package:monalisa_app_001/features/products/presentation/screens/movement/printer/mo_printer.dart';
 import 'package:monalisa_app_001/features/products/presentation/screens/movement/printer/printer_utils.dart';
+import 'package:monalisa_app_001/features/products/presentation/screens/movement/printer/widgets/printer_commands_menu.dart';
+import 'package:monalisa_app_001/features/products/presentation/screens/movement/printer/zpl/label_utils.dart';
+import 'package:monalisa_app_001/features/products/presentation/screens/movement/printer/zpl/new/template_zpl_models.dart';
+import 'package:monalisa_app_001/features/products/presentation/screens/movement/printer/zpl/new/template_zpl_on_create.dart';
+import 'package:monalisa_app_001/features/products/presentation/screens/movement/printer/zpl/new/template_zpl_on_use.dart';
+import 'package:monalisa_app_001/features/products/presentation/screens/movement/printer/zpl/new/template_zpl_store.dart';
+import 'package:monalisa_app_001/features/products/presentation/screens/movement/printer/zpl/new/template_zpl_utils.dart';
+import 'package:monalisa_app_001/features/products/presentation/screens/movement/printer/zpl/zpl_label_printer_100x150.dart';
+import 'package:monalisa_app_001/features/products/presentation/screens/movement/printer/zpl/zpl_print_profile_providers.dart';
+import 'package:monalisa_app_001/features/products/presentation/screens/movement/printer/zpl/zpl_print_widget.dart';
 import 'package:pdf/pdf.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:printing/printing.dart';
 import 'package:simple_barcode_scanner/simple_barcode_scanner.dart';
+import 'dart:io';
+import 'package:path_provider/path_provider.dart';
+import 'package:share_plus/share_plus.dart';
 
 import '../../../../../shared/data/memory.dart';
 import '../../../../../shared/data/messages.dart';
@@ -223,6 +236,95 @@ class _PrinterSetupScreenState extends ConsumerState<PrinterSetupScreen> {
                 ),
                 side: const BorderSide(color: Colors.purple),
               ),
+            ),
+
+            const SizedBox(width: 4),
+            // 👇 MENÚ DE COMANDOS ZPL / TSPL
+            PrinterCommandsMenu(
+              onCopyZpl: () {
+                final movementAndLinesNow = MovementAndLines.fromJson(jsonDecode(widget.argument));
+
+                final int rowsPerLabel = 4;
+                final int rowPerProductName = 2;
+                final int marginX = 20;
+                final int marginY = 20;
+                final box = GetStorage();
+                final current =
+                zplLabelTypeFromStorage(box.read<String>(kZplLabelTypeKey));
+                if(current==null){
+                  showWarningMessage(context, ref, Messages.ERROR_LABEL_TYPE);
+                  return;
+                }
+
+                final zplAll = buildZpl100x150NoLogoAll(
+                  movementAndLines: movementAndLinesNow,
+                  rowsPerLabel: rowsPerLabel,
+                  rowPerProductName: rowPerProductName,
+                  marginX: marginX,
+                  marginY: marginY,
+                  labelType: current,
+                );
+
+                copyToClipboard(context, zplAll);},
+              onCopyTspl: () {
+                final movementAndLinesNow = MovementAndLines.fromJson(jsonDecode(widget.argument));
+
+                // Ejemplo configuración (o usa tu perfil guardado)
+                final int rowsPerLabel = 4;
+                final int rowPerProductName = 2;
+                final int marginX = 20;
+                final int marginY = 20;
+                final box = GetStorage();
+                final current =
+                zplLabelTypeFromStorage(box.read<String>(kZplLabelTypeKey));
+                if(current==null){
+                  showWarningMessage(context, ref, Messages.ERROR_LABEL_TYPE);
+                  return;
+                }
+
+                final tsplAll = buildTspl100x150NoLogoAll(
+                  movementAndLines: movementAndLinesNow,
+                  rowsPerLabel: rowsPerLabel,
+                  rowPerProductName: rowPerProductName,
+                  marginX: marginX,
+                  marginY: marginY,
+                  labelType: current,
+                );
+                copyToClipboard(context, tsplAll);},
+                onSaveTxt: () async {
+                  final box = GetStorage();
+                  final current = zplLabelTypeFromStorage(box.read<String>(kZplLabelTypeKey));
+
+                  if (current == null) {
+                  showWarningMessage(context, ref, Messages.ERROR_LABEL_TYPE);
+                  return;
+                  }
+
+                  await saveAndShareCommands(context, current);
+                },
+
+
+              onConfigureZpl: () async {
+                await showZplPrintProfilesSheet(context, ref);
+              },
+              onPrintZplDirect: () async {
+                MovementAndLines movementAndLines = ref.read(movementAndLinesProvider);
+                await printZplDirectOrConfigure(ref,movementAndLines);
+              },
+              onChooseLabelType: () async {
+                final box = GetStorage();
+                final current =
+                zplLabelTypeFromStorage(box.read<String>(kZplLabelTypeKey));
+                await showZplLabelTypeSheet(ref.context, current: current);
+              },
+              onCreateZplTemplate: () async{
+                onCreateZplTemplate(context,ref);
+
+              },
+              onUseZplTemplate: () async {
+                 onUseZplTemplate(context,ref);
+              },
+
             ),
             SizedBox(width: 8,),
           ],
@@ -834,6 +936,472 @@ class _PrinterSetupScreenState extends ConsumerState<PrinterSetupScreen> {
     _applyPrinterToFields(ref, printer);
     // esto usa los datos que ya pusimos en printerProvider
     await printPdf(ref, direct: true);
+  }
+  String get zplHeaderCompact => r'''
+^PW800
+^CI28
+^LH0,0
+^LS0
+
+^FX HEADER compacto ~25mm (200 dots) - QR izquierda
+^FX Area efectiva: 93mm (=744 dots) por resta 7mm
+^FX Variables: {{QRDATA}} {{DOCNO}} {{DATE}} {{STATUS}} {{COMPANY}} {{TITLE}}
+
+^FO20,20
+^BQN,2,8
+^FDLA,{{QRDATA}}^FS
+
+^FO192,24^FB572,1,0,R^A0N,44,32^FD{{DOCNO}}^FS
+^FO192,76^FB286,1,0,C^A0N,24,18^FD{{DATE}}^FS
+^FO478,76^FB286,1,0,R^A0N,24,18^FD{{STATUS}}^FS
+^FO192,108^FB572,1,0,R^A0N,26,20^FD{{COMPANY}}^FS
+^FO192,140^FB572,1,0,R^A0N,30,22^FD{{TITLE}}^FS
+
+^FO20,218^GB744,2,2^FS
+''';
+
+  String get tsplHeaderCompact => r'''
+SIZE 100 mm,150 mm
+GAP 3 mm,0 mm
+DENSITY 12
+SPEED 4
+DIRECTION 1
+REFERENCE 0,0
+CLS
+
+; HEADER compacto ~25mm (200 dots) - QR izquierda
+; Area efectiva: 93mm (=744 dots) por resta 7mm
+; Variables: {{QRDATA}} {{DOCNO}} {{DATE}} {{STATUS}} {{COMPANY}} {{TITLE}}
+
+QRCODE 20,20,L,6,A,0,"{{QRDATA}}"
+
+BLOCK 192,24,572,40,"0",0,2,2,0,2,"{{DOCNO}}"
+BLOCK 192,76,286,30,"0",0,1,1,0,1,"{{DATE}}"
+BLOCK 478,76,286,30,"0",0,1,1,0,2,"{{STATUS}}"
+BLOCK 192,108,572,30,"0",0,1,1,0,2,"{{COMPANY}}"
+BLOCK 192,140,572,34,"0",0,1,1,0,2,"{{TITLE}}"
+
+BAR 20,218,744,2
+PRINT 1,1
+''';
+
+  String buildCommandsPackText() {
+    return '''
+=== ZPL (Header compacto) ===
+
+$zplHeaderCompact
+
+=== TSPL (Header compacto) ===
+
+$tsplHeaderCompact
+''';
+  }
+
+  Future<void> copyToClipboard(BuildContext context, String text) async {
+    await Clipboard.setData(ClipboardData(text: text));
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Copiado al clipboard')),
+    );
+  }
+
+  Future<File> saveTxtToDownloadsOrAppDir({
+    required String filename,
+    required String content,
+  }) async {
+    // En Android/iOS lo más estable es guardar en app documents
+    final dir = await getApplicationDocumentsDirectory();
+    final file = File('${dir.path}/$filename');
+    await file.writeAsString(content, encoding: utf8);
+    return file;
+  }
+
+  Future<void> saveAndShareCommands(BuildContext context, ZplLabelType current) async {
+    final movementAndLinesNow = MovementAndLines.fromJson(jsonDecode(widget.argument));
+   int id = movementAndLinesNow.id ?? 00 ;
+    // Ejemplo configuración (o usa tu perfil guardado)
+    final int rowsPerLabel = 4;
+    final int rowPerProductName = 2;
+    final int marginX = 20;
+    final int marginY = 20;
+
+    final zplAll = buildZpl100x150NoLogoAll(
+      movementAndLines: movementAndLinesNow,
+      rowsPerLabel: rowsPerLabel,
+      rowPerProductName: rowPerProductName,
+      marginX: marginX,
+      marginY: marginY,
+      labelType: current,
+    );
+
+    final text = zplAll;
+    final file = await saveTxtToDownloadsOrAppDir(
+      filename: 'mv_${id}_zpl_commands.txt',
+      content: text,
+    );
+
+    // Compartir por WhatsApp/Drive/etc
+    final params = ShareParams(
+      text: 'Comandos ZPL',
+      files: [XFile(file.path)],
+    );
+    await SharePlus.instance.share(
+      params
+    );
+
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Guardado: ${file.path}')),
+    );
+  }
+
+
+  Future<void> onCreateZplTemplate(
+      BuildContext context,
+      WidgetRef ref,
+      ) async {
+    final store = ZplTemplateStore(GetStorage());
+
+    await showCreateZplTemplateDialog(
+      context: context,
+      ref: ref,
+      store: store,
+    );
+  }
+  Future<ZplTemplate?> onUseZplTemplate(
+      BuildContext context,
+      WidgetRef ref,
+      ) async {
+    final store = ZplTemplateStore(GetStorage());
+
+    return await showUseZplTemplateDialog(
+      context: context,
+      ref: ref,
+      store: store,
+    );
+  }
+
+
+
+
+  Future<void> printZplString(String zpl) async {
+    // aquí llamas tu pipeline real de impresión (Bluetooth/WiFi/USB/etc)
+    // ej: printerService.sendRaw(zpl);
+  }
+  String exportMovementByCategoryAsTemplateZpl({
+    required int rowsPerLabel,
+    required int rowPerProductName, // si no se usa, déjalo
+    required int marginX,
+    required int marginY,
+  }) {
+    // OJO: esto es tu ZPL “layout” fijo.
+    // Pega aquí la misma estructura que ya generas,
+    // pero sustituyendo variables por {{FNx}}.
+    // Para que sea corto, te dejo un “header-only” de ejemplo.
+
+    const int pw = 800;
+    const int ll = 1200;
+    const int reduceWidthDots = 56;
+    final int usableWidth = pw - reduceWidthDots;
+    const int qrSize = 160;
+    const int gap = 12;
+
+    const int headerHeight = 480;
+    const int tableHeaderHeight = 80;
+    const int footerHeight = 80;
+
+    return '''
+    ^XA
+    ^CI28
+    ^PW$pw
+    ^LL$ll
+    ^LH0,0
+    ^LS0
+    ^PR3
+    
+    ^FO$marginX,$marginY
+    ^BQN,2,8
+    ^FDLA,{{FN1}}^FS
+    
+    ^FO${marginX + qrSize + gap},${marginY + 4}
+    ^FB${usableWidth - qrSize - gap},1,0,R^A0N,44,32^FD{{FN1}}^FS
+    
+    ^FO${marginX + qrSize + gap},${marginY + 56}
+    ^FB${((usableWidth - qrSize - gap) / 2).round()},1,0,C^A0N,24,18^FD{{FN2}}^FS
+    
+    ^FO${marginX + qrSize + gap + ((usableWidth - qrSize - gap) / 2).round()},${marginY + 56}
+    ^FB${((usableWidth - qrSize - gap) / 2).round()},1,0,R^A0N,24,18^FD{{FN3}}^FS
+    
+    ^FO${marginX + qrSize + gap},${marginY + 88}
+    ^FB${usableWidth - qrSize - gap},1,0,R^A0N,26,20^FD{{FN4}}^FS
+    
+    ^FO${marginX + qrSize + gap},${marginY + 120}
+    ^FB${usableWidth - qrSize - gap},1,0,R^A0N,30,22^FD{{FN5}}^FS
+    
+    ^FO${marginX + qrSize + gap},${marginY + 156}
+    ^FB${usableWidth - qrSize - gap},1,0,R^A0N,22,18^FDDireccion: {{FN6}}^FS
+    
+    ^FO${marginX + qrSize + gap},${marginY + 184}
+    ^FB${usableWidth - qrSize - gap},1,0,R^A0N,22,18^FDFrom: {{FN7}}^FS
+    
+    ^FO${marginX + qrSize + gap},${marginY + 212}
+    ^FB${usableWidth - qrSize - gap},1,0,R^A0N,22,18^FDTO: {{FN8}}^FS
+    
+    ^FO$marginX,${marginY + headerHeight - 2}^GB$usableWidth,2,2^FS
+    
+    ^FO$marginX,${ll - marginY - footerHeight}^GB$usableWidth,2,2^FS
+    ^XZ
+    ''';
+  }
+  Future<ZplTemplate?> showZplTemplateEditorDialogMode({
+    required BuildContext context,
+    required ZplTemplateStore store,
+    ZplTemplate? initial,
+  }) async {
+    // ======================
+    // Estado inicial
+    // ======================
+    ZplTemplateMode mode = initial?.mode ?? ZplTemplateMode.category;
+
+    final nameCtrl = TextEditingController(
+      text: initial?.templateFileName ??
+          (mode == ZplTemplateMode.category
+              ? 'E:TEMPLATE_CATEGORY.ZPL'
+              : 'E:TEMPLATE_PRODUCT.ZPL'),
+    );
+
+    final dfCtrl = TextEditingController(text: initial?.zplTemplateDf ?? '');
+    final refCtrl = TextEditingController(text: initial?.zplReferenceTxt ?? '');
+
+    int rowsPerLabel(ZplTemplateMode m) => m == ZplTemplateMode.category ? 6 : 8;
+
+    String stripDrive(String file) {
+      final idx = file.indexOf(':');
+      return (idx >= 0 && idx < file.length - 1) ? file.substring(idx + 1) : file;
+    }
+
+    // ======================
+    // Cargar ejemplos
+    // ======================
+    void loadExampleForMode() {
+      final file = nameCtrl.text.trim().isEmpty
+          ? (mode == ZplTemplateMode.category
+          ? 'E:TEMPLATE_CATEGORY.ZPL'
+          : 'E:TEMPLATE_PRODUCT.ZPL')
+          : nameCtrl.text.trim();
+
+      if (nameCtrl.text.trim().isEmpty) {
+        nameCtrl.text = file;
+      }
+
+      // DF solo si es nuevo y está vacío
+      if (initial == null && dfCtrl.text.trim().isEmpty) {
+        if (mode == ZplTemplateMode.category) {
+          dfCtrl.text = buildTemplateZpl100x150ByCategoryDf(
+            printerFile: file,
+            rowsPerLabel: 6,
+          );
+        } else {
+          // DF de producto puede ser reemplazado luego por el layout real
+          dfCtrl.text = '''
+^XA
+^DF$file^FS
+^XZ
+'''.trim();
+        }
+      }
+
+      // Reference siempre se puede regenerar como ejemplo
+      if (mode == ZplTemplateMode.category) {
+        refCtrl.text = buildReferenceTxtByCategory(
+          templateFileNameNoDrive: stripDrive(file),
+        );
+      } else {
+        refCtrl.text = buildReferenceProductExample(
+          templateFileNoDrive: stripDrive(file),
+        );
+      }
+    }
+
+    if (initial == null) {
+      loadExampleForMode();
+    }
+
+    // ======================
+    // Insertar token en cursor
+    // ======================
+    void insertAtCursor(TextEditingController c, String text) {
+      final sel = c.selection;
+      final start = sel.start < 0 ? c.text.length : sel.start;
+      final end = sel.end < 0 ? c.text.length : sel.end;
+
+      c.text = c.text.replaceRange(start, end, text);
+      c.selection = TextSelection.collapsed(offset: start + text.length);
+    }
+
+    // ======================
+    // Dialog
+    // ======================
+    return showDialog<ZplTemplate>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setState) {
+          final rows = rowsPerLabel(mode);
+
+          return AlertDialog(
+            title: Text(initial == null ? 'Nuevo template ZPL' : 'Editar template ZPL'),
+            content: SizedBox(
+              width: 880,
+              child: SingleChildScrollView(
+                child: Column(
+                  children: [
+                    // ======================
+                    // Barra superior
+                    // ======================
+                    Row(
+                      children: [
+                        Expanded(
+                          child: DropdownButtonFormField<ZplTemplateMode>(
+                            value: mode,
+                            decoration: const InputDecoration(
+                              labelText: 'Modo del template',
+                              border: OutlineInputBorder(),
+                            ),
+                            items: ZplTemplateMode.values
+                                .map(
+                                  (m) => DropdownMenuItem(
+                                value: m,
+                                child: Text(
+                                  m == ZplTemplateMode.category
+                                      ? 'Categoría (6 filas)'
+                                      : 'Producto (8 filas)',
+                                ),
+                              ),
+                            )
+                                .toList(),
+                            onChanged: initial != null
+                                ? null
+                                : (m) {
+                              if (m == null) return;
+                              setState(() {
+                                mode = m;
+                                loadExampleForMode();
+                              });
+                            },
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        ElevatedButton.icon(
+                          onPressed: () => setState(loadExampleForMode),
+                          icon: const Icon(Icons.auto_fix_high),
+                          label: const Text('Cargar ejemplo'),
+                        ),
+                        const SizedBox(width: 10),
+                        PopupMenuButton<String>(
+                          tooltip: 'Insertar token',
+                          itemBuilder: (_) =>
+                              tokenMenuItemsByMode(mode: mode, rowsPerLabel: rows),
+                          onSelected: (token) =>
+                              setState(() => insertAtCursor(refCtrl, token)),
+                          child: ElevatedButton.icon(
+                            onPressed: null,
+                            icon: const Icon(Icons.control_point_duplicate),
+                            label: const Text('Insertar token'),
+                          ),
+                        ),
+                      ],
+                    ),
+
+                    const SizedBox(height: 12),
+
+                    // ======================
+                    // Nombre template
+                    // ======================
+                    TextField(
+                      controller: nameCtrl,
+                      decoration: const InputDecoration(
+                        labelText: 'Nombre del template en impresora',
+                        hintText:
+                        'Ej: E:TEMPLATE_CATEGORY.ZPL / E:TEMPLATE_PRODUCT.ZPL',
+                        border: OutlineInputBorder(),
+                      ),
+                    ),
+
+                    const SizedBox(height: 12),
+
+                    // ======================
+                    // DF
+                    // ======================
+                    TextField(
+                      controller: dfCtrl,
+                      minLines: 10,
+                      maxLines: 18,
+                      decoration: const InputDecoration(
+                        labelText: 'TEMPLATE.ZPL (DF – crear plantilla)',
+                        alignLabelWithHint: true,
+                        border: OutlineInputBorder(),
+                      ),
+                    ),
+
+                    const SizedBox(height: 12),
+
+                    // ======================
+                    // Reference
+                    // ======================
+                    TextField(
+                      controller: refCtrl,
+                      minLines: 14,
+                      maxLines: 22,
+                      decoration: InputDecoration(
+                        labelText:
+                        'REFERENCE.TXT (XF + FN + TOKENS) — ${stripDrive(nameCtrl.text)}',
+                        alignLabelWithHint: true,
+                        border: const OutlineInputBorder(),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx, null),
+                child: const Text('Desistir'),
+              ),
+              ElevatedButton(
+                onPressed: () async {
+                  final file = nameCtrl.text.trim();
+                  if (file.isEmpty) return;
+
+                  final result = (initial ??
+                      ZplTemplate(
+                        id: DateTime.now()
+                            .millisecondsSinceEpoch
+                            .toString(),
+                        templateFileName: file,
+                        zplTemplateDf: dfCtrl.text,
+                        zplReferenceTxt: refCtrl.text,
+                        mode: mode,
+                        createdAt: DateTime.now(),
+                      ))
+                      .copyWith(
+                    templateFileName: file,
+                    zplTemplateDf: dfCtrl.text,
+                    zplReferenceTxt: refCtrl.text,
+                    mode: mode,
+                  );
+
+                  await store.upsert(result);
+                  if (ctx.mounted) Navigator.pop(ctx, result);
+                },
+                child: const Text('Guardar'),
+              ),
+            ],
+          );
+        },
+      ),
+    );
   }
 
 }

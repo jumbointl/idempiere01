@@ -3,7 +3,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
 import '../../domain/idempiere/idempiere_product.dart';
-import 'movement_provider_old.dart';
+import '../screens/movement/provider/new_movement_provider.dart';
 
 class MovementConfirmStateNotifier  extends StateNotifier<List<IdempiereProduct>>{
   static const int SQL_QUERY_CREATE =1;
@@ -18,7 +18,10 @@ class MovementConfirmStateNotifier  extends StateNotifier<List<IdempiereProduct>
     print('MovementConfirmStateNotifier confirmMovement $id');
     ref.read(movementIdForConfirmProvider.notifier).update((state) => id ?? -1);
   }
-
+  void cancelMovement(int? id) {
+    print('MovementCancelStateNotifier cancelMovement $id');
+    ref.read(movementIdForCancelProvider.notifier).update((state) => id ?? -1);
+  }
 
 }
 

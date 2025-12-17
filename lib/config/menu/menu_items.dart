@@ -105,7 +105,7 @@ var appHomeOptionCol2Items = <MenuItem>[
 final appHomeOptionCol3Items = <MenuItem>[
   if (RolesApp.cantConfirmMovement)
   const MenuItem(
-    title: 'Inventory Move',
+    title: 'Replenish',
     subTitle: '',
     link: '/mInOut/move',
     icon: Icons.swap_horiz,

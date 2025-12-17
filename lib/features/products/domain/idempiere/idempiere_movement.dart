@@ -1,5 +1,7 @@
 
 
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:monalisa_app_001/features/products/domain/idempiere/idempiere_business_partner.dart';
 import 'package:monalisa_app_001/features/products/domain/idempiere/idempiere_business_partner_location.dart';
@@ -287,6 +289,25 @@ class IdempiereMovement extends IdempiereObject {
     }
     return Colors.grey[800];
 
+  }
+  static List<IdempiereMovement>? fromJsonString(String jsonString) {
+    if(jsonString.isEmpty) return null ;
+
+    final decoded = jsonDecode(jsonString);
+
+    if (decoded is! List) {
+      return null;
+    } else {
+      if(decoded.isEmpty) return null;
+      if(decoded[0] is! Map<String, dynamic> ) return null ;
+      if(decoded[0]['id']==null) return null;
+    }
+
+
+    return decoded
+        .whereType<Map<String, dynamic>>()
+        .map((e) => IdempiereMovement.fromJson(e))
+        .toList();
   }
 
 }

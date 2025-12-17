@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
+import '../../../../../../config/router/app_router.dart';
 import '../../../../../../config/theme/app_theme.dart';
 import '../../../../../shared/data/messages.dart';
 import '../../../../common/no_data_create_state.dart';
@@ -41,9 +43,10 @@ class NoDataPutAwayCreatedCardState extends NoDataCreateState<NoDataPutAwayCreat
   void action(BuildContext context, WidgetRef ref) {
     //ref.invalidate(startedCreateNewPutAwayMovementProvider);
     if (context.mounted) {
-      if(context.mounted){
-        Navigator.pop(context);
-      }
+      DateTime now = DateTime.now();
+      String today =   now.toIso8601String();
+      String movementDateFilter = today.substring(0,10);
+      context.go('${AppRouter.PAGE_MOVEMENTS_LIST}/$movementDateFilter');
     }
   }
 

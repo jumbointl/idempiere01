@@ -155,30 +155,35 @@ final findMovementLinesByMovementIdProvider = FutureProvider.autoDispose<List<Id
 });
 
 final createNewMovementLineProvider = FutureProvider.autoDispose<IdempiereMovementLine?>((ref) async {
+  print('newSqlDataMovementLineProvider 0');
   SqlDataMovementLine newMovementLine = ref.watch(newSqlDataMovementLineProvider);
 
   if(newMovementLine.id!=null && newMovementLine.id!>0){
     print('Error id :${newMovementLine.id} ');
     return null;
   }
+  print('newSqlDataMovementLineProvider 1');
   if(newMovementLine.mMovementID==null || newMovementLine.mMovementID!.id!<=0) {
-    print('Error movement id :${newMovementLine.mMovementID!.id} ');
+    print('Error movement id :${newMovementLine.mMovementID?.id ??'id null'} ');
     return null;}
+  print('newSqlDataMovementLineProvider 2');
   if(newMovementLine.mLocatorID ==null || newMovementLine.mLocatorID!.id==null || newMovementLine.mLocatorID!.id!<=0){
-    print('Error mLocatorID id :${newMovementLine.mLocatorID!.id} ');
+    print('Error mLocatorID id :${newMovementLine.mLocatorID?.id ??'locator id null'} ');
     return null;
   }
+  print('newSqlDataMovementLineProvider 3');
   if(newMovementLine.mLocatorToID==null || newMovementLine.mLocatorToID!.id==null || newMovementLine.mLocatorToID!.id!<=0){
-    print('Error mLocatorToID id :${newMovementLine.mLocatorToID!.id} ');
+    print('Error mLocatorToID id :${newMovementLine.mLocatorToID?.id ?? 'locator to id null'} ');
     return null;
   }
+  print('newSqlDataMovementLineProvider 4');
 
 
 
   Dio dio = await DioClient.create();
   try {
     String url = newMovementLine.getInsertUrl();
-
+    print('newSqlDataMovementLineProvider 2');
     final response = await dio.post(url, data: newMovementLine.getInsertJson());
     print(url);
     print(newMovementLine.getInsertJson());

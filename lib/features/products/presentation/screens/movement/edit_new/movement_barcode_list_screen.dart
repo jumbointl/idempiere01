@@ -12,7 +12,7 @@ import 'package:qr_flutter/qr_flutter.dart';
 import 'package:barcode_widget/barcode_widget.dart';
 
 import 'package:monalisa_app_001/config/config.dart';
-import 'package:monalisa_app_001/features/products/common/common_screen_state.dart';
+import 'package:monalisa_app_001/features/products/common/async_value_consumer_screen_state.dart';
 import 'package:monalisa_app_001/features/products/domain/idempiere/movement_and_lines.dart';
 import 'package:monalisa_app_001/features/products/presentation/screens/movement/provider/products_home_provider.dart';
 
@@ -23,6 +23,7 @@ import '../../../../../shared/data/messages.dart';
 import '../../../../common/barcode_utils.dart';
 import '../../../../common/messages_dialog.dart';
 import '../../../../domain/idempiere/idempiere_movement_line.dart';
+import '../../../../domain/idempiere/response_async_value.dart';
 import '../../../providers/common_provider.dart';
 import '../../../providers/persitent_provider.dart';
 import '../../../providers/product_provider_common.dart';
@@ -53,7 +54,7 @@ enum MovementViewSection {
 }
 
 
-class MovementBarcodeListScreenState extends CommonConsumerState<MovementBarcodeListScreen> with SingleTickerProviderStateMixin {
+class MovementBarcodeListScreenState extends AsyncValueConsumerState<MovementBarcodeListScreen> with SingleTickerProviderStateMixin {
   Color colorBackgroundHasMovementId = Colors.cyan[200]!;
   Color colorBackgroundNoMovementId = Colors.white;
   int sameLocator = 0;
@@ -98,7 +99,7 @@ class MovementBarcodeListScreenState extends CommonConsumerState<MovementBarcode
   }
 
   @override
-  AsyncValue get mainDataAsync => throw UnimplementedError();
+  AsyncValue<ResponseAsyncValue> get mainDataAsync => throw UnimplementedError();
   @override
   Widget getMainDataCard(BuildContext context, WidgetRef ref) {
     final hasMovement        = movementAndLines.hasMovement;
@@ -657,6 +658,23 @@ class MovementBarcodeListScreenState extends CommonConsumerState<MovementBarcode
     int movementId = movementAndLines.id ?? -1;
     String pageFrom = NewMovementEditScreen.FROM_PAGE_MOVEMENT_LIST;
     context.go('${AppRouter.PAGE_MOVEMENTS_EDIT}/$movementId/$pageFrom');
+  }
+
+  @override
+  void afterAsyncValueAction(WidgetRef ref, {required ResponseAsyncValue result}) {
+    // TODO: implement afterAsyncValueAction
+  }
+
+  @override
+  Widget asyncValueErrorHandle(WidgetRef ref, {required ResponseAsyncValue result}) {
+    // TODO: implement asyncValueErrorHandle
+    throw UnimplementedError();
+  }
+
+  @override
+  Widget asyncValueSuccessPanel(WidgetRef ref, {required ResponseAsyncValue result}) {
+    // TODO: implement asyncValueSuccessPanel
+    throw UnimplementedError();
   }
 
 

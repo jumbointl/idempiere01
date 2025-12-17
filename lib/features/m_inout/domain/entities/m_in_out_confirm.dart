@@ -56,4 +56,17 @@ class MInOutConfirm {
       linesConfirm: linesConfirm ?? this.linesConfirm,
     );
   }
+
+  Map<String, dynamic> toJson() {
+    return {
+      if (id != null) "id": id,
+      "M_InOut_ID": mInOutId.toJson(),
+      "M_Movement_ID": mMovementId.toJson(),
+      if (documentNo != null) "DocumentNo": documentNo,
+      "DocStatus": docStatus.toJson(),
+      "m_inoutlineconfirm":
+      linesConfirm.map((e) => e.toJson()).toList(),
+    };
+  }
+
 }

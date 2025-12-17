@@ -114,6 +114,7 @@ class IdempiereObject implements CommonSqlData {
     String url = '$appEndpointModel/$modelName/$id';
     return url;
   }
+
   @override
   Map<String, dynamic> getDeleteJson() {
     return {"msg": "Deleted"};

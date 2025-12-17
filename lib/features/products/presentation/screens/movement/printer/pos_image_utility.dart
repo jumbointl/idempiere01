@@ -143,3 +143,88 @@ Future<Uint8List> combineLogoAndQrCode({required String logo, required String qr
   return combinedImageBytes;
 
 }
+
+/// Convierte bytes PNG/JPG a ZPL ^GFA (inline).
+/// - 203dpi (8 dots/mm): etiqueta 100mm => 800 dots.
+/// - threshold: más alto => imprime más negro.
+/// - invert: si sale invertido, pon true.
+String pngBytesToZplGfa(
+    Uint8List bytes, {
+      int? targetWidthDots,
+      int? targetHeightDots,
+      int threshold = 170,
+      bool invert = false,
+    }) {
+  img.Image? image = img.decodeImage(bytes);
+  if (image == null) {
+    throw Exception('pngBytesToZplGfa: decodeImage = null');
+  }
+
+  // Resize opcional
+  if (targetWidthDots != null || targetHeightDots != null) {
+    final w = targetWidthDots ?? image.width;
+    final h = targetHeightDots ?? (image.height * (w / image.width)).round();
+    image = img.copyResize(
+      image,
+      width: w,
+      height: h,
+      interpolation: img.Interpolation.average,
+    );
+  }
+
+  final width = image.width;
+  final height = image.height;
+
+  final bytesPerRow = ((width + 7) ~/ 8);
+  final totalBytes = bytesPerRow * height;
+  final out = Uint8List(totalBytes);
+
+  int outIndex = 0;
+
+  for (int y = 0; y < height; y++) {
+    int bit = 7;
+    int currentByte = 0;
+
+    for (int x = 0; x < width; x++) {
+      final p = image.getPixel(x, y); // Pixel (image v4+)
+
+      final r = p.r;
+      final g = p.g;
+      final b = p.b;
+
+      // luminancia (0 = negro, 255 = blanco aprox)
+      final lum = (0.299 * r + 0.587 * g + 0.114 * b);
+
+      // En ZPL: bit 1 = punto negro impreso
+      bool isBlack = lum < threshold;
+      if (invert) isBlack = !isBlack;
+
+      if (isBlack) {
+        currentByte |= (1 << bit);
+      }
+
+      bit--;
+      if (bit < 0) {
+        out[outIndex++] = currentByte;
+        currentByte = 0;
+        bit = 7;
+      }
+    }
+
+    // Si la fila no terminó justo en un byte, escribe el byte parcial
+    if (bit != 7) {
+      out[outIndex++] = currentByte;
+    }
+  }
+
+  // HEX
+  final hex = StringBuffer();
+  for (final b in out) {
+    hex.write(b.toRadixString(16).padLeft(2, '0').toUpperCase());
+  }
+
+  // ^GFA,totalBytes,bytesUsados,bytesPorFila,DATA
+  return '^GFA,$totalBytes,$totalBytes,$bytesPerRow,${hex.toString()}';
+}
+
+

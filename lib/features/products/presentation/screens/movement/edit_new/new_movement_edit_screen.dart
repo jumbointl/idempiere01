@@ -1,12 +1,7 @@
-import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:monalisa_app_001/features/products/common/common_screen_state.dart';
-import 'package:monalisa_app_001/features/products/domain/idempiere/idempiere_locator.dart';
-import 'package:monalisa_app_001/features/products/domain/idempiere/idempiere_movement.dart';
-import 'package:monalisa_app_001/features/products/domain/idempiere/idempiere_movement_confirm.dart';
 import 'package:monalisa_app_001/features/products/domain/idempiere/movement_and_lines.dart';
 import 'package:monalisa_app_001/features/products/presentation/screens/movement/provider/products_home_provider.dart';
 import 'package:monalisa_app_001/features/products/presentation/screens/movement/provider/new_movement_provider.dart';
@@ -14,17 +9,12 @@ import 'package:monalisa_app_001/features/products/presentation/screens/store_on
 
 import '../../../../../../config/router/app_router.dart';
 import '../../../../../../config/theme/app_theme.dart';
-import '../../../../../auth/domain/entities/warehouse.dart';
 import '../../../../../shared/data/memory.dart';
 import '../../../../../shared/data/messages.dart';
-import '../../../../common/messages_dialog.dart';
-import '../../../../domain/idempiere/idempiere_movement_line.dart';
+import '../../../../common/movement_and_lines_consumer_state.dart';
+import '../../../../domain/idempiere/response_async_value.dart';
 import '../../../providers/common_provider.dart';
-import '../../../providers/persitent_provider.dart';
 import '../../../providers/product_provider_common.dart';
-import '../movement_no_data_card.dart';
-import 'new_movement_card_with_locator.dart';
-import 'new_movement_line_card.dart';
 
 
 class NewMovementEditScreen extends ConsumerStatefulWidget {
@@ -52,32 +42,11 @@ class NewMovementEditScreen extends ConsumerStatefulWidget {
   @override
   ConsumerState<ConsumerStatefulWidget> createState() => NewMovementEditScreenState();
 
-  void confirmMovementButtonPressed(BuildContext context, WidgetRef ref, String string) {
-
-  }
-
-  void lastMovementButtonPressed(BuildContext context, WidgetRef ref, String lastSearch) {}
-
-  void findMovementButtonPressed(BuildContext context, WidgetRef ref, String s) {}
-
-  void newMovementButtonPressed(BuildContext context, WidgetRef ref, String s) {}
-
 
 }
 
-class NewMovementEditScreenState extends CommonConsumerState<NewMovementEditScreen> {
-  IdempiereMovement? movement ;
-  IdempiereLocator? lastSavedLocatorFrom;
-  Color colorBackgroundHasMovementId = Colors.cyan[200]!;
-  Color colorBackgroundNoMovementId = Colors.white;
-  int sameLocator = 0;
-  final double singleProductDetailCardHeight = 160;
-  Warehouse? userWarehouse;
-  late var movementAndLines ;
-  int movementId =-1;
-  @override
-  late var isDialogShowed;
-  late String fromPage;
+class NewMovementEditScreenState extends MovementAndLinesConsumerState<NewMovementEditScreen> {
+
 
 
 
@@ -113,111 +82,20 @@ class NewMovementEditScreenState extends CommonConsumerState<NewMovementEditScre
   }
 
   @override
-  AsyncValue get mainDataAsync => ref.watch(newFindMovementByIdOrDocumentNOProvider);
+  AsyncValue<ResponseAsyncValue> get mainDataAsync => ref.watch(newFindMovementByIdOrDocumentNOProvider);
 
-  @override
-  Widget getMainDataCard(BuildContext context, WidgetRef ref) {
-
-     return mainDataAsync.when(
-      data: (movement) {
-
-        this.movement = movement;
-        MovementAndLines? movementAndLines = movement;
-
-        WidgetsBinding.instance.addPostFrameCallback((_) async {
-          if(movement==null) return;
-          if(movementAndLines!=null && !movementAndLines.isOnInitialState){
-            changeMovementAndLineState(ref, movementAndLines);
-            if(movementAndLines.canCompleteMovement || !movementAndLines.hasMovementLines) {
-              ref.read(showBottomBarProvider.notifier).state = true;
-            } else {
-              ref.read(showBottomBarProvider.notifier).state = false;
-            }
-
-          }
-
-
-
-        });
-        if(movementAndLines==null || movementAndLines.isOnInitialState){
-          return   MovementNoDataCard();
-        }
-        widget.movementId = movementAndLines.id.toString();
-        movementId = movementAndLines.id!;
-        String argument = jsonEncode(movementAndLines.toJson());
-        List<IdempiereMovementLine>? lines = movementAndLines.movementLines;
-        return  Column(
-          spacing: 5,
-          children: [
-            movement!=null && movementAndLines.hasMovement ?
-            //
-            NewMovementCardWithLocator(
-              argument: argument,
-              bgColor: themeColorPrimary,
-              height: singleProductDetailCardHeight,
-              width: double.infinity,
-              movementAndLines: MemoryProducts.movementAndLines,
-            )
-            : MovementNoDataCard(),
-            if(movementAndLines.hasMovementConfirms)
-              getMovementConfirm(movementAndLines.movementConfirms!),
-
-            lines == null || lines.isEmpty ? Center(child: Text(Messages.NO_DATA_FOUND),)
-                : getMovementLines(lines, getWidth()),
-          ],
-        );
-
-      },error: (error, stackTrace) => Text('Error: $error'),
-       loading: () => LinearProgressIndicator(
-         minHeight: 36,
-       ),
-    );
-  }
-
-
-  Widget getMovementLines(List<IdempiereMovementLine> storages, double width) {
-
-    return ListView.separated(
-        shrinkWrap: true,
-        physics: const NeverScrollableScrollPhysics(),
-        itemCount: storages.length,
-        itemBuilder: (context, index) {
-          final product = storages[index];
-          return NewMovementLineCard(index: index + 1, totalLength:storages.length,
-            width: width - 10, movementLine: product,
-            canEdit: movementAndLines.canCompleteMovement ,
-            showLocators: true,
-          );
-        },
-        separatorBuilder: (BuildContext context, int index) =>
-        const SizedBox(height: 5,)
-    );
-
-  }
   @override
   int get qtyOfDataToAllowScroll => 2;
 
   @override
   int get actionScanTypeInt => widget.actionTypeInt;
 
-  @override
-  void initialSetting(BuildContext context, WidgetRef ref) {
-    fromPage = widget.fromPage;
-    ref.invalidate(persistentLocatorToProvider);
-    isScanning = ref.watch(isScanningProvider);
-    isDialogShowed = ref.watch(isDialogShowedProvider);
 
-    inputString = ref.watch(inputStringProvider);
-    pageIndexProdiver = ref.watch(productsHomeCurrentIndexProvider);
-    actionScan = ref.read(actionScanProvider);
-    movementAndLines = ref.watch(movementAndLinesProvider);
-
-
-
-  }
 
   @override
   Future<void> handleInputString({required WidgetRef ref,required  String inputData,required int actionScan}) async {
+    asyncResultHandled = false;
+
     if(inputData.isEmpty){
       return;
     }
@@ -228,32 +106,7 @@ class NewMovementEditScreenState extends CommonConsumerState<NewMovementEditScre
     //ref.read(inputStringProvider.notifier).update((state) => inputData);
   }
 
-  void changeMovementAndLineState(WidgetRef ref,MovementAndLines? movementAndLines) async {
-    int len = movementAndLines?.movementLines?.length ?? 0;
-    if(len>0) {
-      final allow = len > qtyOfDataToAllowScroll;
-      final notifier = ref.read(allowScrollFabProvider.notifier);
-      if (notifier.state != allow) {
-        notifier.state = allow;
-      }
 
-      if (scrollController.hasClients) {
-        scrollController.animateTo(
-          scrollController.position.maxScrollExtent,
-          duration: const Duration(milliseconds: 250),
-          curve: Curves.easeOut,
-        );
-      }
-    }
-    ref.read(isScanningProvider.notifier).update((state) => false);
-
-
-    if(movementAndLines!=null && movementAndLines.hasMovement){
-      ref.read(movementAndLinesProvider.notifier).state = movementAndLines;
-      widget.movementId = movementAndLines.id.toString();
-    }
-
-  }
   Widget getAddButton(BuildContext context, WidgetRef ref) {
     return SizedBox(
       child: TextButton.icon(
@@ -373,41 +226,6 @@ class NewMovementEditScreenState extends CommonConsumerState<NewMovementEditScre
     );
   }
 
-
-  @override
-  void addQuantityText(BuildContext context, WidgetRef ref,
-      TextEditingController quantityController,int quantity) {
-    if(quantity==-1){
-      quantityController.text = '';
-      return;
-    }
-    String s =  quantityController.text;
-    String s1 = s;
-    String s2 ='';
-    if(s.contains('.')) {
-      s1 = s.split('.').first;
-      s2 = s.split('.').last;
-    }
-
-    String r ='';
-    if(s.contains('.')){
-      r='$s1$quantity.$s2';
-    } else {
-      r='$s1$quantity';
-    }
-
-    int? aux = int.tryParse(r);
-    if(aux==null || aux<=0){
-      String message =  '${Messages.ERROR_QUANTITY} $quantity';
-      showErrorMessage(context, ref, message);
-      return;
-    }
-    quantityController.text = aux.toString();
-
-  }
-
-
-
   @override
   BottomAppBar? getBottomAppBar(BuildContext context, WidgetRef ref) {
     final showBottomBar = ref.watch(showBottomBarProvider);
@@ -421,28 +239,7 @@ class NewMovementEditScreenState extends CommonConsumerState<NewMovementEditScre
   }
 
 
-  Widget getMovementConfirm(List<IdempiereMovementConfirm> list) {
-    return ListView.separated(
-        shrinkWrap: true,
-        physics: const NeverScrollableScrollPhysics(),
-        itemCount: list.length,
-        itemBuilder: (context, index) {
-          final data = list[index];
-          String documentStatus = data.docStatus?.id ?? '';
 
-          return Container(
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: Colors.black),
-              ),
-
-              child: ListTile(leading: Text('$documentStatus :${index+1}',style: textStyleLarge), title: Text(data.documentNo ??'',style: textStyleLarge)));
-        },
-        separatorBuilder: (BuildContext context, int index) =>
-        const SizedBox(height: 5)
-    );
-  }
 
   @override
   Future<void> setDefaultValues(BuildContext context, WidgetRef ref) async {
@@ -465,6 +262,15 @@ class NewMovementEditScreenState extends CommonConsumerState<NewMovementEditScre
 
 
   }
+
+  @override
+  void setWidgetMovementId(String id) {
+    widget.movementId = id;
+  }
+
+
+
+
 
 
 }

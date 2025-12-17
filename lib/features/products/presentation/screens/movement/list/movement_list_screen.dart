@@ -6,19 +6,21 @@ import 'package:go_router/go_router.dart';
 import 'package:flutter/services.dart';
 import 'package:monalisa_app_001/config/config.dart';
 import 'package:monalisa_app_001/config/constants/roles_app.dart';
-import 'package:monalisa_app_001/features/products/common/common_screen_state.dart';
 import 'package:monalisa_app_001/features/products/domain/idempiere/idempiere_document_status.dart';
-import 'package:monalisa_app_001/features/products/domain/idempiere/idempiere_locator.dart';
 import 'package:monalisa_app_001/features/products/domain/idempiere/idempiere_movement.dart';
 import 'package:monalisa_app_001/features/products/domain/idempiere/idempiere_warehouse.dart';
 import 'package:monalisa_app_001/features/products/presentation/screens/movement/edit_new/custom_app_bar.dart';
 import 'package:monalisa_app_001/features/products/presentation/screens/movement/provider/products_home_provider.dart';
 import 'package:monalisa_app_001/features/products/presentation/screens/movement/provider/new_movement_provider.dart';
+import 'package:monalisa_app_001/features/products/presentation/widget/no_data_card.dart';
 
-import '../../../../../auth/domain/entities/warehouse.dart';
 import '../../../../../shared/data/memory.dart';
 import '../../../../../shared/data/messages.dart';
+import '../../../../common/async_value_consumer_simple_state.dart';
 import '../../../../common/messages_dialog.dart';
+import '../../../../common/time_utils.dart';
+import '../../../../common/widget/movement_date_filter_row.dart';
+import '../../../../domain/idempiere/response_async_value.dart';
 import '../../../providers/common_provider.dart';
 import '../../../providers/persitent_provider.dart';
 import '../../../providers/product_provider_common.dart';
@@ -46,17 +48,7 @@ class MovementListScreen extends ConsumerStatefulWidget {
 
 }
 
-class MovementListScreenState extends CommonConsumerState<MovementListScreen> {
-  IdempiereLocator? lastSavedLocatorFrom;
-  Color colorBackgroundHasMovementId = Colors.cyan[200]!;
-  Color colorBackgroundNoMovementId = Colors.white;
-  int sameLocator = 0;
-  final double singleProductDetailCardHeight = 160;
-  Warehouse? userWarehouse;
-  @override
-  late var isDialogShowed;
-
-
+class MovementListScreenState extends AsyncValueConsumerSimpleState<MovementListScreen> {
 
   @override
   void executeAfterShown() {
@@ -79,7 +71,7 @@ class MovementListScreenState extends CommonConsumerState<MovementListScreen> {
   }
 
   @override
-  AsyncValue get mainDataAsync => ref.watch(findMovementNotCompletedByDateProvider);
+  AsyncValue<ResponseAsyncValue> get mainDataAsync => ref.watch(findMovementNotCompletedByDateProvider);
 
   @override
   Widget getMainDataCard(BuildContext context, WidgetRef ref) {
@@ -91,13 +83,18 @@ class MovementListScreenState extends CommonConsumerState<MovementListScreen> {
            findMovementAfterDate(date, inOut: inOut);
          },),
          mainDataAsync.when(
-          data: (movements) {
-            if(movements==null) return   MovementNoDataCard();
+          data: (ResponseAsyncValue response) {
+
+            if(!response.isInitiated) return   MovementNoDataCard(response: response,);
+
             WidgetsBinding.instance.addPostFrameCallback((_) async {
 
 
             });
-            List<IdempiereMovement> list = movements;
+            List<IdempiereMovement> list = response.data ?? [];
+            if(list.isEmpty){
+              return MovementNoDataCard(response: response,);
+            }
             return getMovements(list);
 
           },error: (error, stackTrace) => Text('Error'),
@@ -110,9 +107,7 @@ class MovementListScreenState extends CommonConsumerState<MovementListScreen> {
   }
 
   Widget getMovements(List<IdempiereMovement> movements) {
-    // Lee el valor actual de IN/OUT desde Riverpod
-    final inOut = ref.watch(inOutFilterProvider); // true = IN, false = OUT
-
+    final inOut = ref.watch(inOutFilterProvider);
 
     return ListView.separated(
       shrinkWrap: true,
@@ -177,11 +172,6 @@ class MovementListScreenState extends CommonConsumerState<MovementListScreen> {
         }
         Color docColor = movement.colorMovementDocumentTypeDark ?? Colors.red[800]!;
         var fontSize = themeFontSizeSmall;
-        /*if(movement.documentNo!=null && movement.documentNo!.length >20){
-          fontSize = themeFontSizeSmall;
-        }*/
-
-
 
 
         return GestureDetector(
@@ -367,13 +357,15 @@ class MovementListScreenState extends CommonConsumerState<MovementListScreen> {
   @override
   Widget? getAppBarTitle(BuildContext context, WidgetRef ref) {
     return mainDataAsync.when(
-      data: (movements) {
+      data: (ResponseAsyncValue response) {
         //if(movements==null) return Text(Messages.MOVEMENT_SEARCH,style: textStyleTitle);
         WidgetsBinding.instance.addPostFrameCallback((_) async {
 
 
         });
-        List<IdempiereMovement> list = movements;
+        if(!response.isInitiated) return NoDataCard();
+
+        List<IdempiereMovement> list = response.data ?? [];
         String title = Messages.MOVEMENT_SEARCH;
         if(list.isEmpty || list[0].id==null || list[0].id!<0) {
           //return Text(Messages.MOVEMENT_SEARCH,style: textStyleTitle);
@@ -536,11 +528,6 @@ class MovementListScreenState extends CommonConsumerState<MovementListScreen> {
   void _showDocumentTypeFilterSheet(BuildContext context, WidgetRef ref) {
     final screenHeight = MediaQuery.of(context).size.height;
     var documentTypeOptions = documentTypeOptionsAll;
-    /*if(RolesApp.canDoAppInventory){
-      documentTypeOptions = documentTypeOptionsForInventory ;
-    } else if (RolesApp.canConfirmMovementWithConfirm){
-      documentTypeOptions = documentTypeOptionsForMovementConfirm ;
-    }*/
 
     showModalBottomSheet(
       context: context,
@@ -654,6 +641,8 @@ class MovementListScreenState extends CommonConsumerState<MovementListScreen> {
         return Colors.green.shade200;
       case 'IP': // In Progress
         return Colors.cyan.shade200;
+      case 'VO': // In Progress
+        return Colors.amber.shade200;
       default:
         return Colors.grey.shade200;
     }
@@ -667,6 +656,8 @@ class MovementListScreenState extends CommonConsumerState<MovementListScreen> {
 
   @override
   int get actionScanTypeInt => widget.actionTypeInt;
+
+
 
 
 }

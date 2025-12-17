@@ -131,15 +131,25 @@ final movementLinesProvider = StateProvider.autoDispose
     .family<double, MovementAndLines>((ref, movement) {
   final length = movement.movementLines?.length ?? 0;
   final base = (length + 1) * 10;
-  return base.toDouble();
+  double base2 = (movement.movementLines?.isNotEmpty ?? false)
+      ? movement.movementLines!
+      .map((e) => e.line ?? 0)
+      .reduce((a, b) => a > b ? a : b)
+      : 0;
+  base2 = base2 + 10;
+  final result = base > base2 ? base : base2;
+
+  return result.toDouble();
 });
 
 final quantityOfMovementAndScannedToAllowInputScannedQuantityProvider =
 StateProvider<int>((ref) {
   final box = GetStorage();
   // Lê GetStorage — se não existir, devolve 3
+
   return box.read(KEY_QTY_ALLOW_INPUT) ?? 3;
 });
+
 
 final showBottomBarProvider = StateProvider.autoDispose<bool>((ref) {
   return false;
@@ -283,3 +293,11 @@ final allowedMovementDocumentTypeProvider = StateProvider<int>((ref) {
 final pageFromProvider = StateProvider<int>((ref) {
   return 0;
 });
+
+class NumButtonData {
+  final String label;
+  final int value;
+
+  NumButtonData({required this.label, required this.value});
+}
+

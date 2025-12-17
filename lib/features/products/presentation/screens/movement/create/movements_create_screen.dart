@@ -39,15 +39,14 @@ class MovementsCreateScreenState extends ConsumerState<MovementsCreateScreen> {
   PutAwayMovement? putAwayMovement;
   late AsyncValue movementAsync ;
   bool startCreate = false;
+
+  String? productUPC;
   @override
   void initState() {
     productsNotifier = ref.read(scanHandleNotifierProvider.notifier);
+    productUPC = widget.putAwayMovement?.movementLineToCreate?.uPC ?? '-1' ;
     WidgetsBinding.instance.addPostFrameCallback((_) async {
 
-      /*Future.delayed(const Duration(milliseconds: 1000), () {
-
-
-      });*/
       if(widget.putAwayMovement!=null && mounted && !startCreate){
         startCreate = true;
         widget.putAwayMovement!.startCreate = true;
@@ -72,7 +71,8 @@ class MovementsCreateScreenState extends ConsumerState<MovementsCreateScreen> {
           icon: const Icon(Icons.arrow_back),
           onPressed: () =>
           {
-            context.pop(),
+            popScopeAction(context,ref),
+
           }
             //
         ),
@@ -95,7 +95,7 @@ class MovementsCreateScreenState extends ConsumerState<MovementsCreateScreen> {
               if (didPop) {
                 return;
               }
-              Navigator.pop(context);
+              popScopeAction(context,ref);
             },
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 10),
@@ -282,6 +282,15 @@ class MovementsCreateScreenState extends ConsumerState<MovementsCreateScreen> {
   Widget getMovementLines(List<IdempiereMovementLine> storages, double width) {
     return MovementLineCardForCreate(width: width,
       movementLine: storages[0],);
+  }
+
+  void popScopeAction(BuildContext context, WidgetRef ref) {
+    ref.read(isScanningProvider.notifier).update((state) => false);
+    ref.read(quantityToMoveProvider.notifier).update((state) => 0);
+    ref.read(productsHomeCurrentIndexProvider.notifier).update((state) => Memory.PAGE_INDEX_STORE_ON_HAND);
+    ref.read(actionScanProvider.notifier).state = Memory.ACTION_FIND_BY_UPC_SKU_FOR_STORE_ON_HAND;
+    print('${AppRouter.PAGE_PRODUCT_STORE_ON_HAND}/$productUPC');
+    context.go('${AppRouter.PAGE_PRODUCT_STORE_ON_HAND}/$productUPC');
   }
 
 }

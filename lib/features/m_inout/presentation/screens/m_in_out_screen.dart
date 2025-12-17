@@ -4,8 +4,6 @@ import 'package:get_storage/get_storage.dart';
 import 'package:monalisa_app_001/config/config.dart';
 import 'package:monalisa_app_001/features/m_inout/domain/entities/m_in_out.dart';
 import 'package:monalisa_app_001/features/m_inout/domain/entities/m_in_out_confirm.dart';
-import 'package:monalisa_app_001/features/products/common/messages_dialog.dart';
-import 'package:monalisa_app_001/features/shared/data/messages.dart';
 import 'package:monalisa_app_001/features/shared/shared.dart';
 import 'package:monalisa_app_001/features/m_inout/domain/entities/line.dart';
 import 'package:monalisa_app_001/features/m_inout/presentation/widgets/barcode_list.dart';
@@ -46,6 +44,7 @@ class MInOutScreenState extends ConsumerState<MInOutScreen> {
       mInOutNotifier.setParameters(widget.type);
       if(documentNo.isNotEmpty && documentNo !='-1'){
         print('----documentNo: $documentNo');
+
         //String message = Messages.PASTE_THE_DOCUMENT_NUMBER_IN_THE_FIELD_THEN_SEARCH ;
         //showWarningMessage(context, ref, message);
       } else {
@@ -120,23 +119,24 @@ class MInOutScreenState extends ConsumerState<MInOutScreen> {
                       mInOutState.mInOutType ==
                           MInOutType.move
                       ? () {
-                              print(' mInOutNotifier.setDocAction');
-                              mInOutNotifier.setDocAction(ref);
-                            }
+                    print(' mInOutNotifier.setDocAction');
+                      mInOutNotifier.setDocAction(ref);
+                    }
                       : () {
-                      mInOutNotifier.setDocActionConfirm(ref);}
+                    print(' mInOutNotifier.setDocActionConfirm');
+                    mInOutNotifier.setDocActionConfirm(ref);}
                       : () {
-                              print(' mInOutNotifier._showConfirmMInOut');
-                              _showConfirmMInOut(context);
-                            }
+                    print(' mInOutNotifier._showConfirmMInOut');
+                    _showConfirmMInOut(context);
+                  }
                       : () {
-                            print(' mInOutNotifier._showWithoutRole');
-                            _showWithoutRole(context);
-                            },
+                    print(' mInOutNotifier._showWithoutRole');
+                    _showWithoutRole(context);
+                  },
                   icon: Icon(
                     Icons.check,
                     color: mInOutNotifier.isConfirmMInOut()
-                        //? themeColorSuccessful
+                    //? themeColorSuccessful
                         ? Colors.purple
                         : null,
                   ),
@@ -147,7 +147,7 @@ class MInOutScreenState extends ConsumerState<MInOutScreen> {
             body: TabBarView(
               children: [
                 _MInOutView(mInOutState: mInOutState, mInOutNotifier: mInOutNotifier,
-                initialDocumentNo: widget.documentNo.isNotEmpty ? widget.documentNo : '',),
+                  initialDocumentNo: widget.documentNo.isNotEmpty ? widget.documentNo : '',),
                 _ScanView(
                     mInOutState: mInOutState, mInOutNotifier: mInOutNotifier),
               ],
@@ -241,7 +241,6 @@ class _MInOutView extends ConsumerStatefulWidget {
   final String initialDocumentNo;
 
   const _MInOutView({
-    super.key,
     required this.mInOutState,
     required this.mInOutNotifier,
     required this.initialDocumentNo,
@@ -261,15 +260,18 @@ class _MInOutViewState extends ConsumerState<_MInOutView> {
   @override
   void initState() {
     super.initState();
-     mInOutState = widget.mInOutState;
-     mInOutNotifier = widget.mInOutNotifier;
+    mInOutState = widget.mInOutState;
+    mInOutNotifier = widget.mInOutNotifier;
     // Envia o valor inicial para o notifier só uma vez
     if (widget.initialDocumentNo.isNotEmpty && widget.initialDocumentNo != '-1') {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
+      WidgetsBinding.instance.addPostFrameCallback((_) async {
         if (!_sentInitialToNotifier) {
           widget.mInOutNotifier.onDocChange(widget.initialDocumentNo);
-          _loadMInOutAndLine(context, ref);
-          _sentInitialToNotifier = true;
+          //await Future.delayed(Duration(microseconds: 100));
+          if(context.mounted){
+            _loadMInOutAndLine(context, ref);
+            _sentInitialToNotifier = true;
+          }
         }
       });
     }
@@ -747,7 +749,7 @@ class _MInOutViewState extends ConsumerState<_MInOutView> {
           title: const Text('Cambiar Estante'),
           content: CustomTextFormField(
             label: 'Estante Nueva',
-            initialValue: '',
+            initialValue: _sentInitialToNotifier ? '' :initialDocumentNo,
             onChanged: mInOutNotifier.onEditLocatorChange,
             autofocus: true,
           ),
@@ -1550,10 +1552,9 @@ class _MInOutViewOld extends ConsumerWidget {
   final MInOutNotifier mInOutNotifier;
   final String? initialDocument;
 
-  const _MInOutViewOld({
+  const _MInOutViewOld(this.initialDocument, {
     required this.mInOutState,
     required this.mInOutNotifier,
-    this.initialDocument,
   });
 
   @override

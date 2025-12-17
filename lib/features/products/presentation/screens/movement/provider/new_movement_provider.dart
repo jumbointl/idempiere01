@@ -1,17 +1,23 @@
+
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
+import 'package:monalisa_app_001/features/products/domain/idempiere/idempiere_response_message.dart';
 import 'package:monalisa_app_001/features/products/domain/idempiere/put_away_movement.dart';
 import 'package:get_storage/get_storage.dart';
+import 'package:monalisa_app_001/features/products/domain/idempiere/response_async_value.dart';
 import 'package:monalisa_app_001/features/shared/data/memory.dart';
 
 import '../../../../../../config/http/dio_client.dart';
 import '../../../../../shared/data/messages.dart';
 import '../../../../../shared/domain/entities/response_api.dart';
+import '../../../../domain/idempiere/delete_request.dart';
 import '../../../../domain/idempiere/idempiere_movement.dart';
 import '../../../../domain/idempiere/idempiere_movement_confirm.dart';
 import '../../../../domain/idempiere/idempiere_movement_line.dart';
 import '../../../../domain/idempiere/movement_and_lines.dart';
+import '../../../../domain/sql/common_sql_data.dart';
+import '../../../../domain/sql/sql_data_movement.dart';
 import '../../../../domain/sql/sql_data_movement_line.dart';
 import '../../../providers/locator_provider.dart';
 import '../../store_on_hand/memory_products.dart';
@@ -24,7 +30,7 @@ final documentTyprFilterProvider = StateProvider<String>((ref) {
 });
 
 // Opciones disponibles, fácil de expandir luego
-const List<String> documentTypeOptionsAll = ['DR', 'IP', 'CO'];
+const List<String> documentTypeOptionsAll = ['DR', 'IP', 'CO','VO'];
 const List<String> documentTypeOptionsForMovementConfirm = ['DR', 'IP', 'CO'];
 const List<String> documentTypeOptionsForInventory = ['DR','CO'];
 
@@ -96,12 +102,16 @@ final newMovementIdForMovementLineSearchProvider  = StateProvider.autoDispose<in
 });
 
 
-final newFindMovementByIdOrDocumentNOProvider = FutureProvider.autoDispose<MovementAndLines>((ref) async {
+final newFindMovementByIdOrDocumentNOProvider = FutureProvider.autoDispose<ResponseAsyncValue>((ref) async {
   final String scannedCode = ref.watch(newScannedMovementIdForSearchProvider).toUpperCase();
   print('--------------------------------provider--start new searchMovementByIdOrDocumentNo $scannedCode');
+  ResponseAsyncValue responseAsyncValue = ResponseAsyncValue();
   if(scannedCode=='') {
     MemoryProducts.movementAndLines.clearData();
-    return MemoryProducts.movementAndLines;}
+    responseAsyncValue.data = MemoryProducts.movementAndLines;
+    return responseAsyncValue;
+  }
+  responseAsyncValue.isInitiated = true;
   String idempiereModelName ='m_movement';
   Dio dio = await DioClient.create();
   try {
@@ -117,36 +127,40 @@ final newFindMovementByIdOrDocumentNOProvider = FutureProvider.autoDispose<Movem
     final response = await dio.get(url);
 
     if (response.statusCode == 200) {
+
+      responseAsyncValue.success = true;
       print(response.data);
       final responseApi =
       ResponseApi<IdempiereMovement>.fromJson(response.data, IdempiereMovement.fromJson);
       late IdempiereMovement m;
       if (responseApi.records != null && responseApi.records!.isNotEmpty) {
         m = responseApi.records![0];
-
-        if(m.id!=null) {
+        if(m.id==null || m.id==Memory.INITIAL_STATE_ID || m.id!<=0) {
+          MemoryProducts.movementAndLines.cloneMovement(IdempiereMovement(name: Messages.NOT_FOUND,
+              id: Memory.NOT_FOUND_ID,
+              identifier: scannedCode));
+          responseAsyncValue.data = MemoryProducts.movementAndLines;
+          return responseAsyncValue;
+        } else {
+          responseAsyncValue.success = true;
           MemoryProducts.movementAndLines.cloneMovement(m);
           await GetStorage().write(Memory.KEY_MOVEMENT_AND_LINES, MemoryProducts.movementAndLines);
-          //ref.read(newMovementIdForMovementLineSearchProvider.notifier).state = m.id!;
-
-          if(m.id==null || m.id==Memory.INITIAL_STATE_ID || m.id!<=0) return MemoryProducts.movementAndLines;
           final String searchField ='M_Movement_ID';
           String idempiereModelName ='m_movementline';
           Dio dio = await DioClient.create();
           String url =
-              "/api/v1/models/$idempiereModelName?\$filter=$searchField eq ${m.id!}&\$orderby=Line";
+              "/api/v1/models/$idempiereModelName?\$expand=M_Product_ID&\$filter=$searchField eq ${m.id!}&\$orderby=Line";
           url = url.replaceAll(' ', '%20');
           print(url);
           final response = await dio.get(url);
 
           if (response.statusCode == 200) {
-
+            responseAsyncValue.success = true;
             final responseApi =
             ResponseApi<IdempiereMovementLine>.fromJson(response.data, IdempiereMovementLine.fromJson);
             if (responseApi.records != null && responseApi.records!.isNotEmpty) {
               final dataList = responseApi.records!;
               MemoryProducts.movementAndLines.movementLines = dataList;
-
             } else {
               MemoryProducts.movementAndLines.movementLines = [];
             }
@@ -170,27 +184,37 @@ final newFindMovementByIdOrDocumentNOProvider = FutureProvider.autoDispose<Movem
             }
           }
 
-        } else {
-          MemoryProducts.movementAndLines.cloneMovement(IdempiereMovement(name: Messages.NOT_FOUND,
-              id: Memory.NOT_FOUND_ID,
-              identifier: scannedCode));
         }
 
       } else {
         MemoryProducts.movementAndLines.cloneMovement(IdempiereMovement(name: Messages.NOT_FOUND, id: Memory.NOT_FOUND_ID, identifier: scannedCode));
       }
-
+      responseAsyncValue.data = MemoryProducts.movementAndLines;
     } else {
+      responseAsyncValue.success = true;
+      responseAsyncValue.message = '${response.statusCode} ${response.statusMessage!}';
       MemoryProducts.movementAndLines.cloneMovement(IdempiereMovement(name: Messages.NOT_FOUND, id: Memory.NOT_FOUND_ID, identifier: scannedCode));
+      responseAsyncValue.data = MemoryProducts.movementAndLines;
+
     }
-    return MemoryProducts.movementAndLines;
+    ref.read(movementAndLinesProvider.notifier).state = MemoryProducts.movementAndLines;
+    return responseAsyncValue;
   } on DioException {
+
+    responseAsyncValue.success = false;
+    responseAsyncValue.message = '${Messages.ERROR} DioException';
     MemoryProducts.movementAndLines.cloneMovement(IdempiereMovement(name: Messages.ERROR, id: Memory.ERROR_ID, identifier: scannedCode));
-    return MemoryProducts.movementAndLines;
+    ref.read(movementAndLinesProvider.notifier).state = MemoryProducts.movementAndLines;
+    responseAsyncValue.data = MemoryProducts.movementAndLines;
+    return responseAsyncValue;
 
   } catch (e) {
     MemoryProducts.movementAndLines.cloneMovement(IdempiereMovement(name: Messages.ERROR, id: Memory.ERROR_ID, identifier: scannedCode));
-    return MemoryProducts.movementAndLines;
+    ref.read(movementAndLinesProvider.notifier).state = MemoryProducts.movementAndLines;
+    responseAsyncValue.success = false ;
+    responseAsyncValue.message = Messages.ERROR +e.toString();
+    responseAsyncValue.data = MemoryProducts.movementAndLines;
+    return responseAsyncValue;
   } finally {
     await GetStorage().write(Memory.KEY_MOVEMENT_AND_LINES, MemoryProducts.movementAndLines);
   }
@@ -249,55 +273,158 @@ StateProvider.autoDispose.family<IdempiereMovementLine?, int>((ref, lineId) {
   return null;
 });
 
+
+
 final movementLineQuantityToMoveProvider =
-StateProvider.autoDispose.family<IdempiereMovementLine?, int>((ref, lineId) {
+StateProvider.autoDispose.family<double?, int>((ref, lineId) {
   return null;
+});
+final editingMovementLineProvider =
+StateProvider.autoDispose.family<bool, int>((ref, lineId) {
+  return false;
+});
+
+final quantityOfLineToEditProvider = StateProvider.autoDispose<List<dynamic>?>((ref) {
+  return [];
+});
+final idOfMovementLineToDeleteProvider = StateProvider.autoDispose<int>((ref) {
+  return -1;
+});
+final counterProvider = StateProvider<int>((ref) {
+  return 1;
+});
+final deleteRequestProvider =
+StateProvider.autoDispose<DeleteRequest?>((ref) => null);
+
+final updateMovementLineIdProvider = StateProvider.autoDispose<int?>((ref) => null);
+final deleteMovementLineProvider =
+FutureProvider.autoDispose.family<bool, DeleteRequest>((ref, request) async {
+  if (request.lineId <= 0) return false;
+  print(request.lineId);
+  print(request.movementIdToDelete);
+  final dio = await DioClient.create();
+
+  try {
+    // =========================
+    // 1) BORRAR LINE (DELETE)
+    // =========================
+    final line = SqlDataMovementLine(id: request.lineId);
+    Memory.sqlUsersData.copyToSqlData(line);
+
+    final urlLine = line.getUpdateUrl();
+    print(urlLine);
+    final respLine = await dio.delete(urlLine);
+    print(respLine.data);
+    int i  = ref.read(counterProvider);
+    print('deleteMovementLineProvider $i');
+    ref.read(counterProvider.notifier).state = i+1;
+
+    if (respLine.statusCode != 200) return false;
+
+    final resLine = IdempiereResponseMessage.fromJson(respLine.data);
+    if (request.movementIdToDelete ==null || request.movementIdToDelete!<=0){
+      print('return ${resLine.deleted}');
+      return resLine.deleted;
+    }
+    print('deleteMovementLineProvider delete movement');
+
+    // =========================
+    // 2) SI ES ÚLTIMA LINEA: BORRAR MOVEMENT (PUT docStatus=DELETE)
+    // =========================
+    final movementId = request.movementIdToDelete ?? -1;
+    if (movementId > 0) {
+      final movement = SqlDataMovement(id: movementId);
+      Memory.sqlUsersData.copyToSqlData(movement);
+
+      final urlMov = movement.getUpdateUrl();
+      print(urlMov);
+      final payload = movement.getUpdateDocStatusJson(CommonSqlData.DOC_DELETE_STATUS);
+      print(payload);
+      final respMov = await dio.put(urlMov, data: payload);
+      print(respMov.data);
+      print(respMov.statusCode);
+      if (respMov.statusCode != 200) return false;
+
+
+      final resMov = IdempiereResponseMessage.fromJson(respMov.data);
+      print(resMov.toJson());
+      print(resMov.deleted);
+      return true;
+      /*if (resMov.deleted) {
+        return true;
+      } else {
+        return false;
+      }*/
+    }
+
+    // =========================
+    // 3) UPDATE LOCAL STATE (quitar la línea del movementAndLinesProvider)
+    // =========================
+    final current = ref.read(movementAndLinesProvider);
+    final newLines = List<IdempiereMovementLine>.from(current.movementLines ?? const []);
+    newLines.removeWhere((e) => (e.id ?? -1) == request.lineId);
+    current.movementLines = newLines;
+    ref.read(movementAndLinesProvider.notifier).state = current;
+
+    return true;
+  } on DioException catch (e) {
+    print('DioException delete line/movement: $e');
+    return false;
+  } catch (e) {
+    print('Exception delete line/movement: $e');
+    return false;
+  } finally {
+    // ✅ limpia el trigger sí o sí
+    ref.read(deleteRequestProvider.notifier).state = null;
+  }
 });
 
 
 final editQuantityToMoveProvider =
 FutureProvider.autoDispose.family<double?, int>((ref, lineId) async {
+  final ml = ref.watch(quantityOfLineToEditProvider);
 
-  final ml = ref.watch(movementLineForEditQuantityToMoveProvider(lineId));
+  // ✅ Validación fuerte
+  if (ml == null || ml.length != 2) return null;
 
-  if (ml == null ||
-      ml.id == null ||
-      ml.id! < 0 ||
-      ml.movementQty == null ||
-      ml.movementQty! < 0) {
-    return null;
-  }
+  final int id = (ml[0] as num).toInt();
+  final double qty = (ml[1] as num).toDouble();
 
-  Dio dio = await DioClient.create();
+  // ✅ Solo esta card debe ejecutar su update
+  if (id != lineId) return null;
+
+  // reglas de negocio
+  if (id <= 0 || qty < 0) return null;
+
+  final dio = await DioClient.create();
 
   try {
-    SqlDataMovementLine movementLine =
-    SqlDataMovementLine(id: ml.id, movementQty: ml.movementQty);
+    final movementLine = SqlDataMovementLine(id: id, movementQty: qty);
     Memory.sqlUsersData.copyToSqlData(movementLine);
 
-    String url = movementLine.getUpdateUrl();
+    final url = movementLine.getUpdateUrl();
     print(url);
-    print('---start-------------editMovementQuantityProvider');
-    final response =
-    await dio.put(url, data: movementLine.getUpdateMovementQuantityJson());
-    print('---result-------------editMovementQuantityProvider ${response.statusCode}');
+    print(movementLine.getUpdateMovementQuantityJson());
+    final response = await dio.put(url, data: movementLine.getUpdateMovementQuantityJson());
+
 
     if (response.statusCode == 200) {
-      IdempiereMovementLine res = IdempiereMovementLine.fromJson(response.data);
+      final res = IdempiereMovementLine.fromJson(response.data);
       return res.movementQty;
-    } else {
-      // -1 = error HTTP
-      return -1;
     }
-  } on DioException catch (_) {
-    // invalidamos solo el provider de esta línea
-    ref.invalidate(movementLineForEditQuantityToMoveProvider(lineId));
+
+    return -1; // error http
+  } on DioException catch (e) {
+    print('DioException edit quantity: $lineId $e');
     return -2;
-  } catch (_) {
-    ref.invalidate(movementLineForEditQuantityToMoveProvider(lineId));
+  } catch (e) {
+    print('Exception edit quantity: $lineId $e');
     return -3;
+  } finally {
+
   }
 });
+
 
 final movementNotCompletedToFindByDateProvider  = StateProvider.autoDispose<IdempiereMovement?>((ref) {
   return null;
@@ -305,12 +432,13 @@ final movementNotCompletedToFindByDateProvider  = StateProvider.autoDispose<Idem
 
 
 
-final findMovementNotCompletedByDateProvider = FutureProvider.autoDispose<List<IdempiereMovement>?>((ref) async {
+final findMovementNotCompletedByDateProvider = FutureProvider.autoDispose<ResponseAsyncValue>((ref) async {
   final IdempiereMovement? movement = ref.watch(movementNotCompletedToFindByDateProvider);
   print('----------------------------------findMovementNotCompletedByDateProvider');
-  if(movement== null || movement.movementDate == null) return null;
-  bool? isIn ;
+  ResponseAsyncValue responseAsyncValue = ResponseAsyncValue();
+  if(movement== null || movement.movementDate == null) return responseAsyncValue;
 
+  responseAsyncValue.isInitiated = true;
   String docStatus = movement.docStatus?.id ?? 'DR' ;
 
 
@@ -362,6 +490,7 @@ final findMovementNotCompletedByDateProvider = FutureProvider.autoDispose<List<I
     final response = await dio.get(url);
 
     if (response.statusCode == 200) {
+      responseAsyncValue.success = true;
       final responseApi =
       ResponseApi<IdempiereMovement>.fromJson(response.data, IdempiereMovement.fromJson);
       late List<IdempiereMovement> m;
@@ -370,19 +499,119 @@ final findMovementNotCompletedByDateProvider = FutureProvider.autoDispose<List<I
       } else {
         m = [IdempiereMovement(name: Messages.NO_DATA_FOUND, id: Memory.NOT_FOUND_ID)];
       }
-      return m;
+      responseAsyncValue.data = m;
+      return responseAsyncValue;
 
 
     } else {
-      return [IdempiereMovement(name: Messages.ERROR, id: response.statusCode)];
+      responseAsyncValue.success = true;
+      List<IdempiereMovement>  m = [IdempiereMovement(name: Messages.ERROR, id: response.statusCode)];
+      responseAsyncValue.data = m;
+      return responseAsyncValue;
     }
 
   } on DioException {
-    return [IdempiereMovement(name: '${Messages.ERROR} DioException', id: Memory.ERROR_ID)];
+    responseAsyncValue.success = false;
+    responseAsyncValue.message = '${Messages.ERROR} DioException';
+    return  responseAsyncValue;
 
   } catch (e) {
-    return [IdempiereMovement(name: Messages.ERROR +e.toString(), id: Memory.ERROR_ID)];
+    responseAsyncValue.success = false;
+    responseAsyncValue.message = Messages.ERROR +e.toString();
+    return  responseAsyncValue;
+  }
+
+});
+final movementIdForConfirmProvider = StateProvider.autoDispose<int?>((ref) {
+  return null;
+});
+final confirmMovementProvider = FutureProvider.autoDispose<MovementAndLines?>((ref) async {
+
+  int id = ref.watch(movementIdForConfirmProvider) ?? -1;
+  if(id <=0) return null;
+  Dio dio = await DioClient.create();
+  try {
+    SqlDataMovement movement = SqlDataMovement(id:id);
+    Memory.sqlUsersData.copyToSqlData(movement);
+
+    String url =movement.getUpdateUrl();
+    print(url);
+    print(movement.getUpdateDocStatusJson(CommonSqlData.DOC_COMPLETE_STATUS));
+    final response = await dio.put(url, data: movement.getUpdateDocStatusJson(CommonSqlData.DOC_COMPLETE_STATUS));
+
+    if (response.statusCode == 200) {
+      movement =  SqlDataMovement.fromJson(response.data);
+      MovementAndLines movementAndLines = MovementAndLines();
+      movementAndLines.cloneMovement(movement);
+      MemoryProducts.movementAndLines = movementAndLines;
+      print('result confirmMovementProvider ${movementAndLines.docStatus?.id ?? 'doc null'}');
+      return movementAndLines;
+    } else {
+      return MovementAndLines(id: Memory.ERROR_ID,
+          name: '${Messages.ERROR }${response.statusCode} : ${response.statusMessage}' );
+
+    }
+
+
+
+  } on DioException catch (e) {
+    return MovementAndLines(id: Memory.ERROR_ID,
+        name: '${Messages.ERROR } ${e.toString()}' );
+  } catch (e) {
+    return MovementAndLines(id: Memory.ERROR_ID,
+        name: '${Messages.ERROR } ${e.toString()}' );
   }
 
 });
 
+final movementIdForCancelProvider = StateProvider.autoDispose<int?>((ref) {
+  return null;
+});
+final cancelMovementProvider = FutureProvider.autoDispose<MovementAndLines?>((ref) async {
+  int id = ref.watch(movementIdForCancelProvider) ?? -1;
+  if(id <=0) return null;
+  Dio dio = await DioClient.create();
+  try {
+    SqlDataMovement movement = SqlDataMovement(id:id);
+    Memory.sqlUsersData.copyToSqlData(movement);
+    String url =movement.getUpdateUrl();
+    print(url);
+    Map<String, dynamic> payload = movement.getUpdateDocStatusJson(CommonSqlData.DOC_DELETE_STATUS);
+    print(payload);
+    print('---put-------------cancelMovementProvider 4 ');
+    final response = await dio.put(url, data: payload);
+
+    if (response.statusCode == 200) {
+      movement =  SqlDataMovement.fromJson(response.data);
+      MovementAndLines movementAndLines = MovementAndLines();
+      movementAndLines.cloneMovement(movement);
+      MemoryProducts.movementAndLines = movementAndLines;
+      print('---result-------------cancelMovementProvider ${movement.docStatus?.id ?? 'doc null'}');
+      print('---movement-------------movement ${movementAndLines.docStatus?.id ?? 'doc null'}');
+      print('---result-------------cancelMovementProvider ${movement.docStatus?.id ?? 'doc null'}');
+      print('---movement-------------movement ${movementAndLines.docStatus?.toJson() ?? 'doc null'}');
+      return movementAndLines;
+    } else {
+      print('${Messages.ERROR }${response.statusCode} : ${response.statusMessage}');
+      return MovementAndLines(id: Memory.ERROR_ID,
+          name: '${Messages.ERROR }${response.statusCode} : ${response.statusMessage}' );
+      throw Exception(
+          'Error al obtener la lista de $url: ${response.statusCode}');
+    }
+
+
+
+  } on DioException catch (e) {
+    print('DioException: ${e.toString()}');
+    return MovementAndLines(id: Memory.ERROR_ID,
+        name: '${Messages.ERROR } ${e.toString()}' );
+    //final authDataNotifier = ref.read(authProvider.notifier);
+    //throw CustomErrorDioException(e, authDataNotifier);
+  } catch (e) {
+    print('Exception: ${e.toString()}');
+    return MovementAndLines(id: Memory.ERROR_ID,
+        name: '${Messages.ERROR } ${e.toString()}' );
+    //throw Exception(e.toString());
+  }
+
+});

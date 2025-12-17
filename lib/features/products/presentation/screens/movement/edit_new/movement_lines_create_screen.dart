@@ -21,6 +21,7 @@ import '../../../providers/product_provider_common.dart';
 import '../../../providers/products_scan_notifier.dart';
 import '../../store_on_hand/memory_products.dart';
 import '../create/movement_line_card_for_create.dart';
+import '../provider/products_home_provider.dart';
 
 
 class MovementLinesCreateScreen extends ConsumerStatefulWidget {
@@ -47,31 +48,32 @@ class MovementLinesCreateScreenState extends ConsumerState<MovementLinesCreateSc
   late MovementAndLines movementAndLines ;
   @override
   void initState() {
+    super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) async {
-      Future.delayed(const Duration(microseconds: 100),(){
-
-      });
       SqlDataMovementLine movementLine = movementAndLines.movementLineToCreate ??
           SqlDataMovementLine();
       if(mounted && movementAndLines.canCreateMovementLine()){
         if(!startCreate){
           startCreate = true;
+          int aux = movementLine.mMovementID?.id ?? -1;
+          print('print Movement Line Create createMovementLine $aux');
           productsNotifier.createMovementLine(movementLine);
         }
       }
     });
-    super.initState();
+
   }
   @override
   Widget build(BuildContext context){
 
     movementAndLines = MovementAndLines.fromJson(jsonDecode(widget.argument));
-    print(movementAndLines.toJson());
+
+    print('print Movement Line Create build 1 ${movementAndLines.movementLineToCreate?.id}');
     width = MediaQuery.of(context).size.width;
     productsNotifier = ref.watch(scanHandleNotifierProvider.notifier);
 
     String title ='${Messages.MOVEMENT_LINE} : ${Messages.CREATE}';
-
+    print('print Movement Line Create build 2');
     return Scaffold(
       appBar: AppBar(
         automaticallyImplyLeading: true,
@@ -79,7 +81,7 @@ class MovementLinesCreateScreenState extends ConsumerState<MovementLinesCreateSc
             icon: const Icon(Icons.arrow_back),
             onPressed: () =>
             {
-              context.pop(),
+              popScopeAction(context, ref),
             }
           //
         ),
@@ -104,7 +106,7 @@ class MovementLinesCreateScreenState extends ConsumerState<MovementLinesCreateSc
             if (didPop) {
               return;
             }
-            Navigator.pop(context);
+            popScopeAction(context, ref);
           },
           child: SingleChildScrollView(
             child: Container(
@@ -119,6 +121,7 @@ class MovementLinesCreateScreenState extends ConsumerState<MovementLinesCreateSc
     );
   }
   Widget getDataToCreate(BuildContext context, WidgetRef ref){
+    print('print Movement Line Create getDataToCreate');
     return  Container(
       padding: const EdgeInsets.symmetric(horizontal: 10),
       child: getMovementLines([MemoryProducts.newSqlDataMovementLineToCreate],
@@ -128,17 +131,25 @@ class MovementLinesCreateScreenState extends ConsumerState<MovementLinesCreateSc
 
 
   Widget getBody(BuildContext context, WidgetRef ref){
+    print('print Movement Line getBody 1');
     AsyncValue movementAsync = ref.watch(createNewMovementLineProvider);
+    print('print Movement Line getBody 11');
     return movementAsync.when(
       data: (data) {
+        print('print Movement Line getBody 0');
         if(data==null){
+          print('print Movement Line getBody 3');
           if(startCreate){
+            print('print Movement Line getBody 4');
             return getNoDataCreated(context, ref);
+
           } else {
+            print('print Movement Line getBody 5');
             return getDataToCreate(context, ref);
           }
 
         }
+        print('print Movement Line getBody 6');
         WidgetsBinding.instance.addPostFrameCallback((_) async {
           if(data!=null && data.id!=null && data.id! > 0){
             if (ref.context.mounted) {
@@ -160,6 +171,7 @@ class MovementLinesCreateScreenState extends ConsumerState<MovementLinesCreateSc
             }
           }
         });
+        print('print Movement Line getBody 8');
         IdempiereMovement movement = IdempiereMovement();
         IdempiereMovementLine movementLine = IdempiereMovementLine();
         if(data==null || data.id==null || data.id!<=0){
@@ -174,7 +186,7 @@ class MovementLinesCreateScreenState extends ConsumerState<MovementLinesCreateSc
             showErrorMessage(context, ref, '${Messages.NO_DATA_CREATED} ID: $id');
             return getNoDataCreated(context, ref);
           }
-
+          print('print Movement Line getBody 9');
           return  Column(
             spacing: 10,
             children: [
@@ -242,5 +254,16 @@ class MovementLinesCreateScreenState extends ConsumerState<MovementLinesCreateSc
     return MovementLineCardForCreate(width: width,
       movementLine: storages[0],);
   }
+  void popScopeAction(BuildContext context, WidgetRef ref) {
 
+    // Restaurar configuración de navegación del Home
+    ref.read(productsHomeCurrentIndexProvider.notifier).state =
+        Memory.PAGE_INDEX_MOVEMENTE_EDIT_SCREEN;
+
+    ref.read(actionScanProvider.notifier).state =
+        Memory.ACTION_FIND_MOVEMENT_BY_ID;
+    int movementId = movementAndLines.id ?? -1;
+    // Redirigir
+    context.go('${AppRouter.PAGE_MOVEMENTS_EDIT}/$movementId/1');
+  }
 }

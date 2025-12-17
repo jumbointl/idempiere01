@@ -54,6 +54,9 @@ final findProductByUPCOrSKUForStoreOnHandProvider = FutureProvider.autoDispose<P
 
       if (responseApi.records != null && responseApi.records!.isNotEmpty) {
         final productsList = responseApi.records!;
+        if(productsList.isEmpty){
+          return productWithStock;
+        }
         IdempiereProduct product = productsList[0];
         productWithStock.copyWithProduct(product);
 
