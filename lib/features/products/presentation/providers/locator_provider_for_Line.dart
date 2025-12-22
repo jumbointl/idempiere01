@@ -101,7 +101,7 @@ final findLocatorToForLineProvider = FutureProvider<IdempiereLocator>((ref) asyn
     return IdempiereLocator(id:Memory.INITIAL_STATE_ID,value: Messages.FIND);
   }
   int excludedLocatorId  = ref.watch(actualLocatorFromProvider);
-  int warehouseTo = ref.watch(actualWarehouseToProvider);
+  int warehouseTo = ref.watch(allowedWarehouseToProvider);
 
 
   String searchField ='Value';

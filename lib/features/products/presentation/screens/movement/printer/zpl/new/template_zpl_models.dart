@@ -1,20 +1,24 @@
-enum ZplTemplateMode { category, product }
+
+
+
+enum ZplTemplateMode { movement /*, shipping ... */ }
 
 String zplTemplateModeToJson(ZplTemplateMode mode) => mode.name;
 
 ZplTemplateMode zplTemplateModeFromJson(dynamic v) {
-  if (v == null) return ZplTemplateMode.category;
-  final s = v.toString().toLowerCase();
-  if (s == 'product') return ZplTemplateMode.product;
-  return ZplTemplateMode.category;
+  return ZplTemplateMode.movement;
 }
+
+
 
 class ZplTemplate {
   final String id;
-  final String templateFileName; // "E:TEMPLATE_....ZPL"
-  final String zplTemplateDf;    // DF (guardar en impresora)
-  final String zplReferenceTxt;  // XF+FN (imprimir)
-  final ZplTemplateMode mode;    // category/product
+  final String templateFileName;
+  final String zplTemplateDf;
+  final String zplReferenceTxt;
+  final ZplTemplateMode mode; // ✅ se mantiene
+  final int rowPerpage;       // ✅ se mantiene
+  final bool isDefault;       // ✅ NUEVO
   final DateTime createdAt;
 
   const ZplTemplate({
@@ -23,6 +27,8 @@ class ZplTemplate {
     required this.zplTemplateDf,
     required this.zplReferenceTxt,
     required this.mode,
+    required this.rowPerpage,
+    required this.isDefault,
     required this.createdAt,
   });
 
@@ -32,6 +38,8 @@ class ZplTemplate {
     String? zplTemplateDf,
     String? zplReferenceTxt,
     ZplTemplateMode? mode,
+    int? rowPerpage,
+    bool? isDefault,
     DateTime? createdAt,
   }) =>
       ZplTemplate(
@@ -40,6 +48,8 @@ class ZplTemplate {
         zplTemplateDf: zplTemplateDf ?? this.zplTemplateDf,
         zplReferenceTxt: zplReferenceTxt ?? this.zplReferenceTxt,
         mode: mode ?? this.mode,
+        rowPerpage: rowPerpage ?? this.rowPerpage,
+        isDefault: isDefault ?? this.isDefault,
         createdAt: createdAt ?? this.createdAt,
       );
 
@@ -48,21 +58,47 @@ class ZplTemplate {
     'templateFileName': templateFileName,
     'zplTemplateDf': zplTemplateDf,
     'zplReferenceTxt': zplReferenceTxt,
-    'mode': zplTemplateModeToJson(mode),
+    'mode': mode.name,
+    'rowPerpage': rowPerpage,
+    'isDefault': isDefault, // ✅ NUEVO
     'createdAt': createdAt.toIso8601String(),
   };
 
-  factory ZplTemplate.fromJson(Map<String, dynamic> json) => ZplTemplate(
-    id: (json['id'] ?? '').toString(),
-    templateFileName: (json['templateFileName'] ?? '').toString(),
-    zplTemplateDf: (json['zplTemplateDf'] ?? '').toString(),
-    zplReferenceTxt: (json['zplReferenceTxt'] ?? '').toString(),
-    mode: zplTemplateModeFromJson(json['mode']),
-    createdAt:
-    DateTime.tryParse((json['createdAt'] ?? '').toString()) ??
-        DateTime.now(),
-  );
+  factory ZplTemplate.fromJson(Map<String, dynamic> json) {
+    final modeStr = (json['mode'] ?? '').toString().trim();
+
+    // ✅ Migración: category/product -> movement
+    ZplTemplateMode parsedMode;
+    switch (modeStr) {
+      case 'movement':
+        parsedMode = ZplTemplateMode.movement;
+        break;
+      case 'category':
+      case 'product':
+        parsedMode = ZplTemplateMode.movement;
+        break;
+      default:
+        parsedMode = ZplTemplateMode.movement;
+    }
+
+    final isDefaultRaw = json['isDefault'];
+
+    return ZplTemplate(
+      id: (json['id'] ?? '').toString(),
+      templateFileName: (json['templateFileName'] ?? '').toString(),
+      zplTemplateDf: (json['zplTemplateDf'] ?? '').toString(),
+      zplReferenceTxt: (json['zplReferenceTxt'] ?? '').toString(),
+      mode: parsedMode,
+      rowPerpage: int.tryParse((json['rowPerpage'] ?? '').toString()) ?? 6,
+      isDefault: (isDefaultRaw is bool)
+          ? isDefaultRaw
+          : (isDefaultRaw?.toString().toLowerCase() == 'true'),
+      createdAt: DateTime.tryParse((json['createdAt'] ?? '').toString()) ?? DateTime.now(),
+    );
+  }
 }
+
+
 class CategoryAgg {
   final String categoryId;
   final String categoryName;
@@ -82,4 +118,9 @@ class CategoryAgg {
     categoryName: categoryName,
     totalQty: totalQty ?? this.totalQty,
   );
+}
+class TokenItem {
+  final String section;
+  final String token;
+  const TokenItem(this.section, this.token);
 }

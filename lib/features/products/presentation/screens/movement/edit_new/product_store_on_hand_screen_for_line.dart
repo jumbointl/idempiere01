@@ -16,6 +16,7 @@ import '../../../../common/input_dialog.dart';
 import '../../../../common/scan_button_by_action_fixed_short.dart';
 import '../../../providers/common_provider.dart';
 import '../../../providers/products_scan_notifier_for_line.dart';
+import '../../../widget/message_card.dart';
 import 'custom_app_bar.dart';
 import 'product_detail_card_for_line.dart';
 import '../provider/products_home_provider.dart';
@@ -23,7 +24,6 @@ import '../../../../../shared/data/memory.dart';
 import '../../../../../shared/data/messages.dart';
 import '../../../providers/product_provider_common.dart';
 import '../../../providers/store_on_hand_provider.dart';
-import '../../../widget/no_data_card.dart';
 import '../../store_on_hand/product_resume_card.dart';
 
 
@@ -158,7 +158,11 @@ class ProductStoreOnHandScreenForLineState
               child: productAsync.when(
                 data: (result) {
                   if(result.id==null || result.id! ==-1){
-                    return NoDataCard();
+                    return MessageCard(
+                      title: Messages.CONTINUE_TO_ADD_LINE,
+                      message: Messages.BACK_BUTTON_TO_SEE_MOVEMENT,
+                      subtitle: Messages.SCAN_PRODUCT_TO_CREATE_LINE,
+                    );
                   }
                   final double width = MediaQuery.of(context).size.width - 30;
 

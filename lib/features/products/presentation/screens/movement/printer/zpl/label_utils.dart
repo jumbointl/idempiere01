@@ -2,7 +2,6 @@ import 'dart:math';
 
 import 'package:monalisa_app_001/features/products/presentation/screens/movement/printer/zpl/zpl_print_profile_providers.dart';
 
-import '../../../../../domain/idempiere/movement_and_lines.dart';
 
 String buildZpl100x150NoLogoAll({
   required dynamic movementAndLines,
@@ -31,7 +30,7 @@ String buildZpl100x150NoLogoAll({
   String truncate(String s, int maxChars) {
     final t = safe(s);
     if (t.length <= maxChars) return t;
-    return t.substring(0, maxChars - 1) + '…';
+    return '${t.substring(0, maxChars - 1)}…';
   }
 
   final String qrData = safe(movementAndLines.documentNumber ?? '');
@@ -353,7 +352,7 @@ String buildZpl100x150NoLogoAll({
 }
 
 
-String buildTspl100x150NoLogoAll({
+/*String buildTspl100x150NoLogoAll({
   required dynamic movementAndLines,
   required ZplLabelType labelType,
   required int rowsPerLabel,
@@ -380,7 +379,7 @@ String buildTspl100x150NoLogoAll({
   String truncate(String s, int maxChars) {
     final t = safe(s);
     if (t.length <= maxChars) return t;
-    return t.substring(0, maxChars - 1) + '…';
+    return '${t.substring(0, maxChars - 1)}…';
   }
 
   final String qrData = safe(movementAndLines.documentNumber ?? '');
@@ -651,7 +650,7 @@ String buildTspl100x150NoLogoAll({
   }
 
   return out.toString();
-}
+}*/
 String safe(String s) => s
     .replaceAll('^', ' ')
     .replaceAll('~', ' ')

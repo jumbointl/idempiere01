@@ -3,12 +3,18 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:monalisa_app_001/config/config.dart';
+import 'package:monalisa_app_001/features/m_inout/presentation/providers/pick_confirm_provider.dart';
+import 'package:monalisa_app_001/features/products/common/messages_dialog.dart';
+import 'package:monalisa_app_001/features/shared/data/messages.dart';
 
+import '../../../products/domain/idempiere/response_async_value.dart';
 import '../../domain/entities/line.dart';
 import '../../domain/entities/line_confirm.dart';
 import '../../domain/entities/m_in_out.dart';
 import '../../domain/entities/m_in_out_confirm.dart';
 import 'm_in_out_providers.dart';
+import 'shipment_confirm_provider.dart';
 
 Future<void> showMInOutResultModalBottomSheet({
   required WidgetRef ref,
@@ -366,4 +372,324 @@ Future<void> showMInOutConfirmResultModalBottomSheet({required WidgetRef ref,
     },
   );
 
+}
+
+Future<void> showCreateShipmentConfirmModalBottomSheet({
+  required WidgetRef ref,
+  required String mInOutId,
+  required String documentNo,
+  required MInOutType type,
+  required Future<void> Function() onResultSuccess,
+}) async {
+  final color = Colors.grey.shade200;
+
+  await showModalBottomSheet(
+    isDismissible: false,
+    enableDrag: false,
+    context: ref.context,
+    isScrollControlled: true,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+    ),
+    builder: (ctx) {
+      final height = MediaQuery.of(ctx).size.height * 0.9;
+      bool started =false ;
+      return Consumer(
+        builder: (context, ref2, _) {
+          final asyncValue = ref2.watch(createShipmentConfirmProvider);
+          final result = asyncValue.value;
+          print('creating shipment confirm 1');
+          return SizedBox(
+            height: height,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 20,vertical: 20),
+              decoration: BoxDecoration(
+                color: color,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Text(
+                    Messages.CREATE_SHIPMENT_CONFIRM,
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                  Text(
+                    Messages.TO_CREATE_SHIPMENT_CONFIRM_DOC_STATUS_MUST_EQUAL_DR,
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                  Text(
+                    'Document No: $documentNo',
+                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+
+                  const SizedBox(height: 12),
+
+                  Expanded(
+                    child: SingleChildScrollView(
+                      child: asyncValue.when(
+                        data: (res) {
+                          // res puede ser null cuando scannedCode == ''
+                          if (res == null) return const SizedBox.shrink();
+
+                          final actionSuccess = res.success && res.data != null;
+
+                          if (actionSuccess) {
+                            // Evitar hacer lógica pesada durante el build
+                            WidgetsBinding.instance.addPostFrameCallback((_) async {
+                              await Future.delayed(const Duration(seconds: 2));
+                              if(ctx.mounted){
+                                if (Navigator.of(ctx).canPop()) Navigator.of(ctx).pop();
+                                print('onResultSuccess');
+                                await onResultSuccess();
+                              }
+
+                            });
+                          }
+                          print('Card');
+                          return Card(
+
+                            child: Padding(
+                              padding: const EdgeInsets.all(8.0),
+                              child: Column(
+                                children: [
+                                  Icon(
+                                    actionSuccess ? Icons.check_circle : Icons.error_outline,
+                                    color: actionSuccess ? Colors.green : Colors.red,
+                                    size: 60,
+                                  ),
+                                  if(actionSuccess)  Text(
+                                    "${Messages.SUMMARY} : ${res.data}",
+                                  ),
+                                  Text(
+                                    actionSuccess
+                                        ? '${Messages.DOCUMENT_ADDED}, ${Messages.PLEASE_WAIT}'
+                                        : res.message ?? Messages.ERROR_DOCUMENT_NOT_ADDED,
+                                  ),
+                                ],
+                              ),
+                            ),
+                          );
+                        },
+                        error: (error, _) => Text(error.toString()),
+                        loading: () => const LinearProgressIndicator(minHeight: 36),
+                      ),
+                    ),
+                  ),
+
+
+                  Row(
+                    children: [
+                      Expanded(
+                        child: ElevatedButton(
+                          onPressed: () async {
+
+                             if(result!=null && result.success == true) {
+                                if (ctx.mounted && Navigator.of(ctx).canPop()) {
+                                Navigator.of(
+                                  ctx).pop();
+                                await onResultSuccess();
+                              }
+
+                            }
+
+
+                          },
+                          child: Text(Messages.CANCEL),
+                        ),
+                      ),
+                      if(!started)const SizedBox(width: 10),
+
+                      if(!started)Expanded(
+                        child: ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: themeColorPrimary,
+                            foregroundColor: Colors.white,
+                          ),
+                          onPressed: () async {
+                            // Dispara el FutureProvider
+                            print('creating shipment confirm pressed $started');
+                            if(started) {
+                              String message = Messages.SHIPMENT_CONFIRM_ALREADY_STARTED;
+                              showErrorMessage(context, ref, message);
+                              return;
+                            }
+                            started = true ;
+                            ref2.read(idForCreateShipmentConfirmProvider.notifier).state = mInOutId;
+                            print('creating shipment confirm pressed ${result?.success}');
+                          },
+                          child: Text(Messages.CREATE),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      );
+    },
+  );
+}
+
+Future<void> showCreatePickConfirmModalBottomSheet({
+  required WidgetRef ref,
+  required String mInOutId,
+  required String documentNo,
+  required MInOutType type,
+  required Future<void> Function() onResultSuccess,
+}) async {
+  final color = Colors.grey.shade200;
+
+  await showModalBottomSheet(
+    isDismissible: false,
+    enableDrag: false,
+    context: ref.context,
+    isScrollControlled: true,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+    ),
+    builder: (ctx) {
+      final height = MediaQuery.of(ctx).size.height * 0.9;
+      bool started =false ;
+      return Consumer(
+        builder: (context, ref2, _) {
+          final asyncValue = ref2.watch(createPickConfirmProvider);
+          final result = asyncValue.value;
+          print('creating pick confirm 1');
+          return SizedBox(
+            height: height,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 20,vertical: 20),
+              decoration: BoxDecoration(
+                color: color,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Text(
+                    Messages.CREATE_PICK_CONFIRM,
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                  Text(
+                    Messages.TO_CREATE_PICK_CONFIRM_DOC_STATUS_MUST_EQUAL_DR,
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                  Text(
+                    'Document No: $documentNo',
+                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+
+                  const SizedBox(height: 12),
+
+                  Expanded(
+                    child: SingleChildScrollView(
+                      child: asyncValue.when(
+                        data: (res) {
+                          // res puede ser null cuando scannedCode == ''
+                          if (res == null) return const SizedBox.shrink();
+
+                          final actionSuccess = res.success && res.data != null;
+
+                          if (actionSuccess) {
+                            // Evitar hacer lógica pesada durante el build
+                            WidgetsBinding.instance.addPostFrameCallback((_) async {
+                              await Future.delayed(const Duration(seconds: 2));
+                              if(ctx.mounted) {
+                                if (Navigator.of(ctx).canPop()) {
+                                  Navigator.of(
+                                    ctx).pop();
+                                }
+                                print('onResultSuccess');
+                                await onResultSuccess();
+                              }
+                            });
+                          }
+                          print('Card');
+                          return Card(
+
+                            child: Padding(
+                              padding: const EdgeInsets.all(8.0),
+                              child: Column(
+                                children: [
+                                  Icon(
+                                    actionSuccess ? Icons.check_circle : Icons.error_outline,
+                                    color: actionSuccess ? Colors.green : Colors.red,
+                                    size: 60,
+                                  ),
+                                  if(actionSuccess)  Text(
+                                    "${Messages.SUMMARY} : ${res.data}",
+                                  ),
+                                  Text(
+                                    actionSuccess
+                                        ? '${Messages.DOCUMENT_ADDED}, ${Messages.PLEASE_WAIT}'
+                                        : res.message ?? Messages.ERROR_DOCUMENT_NOT_ADDED,
+                                  ),
+                                ],
+                              ),
+                            ),
+                          );
+                        },
+                        error: (error, _) => Text(error.toString()),
+                        loading: () => const LinearProgressIndicator(minHeight: 36),
+                      ),
+                    ),
+                  ),
+
+
+                  Row(
+                    children: [
+                      Expanded(
+                        child: ElevatedButton(
+                          onPressed: () async {
+
+                            if(result!=null && result.success == true) {
+                              if (ctx.mounted && Navigator.of(ctx).canPop()) {
+                                Navigator.of(
+                                    ctx).pop();
+                                await onResultSuccess();
+                              }
+
+                            }
+
+
+                          },
+                          child: Text(Messages.CANCEL),
+                        ),
+                      ),
+                      if(!started)const SizedBox(width: 10),
+
+                      if(!started)Expanded(
+                        child: ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: themeColorPrimary,
+                            foregroundColor: Colors.white,
+                          ),
+                          onPressed: () async {
+                            // Dispara el FutureProvider
+                            print('creating pick confirm pressed $started');
+                            if(started) {
+                              String message = Messages.PICK_CONFIRM_ALREADY_STARTED;
+                              showErrorMessage(context, ref, message);
+                              return;
+                            }
+                            started = true ;
+                            ref2.read(idForCreatePickConfirmProvider.notifier).state = mInOutId;
+                            print('creating pick confirm pressed ${result?.success}');
+                          },
+                          child: Text(Messages.CREATE),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      );
+    },
+  );
 }

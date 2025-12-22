@@ -95,7 +95,7 @@ class UnsortedStorageOnHandScreenState extends ConsumerState<UnsortedStorageOnHa
     WidgetsBinding.instance.addPostFrameCallback((_){
       final id = locatorFrom?.id ?? -1;
       ref.read(actualLocatorFromProvider.notifier).state = id;
-      ref.read(actualWarehouseToProvider.notifier).state = 0;
+      //ref.read(allowedWarehouseToProvider.notifier).state = 0;
     });
     super.initState();
     putAwayMovement = PutAwayMovement();
@@ -147,7 +147,7 @@ class UnsortedStorageOnHandScreenState extends ConsumerState<UnsortedStorageOnHa
         element.mProductID?.id == widget.storage.mProductID?.id &&
         element.mLocatorID?.id == widget.storage.mLocatorID?.id )
         .toList();
-    final String title = ref.watch(movementTypeProvider(widget.storage.mLocatorID));
+    final String title = ref.read(movementCreateScreenTitleProvider);
 
     if (isCardsSelected.isEmpty && storageList.isNotEmpty) {
       isCardsSelected = List<bool>.filled(storageList.length, false);

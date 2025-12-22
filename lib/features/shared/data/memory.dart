@@ -30,6 +30,8 @@ class Memory {
   //FOUND MORE THAN 1, SUCCESSFUL SQL QUERY BUT TOO MUCH RECORDS,
   static var TOO_MUCH_RECORDS_ID=-3;
 
+  static bool isAdmin = true;
+
 
   static final numberFormatter2Digit = NumberFormat.decimalPatternDigits
     (locale: 'es_PY',decimalDigits: 2);
@@ -65,6 +67,7 @@ class Memory {
   static const int ACTION_GO_TO_STORAGE_ON_HAND_PAGE_WITH_UPC=8;
   static const int ACTION_GO_TO_MOVEMENT_EDIT_PAGE_WITH_ID=9;
   static const int ACTION_FIND_PRINTER_BY_QR = 10;
+  static const int ACTION_NO_SCAN_ACTION =200;
 
   static const int UPC_EXITS = -1;
 
@@ -129,7 +132,7 @@ class Memory {
 
   static String URL_CUPS_SERVER ='http://192.168.188.108:3100/print';
 
-  static String VERSIONS='1.01.056';
+  static String VERSIONS='1.01.059';
 
   static String getUrlCupsServerWithPrinter({required String ip,
     required String port,required String printerName}){

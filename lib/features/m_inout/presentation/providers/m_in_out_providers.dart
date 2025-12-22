@@ -258,6 +258,7 @@ class MInOutNotifier extends StateNotifier<MInOutStatus> {
   }
 
   Future<MInOut> getMInOutAndLine(WidgetRef ref) async {
+    print('------------mInOutTypegetMInOutAndLine ${state.mInOutType}');
     if (state.doc.trim().isEmpty) {
       state = state.copyWith(
         errorMessage: 'Por favor ingrese un número de documento válido',
@@ -275,6 +276,7 @@ class MInOutNotifier extends StateNotifier<MInOutStatus> {
 
     try {
       final mInOutResponse = await mInOutRepository.getMInOut(state.doc, ref);
+      print('mInOutResponse ${mInOutResponse.toJson()}');
       final filteredLines = mInOutResponse.lines
           .where((line) => line.mProductId?.id != null)
           .toList();
@@ -301,6 +303,8 @@ class MInOutNotifier extends StateNotifier<MInOutStatus> {
         isLoading: false,
         viewMInOut: false,
       );
+      //if(ref.context.mounted)showWarningMessage(ref.context, ref, e.toString());
+      print('mInOutResponse Exception: ${e.toString()} ${state.doc}');
       throw Exception(e.toString().replaceAll('Exception: ', ''));
     }
   }

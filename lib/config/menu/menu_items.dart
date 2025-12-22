@@ -105,7 +105,7 @@ var appHomeOptionCol2Items = <MenuItem>[
 final appHomeOptionCol3Items = <MenuItem>[
   if (RolesApp.cantConfirmMovement)
   const MenuItem(
-    title: 'Replenish',
+    title: 'Move Complete',
     subTitle: '',
     link: '/mInOut/move',
     icon: Icons.swap_horiz,
@@ -118,10 +118,16 @@ final appHomeOptionCol3Items = <MenuItem>[
     link: '/mInOut/moveconfirm',
     icon: Icons.swap_horiz,
   ),
-
+  if (RolesApp.canCreateMovementInSameWarehouse)
+    MenuItem(
+      title: 'Move create same ware.',
+      subTitle: '',
+      link: '${AppRouter.PAGE_PRODUCT_STORE_ON_HAND}/-1/movementInSameWarehouse',
+      icon: Icons.inventory,
+    ),
   if (RolesApp.canCreateMovementInSameOrganization)
   MenuItem(
-    title: Messages.MOVEMENT_CREATE_OR_STOCK,
+    title: 'Move create diff ware',
     subTitle: '',
     link: '${AppRouter.PAGE_PRODUCT_STORE_ON_HAND}/-1',
     icon: Icons.inventory,

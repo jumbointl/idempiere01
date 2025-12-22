@@ -2,6 +2,7 @@
 
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
 import 'package:material_symbols_icons/symbols.dart';
@@ -17,153 +18,223 @@ double get fontSizeMedium => themeFontSizeNormal;
 double get fontSizeLarge => themeFontSizeLarge;
 
 
-
-
 Future<String?> openInputDialogWithResult(
-
     BuildContext context,
     WidgetRef ref,
-    bool history,
-    {required String title , required String value,
-      required bool numberOnly}
+    bool history, {
+      required String title,
+      required String value,
+      required bool numberOnly,
+    }) async {
+  final TextEditingController controller = TextEditingController();
+  final FocusNode dialogFocusNode = FocusNode();
 
-    ) async {
 
-  TextEditingController controller = TextEditingController();
-  if(numberOnly){
-    double? aux = double.tryParse(value);
-    if(aux!=null){
-      int valueInt = aux.toInt() ;
-      controller.text = valueInt.toString() ;
+  // ===== Inicializar texto =====
+  if (numberOnly) {
+    final double? aux = double.tryParse(value);
+    if (aux != null) {
+      controller.text = aux.toInt().toString();
+    } else {
+      controller.text = value;
     }
-
   } else {
     controller.text = value;
   }
 
-
   if (history) {
     String lastSearch = Memory.lastSearch;
-
-
     if (lastSearch == '-1') lastSearch = '';
-
-    controller.text =
-    lastSearch.isEmpty ? Messages.NO_RECORDS_FOUND : lastSearch;
+    controller.text = lastSearch.isEmpty ? Messages.NO_RECORDS_FOUND : lastSearch;
   }
-  if(numberOnly) ref.read(useNumberKeyboardProvider.notifier).state = true;
 
-  final result = await showModalBottomSheet<String?>(
+  if (numberOnly) {
+    ref.read(useNumberKeyboardProvider.notifier).state = true;
+  }
+
+  // (Opcional pero útil) Mientras el diálogo esté abierto, evita que la pantalla base reciba foco
+  // y apaga scanner/teclado externo si lo usas.
+  ref.read(enableScannerKeyboardProvider.notifier).state = false;
+  ref.read(isDialogShowedProvider.notifier).state = true;
+  final int actualAction = ref.read(actionScanProvider);
+  ref.read(actionScanProvider.notifier).state = Memory.ACTION_NO_SCAN_ACTION;
+
+  final String? result = await showModalBottomSheet<String?>(
     isScrollControlled: true,
     context: context,
-    builder: (BuildContext context) {
+    builder: (BuildContext sheetCtx) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (dialogFocusNode.canRequestFocus) {
+          dialogFocusNode.requestFocus();
+        }
 
-
+      });
       return Consumer(
         builder: (context, ref, child) {
           final useNumberKeyboard = ref.watch(useNumberKeyboardProvider);
-          return FractionallySizedBox(
-            heightFactor: 0.9,
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 20),
-              child: Center(
-                child: SingleChildScrollView(
-                  child: Column(
-                    spacing: 5,
-                    children: [
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 20.0),
-                        child: Text(
-                          title,
-                          style: TextStyle(
-                            fontSize: fontSizeLarge,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.purple,
+          final useScreenKeyBoard = ref.watch(useScreenKeyboardProvider);
+
+
+          // ✅ Bloquea foco fuera del bottom sheet mientras esté abierto
+          return PopScope(
+            canPop: false,
+            onPopInvokedWithResult: (bool didPop, Object? result) async {
+              if (didPop) {
+                return;
+              }
+              ref.read(enableScannerKeyboardProvider.notifier).state = true;
+              ref.read(isDialogShowedProvider.notifier).state = false;
+              ref.read(actionScanProvider.notifier).state = actualAction;
+              Navigator.pop(context, null);
+            },
+            child: FocusScope(
+              canRequestFocus: true,
+              child: FractionallySizedBox(
+                heightFactor: 0.9,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 20),
+                  child: Center(
+                    child: SingleChildScrollView(
+                      child: Column(
+                        spacing: 5,
+                        children: [
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 20.0),
+                            child: Text(
+                              title,
+                              style: TextStyle(
+                                fontSize: fontSizeLarge,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.purple,
+                              ),
+                            ),
                           ),
-                        ),
-                      ),
 
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 40.0),
-                        child: Row(
-                          children: [
-                            SizedBox(width: 60,),
-                            Expanded(
-                              child: TextField(
-                                controller: controller,
-                                textAlign: TextAlign.center,
-                                style: TextStyle(
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 5.0),
+                            child: Row(
+                              children: [
+                                  SizedBox(
+                                  width: 60,
+                                  child: useScreenKeyBoard ? (numberOnly == true)
+                                      ? Container()
+                                      : IconButton(
+                                    onPressed: () {
+                                      final oldValue =
+                                      ref.read(useNumberKeyboardProvider);
+                                      ref
+                                          .read(useNumberKeyboardProvider.notifier)
+                                          .state = !oldValue;
 
-                                  fontSize: fontSizeLarge,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.purple,
+
+                                    },
+
+                                    icon: Icon(
+                                      useNumberKeyboard
+                                          ? Icons.keyboard
+                                          : Icons.numbers,
+                                      color: Colors.purple,
+                                    ),
+                                  ) : null,
                                 ),
-                                keyboardType: TextInputType.none,
-                              ),
-                            ),
-                            SizedBox(
-                              width: 60,
-                              child: (numberOnly ==true) ? Container(): IconButton(
-                                onPressed: () {
-                                  final oldValue =
-                                  ref.read(useNumberKeyboardProvider);
-                                  ref
-                                      .read(useNumberKeyboardProvider.notifier)
-                                      .state = !oldValue;
-                                  print(ref.read(useNumberKeyboardProvider));
-                                },
-                                icon: Icon(
-                                  useNumberKeyboard
-                                      ? Icons.keyboard
-                                      : Icons.numbers,
-                                  color: Colors.purple,),
-                              ) ,
-                            ),
-                          ],
-                        ),
-                      ),
+                                Expanded(
+                                  child: Builder(
+                                    builder: (_) {
 
-                      useNumberKeyboard ? numberButtonsNoProcessor(ref: ref, context:
-                      context, textController: controller)
-                          : keyboardButtons(context, ref, controller),
 
-                      Padding(
-                        padding: const EdgeInsets.all(40.0),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                          spacing: 10,
-                          children: [
-                            Expanded(
-                              child: TextButton(
-                                style: TextButton.styleFrom(
-                                  foregroundColor: Colors.white,
-                                  backgroundColor: Colors.red,
+                                      return TextField(
+                                        focusNode: dialogFocusNode,
+                                        maxLines: 3,
+                                        controller: controller,
+                                        textAlign: TextAlign.center,
+                                        style: TextStyle(
+                                          fontSize: fontSizeLarge,
+                                          fontWeight: FontWeight.bold,
+                                          color: Colors.purple,
+                                        ),
+                                        keyboardType: numberOnly ? TextInputType.number :
+                                            TextInputType.text,
+                                      );
+                                    },
+                                  ),
                                 ),
-                                onPressed: ()
-                                {
-                                  Navigator.pop(context, null);
-                                },
-                                child: Text(Messages.CANCEL),
-                              ),
-                            ),
-                            SizedBox(width: 10),
-                            Expanded(
-                              child: TextButton(
-                                style: TextButton.styleFrom(
-                                  foregroundColor: Colors.white,
-                                  backgroundColor: Colors.green,
+                                SizedBox(
+                                  width: 60,
+                                  child: IconButton(
+                                    onPressed: () {
+                                      final oldValue =
+                                      ref.read(useScreenKeyboardProvider);
+                                      ref
+                                          .read(useScreenKeyboardProvider.notifier)
+                                          .state = !oldValue;
+
+
+                                    },
+
+                                    icon: Icon(
+                                      useScreenKeyBoard
+                                          ? Symbols.keyboard_off_rounded
+                                          : Symbols.keyboard_rounded,
+                                      color: Colors.purple,
+                                    ),
+                                  ),
                                 ),
-                                onPressed: () {
-                                  String text = controller.text;
-                                  Navigator.pop(context, text);
-                                },
-                                child: Text(Messages.CONFIRM),
-                              ),
+                              ],
                             ),
-                          ],
-                        ),
+                          ),
+
+                         if(useScreenKeyBoard) useNumberKeyboard
+                              ? numberButtonsNoProcessor(
+                            ref: ref,
+                            context: sheetCtx,
+                            textController: controller,
+                          )
+                              : keyboardButtons(sheetCtx, ref, controller),
+
+                          Padding(
+                            padding: const EdgeInsets.all(40.0),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                              spacing: 10,
+                              children: [
+                                Expanded(
+                                  child: TextButton(
+                                    style: TextButton.styleFrom(
+                                      foregroundColor: Colors.white,
+                                      backgroundColor: Colors.red,
+                                    ),
+                                    onPressed: () {
+                                      // ✅ perder foco antes de cerrar
+                                      dialogFocusNode.unfocus();
+                                      FocusScope.of(sheetCtx).unfocus();
+                                      Navigator.pop(sheetCtx, null);
+                                    },
+                                    child: Text(Messages.CANCEL),
+                                  ),
+                                ),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: TextButton(
+                                    style: TextButton.styleFrom(
+                                      foregroundColor: Colors.white,
+                                      backgroundColor: Colors.green,
+                                    ),
+                                    onPressed: () {
+                                      final text = controller.text;
+                                      // ✅ perder foco antes de cerrar
+                                      dialogFocusNode.unfocus();
+                                      FocusScope.of(sheetCtx).unfocus();
+                                      Navigator.pop(sheetCtx, text);
+                                    },
+                                    child: Text(Messages.CONFIRM),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
                       ),
-                    ],
+                    ),
                   ),
                 ),
               ),
@@ -174,9 +245,27 @@ Future<String?> openInputDialogWithResult(
     },
   );
 
+  // ✅ Al cerrar: liberar foco + restaurar scanner
+  await Future.delayed(const Duration(milliseconds: 1000));
+  try {
+    dialogFocusNode.unfocus();
+    if(context.mounted)FocusScope.of(context).unfocus();
+  } catch (_) {}
+  if (dialogFocusNode.hasFocus) {
+    dialogFocusNode.unfocus();
+  }
+  dialogFocusNode.dispose();
+  controller.dispose();
+
   ref.read(isDialogShowedProvider.notifier).state = false;
+  ref.read(enableScannerKeyboardProvider.notifier).state = true;
+  ref.read(actionScanProvider.notifier).state = actualAction;
+
   return result;
 }
+
+
+
 Future<bool?> openBottomSheetConfirmationDialog(
 
 
@@ -186,6 +275,9 @@ Future<bool?> openBottomSheetConfirmationDialog(
 
     ) async {
 
+   int actualAction = ref.read(actionScanProvider);
+   ref.read(isDialogShowedProvider.notifier).state = true;
+   ref.read(actionScanProvider.notifier).state = Memory.ACTION_NO_SCAN_ACTION;
 
   final result = await showModalBottomSheet<bool?>(
     isScrollControlled: true,
@@ -278,6 +370,7 @@ Future<bool?> openBottomSheetConfirmationDialog(
   );
 
   ref.read(isDialogShowedProvider.notifier).state = false;
+   ref.read(actionScanProvider.notifier).state = actualAction;
   return result;
 }
 
@@ -317,8 +410,11 @@ Future<void> openInputDialogWithAction({
     controller.text =
     lastSearch.isEmpty ? Messages.NO_RECORDS_FOUND : lastSearch;
   }
-
+  ref.read(actionScanProvider.notifier).state = Memory.ACTION_NO_SCAN_ACTION;
+  ref.read(isDialogShowedProvider.notifier).state = true;
   final result = await showModalBottomSheet<String?>(
+    isDismissible: false,
+    enableDrag: false,
     isScrollControlled: true,
     context: ref.context,
     builder: (BuildContext context) {
@@ -326,122 +422,162 @@ Future<void> openInputDialogWithAction({
       return Consumer(
         builder: (context, ref, _) {
           final useNumberKeyboard = ref.watch(useNumberKeyboardProvider);
+          final useScreenKeyBoard = ref.watch(useScreenKeyboardProvider);
 
-          return FractionallySizedBox(
-            heightFactor: 0.9,
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 20),
-              child: Center(
-                child: SingleChildScrollView(
-                  child: Column(
-                    spacing: 5,
-                    children: [
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 5.0),
-                        child: Text(
-                          title,
-                          style: TextStyle(
-                            fontSize: fontSizeLarge,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.purple,
+
+          return PopScope(
+            canPop: false,
+            onPopInvokedWithResult: (bool didPop, Object? result) async {
+              if (didPop) {
+                return;
+              }
+
+              ref.read(isDialogShowedProvider.notifier).state = false;
+              ref.read(actionScanProvider.notifier).state = actionScan;
+              Navigator.pop(context, null);
+            },
+
+            child: FractionallySizedBox(
+              heightFactor: 0.9,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 20),
+                child: Center(
+                  child: SingleChildScrollView(
+                    child: Column(
+                      spacing: 5,
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 5.0),
+                          child: Text(
+                            title,
+                            style: TextStyle(
+                              fontSize: fontSizeLarge,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.purple,
+                            ),
                           ),
                         ),
-                      ),
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 5.0),
-                        child: Row(
-                          children: [
-                            Expanded(
-                              child: TextField(
-                                controller: controller,
-                                style: TextStyle(
-                                  fontSize: fontSizeLarge,
-                                  fontWeight: FontWeight.bold,
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 5.0),
+                          child: Row(
+                            children: [
+                              SizedBox(
+                                width: 60,
+                                child: useScreenKeyBoard ?IconButton(
+                                  onPressed: () {
+                                    final oldValue =
+                                    ref.read(useNumberKeyboardProvider);
+                                    ref
+                                        .read(useNumberKeyboardProvider.notifier)
+                                        .state = !oldValue;
+                                  },
+                                  icon: Icon(
+                                    useNumberKeyboard
+                                        ? Icons.keyboard
+                                        : Icons.numbers,
+                                    color: Colors.purple,),
+                                ): null,
+                              ),
+
+                              Expanded(
+                                child: TextField(
+                                  maxLines: 3,
+                                  controller: controller,
+                                  style: TextStyle(
+                                    fontSize: fontSizeLarge,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.purple,
+                                  ),
+                                  keyboardType:  numberOnly==true ? TextInputType.number
+                                      : TextInputType.text,
+                                ),
+                              ),
+                              IconButton(
+                                onPressed: () {
+                                  final oldValue =
+                                  ref.read(useScreenKeyboardProvider);
+                                  ref
+                                      .read(useScreenKeyboardProvider.notifier)
+                                      .state = !oldValue;
+
+                                },
+
+                                icon: Icon(
+                                  useScreenKeyBoard
+                                      ? Symbols.keyboard_off_rounded
+                                      : Symbols.keyboard_rounded,
                                   color: Colors.purple,
                                 ),
-                                keyboardType: TextInputType.none,
+                              ),
+                            ],
+                          ),
+                        ),
+                        if(useScreenKeyBoard) (numberOnly==true)  ? numberButtonsNoProcessor(
+                            context: context, ref: ref, textController: controller,
+                            numberOnly: true):
+                        useNumberKeyboard
+                            ? Padding(
+                              padding: const EdgeInsets.all(12.0),
+                              child: numberButtonsNoProcessor
+                                (context: context, ref: ref, textController: controller,)
+                            )
+                            : keyboardButtons(context, ref, controller),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                          spacing: 10,
+                          children: [
+                            Expanded(
+                              child: TextButton(
+                                style: TextButton.styleFrom(
+                                  foregroundColor: Colors.white,
+                                  backgroundColor: Colors.red,
+                                ),
+                                onPressed: () {
+                                  ref.read(isDialogShowedProvider.notifier).state = false;
+                                  ref.read(actionScanProvider.notifier).state = actionScan;
+                                  Navigator.pop(context, null);
+                                },
+                                child: Text(Messages.CANCEL),
                               ),
                             ),
-                            const SizedBox(width: 8),
-                            IconButton(
-                              onPressed: () {
-                                final oldValue =
-                                ref.read(useNumberKeyboardProvider);
-                                ref
-                                    .read(useNumberKeyboardProvider.notifier)
-                                    .state = !oldValue;
-                              },
-                              icon: Icon(
-                                useNumberKeyboard
-                                    ? Icons.keyboard
-                                    : Icons.numbers,
-                              color: Colors.purple,),
+                            Expanded(
+                              child: TextButton(
+                                style: TextButton.styleFrom(
+                                  foregroundColor: Colors.white,
+                                  backgroundColor: Colors.green,
+                                ),
+                                onPressed: () {
+                                  final text = controller.text;
+
+                                  if (text.isEmpty) {
+                                    showErrorMessage(context, ref,
+                                        Messages.TEXT_FIELD_EMPTY);
+                                    return;
+                                  }
+                                  ref.read(isDialogShowedProvider.notifier).state = false;
+                                  ref.read(actionScanProvider.notifier).state = actionScan;
+                                  if (actionScan ==
+                                      Memory.ACTION_FIND_MOVEMENT_BY_ID) {
+                                    Memory.lastSearchMovement = text;
+                                  } else {
+                                    Memory.lastSearch = text;
+                                  }
+
+                                  onOk(
+                                    ref: ref,
+                                    inputData: text,
+                                    actionScan: actionScan,
+                                  );
+
+                                  Navigator.pop(context, text);
+                                },
+                                child: Text(Messages.CONFIRM),
+                              ),
                             ),
                           ],
                         ),
-                      ),
-                      (numberOnly==true)  ? numberButtonsNoProcessor(
-                          context: context, ref: ref, textController: controller,
-                          numberOnly: true):
-                      useNumberKeyboard
-                          ? Padding(
-                            padding: const EdgeInsets.all(12.0),
-                            child: numberButtonsNoProcessor
-                              (context: context, ref: ref, textController: controller,)
-                          )
-                          : keyboardButtons(context, ref, controller),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                        spacing: 10,
-                        children: [
-                          Expanded(
-                            child: TextButton(
-                              style: TextButton.styleFrom(
-                                foregroundColor: Colors.white,
-                                backgroundColor: Colors.red,
-                              ),
-                              onPressed: () {
-                                Navigator.pop(context, null);
-                              },
-                              child: Text(Messages.CANCEL),
-                            ),
-                          ),
-                          Expanded(
-                            child: TextButton(
-                              style: TextButton.styleFrom(
-                                foregroundColor: Colors.white,
-                                backgroundColor: Colors.green,
-                              ),
-                              onPressed: () {
-                                final text = controller.text;
-
-                                if (text.isEmpty) {
-                                  showErrorMessage(context, ref,
-                                      Messages.TEXT_FIELD_EMPTY);
-                                  return;
-                                }
-
-                                if (actionScan ==
-                                    Memory.ACTION_FIND_MOVEMENT_BY_ID) {
-                                  Memory.lastSearchMovement = text;
-                                } else {
-                                  Memory.lastSearch = text;
-                                }
-
-                                onOk(
-                                  ref: ref,
-                                  inputData: text,
-                                  actionScan: actionScan,
-                                );
-
-                                Navigator.pop(context, text);
-                              },
-                              child: Text(Messages.CONFIRM),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
               ),
@@ -559,7 +695,7 @@ Widget keyboardButtons(BuildContext context, WidgetRef ref,TextEditingController
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             SizedBox(
-              width: widthButton*3,
+              width: widthButton*2,
               height: widthButton,
               child: TextButton(
                 onPressed: () => removeText(context,ref,textController),
@@ -582,7 +718,7 @@ Widget keyboardButtons(BuildContext context, WidgetRef ref,TextEditingController
               ),
             ),
             SizedBox(
-              width: widthButton*3,
+              width: widthButton*2,
               height: widthButton,
               child: TextButton(
                 onPressed: () => addText(context,ref,textController,' '),
@@ -600,6 +736,34 @@ Widget keyboardButtons(BuildContext context, WidgetRef ref,TextEditingController
                   style: TextStyle(
                     color: Colors.black,
                     fontSize: fontSizeLarge,
+                  ),
+                ),
+              ),
+            ),
+            SizedBox(
+              width: widthButton * 2,
+              height: widthButton,
+              child: Material(
+                color: Colors.white,
+                shape: RoundedRectangleBorder(
+                  side: const BorderSide(color: Colors.black),
+                  borderRadius: BorderRadius.circular(5),
+                ),
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(5),
+                  onTap: () async {
+
+                    final data = await Clipboard.getData(Clipboard.kTextPlain);
+                    if (data?.text == null) {
+                      if(context.mounted)showErrorMessage(context, ref, Messages.NO_DATA_ON_CLIPBOARD);
+                      return;
+                    }
+
+                    textController.text = data!.text!;
+                  },
+                  child: const Icon(
+                    Icons.content_paste,
+                    color: Colors.purple,
                   ),
                 ),
               ),
@@ -641,7 +805,7 @@ Widget numberButtonsNoProcessor(
     {required BuildContext context,required WidgetRef ref,
       required TextEditingController textController,
       bool? numberOnly =false }) {
-  final double keyboardWidth = MediaQuery.of(context).size.width * 0.56;
+  final double keyboardWidth = MediaQuery.of(context).size.width * 0.55;
   final double buttonWidth = keyboardWidth/5.5;
 
 
@@ -804,7 +968,7 @@ Widget numberButtonsNoProcessor(
     ),
   );
 }
-Future<void> getDoubleDialog({
+/*Future<void> getDoubleDialog({
   required WidgetRef ref,
   required double quantity,
   required StateProvider<double> targetProvider,   // 👈 NUEVO
@@ -814,8 +978,15 @@ Future<void> getDoubleDialog({
   BuildContext context = ref.context;
 
   quantityController.text = quantity.toStringAsFixed(0);
+  final int actualAction = ref.read(actionScanProvider);
+  ref.read(actionScanProvider.notifier).state = Memory.ACTION_NO_SCAN_ACTION;
+  ref.read(isDialogShowedProvider.notifier).state = true;
+  final useScreenKeyBoard = ref.watch(useScreenKeyboardProvider);
+
 
   await showModalBottomSheet(
+    isDismissible: false,
+    enableDrag: false,
     context: context,
     isScrollControlled: true,
     backgroundColor: Colors.white,
@@ -840,16 +1011,43 @@ Future<void> getDoubleDialog({
                 ),
 
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 50.0),
-                  child: TextField(
-                    enabled: false,
-                    controller: quantityController,
-                    textAlign: TextAlign.end,
-                    style: TextStyle(
-                      fontSize: fontSizeLarge,
-                      color: Colors.purple,
-                      fontWeight: FontWeight.bold,
-                    ),
+                  padding: const EdgeInsets.symmetric(horizontal: 10.0),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: TextField(
+                          controller: quantityController,
+                          textAlign: TextAlign.end,
+                          keyboardType: TextInputType.number,
+                          style: TextStyle(
+                            fontSize: fontSizeLarge,
+                            color: Colors.purple,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                      SizedBox(
+                        width: 60,
+                        child: IconButton(
+                          onPressed: () {
+                            final oldValue =
+                            ref.read(useScreenKeyboardProvider);
+                            ref
+                                .read(useScreenKeyboardProvider.notifier)
+                                .state = !oldValue;
+
+
+                          },
+
+                          icon: Icon(
+                            useScreenKeyBoard
+                                ? Symbols.keyboard_off_rounded
+                                : Symbols.keyboard_rounded,
+                            color: Colors.purple,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
 
@@ -870,6 +1068,8 @@ Future<void> getDoubleDialog({
                         ),
                         onPressed: () {
                           ref.read(targetProvider.notifier).state = 0;
+                          ref.read(actionScanProvider.notifier).state = actualAction;
+                          ref.read(isDialogShowedProvider.notifier).state = false;
                           Navigator.of(ctx).pop();
                         },
                         child: Text(Messages.CANCEL),
@@ -896,6 +1096,8 @@ Future<void> getDoubleDialog({
                           if (aux != null && aux > 0) {
                             if (aux <= qtyOnHand) {
                               ref.read(targetProvider.notifier).state = aux;
+                              ref.read(actionScanProvider.notifier).state = actualAction;
+                              ref.read(isDialogShowedProvider.notifier).state = false;
                               Navigator.of(ctx).pop();
                             } else {
                               final msg =
@@ -930,6 +1132,179 @@ Future<void> getDoubleDialog({
       );
     },
   );
+}*/
+Future<void> getDoubleDialog({
+  required WidgetRef ref,
+  required double quantity,
+  required StateProvider<double> targetProvider,
+}) async {
+  final quantityController = TextEditingController();
+  final focusNodeQty = FocusNode();
+
+  final double qtyOnHand = quantity;
+  final context = ref.context;
+
+  quantityController.text = quantity.toStringAsFixed(0);
+  final int actualAction = ref.read(actionScanProvider);
+  ref.read(actionScanProvider.notifier).state = Memory.ACTION_NO_SCAN_ACTION;
+  ref.read(isDialogShowedProvider.notifier).state = true;
+  bool focusRequested = false;
+
+  try {
+    await showModalBottomSheet(
+      isDismissible: false,
+      enableDrag: false,
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (ctx) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (!focusRequested && focusNodeQty.canRequestFocus){
+            focusNodeQty.requestFocus();
+            focusRequested = true;
+          }
+        });
+
+        final useScreenKeyBoard = ref.watch(useScreenKeyboardProvider);
+
+        return FractionallySizedBox(
+          heightFactor: 0.9,
+          child: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: SingleChildScrollView(
+              child: Column(
+                spacing: 5,
+                children: [
+                  Text(
+                    Messages.QUANTITY_TO_MOVE,
+                    style: TextStyle(
+                      fontSize: fontSizeLarge,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 10.0),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: TextField(
+                            focusNode: focusNodeQty,
+                            controller: quantityController,
+                            textAlign: TextAlign.end,
+                            keyboardType: TextInputType.number,
+                            style: TextStyle(
+                              fontSize: fontSizeLarge,
+                              color: Colors.purple,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                        SizedBox(
+                          width: 60,
+                          child: IconButton(
+                            onPressed: () {
+                              final oldValue =
+                              ref.read(useScreenKeyboardProvider);
+                              ref
+                                  .read(useScreenKeyboardProvider.notifier)
+                                  .state = !oldValue;
+                            },
+                            icon: Icon(
+                              useScreenKeyBoard
+                                  ? Symbols.keyboard_off_rounded
+                                  : Symbols.keyboard_rounded,
+                              color: Colors.purple,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  numberButtonsNoProcessor(
+                    ref: ref,
+                    textController: quantityController,
+                    context: ctx,
+                    numberOnly: true,
+                  ),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton(
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: Colors.red,
+                          ),
+                          onPressed: () {
+                            FocusScope.of(ctx).unfocus(); // 👈 pierde foco
+                            ref.read(targetProvider.notifier).state = 0;
+                            ref.read(actionScanProvider.notifier).state =
+                                actualAction;
+                            ref.read(isDialogShowedProvider.notifier).state =
+                            false;
+                            Navigator.of(ctx).pop();
+                          },
+                          child: Text(Messages.CANCEL),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.green,
+                            foregroundColor: Colors.white,
+                          ),
+                          onPressed: () {
+                            final txt = quantityController.text.trim();
+                            if (txt.isEmpty) {
+                              showErrorMessage(ctx, ref,
+                                  '${Messages.ERROR_QUANTITY} ${Messages.EMPTY}');
+                              return;
+                            }
+
+                            final aux = double.tryParse(txt);
+                            if (aux != null && aux > 0) {
+                              if (aux <= qtyOnHand) {
+                                FocusScope.of(ctx).unfocus(); // 👈 pierde foco
+                                ref.read(targetProvider.notifier).state = aux;
+                                ref.read(actionScanProvider.notifier).state =
+                                    actualAction;
+                                ref.read(isDialogShowedProvider.notifier).state =
+                                false;
+                                Navigator.of(ctx).pop();
+                              } else {
+                                final msg =
+                                    '${Messages.ERROR_QUANTITY} ${Memory.numberFormatter0Digit.format(aux)} > ${Memory.numberFormatter0Digit.format(qtyOnHand)}';
+                                showErrorMessage(ctx, ref, msg);
+                                quantityController.text =
+                                    Memory.numberFormatter0Digit.format(qtyOnHand);
+                              }
+                            } else {
+                              showErrorMessage(
+                                  ctx,
+                                  ref,
+                                  '${Messages.ERROR_QUANTITY} '
+                                      '${aux == null ? Messages.EMPTY : txt}');
+                            }
+                          },
+                          child: Text(Messages.OK),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  } finally {
+    await Future.delayed(const Duration(milliseconds: 100));
+    focusNodeQty.dispose();
+    quantityController.dispose();
+  }
 }
 
 

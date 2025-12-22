@@ -2,15 +2,23 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:get_storage/get_storage.dart';
 import 'package:monalisa_app_001/config/config.dart';
+import 'package:monalisa_app_001/config/constants/roles_app.dart';
 import 'package:monalisa_app_001/features/m_inout/domain/entities/m_in_out.dart';
 import 'package:monalisa_app_001/features/m_inout/domain/entities/m_in_out_confirm.dart';
+import 'package:monalisa_app_001/features/products/common/messages_dialog.dart';
 import 'package:monalisa_app_001/features/shared/shared.dart';
 import 'package:monalisa_app_001/features/m_inout/domain/entities/line.dart';
 import 'package:monalisa_app_001/features/m_inout/presentation/widgets/barcode_list.dart';
 import 'package:intl/intl.dart';
+import '../../../auth/presentation/providers/auth_provider.dart';
 import '../../../products/common/selections_dialog.dart';
 import '../../../products/presentation/providers/common_provider.dart';
+import '../../../shared/data/messages.dart';
+import '../../../shared/domain/entities/ad_login_request.dart';
+import '../../../shared/domain/entities/model_run_process_action.dart';
+import '../../../shared/domain/entities/model_run_process_request.dart';
 import '../../domain/entities/barcode.dart';
+import '../providers/m_in_ot_utils.dart';
 import '../providers/m_in_out_providers.dart';
 import '../widgets/enter_barcode_button.dart';
 
@@ -352,7 +360,8 @@ class _MInOutViewState extends ConsumerState<_MInOutView> {
   Future<void> _loadMInOutAndLine(BuildContext context, WidgetRef ref) async {
     final mInOutState = widget.mInOutState;
     final mInOutNotifier = widget.mInOutNotifier;
-
+    String doc = mInOutState.doc;
+    print('_loadMInOutAndLine');
     if (mInOutState.mInOutType == MInOutType.shipmentConfirm ||
         mInOutState.mInOutType == MInOutType.receiptConfirm ||
         mInOutState.mInOutType == MInOutType.pickConfirm ||
@@ -362,19 +371,64 @@ class _MInOutViewState extends ConsumerState<_MInOutView> {
       try {
         final mInOut = await mInOutNotifier.getMInOutAndLine(ref);
         if (mInOut.id != null) {
+          print('mInOut.id != null');
           final mInOutConfirmList =
-          await mInOutNotifier.getMInOutConfirmList(mInOut.id!, ref);
+              await mInOutNotifier.getMInOutConfirmList(mInOut.id!, ref);
           if (context.mounted) {
             Navigator.of(context).pop();
-            _showSelectMInOutConfirm(
-                mInOutConfirmList, context, mInOutNotifier, mInOutState, ref);
+            bool isPickConfirm = mInOutState.mInOutType == MInOutType.pickConfirm;
+            bool isShipmentConfirm = mInOutState.mInOutType == MInOutType.shipmentConfirm;
+            bool canCreatePickConfirm = mInOut.canCreatePickConfirm;
+            bool canCreateShipmentConfirm = mInOut.canCreateShipmentConfirm;
+            print('can crete Confirm ${mInOutConfirmList.length}');
+             if(mInOutConfirmList.isEmpty && RolesApp.canCreateConfirm){
+               print('can crete Confirm ${mInOutConfirmList.length} $canCreateShipmentConfirm');
+               print('can crete Confirm ${mInOutConfirmList.length} $canCreatePickConfirm');
+                if(isPickConfirm && canCreatePickConfirm){
+                  print('crete Pick Confirm');
+                  await Future.delayed(const Duration(seconds: 1));
+                  await showCreatePickConfirmModalBottomSheet(ref: ref,
+                      documentNo: doc,
+                      mInOutId: mInOut.id?.toString() ?? '',
+                      type: MInOutType.pickConfirm,
+                      onResultSuccess: () async {
+                        print('onResultSuccess');
+                        _loadMInOutAndLine(context, ref);
+                      });
+                } else if(isShipmentConfirm && canCreateShipmentConfirm){
+                  print('crete Shipment Confirm');
+                  await Future.delayed(const Duration(seconds: 1));
+                  await showCreateShipmentConfirmModalBottomSheet(ref: ref,
+                      documentNo: doc,
+                      mInOutId: mInOut.id?.toString() ?? '',
+                      type: MInOutType.shipmentConfirm,
+                      onResultSuccess: () async {
+                        print('onResultSuccess');
+                        _loadMInOutAndLine(context, ref);
+                      });
+
+                }
+
+            } else {
+
+                 _showSelectMInOutConfirm(
+                  mInOutConfirmList, context, mInOutNotifier, mInOutState, ref);
+            }
+
+
           }
+
         } else if (context.mounted) {
           Navigator.of(context).pop();
+          String message = '${Messages.NOT_M_IN_OUT_RECORD_FOUND} : $doc';
+          showErrorMessage(context, ref, message);
         }
       } catch (e) {
+        print(e.toString());
         if (context.mounted) {
           Navigator.of(context).pop();
+          //String message = '${Messages.NOT_M_IN_OUT_RECORD_FOUND} : $doc';
+          //showErrorMessage(context, ref, message);
         }
       }
     } else if (mInOutState.mInOutType == MInOutType.moveConfirm) {
@@ -1628,23 +1682,49 @@ class _MInOutViewOld extends ConsumerWidget {
         mInOutState.mInOutType == MInOutType.pickConfirm ||
         mInOutState.mInOutType == MInOutType.qaConfirm) {
       _showScreenLoading(context);
-
+      print('------------mInOutType s ${mInOutState.mInOutType}');
       try {
+        print('---------try---mInOutType ${mInOutState.mInOutType}');
         final mInOut = await mInOutNotifier.getMInOutAndLine(ref);
         if (mInOut.id != null) {
           final mInOutConfirmList =
           await mInOutNotifier.getMInOutConfirmList(mInOut.id!, ref);
           if (context.mounted) {
             Navigator.of(context).pop();
-            _showSelectMInOutConfirm(
-                mInOutConfirmList, context, mInOutNotifier, mInOutState, ref);
+
+            if(mInOutConfirmList.isEmpty && mInOutState.mInOutType == MInOutType.pickConfirm){
+              //add funtion here
+              await showCreatePickConfirmModalBottomSheet(
+                documentNo: mInOutState.doc,
+                ref: ref,
+                onResultSuccess: () async {
+                  print('onResult 2');
+                  _loadMInOutAndLine(context, ref);
+
+                },
+                type: MInOutType.pickConfirm,
+                mInOutId: mInOut.id?.toString() ?? '',
+              );
+            } else {
+              _showSelectMInOutConfirm(
+                  mInOutConfirmList, context, mInOutNotifier, mInOutState, ref);
+            }
+
           }
+          print('------------mInOut');
         } else if (context.mounted) {
-          Navigator.of(context).pop();
+          print('------------mInOutType not found 1');
         }
       } catch (e) {
+        print('------------mInOutType not found 2 exception ${mInOutState.mInOutType}');
+
         if (context.mounted) {
-          Navigator.of(context).pop();
+          //Navigator.of(context).pop();
+
+
+
+
+          //Navigator.of(context).pop();
         }
       }
     } else if (mInOutState.mInOutType == MInOutType.moveConfirm) {

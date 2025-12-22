@@ -154,7 +154,7 @@ class UnsortedStorageOnHandScreenSelectLocatorState extends ConsumerState<Unsort
         ref.read(actionScanProvider.notifier).state = 5;
         ref.read(isDialogShowedProvider.notifier).state = false;
         int warehouseToID = movementAndLines.mWarehouseToID?.id ?? 0;
-        ref.read(actualWarehouseToProvider.notifier).state = warehouseToID;
+        ref.read(allowedWarehouseToProvider.notifier).state = warehouseToID;
         if(copyLastLocatorTo){
           if(movementAndLines.hasLastLocatorTo){
             ref.read(selectedLocatorToProvider.notifier).state = movementAndLines.lastLocatorTo!;
@@ -443,7 +443,7 @@ class UnsortedStorageOnHandScreenSelectLocatorState extends ConsumerState<Unsort
           backgroundColor: Colors.green[100]!,
           backgroundColorEnd: Colors.green[800]!,
           foregroundColor: Colors.green,
-          text: Messages.SLIDE_TO_CREATE,
+          text: Messages.SLIDE_TO_CREATE_LINE,
           textStyle: TextStyle(
             fontSize: themeFontSizeLarge,
             fontWeight: FontWeight.bold,

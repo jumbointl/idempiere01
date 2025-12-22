@@ -457,7 +457,7 @@ class UnsortedStorageOnHandScreenForLineState extends ConsumerState<UnsortedStor
           backgroundColor: Colors.green[100]!,
           backgroundColorEnd: Colors.green[800]!,
           foregroundColor: Colors.green,
-          text: Messages.SLIDE_TO_CREATE,
+          text: Messages.SLIDE_TO_CREATE_LINE,
           textStyle: TextStyle(
             fontSize: themeFontSizeLarge,
             fontWeight: FontWeight.bold,

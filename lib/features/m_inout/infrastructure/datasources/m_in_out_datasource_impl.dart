@@ -156,6 +156,9 @@ class MInOutDataSourceImpl implements MInOutDataSource {
     try {
       final String url =
           "/api/v1/models/m_inout?\$filter=DocumentNo%20eq%20'${mInOutDoc.toString()}'%20AND%20IsSOTrx%20eq%20${mInOutState.isSOTrx}%20AND%20M_Warehouse_ID%20eq%20$warehouseID";
+      String aux = url.replaceAll('%20',' ');
+      print(aux);
+      print(url);
       final response = await dio.get(url);
 
       if (response.statusCode == 200) {

@@ -214,10 +214,6 @@ class PrinterScanNotifier extends StateNotifier<PrinterState>  {
       } else if(state.typeController.text.startsWith('ZPL') ||
               state.typeController.text.startsWith('LABEL') ){
         print('----------------------------ZPL');
-        /*if(ref.context.mounted) {
-          showWarningMessage(ref.context, ref, '${Messages.NOT_ENABLED} :${state.nameController} at '
-              '${state.ipController.text}:${state.portController.text} type ${state.typeController.text}');
-        }*/
         MovementAndLines movementAndLines = ref.read(movementAndLinesProvider);
         printZplDirectOrConfigure(ref,movementAndLines);
 

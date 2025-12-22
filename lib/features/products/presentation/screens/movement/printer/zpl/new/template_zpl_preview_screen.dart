@@ -1,18 +1,51 @@
 import 'package:flutter/material.dart';
+import '../../../../../../../shared/data/memory.dart';
 import 'template_zpl_models.dart';
 
-class ZplPreviewDialog extends StatelessWidget {
-  final ZplTemplate template;
+Future<void> showZplPreviewSheet({
+  required BuildContext context,
+  required ZplTemplate template,
+  required String filledPreviewFirstPage,
+  required String filledPreviewAllPages,
+  required List<String> missingTokens,
+  Future<void> Function()? onSendDf,
+  Future<void> Function()? onPrintReference,
+}) async {
+  await showModalBottomSheet<void>(
+    context: context,
+    isScrollControlled: true,
+    showDragHandle: true,
+    backgroundColor: Colors.white,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+    ),
+    builder: (ctx) {
+      final height = MediaQuery.of(ctx).size.height * 0.90;
+      return SizedBox(
+        height: height,
+        width: double.infinity,
+        child: ZplPreviewSheet(
+          template: template,
+          filledPreviewFirstPage: filledPreviewFirstPage,
+          filledPreviewAllPages: filledPreviewAllPages,
+          missingTokens: missingTokens,
+          onSendDf: onSendDf,
+          onPrintReference: onPrintReference,
+        ),
+      );
+    },
+  );
+}
 
+class ZplPreviewSheet extends StatelessWidget {
+  final ZplTemplate template;
   final String filledPreviewFirstPage;
   final String filledPreviewAllPages;
-
   final List<String> missingTokens;
-
   final Future<void> Function()? onSendDf;
   final Future<void> Function()? onPrintReference;
 
-  const ZplPreviewDialog({
+  const ZplPreviewSheet({
     super.key,
     required this.template,
     required this.filledPreviewFirstPage,
@@ -25,73 +58,138 @@ class ZplPreviewDialog extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final hasMissing = missingTokens.isNotEmpty;
+    final canSendDf = template.zplTemplateDf.trim().isNotEmpty;
+    final isAdmin = Memory.isAdmin == true;
 
     return DefaultTabController(
       length: 4,
-      child: AlertDialog(
-        title: Text('Preview: ${template.templateFileName}'),
-        content: SizedBox(
-          width: 980,
-          height: 600,
-          child: Column(
-            children: [
-              if (hasMissing)
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(10),
-                  margin: const EdgeInsets.only(bottom: 10),
-                  decoration: BoxDecoration(
-                    color: Colors.amber.withOpacity(0.18),
-                    border: Border.all(color: Colors.amber),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
+      child: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 10, 16, 6),
+            child: Row(
+              children: [
+                Expanded(
                   child: Text(
-                    '⚠ Tokens no soportados (no se generan):\n${missingTokens.join(', ')}',
-                    style: const TextStyle(fontSize: 12),
+                    'Preview: ${template.templateFileName}',
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.titleMedium,
                   ),
                 ),
+                IconButton(
+                  tooltip: 'Cerrar',
+                  icon: const Icon(Icons.close),
+                  onPressed: () => Navigator.pop(context),
+                ),
+              ],
+            ),
+          ),
+          const Divider(height: 1),
 
-              const TabBar(
-                tabs: [
-                  Tab(text: 'DF'),
-                  Tab(text: 'Reference'),
-                  Tab(text: 'Filled 1ra pág'),
-                  Tab(text: 'Filled All pages'),
+          if (hasMissing)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 10, 16, 8),
+              child: Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: Colors.amber.withOpacity(0.18),
+                  border: Border.all(color: Colors.amber),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Text(
+                  '⚠ Tokens no soportados (no se generan):\n${missingTokens.join(', ')}',
+                  style: const TextStyle(fontSize: 12),
+                ),
+              ),
+            ),
+
+          if (!canSendDf)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 10, 16, 8),
+              child: Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: Colors.blue.withOpacity(0.08),
+                  border: Border.all(color: Colors.blue.withOpacity(0.5)),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Text(
+                  'DF vacío: se asume que el template ya existe en la impresora. '
+                      'Se imprimirá usando Reference (^XFE).',
+                  style: TextStyle(fontSize: 12),
+                ),
+              ),
+            ),
+
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 6, 16, 0),
+            child: TabBar(
+              tabs: [
+                const Tab(text: 'DF'),
+                const Tab(text: 'Reference'),
+                const Tab(text: 'Filled 1ra pág'),
+                const Tab(text: 'Filled All pages'),
+              ],
+            ),
+          ),
+          const SizedBox(height: 8),
+
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+              child: TabBarView(
+                children: [
+                  isAdmin ? _ZplTextBox(text: template.zplTemplateDf):
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: Colors.blue.shade200,
+                        border: Border.all(color: Colors.blue.shade500),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: const Text(
+                        'Modo usuario: este sistema usa templates ya cargados en la impresora.\n'
+                            'La impresión se realiza únicamente por Reference (^XFE).',
+                        style: TextStyle(fontSize: 12),
+                      ),
+                    ),
+                  _ZplTextBox(text: template.zplReferenceTxt),
+                  _ZplTextBox(text: filledPreviewFirstPage),
+                  _ZplTextBox(text: filledPreviewAllPages),
                 ],
               ),
-              const SizedBox(height: 10),
-
-              Expanded(
-                child: TabBarView(
-                  children: [
-                    _ZplTextBox(text: template.zplTemplateDf),
-                    _ZplTextBox(text: template.zplReferenceTxt),
-                    _ZplTextBox(text: filledPreviewFirstPage),
-                    _ZplTextBox(text: filledPreviewAllPages),
-                  ],
-                ),
-              ),
-            ],
+            ),
           ),
-        ),
-        actions: [
-          if (onSendDf != null)
-            ElevatedButton.icon(
-              onPressed: () async => await onSendDf!(),
-              icon: const Icon(Icons.upload),
-              label: const Text('Enviar DF'),
+
+          const Divider(height: 1),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 10, 16, 16),
+            child: Row(
+              children: [
+                if (onSendDf != null)
+                  if(isAdmin)ElevatedButton.icon(
+                    onPressed: canSendDf ? () async => await onSendDf!() : null,
+                    icon: const Icon(Icons.upload),
+                    label: const Text('Enviar DF'),
+                  ),
+                if (onSendDf != null) const SizedBox(width: 8),
+                if (onPrintReference != null)
+                  ElevatedButton.icon(
+                    onPressed: hasMissing ? null : () async => await onPrintReference!(),
+                    icon: const Icon(Icons.print),
+                    label: const Text('Imprimir'),
+                  ),
+                const Spacer(),
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('Cerrar'),
+                ),
+              ],
             ),
-          if (onPrintReference != null)
-            ElevatedButton.icon(
-              onPressed: hasMissing
-                  ? null // bloquea imprimir si faltan tokens
-                  : () async => await onPrintReference!(),
-              icon: const Icon(Icons.print),
-              label: const Text('Imprimir'),
-            ),
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cerrar'),
           ),
         ],
       ),

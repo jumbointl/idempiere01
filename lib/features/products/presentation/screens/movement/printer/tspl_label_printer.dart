@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:math';
 
-Future<void> printLabelTspl100x150NoLogo({
+Future<void> printLabelMovementByProductTspl100x150NoLogo({
   required String ip,
   required int port,
   required dynamic movementAndLines, // tu MovementAndLines real

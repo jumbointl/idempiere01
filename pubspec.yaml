@@ -56,6 +56,7 @@ dependencies:
   barcode_widget: ^2.0.4
   share_plus: ^12.0.1
   path_provider: ^2.1.5
+  path: any
 dev_dependencies:
   flutter_test:
     sdk: flutter

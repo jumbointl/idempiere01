@@ -5,6 +5,7 @@ import 'package:monalisa_app_001/features/products/domain/idempiere/idempiere_mo
 import 'package:monalisa_app_001/features/products/domain/idempiere/idempiere_product.dart';
 import 'package:monalisa_app_001/features/products/domain/idempiere/idempiere_storage_on_hande.dart';
 import 'package:monalisa_app_001/features/products/presentation/screens/store_on_hand/memory_products.dart';
+import 'package:monalisa_app_001/features/products/presentation/widget/message_card.dart';
 import 'package:monalisa_app_001/features/products/presentation/widget/no_records_card.dart';
 
 import '../../../../../config/router/app_router.dart';
@@ -22,7 +23,6 @@ import '../../providers/product_provider_common.dart';
 import '../../providers/products_scan_notifier.dart';
 import '../../providers/store_on_hand_for_put_away_movement.dart';
 import '../../providers/store_on_hand_provider.dart';
-import '../../widget/no_data_card.dart';
 import 'product_detail_card.dart';
 import 'product_resume_card.dart';
 import 'storage_on__hand_card.dart';
@@ -222,10 +222,14 @@ class ProductStoreOnHandScreenState extends ConsumerState<ProductStoreOnHandScre
   }
 
   Widget getDataContainer(BuildContext context) {
+    String movementType = ref.read(movementCreateScreenTitleProvider);
      return  productAsync.when(
        data: (result) {
          if(result==null || !result.searched){
-           return NoDataCard();
+           return MessageCard(
+               title: "${Messages.CREATE_MOVEMENT_OR_SEE_STOCK_ON_HAND}($movementType)",
+               subtitle: Messages.SCAN_PRODUCT,
+               message: Messages.BACK);
          }
          final double width = MediaQuery.of(context).size.width - 30;
 

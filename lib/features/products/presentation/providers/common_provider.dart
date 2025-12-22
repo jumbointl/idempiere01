@@ -163,6 +163,10 @@ final useNumberKeyboardProvider = StateProvider<bool>((ref) {
   return true;
 });
 
+final useScreenKeyboardProvider = StateProvider<bool>((ref) {
+  return false;
+});
+
 
 final movementColorProvider =
 Provider.family<Color, IdempiereLocator?>((ref, locatorFrom) {
@@ -239,11 +243,31 @@ Provider.family<Color, IdempiereLocator?>((ref, locatorFrom) {
   return color;
 });*/
 
+final movementCreateScreenTitleProvider = StateProvider<String>((ref) {
+  final documentType = ref.watch(allowedMovementDocumentTypeProvider);
+  if(documentType==Memory.MM_ELECTRONIC_DELIVERY_NOTE_ID){
+    return Messages.MM_DELIVERY_NOTE;
+  }
+  int allowedWarehouseId = ref.watch(allowedWarehouseToProvider);
+  int excludedWarehouseId = ref.watch(excludedWarehouseToProvider);
+  if(allowedWarehouseId>0 && excludedWarehouseId==0){
+    //same warehouse
+    return Messages.MATERIAL_MOVEMENT;
+  }
+  if(allowedWarehouseId==0 && excludedWarehouseId>0){
+    return Messages.MATERIAL_MOVEMENT_WITH_CONFIRM;
+
+  }
+  return Messages.MM_DELIVERY_NOTE;
+});
+
 final movementTypeProvider =
 Provider.family<String, IdempiereLocator?>((ref, locatorFrom) {
+
+
   final locatorTo = ref.watch(selectedLocatorToProvider);
   final documentType = ref.watch(allowedMovementDocumentTypeProvider);
-  if(documentType!=Memory.MM_ELECTRONIC_DELIVERY_NOTE_ID){
+  if(documentType==Memory.MM_ELECTRONIC_DELIVERY_NOTE_ID){
     return Messages.MM_DELIVERY_NOTE;
   }
 
@@ -290,6 +314,7 @@ final allowedMovementDocumentTypeProvider = StateProvider<int>((ref) {
   return -1;
 });
 
+
 final pageFromProvider = StateProvider<int>((ref) {
   return 0;
 });
@@ -301,3 +326,6 @@ class NumButtonData {
   NumButtonData({required this.label, required this.value});
 }
 
+final enableScannerKeyboardProvider =  StateProvider<bool>((ref) => true);
+
+final movementInSameWarehouseProvider =  StateProvider<bool>((ref) => false);

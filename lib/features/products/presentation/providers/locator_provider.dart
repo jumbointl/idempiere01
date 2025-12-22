@@ -32,9 +32,13 @@ final scannedLocatorsListProvider = StateProvider.autoDispose<String>((ref) {
   return '';
 });
 
-final actualWarehouseToProvider = StateProvider<int>((ref) {
+final allowedWarehouseToProvider = StateProvider<int>((ref) {
   return 0;
 });
+final excludedWarehouseToProvider = StateProvider<int>((ref) {
+  return 0;
+});
+
 final actualLocatorFromProvider = StateProvider<int>((ref) {
   return 0;
 });
@@ -115,12 +119,12 @@ final findLocatorToProvider = FutureProvider<IdempiereLocator>((ref) async {
   String searchField ='Value';
   String idempiereModelName ='m_locator';
   int excludedLocatorId = ref.watch(actualLocatorFromProvider);
-  int allowedWarehouseId = ref.watch(actualWarehouseToProvider);
+  int allowedWarehouseId = ref.watch(allowedWarehouseToProvider);
 
-  int  excludedWarehouseId = 0;
-  if(allowedDocumentTypeId==Memory.MM_ELECTRONIC_DELIVERY_NOTE_ID){
+  int  excludedWarehouseId = ref.read(excludedWarehouseToProvider);
+  /*if(allowedDocumentTypeId==Memory.MM_ELECTRONIC_DELIVERY_NOTE_ID){
     excludedWarehouseId = Memory.sqlUsersData.mWarehouseID?.id ?? 0;
-  }
+  }*/
   int  allowedOrganizationId = 0;
   if(allowedDocumentTypeId==Memory.NO_MM_ELECTRONIC_DELIVERY_NOTE_ID){
     allowedOrganizationId = Memory.sqlUsersData.aDOrgID?.id ?? 0;

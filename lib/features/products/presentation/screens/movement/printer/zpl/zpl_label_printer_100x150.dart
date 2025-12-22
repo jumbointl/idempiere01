@@ -5,16 +5,18 @@ import 'dart:typed_data';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:get_storage/get_storage.dart';
 import 'package:image/image.dart' as img;
-import 'package:monalisa_app_001/features/products/domain/idempiere/idempiere_movement.dart';
+import 'package:monalisa_app_001/features/products/presentation/screens/movement/printer/zpl/template/tspl_label_printer.dart';
 import 'package:monalisa_app_001/features/products/presentation/screens/movement/printer/zpl/zpl_print_widget.dart';
 
 import '../../../../../common/messages_dialog.dart';
+import '../../../../../domain/idempiere/idempiere_movement_line.dart';
 import '../../../../../domain/idempiere/movement_and_lines.dart';
 import '../pos_image_utility.dart';
 import '../printer_scan_notifier.dart';
-import '../tspl_label_printer.dart';
 import 'label_utils.dart';
 import 'new/template_zpl_models.dart';
+import 'new/template_zpl_store.dart';
+import 'new/template_zpl_utils.dart';
 import 'zpl_print_profile_providers.dart';
 
 String zplSafe(String s) {
@@ -324,8 +326,60 @@ Future<void> printZplDirectOrConfigure(
     return;
   }
 
-  // ===== 0) Leer tipo guardado o pedirlo =====
+  // ============================================================
+  // ✅ 0) Intentar primero: template guardado (mode=movement)
+  // ============================================================
   final box = GetStorage();
+  final store = ZplTemplateStore(box);
+
+  // Normaliza por si hay más de 1 default
+  await store.normalizeDefaults();
+
+  final movementTemplates = store
+      .loadAll()
+      .where((t) => t.mode == ZplTemplateMode.movement)
+      .toList();
+
+  if (movementTemplates.isNotEmpty) {
+    ZplTemplate chosen;
+
+    // Elegir default si existe
+    final defaults = movementTemplates.where((t) => t.isDefault).toList();
+    if (defaults.isNotEmpty) {
+      chosen = defaults.first;
+    } else {
+      chosen = movementTemplates.first;
+    }
+
+    // ✅ Si hay 1 solo y no está default => marcarlo default
+    if (movementTemplates.length == 1 && chosen.isDefault == false) {
+      final updated = chosen.copyWith(isDefault: true);
+      await store.upsert(updated);
+      chosen = updated;
+    }
+
+    // Debe tener Reference
+    final referenceTxt = chosen.zplReferenceTxt.trim();
+    if (referenceTxt.isNotEmpty) {
+      final missing = validateMissingTokens(
+          template: chosen, referenceTxt: referenceTxt);
+      if (missing.isEmpty) {
+        await printReferenceBySocket(
+          ip: ip,
+          port: port,
+          template: chosen,
+          movementAndLines: movementAndLines,
+        );
+        return; // ✅ ya imprimió con template
+      }
+    }
+  }
+
+  // ============================================================
+  // ✅ 1) Si no hay template movement guardado, seguir flujo actual
+  // ============================================================
+
+  // ===== 0) Leer tipo guardado o pedirlo =====
   ZplLabelType? labelType =
   zplLabelTypeFromStorage(box.read<String>(kZplLabelTypeKey));
 
@@ -338,7 +392,9 @@ Future<void> printZplDirectOrConfigure(
   ZplPrintProfile? profile = loadActiveOrFirstProfile();
 
   if (profile == null) {
-    await showZplPrintProfilesSheet(ref.context, ref);
+    if(ref.context.mounted) {
+      await showZplPrintProfilesSheet(ref.context, ref);
+    }
 
     profile = loadActiveOrFirstProfile();
     if (profile == null) return;
@@ -350,14 +406,13 @@ Future<void> printZplDirectOrConfigure(
   // ===== 2) Imprimir según tipo =====
   switch (labelType) {
     case ZplLabelType.movementDetail:
-      await printLabelZplMovementDetail100x150NoLogo(
+      await printLabelZplMovementByProduct100x150NoLogo(
         ip: ip,
         port: port,
         movementAndLines: movementAndLines,
-        rowsPerLabel: rows,
-        rowPerProductName: profile.rowPerProductName,
+        rowsPerLabel: rows <8 ? 8:rows,
         marginX: profile.marginX,
-        marginY: my,
+        marginY: my, ref: ref,
       );
       break;
 
@@ -367,49 +422,14 @@ Future<void> printZplDirectOrConfigure(
         port: port,
         movementAndLines: movementAndLines,
         rowsPerLabel: rows,
-        rowPerProductName: profile.rowPerProductName,
         marginX: profile.marginX,
-        marginY: my,
+        marginY: my, ref: ref,
       );
       break;
   }
 }
 
 
-/*Future<void> printZplDirectOrConfigure(WidgetRef ref,
-    MovementAndLines movementAndLines,) async {
-  final state = ref.read(printerScanProvider);
-
-  final ip = state.ipController.text.trim();
-  final port = int.tryParse(state.portController.text.trim()) ?? 0;
-
-  if (ip.isEmpty || port == 0) {
-    showWarningMessage(ref.context, ref, 'IP/PORT inválido');
-    return;
-  }
-
-  // 1) Intentar cargar perfil activo o primero
-  ZplPrintProfile? profile = loadActiveOrFirstProfile();
-
-  // 2) Si no hay perfiles => abrir sheet, luego volver a intentar
-  if (profile == null) {
-    await showZplPrintProfilesSheet(ref.context, ref);
-
-    profile = loadActiveOrFirstProfile();
-    if (profile == null) return; // usuario canceló o no guardó nada
-  }
-
-  // 3) Imprimir directo usando el perfil
-  await printLabelZplMovementDetail100x150NoLogo(
-    ip: ip,
-    port: port,
-    movementAndLines: movementAndLines,
-    rowsPerLabel: profile.rowsPerLabel<4 ? 4 : profile.rowsPerLabel,
-    rowPerProductName: profile.rowPerProductName,
-    marginX: profile.marginX,
-    marginY: profile.marginY > 40 ? profile.marginY : 40,
-  );
-}*/
 Future<void> printTsplDirectOrConfigure(WidgetRef ref,
     MovementAndLines movementAndLines,) async {
   final state = ref.read(printerScanProvider);
@@ -434,12 +454,12 @@ Future<void> printTsplDirectOrConfigure(WidgetRef ref,
   }
 
   // 3) Imprimir directo usando el perfil
-  await printLabelTspl100x150NoLogo(
+  await printLabelMovementByProductTspl60x150NoLogo(
+    ref: ref,
     ip: ip,
     port: port,
     movementAndLines: movementAndLines,
     rowsPerLabel: profile.rowsPerLabel,
-    rowPerProductName: profile.rowPerProductName,
     marginX: profile.marginX,
     marginY: profile.marginY,
   );
@@ -679,30 +699,63 @@ Future<void> printLabelZplMovementDetail100x150NoLogo({
   await socket.close();
 }
 
+
+Map<String, int> pickA0ByWidth({
+  required String text,
+  required int maxDots,
+  required int baseH,
+  required int baseW,
+  int minH = 16,
+  int minW = 12,
+}) {
+  final t = text.trim();
+  if (t.isEmpty) return {'h': baseH, 'w': baseW};
+
+  final est = t.length * baseW;
+  if (est <= maxDots) return {'h': baseH, 'w': baseW};
+
+  final scale = maxDots / est; // < 1
+  final newW = max(minW, (baseW * scale).floor());
+  final newH = max(minH, (baseH * scale).floor());
+
+  return {'h': newH, 'w': newW};
+}
+
+String truncateEllipsis(String s, int maxChars) {
+  final t = s.trim();
+  if (maxChars <= 0) return '';
+  if (t.length <= maxChars) return t;
+  if (maxChars == 1) return '…';
+  return '${t.substring(0, maxChars - 1)}…';
+}
+
 Future<void> printLabelZplMovementSortedByCategory100x150NoLogo({
   required String ip,
   required int port,
-  required dynamic movementAndLines, // tu MovementAndLines real
-  required int rowsPerLabel,         // categorías por etiqueta
-  required int rowPerProductName,    // 1 o 2 (lo usamos para wrap de categoryName)
-  required int marginX,              // dots
-  required int marginY,              // dots
+  required dynamic movementAndLines,
+  required int rowsPerLabel,
+  required int marginX,
+  required int marginY,
+  required WidgetRef ref,
 }) async {
-  // ===== Constantes físicas (203dpi = 8 dots/mm) =====
+  // ===== Físico =====
   const int pw = 800;   // 100mm
   const int ll = 1200;  // 150mm
 
-  // Header aumentado a 60mm: 60 * 8 = 480 dots
-  const int headerHeight = 480;
+  const int footerHeight = 80;       // 10mm
+  const int tableHeaderHeight = 80;  // 10mm
 
-  const int tableHeaderHeight = 80; // 10mm
-  const int footerHeight = 80;      // 10mm
-
-  // Restar 7mm al ancho de área de impresión: 7mm * 8 = 56
-  const int reduceWidthDots = 56;
+  const int reduceWidthDots = 56; // 7mm
   final int usableWidth = pw - reduceWidthDots; // 744
 
+  // Header normal/compacto
+  const int headerNormal = 480; // 60mm
+  const int headerCompact = 420; // ~52.5mm
 
+  // gaps internos de seguridad (líneas + separaciones)
+  const int gapHeaderToTable = 8;
+  const int gapTableToBody = 10;
+  const int gapBodyToFooterSafety = 8;
 
   // ===== Datos header =====
   final String qrData = safe(movementAndLines.documentNumber ?? '');
@@ -712,21 +765,15 @@ Future<void> printLabelZplMovementSortedByCategory100x150NoLogo({
   final String company = safe(movementAndLines.cBPartnerID?.identifier ?? '');
   final String title = safe(movementAndLines.documentMovementTitle ?? '');
 
-  // Nuevas 3 filas header
-  final String address =
-  safe(movementAndLines.cBPartnerLocationID?.identifier ?? '');
-  final String warehouseFrom =
-  safe(movementAndLines.mWarehouseID?.identifier ?? '');
-  final String warehouseTo =
-  safe(movementAndLines.warehouseTo?.identifier ?? '');
+  final String address = safe(movementAndLines.cBPartnerLocationID?.identifier ?? '');
+  final String warehouseFrom = safe(movementAndLines.mWarehouseID?.identifier ?? '');
+  final String warehouseTo = safe(movementAndLines.warehouseTo?.identifier ?? '');
 
-  // ===== Lines =====
+  // ===== Lines -> Categories agg =====
   final List<dynamic> lines =
   (movementAndLines.movementLines ?? const <dynamic>[]) as List<dynamic>;
 
-  // ===== Agrupar por categoría + sumar qty =====
   final Map<String, CategoryAgg> map = {};
-
   for (final r in lines) {
     final String categoryName = safe(
       r.mProductID?.mProductCategoryID?.identifier ?? 'category null',
@@ -736,7 +783,6 @@ Future<void> printLabelZplMovementSortedByCategory100x150NoLogo({
     );
 
     final String key = '$categoryId|$categoryName';
-
     final num q = (r.movementQty as num?) ?? 0;
 
     map.update(
@@ -753,314 +799,585 @@ Future<void> printLabelZplMovementSortedByCategory100x150NoLogo({
   final List<CategoryAgg> categories = map.values.toList()
     ..sort((a, b) => a.categoryName.toLowerCase().compareTo(b.categoryName.toLowerCase()));
 
-  final num totalQtyAll = categories.fold<num>(
-    0,
-        (sum, c) => sum + (c.totalQty),
-  );
+  final num totalQtyAll = categories.fold<num>(0, (sum, c) => sum + c.totalQty);
   final String totalItemsText = 'Total items: ${totalQtyAll.toStringAsFixed(0)}';
 
+  final int perPage = max(1, rowsPerLabel);
+  final int totalPages = categories.isEmpty ? 1 : ((categories.length + perPage - 1) ~/ perPage);
 
-  // Si no hay líneas, igual imprime 1 página “vacía” (con header/footer)
-  final int totalPages = categories.isEmpty
-      ? 1
-      : ((categories.length + rowsPerLabel - 1) ~/ rowsPerLabel);
-
-  // ===== Socket =====
-  final socket =
-  await Socket.connect(ip, port, timeout: const Duration(seconds: 5));
-
-  for (int page = 0; page < totalPages; page++) {
-    final int start = page * rowsPerLabel;
-    final int end = min<int>(start + rowsPerLabel, categories.length);
-
-    final List<CategoryAgg> slice =
-    categories.isEmpty ? <CategoryAgg>[] : categories.sublist(start, end);
-
-    final sb = StringBuffer();
-
-    sb.writeln('^XA');
-    sb.writeln('^CI28');
-    sb.writeln('^PW$pw');
-    sb.writeln('^LL$ll');
-    sb.writeln('^LH0,0');
-    sb.writeln('^LS0');
-    sb.writeln('^PR3');
-
-    // =====================================================
-    // HEADER (60mm = 480 dots)
-    // QR a la izquierda + textos a la derecha (alineados a la derecha)
-    // + 3 filas nuevas: Dirección / From / To
-    // =====================================================
-    final int qrSize = 160; // ~20mm
-    const int gap = 12;
-
-    final int qrX = marginX;
-    final int qrY = marginY;
-
-    sb.writeln('^FO$qrX,$qrY');
-    sb.writeln('^BQN,2,8');
-    sb.writeln('^FDLA,$qrData^FS');
-
-    final int textX = marginX + qrSize + gap;
-    final int textWidth = usableWidth - qrSize - gap;
-
-    // y base para texto
-    int ty = marginY + 4;
-
-    // 1) documentNumber
-    sb.writeln(
-      '^FO$textX,$ty'
-          '^FB$textWidth,1,0,R'
-          '^A0N,44,32'
-          '^FD$documentNumber^FS',
-    );
-
-    // 2) date + status
-    ty += 52;
-    final int half = (textWidth / 2).round();
-    sb.writeln(
-      '^FO$textX,$ty'
-          '^FB$half,1,0,C'
-          '^A0N,24,18'
-          '^FD$date^FS',
-    );
-    sb.writeln(
-      '^FO${textX + half},$ty'
-          '^FB$half,1,0,R'
-          '^A0N,24,18'
-          '^FD$documentStatus^FS',
-    );
-
-    // 3) company
-    ty += 32;
-    sb.writeln(
-      '^FO$textX,$ty'
-          '^FB$textWidth,1,0,R'
-          '^A0N,26,20'
-          '^FD$company^FS',
-    );
-
-    // 4) title
-    ty += 32;
-    sb.writeln(
-      '^FO$textX,$ty'
-          '^FB$textWidth,1,0,R'
-          '^A0N,30,22'
-          '^FD$title^FS',
-    );
-
-    // 5) Dirección
-    ty += 36;
-    sb.writeln(
-      '^FO$textX,$ty'
-          '^FB$textWidth,1,0,R'
-          '^A0N,22,18'
-          '^FDDireccion: $address^FS',
-    );
-
-    // 6) From
-    ty += 28;
-    sb.writeln(
-      '^FO$textX,$ty'
-          '^FB$textWidth,1,0,R'
-          '^A0N,22,18'
-          '^FDFrom: $warehouseFrom^FS',
-    );
-
-    // 7) To
-    ty += 28;
-    sb.writeln(
-      '^FO$textX,$ty'
-          '^FB$textWidth,1,0,R'
-          '^A0N,22,18'
-          '^FDTO: $warehouseTo^FS',
-    );
-
-    // Separador header -> tabla
-    sb.writeln(
-      '^FO$marginX,${marginY + headerHeight - 2}'
-          '^GB$usableWidth,2,2^FS',
-    );
-// =====================================================
-// TABLE HEADER (10mm = 80 dots)
-// =====================================================
-    int y = marginY + headerHeight + 8;
-
-    const int colNo = 70;
-    const int colQty = 140;
-    final int colName = usableWidth - colNo - colQty;
-
-    sb.writeln('^FO$marginX,$y^A0N,22,18^FDNo^FS');
-    sb.writeln('^FO${marginX + colNo},$y^A0N,22,18^FDCATEGORY NAME^FS');
-    sb.writeln(
-      '^FO${marginX + colNo + colName},$y'
-          '^FB$colQty,1,0,R'
-          '^A0N,22,18'
-          '^FDQTY^FS',
-    );
-
-    final int yTableEnd = marginY + headerHeight + tableHeaderHeight;
-    sb.writeln('^FO$marginX,$yTableEnd^GB$usableWidth,2,2^FS');
-    /*// =====================================================
-    // TABLE HEADER (No / CATEGORY NAME / QTY)
-    // =====================================================
-    int y = marginY + headerHeight + 8;
-
-    // Column widths
-    const int colNo = 70;
-    const int colQty = 140;
-    final int colName = usableWidth - colNo - colQty;
-
-    // Labels
-    sb.writeln('^FO$marginX,$y^A0N,22,18^FDNo^FS');
-    sb.writeln('^FO${marginX + colNo},$y^A0N,22,18^FDCATEGORY NAME^FS');
-    sb.writeln(
-      '^FO${marginX + colNo + colName},$y'
-          '^FB$colQty,1,0,R'
-          '^A0N,22,18'
-          '^FDQTY^FS',
-    );
-
-    final int yTableEnd = marginY + headerHeight + tableHeaderHeight;
-    sb.writeln('^FO$marginX,$yTableEnd^GB$usableWidth,2,2^FS');*/
-
-    // =====================================================
-// BODY – 1 fila por categoría (10mm fija)
-// =====================================================
-    y = yTableEnd + 10;
-
-    const int rowHeight = 80; // 10mm exactos
-
-    for (int i = 0; i < slice.length; i++) {
-      final item = slice[i];
-
-      final int seq = start + i + 1;
-      final String catName = safe(item.categoryName);
-      final String qtyText = item.totalQty.toStringAsFixed(0);
-
-      // No
-      sb.writeln(
-        '^FO$marginX,$y'
-            '^FB$colNo,1,0,L'
-            '^A0N,24,18'
-            '^FD$seq^FS',
-      );
-
-      // CATEGORY NAME — UNA SOLA LÍNEA, NO AJUSTABLE
-      sb.writeln(
-        '^FO${marginX + colNo},$y'
-            '^FB$colName,1,0,L'
-            '^A0N,24,18'
-            '^FD$catName^FS',
-      );
-
-      // QTY
-      sb.writeln(
-        '^FO${marginX + colNo + colName},$y'
-            '^FB$colQty,1,0,R'
-            '^A0N,28,22'
-            '^FD$qtyText^FS',
-      );
-
-      // Línea separadora
-      final int ySep = y + rowHeight - 6;
-      sb.writeln('^FO$marginX,$ySep^GB$usableWidth,1,1^FS');
-
-      y += rowHeight;
-    }
-
-
-    /*// =====================================================
-    // BODY (1 fila por categoría)
-    // =====================================================
-    y = yTableEnd + 10;
-
-    const int rowPitch = 48; // altura por fila de categoría
-    final int nameLines = rowPerProductName.clamp(1, 2);
-
-    for (int i = 0; i < slice.length; i++) {
-      final item = slice[i];
-
-      final int seq = start + i + 1; // número secuencial global
-      final String catName = safe(item.categoryName);
-      final String qtyText = item.totalQty.toStringAsFixed(0);
-
-      // No
-      sb.writeln(
-        '^FO$marginX,$y'
-            '^FB$colNo,1,0,L'
-            '^A0N,28,20'
-            '^FD$seq^FS',
-      );
-
-      // Category name (wrap 1 o 2 líneas)
-      sb.writeln(
-        '^FO${marginX + colNo},$y'
-            '^FB$colName,$nameLines,0,L'
-            '^A0N,28,20'
-            '^FD$catName^FS',
-      );
-
-      // Qty derecha
-      sb.writeln(
-        '^FO${marginX + colNo + colName},$y'
-            '^FB$colQty,1,0,R'
-            '^A0N,32,24'
-            '^FD$qtyText^FS',
-      );
-
-      y += rowPitch * nameLines.clamp(1, 2);
-
-      // Separador
-      sb.writeln('^FO$marginX,$y^GB$usableWidth,1,1^FS');
-      y += 10;
-    }
-*/
-    // =====================================================
-    // FOOTER
-    // =====================================================
-    /*final int yFooterLine = ll - marginY - footerHeight;
-    final int yFooterText = yFooterLine + 20;
-
-    sb.writeln('^FO$marginX,$yFooterLine^GB$usableWidth,2,2^FS');
-
-    final String right = '${page + 1}/$totalPages';
-    sb.writeln(
-      '^FO${marginX + usableWidth - 120},$yFooterText'
-          '^FB120,1,0,R'
-          '^A0N,28,20'
-          '^FD$right^FS',
-    );*/
-    // ===== FOOTER (10mm) =====
-    final int yFooterLine = ll - marginY - footerHeight;
-    final int yFooterText = yFooterLine + 20;
-
-    sb.writeln('^FO$marginX,$yFooterLine^GB$usableWidth,2,2^FS');
-
-    // IZQUIERDA: Total items
-    sb.writeln(
-      '^FO$marginX,$yFooterText'
-          '^FB${usableWidth - 140},1,0,L'
-          '^A0N,26,20'
-          '^FD$totalItemsText^FS',
-    );
-
-    // DERECHA: página
-    final String right = '${page + 1}/$totalPages';
-    sb.writeln(
-      '^FO${marginX + usableWidth - 120},$yFooterText'
-          '^FB120,1,0,R'
-          '^A0N,28,20'
-          '^FD$right^FS',
-    );
-
-    sb.writeln('^XZ');
-
-    socket.add(utf8.encode(sb.toString()));
+  // ===== Decide header compacto si hace falta =====
+  bool headerWouldOverflow(int headerH, int rowH) {
+    final needed = marginY +
+        headerH +
+        gapHeaderToTable +
+        tableHeaderHeight +
+        gapTableToBody +
+        (perPage * rowH) +
+        gapBodyToFooterSafety +
+        footerHeight;
+    return needed > ll;
   }
 
-  await socket.flush();
-  await socket.close();
+  // first guess
+  int headerHeight = headerNormal;
+
+  // espacio disponible para body (según headerHeight)
+  int computeRowHeight(int headerH) {
+    final availableBody = ll
+        - marginY
+        - footerHeight
+        - gapBodyToFooterSafety
+        - (marginY + headerH + gapHeaderToTable + tableHeaderHeight + gapTableToBody);
+    if (availableBody <= 0) return 40; // fallback ultra seguro
+    return (availableBody ~/ perPage);
+  }
+
+  // rowHeight dinámico (primero con header normal)
+  int rowHeight = computeRowHeight(headerHeight);
+
+  // límites razonables
+  rowHeight = rowHeight.clamp(50, 80); // 6.25mm .. 10mm aprox
+
+  // si aún así overflow, usa header compacto y recalcula rowHeight
+  if (headerWouldOverflow(headerHeight, rowHeight)) {
+    headerHeight = headerCompact;
+    rowHeight = computeRowHeight(headerHeight).clamp(50, 80);
+  }
+
+  // si todavía overflow (caso extremo), fuerza rowHeight mínimo
+  if (headerWouldOverflow(headerHeight, rowHeight)) {
+    rowHeight = 50; // mínimo razonable
+  }
+
+  // ===== Socket con manejo de errores =====
+  Socket? socket;
+  try {
+    socket = await Socket.connect(ip, port, timeout: const Duration(seconds: 5));
+
+    for (int page = 0; page < totalPages; page++) {
+      final int start = page * perPage;
+      final int end = min<int>(start + perPage, categories.length);
+
+      final List<CategoryAgg> slice =
+      categories.isEmpty ? <CategoryAgg>[] : categories.sublist(start, end);
+
+      final sb = StringBuffer();
+
+      sb.writeln('^XA');
+      sb.writeln('^CI28');
+      sb.writeln('^PW$pw');
+      sb.writeln('^LL$ll');
+      sb.writeln('^LH0,0');
+      sb.writeln('^LS0');
+      sb.writeln('^PR3');
+
+      // =====================================================
+      // HEADER (normal/compacto)
+      // =====================================================
+      final int qrSize = 160;
+      const int gap = 12;
+
+      final int qrX = marginX;
+      final int qrY = marginY;
+
+      sb.writeln('^FO$qrX,$qrY');
+      sb.writeln('^BQN,2,8');
+      sb.writeln('^FDLA,$qrData^FS');
+
+      final int textX = marginX + qrSize + gap;
+      final int textWidth = usableWidth - qrSize - gap;
+
+      // fuentes dependientes del modo compacto
+      final bool compact = headerHeight == headerCompact;
+      final int hDoc = compact ? 36 : 44;
+      final int wDoc = compact ? 26 : 32;
+
+      final int hSmall = compact ? 20 : 24;
+      final int wSmall = compact ? 14 : 18;
+
+      final int hCompany = compact ? 24 : 26;
+      final int wCompany = compact ? 18 : 20;
+
+      final int hTitle = compact ? 26 : 30;
+      final int wTitle = compact ? 18 : 22;
+
+      final int d1 = compact ? 44 : 52;
+      final int d2 = compact ? 26 : 32;
+      final int d3 = compact ? 28 : 32;
+      final int d4 = compact ? 28 : 36;
+      final int d5 = compact ? 24 : 28;
+      final int d6 = compact ? 24 : 28;
+
+      int ty = marginY + 4;
+
+      // 1) documentNumber
+      sb.writeln(
+        '^FO$textX,$ty'
+            '^FB$textWidth,1,0,R'
+            '^A0N,$hDoc,$wDoc'
+            '^FD$documentNumber^FS',
+      );
+
+      // 2) date + status (fecha izquierda, status derecha)
+      ty += d1;
+      final int half = (textWidth / 2).round();
+      sb.writeln(
+        '^FO$textX,$ty'
+            '^FB$half,1,0,L'
+            '^A0N,$hSmall,$wSmall'
+            '^FD$date^FS',
+      );
+      sb.writeln(
+        '^FO${textX + half},$ty'
+            '^FB$half,1,0,R'
+            '^A0N,$hSmall,$wSmall'
+            '^FD$documentStatus^FS',
+      );
+
+      // 3) company
+      ty += d2;
+      sb.writeln(
+        '^FO$textX,$ty'
+            '^FB$textWidth,1,0,R'
+            '^A0N,$hCompany,$wCompany'
+            '^FD$company^FS',
+      );
+
+      // 4) title
+      ty += d3;
+      sb.writeln(
+        '^FO$textX,$ty'
+            '^FB$textWidth,1,0,R'
+            '^A0N,$hTitle,$wTitle'
+            '^FD$title^FS',
+      );
+
+      // 5) Dirección
+      ty += d4;
+      sb.writeln(
+        '^FO$textX,$ty'
+            '^FB$textWidth,1,0,R'
+            '^A0N,22,18'
+            '^FDDireccion: $address^FS',
+      );
+
+      // 6) From
+      ty += d5;
+      sb.writeln(
+        '^FO$textX,$ty'
+            '^FB$textWidth,1,0,R'
+            '^A0N,22,18'
+            '^FDFrom: $warehouseFrom^FS',
+      );
+
+      // 7) To
+      ty += d6;
+      sb.writeln(
+        '^FO$textX,$ty'
+            '^FB$textWidth,1,0,R'
+            '^A0N,22,18'
+            '^FDTO: $warehouseTo^FS',
+      );
+
+      // Separador header -> tabla
+      sb.writeln(
+        '^FO$marginX,${marginY + headerHeight - 2}'
+            '^GB$usableWidth,2,2^FS',
+      );
+
+      // =====================================================
+      // TABLE HEADER
+      // =====================================================
+      int y = marginY + headerHeight + gapHeaderToTable;
+
+      const int colNo = 70;
+      const int colQty = 140;
+      final int colName = usableWidth - colNo - colQty;
+
+      sb.writeln('^FO$marginX,$y^A0N,22,18^FDNo^FS');
+      sb.writeln('^FO${marginX + colNo},$y^A0N,22,18^FDCATEGORY NAME^FS');
+      sb.writeln(
+        '^FO${marginX + colNo + colName},$y'
+            '^FB$colQty,1,0,R'
+            '^A0N,22,18'
+            '^FDQTY^FS',
+      );
+
+      final int yTableEnd = marginY + headerHeight + tableHeaderHeight;
+      sb.writeln('^FO$marginX,$yTableEnd^GB$usableWidth,2,2^FS');
+
+      // =====================================================
+      // BODY – N filas por categoría (AUTO rowHeight)
+      // =====================================================
+      y = yTableEnd + gapTableToBody;
+
+      for (int i = 0; i < slice.length && i < perPage; i++) {
+        final item = slice[i];
+
+        final int seq = start + i + 1;
+        final String catNameRaw = safe(item.categoryName);
+        final String qtyText = item.totalQty.toStringAsFixed(0);
+
+        // (opcional) truncado suave para evitar nombres absurdos
+        final String catName = truncateEllipsis(catNameRaw, 60);
+
+        // Auto font para categoryName
+        final font = pickA0ByWidth(
+          text: catName,
+          maxDots: colName,
+          baseH: 24,
+          baseW: 18,
+          minH: 16,
+          minW: 12,
+        );
+
+        // No
+        sb.writeln(
+          '^FO$marginX,$y'
+              '^FB$colNo,1,0,L'
+              '^A0N,24,18'
+              '^FD$seq^FS',
+        );
+
+        // Category name (auto reduce)
+        sb.writeln(
+          '^FO${marginX + colNo},$y'
+              '^FB$colName,1,0,L'
+              '^A0N,${font['h']},${font['w']}'
+              '^FD$catName^FS',
+        );
+
+        // Qty derecha
+        sb.writeln(
+          '^FO${marginX + colNo + colName},$y'
+              '^FB$colQty,1,0,R'
+              '^A0N,28,22'
+              '^FD$qtyText^FS',
+        );
+
+        // Separador
+        final int ySep = y + rowHeight - 4;
+        sb.writeln('^FO$marginX,$ySep^GB$usableWidth,1,1^FS');
+
+        y += rowHeight;
+      }
+
+      // =====================================================
+      // FOOTER
+      // =====================================================
+      final int yFooterLine = ll - marginY - footerHeight;
+      final int yFooterText = yFooterLine + 20;
+
+      sb.writeln('^FO$marginX,$yFooterLine^GB$usableWidth,2,2^FS');
+
+      sb.writeln(
+        '^FO$marginX,$yFooterText'
+            '^FB${usableWidth - 140},1,0,L'
+            '^A0N,26,20'
+            '^FD$totalItemsText^FS',
+      );
+
+      final String right = '${page + 1}/$totalPages';
+      sb.writeln(
+        '^FO${marginX + usableWidth - 120},$yFooterText'
+            '^FB120,1,0,R'
+            '^A0N,28,20'
+            '^FD$right^FS',
+      );
+
+      sb.writeln('^XZ');
+
+      socket.add(utf8.encode(sb.toString()));
+    }
+
+    await socket.flush();
+    await socket.close();
+
+    if(ref.context.mounted)showSuccessMessage(ref.context,ref,'Impresión enviada correctamente.');
+  } catch (e) {
+    try {
+      await socket?.close();
+    } catch (_) {}
+    if(ref.context.mounted)showErrorMessage(ref.context,ref,'Error al imprimir / conectar: $e');
+  }
+}
+
+Future<void> printLabelZplMovementByProduct100x150NoLogo({
+  required String ip,
+  required int port,
+  required MovementAndLines movementAndLines,
+  required int rowsPerLabel, // recomendado: 8
+  required int marginX,
+  required int marginY,
+  required WidgetRef ref,
+}) async {
+  // ===== Físico =====
+  const int pw = 800;   // 100mm
+  const int ll = 1200;  // 150mm
+
+  const int footerHeight = 80;
+  const int tableHeaderHeight = 80;
+
+  const int reduceWidthDots = 56;
+  final int usableWidth = pw - reduceWidthDots;
+
+  const int headerNormal = 480;
+  const int headerCompact = 420;
+
+  const int gapHeaderToTable = 8;
+  const int gapTableToBody = 10;
+  const int gapBodyToFooterSafety = 8;
+
+  // ===== Header data =====
+  final String qrData = safe(movementAndLines.documentNumber ?? '');
+  final String documentNumber = safe(movementAndLines.documentNumber ?? '');
+  final String date = safe(movementAndLines.movementDate ?? '');
+  final String documentStatus = safe(movementAndLines.documentStatus ?? '');
+  final String company = safe(movementAndLines.cBPartnerID?.identifier ?? '');
+  final String title = safe(movementAndLines.documentMovementTitle ?? '');
+
+  final String address = safe(movementAndLines.cBPartnerLocationID?.identifier ?? '');
+  final String warehouseFrom = safe(movementAndLines.mWarehouseID?.identifier ?? '');
+  final String warehouseTo = safe(movementAndLines.warehouseTo?.identifier ?? '');
+
+  // ===== PRODUCTS =====
+  final List<IdempiereMovementLine> lines = movementAndLines.movementLines ??
+          <IdempiereMovementLine>[];
+
+  final int perPage = max(1, rowsPerLabel);
+  final int totalPages =
+  lines.isEmpty ? 1 : ((lines.length + perPage - 1) ~/ perPage);
+
+  // ===== Layout helpers =====
+  bool headerWouldOverflow(int headerH, int rowH) {
+    final needed = marginY +
+        headerH +
+        gapHeaderToTable +
+        tableHeaderHeight +
+        gapTableToBody +
+        (perPage * rowH) +
+        gapBodyToFooterSafety +
+        footerHeight;
+    return needed > ll;
+  }
+
+  int computeRowHeight(int headerH) {
+    final availableBody = ll -
+        marginY -
+        footerHeight -
+        gapBodyToFooterSafety -
+        (marginY +
+            headerH +
+            gapHeaderToTable +
+            tableHeaderHeight +
+            gapTableToBody);
+    if (availableBody <= 0) return 40;
+    return (availableBody ~/ perPage);
+  }
+
+  int headerHeight = headerNormal;
+  int rowHeight = computeRowHeight(headerHeight).clamp(50, 80);
+
+  if (headerWouldOverflow(headerHeight, rowHeight)) {
+    headerHeight = headerCompact;
+    rowHeight = computeRowHeight(headerHeight).clamp(50, 80);
+  }
+  if (headerWouldOverflow(headerHeight, rowHeight)) {
+    rowHeight = 50;
+  }
+
+  // ===== Socket =====
+  Socket? socket;
+  try {
+    socket = await Socket.connect(ip, port, timeout: const Duration(seconds: 5));
+
+    for (int page = 0; page < totalPages; page++) {
+      final int start = page * perPage;
+      final int end = min(start + perPage, lines.length);
+      final slice = lines.sublist(start, end);
+
+      final sb = StringBuffer();
+
+      sb
+        ..writeln('^XA')
+        ..writeln('^CI28')
+        ..writeln('^PW$pw')
+        ..writeln('^LL$ll')
+        ..writeln('^LH0,0')
+        ..writeln('^LS0')
+        ..writeln('^PR3');
+
+      // ================= HEADER =================
+      final int qrSize = 160;
+      const int gap = 12;
+
+      sb
+        ..writeln('^FO$marginX,$marginY')
+        ..writeln('^BQN,2,8')
+        ..writeln('^FDLA,$qrData^FS');
+
+      final int textX = marginX + qrSize + gap;
+      final int textWidth = usableWidth - qrSize - gap;
+
+      final bool compact = headerHeight == headerCompact;
+
+      final int hDoc = compact ? 36 : 44;
+      final int wDoc = compact ? 26 : 32;
+
+      final int hSmall = compact ? 20 : 24;
+      final int wSmall = compact ? 14 : 18;
+
+      final int hTitle = compact ? 26 : 30;
+      final int wTitle = compact ? 18 : 22;
+
+      int ty = marginY + 4;
+
+      sb.writeln(
+        '^FO$textX,$ty^FB$textWidth,1,0,R^A0N,$hDoc,$wDoc^FD$documentNumber^FS',
+      );
+
+      ty += compact ? 44 : 52;
+      final half = (textWidth / 2).round();
+
+      sb.writeln(
+        '^FO$textX,$ty^FB$half,1,0,L^A0N,$hSmall,$wSmall^FD$date^FS',
+      );
+      sb.writeln(
+        '^FO${textX + half},$ty^FB$half,1,0,R^A0N,$hSmall,$wSmall^FD$documentStatus^FS',
+      );
+
+      ty += compact ? 26 : 32;
+      sb.writeln(
+        '^FO$textX,$ty^FB$textWidth,1,0,R^A0N,26,20^FD$company^FS',
+      );
+
+      ty += compact ? 28 : 32;
+      sb.writeln(
+        '^FO$textX,$ty^FB$textWidth,1,0,R^A0N,$hTitle,$wTitle^FD$title^FS',
+      );
+
+      ty += compact ? 28 : 36;
+      sb.writeln(
+        '^FO$textX,$ty^FB$textWidth,1,0,R^A0N,22,18^FDDireccion: $address^FS',
+      );
+
+      ty += compact ? 24 : 28;
+      sb.writeln(
+        '^FO$textX,$ty^FB$textWidth,1,0,R^A0N,22,18^FDFrom: $warehouseFrom^FS',
+      );
+
+      ty += compact ? 24 : 28;
+      sb.writeln(
+        '^FO$textX,$ty^FB$textWidth,1,0,R^A0N,22,18^FDTO: $warehouseTo^FS',
+      );
+
+      sb.writeln(
+        '^FO$marginX,${marginY + headerHeight - 2}^GB$usableWidth,2,2^FS',
+      );
+
+      // ================= TABLE HEADER =================
+      int y = marginY + headerHeight + gapHeaderToTable;
+
+      const int colNo = 70;
+      const int colQty = 140;
+      final int colName = usableWidth - colNo - colQty;
+
+      sb
+        ..writeln('^FO$marginX,$y^A0N,22,18^FDNo^FS')
+        ..writeln('^FO${marginX + colNo},$y^A0N,22,18^FDPRODUCT NAME^FS')
+        ..writeln(
+          '^FO${marginX + colNo + colName},$y^FB$colQty,1,0,R^A0N,22,18^FDQTY^FS',
+        );
+
+      final int yTableEnd = marginY + headerHeight + tableHeaderHeight;
+      sb.writeln('^FO$marginX,$yTableEnd^GB$usableWidth,2,2^FS');
+
+      // ================= BODY =================
+      y = yTableEnd + gapTableToBody;
+
+      for (int i = 0; i < slice.length && i < perPage; i++) {
+        final m = slice[i];
+
+        final seq = safe((m.line ?? (start + i + 1)).toString());
+        final nameRaw = safe(m.productName ?? '');
+        final qtyText = safe((m.movementQty ?? 0).toString());
+
+        final name = truncateEllipsis(nameRaw, 60);
+
+        final font = pickA0ByWidth(
+          text: name,
+          maxDots: colName,
+          baseH: 24,
+          baseW: 18,
+          minH: 16,
+          minW: 12,
+        );
+
+        sb.writeln(
+          '^FO$marginX,$y^FB$colNo,1,0,L^A0N,24,18^FD$seq^FS',
+        );
+
+        sb.writeln(
+          '^FO${marginX + colNo},$y'
+              '^FB$colName,1,0,L'
+              '^A0N,${font['h']},${font['w']}'
+              '^FD$name^FS',
+        );
+
+        sb.writeln(
+          '^FO${marginX + colNo + colName},$y'
+              '^FB$colQty,1,0,R'
+              '^A0N,28,22'
+              '^FD$qtyText^FS',
+        );
+
+        sb.writeln(
+          '^FO$marginX,${y + rowHeight - 4}^GB$usableWidth,1,1^FS',
+        );
+
+        y += rowHeight;
+      }
+
+      // ================= FOOTER =================
+      final int yFooterLine = ll - marginY - footerHeight;
+      final int yFooterText = yFooterLine + 20;
+
+      sb.writeln('^FO$marginX,$yFooterLine^GB$usableWidth,2,2^FS');
+
+      sb.writeln(
+        '^FO$marginX,$yFooterText'
+            '^FB${usableWidth - 140},1,0,L'
+            '^A0N,26,20'
+            '^FDItems: ${lines.length}^FS',
+      );
+
+      final right = '${page + 1}/$totalPages';
+      sb.writeln(
+        '^FO${marginX + usableWidth - 120},$yFooterText'
+            '^FB120,1,0,R'
+            '^A0N,28,20'
+            '^FD$right^FS',
+      );
+
+      sb.writeln('^XZ');
+
+      socket.add(utf8.encode(sb.toString()));
+    }
+
+    await socket.flush();
+    await socket.close();
+
+    if (ref.context.mounted) {
+      showSuccessMessage(ref.context, ref, 'Impresión enviada correctamente.');
+    }
+  } catch (e) {
+    try {
+      await socket?.close();
+    } catch (_) {}
+    if (ref.context.mounted) {
+      showErrorMessage(ref.context, ref, 'Error al imprimir / conectar: $e');
+    }
+  }
 }
 
 

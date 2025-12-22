@@ -61,6 +61,8 @@ class RolesApp {
     'APP_PRODUCTUPC_UPDATE': false,
   };
 
+
+
   // SHIPMENT
   static bool get appShipment => _roles['APP_SHIPMENT']!;
   static bool get appShipmentQty => _roles['APP_SHIPMENT_QTY']!;
@@ -106,6 +108,7 @@ class RolesApp {
 
   // MOVEMENT CONFIRM
   static bool get appMovementconfirm => _roles['APP_MOVEMENTCONFIRM']!;
+  static bool get appMovementconfirmCreate => _roles['APP_MOVEMENTCONFIRM_CREATE'] ?? false;
   static bool get appMovementconfirmComplete => _roles['APP_MOVEMENTCONFIRM_COMPLETE']!;
 
   // INVENTORY
@@ -143,7 +146,8 @@ class RolesApp {
     return  appMovementComplete;
   }
   static bool get canEditMovement {
-    bool b = canCreateMovementInSameOrganization || canCreateDeliveryNote;
+    bool b = canCreateMovementInSameOrganization || canCreateDeliveryNote
+     || canCreateMovementInSameWarehouse;
     if(b) return true ;
     //editar cantidad
     //agregar linea
@@ -172,4 +176,14 @@ class RolesApp {
     return canSearchProductStock ;
   }
 
+  static bool get canCreateMovementInSameWarehouse {
+    return  appMovementComplete;
+  }
+
+  static bool get canCreatePickConfirm {
+    //return  appMovementconfirmCreate ;
+    return true ;
+
+  }
+  static bool get canCreateConfirm =>true;
 }

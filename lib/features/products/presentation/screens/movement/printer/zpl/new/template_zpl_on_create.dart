@@ -1,193 +1,407 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:monalisa_app_001/features/products/presentation/providers/product_provider_common.dart';
+import 'package:monalisa_app_001/features/products/presentation/screens/movement/printer/zpl/new/template_zpl_on_create_editor_sheet.dart';
+import 'package:monalisa_app_001/features/shared/data/messages.dart';
 
+import '../../../../../../common/messages_dialog.dart';
 import '../../../provider/new_movement_provider.dart';
 import '../../printer_scan_notifier.dart';
 import 'template_zpl_models.dart';
 import 'template_zpl_utils.dart';
 import 'template_zpl_preview_screen.dart';
 import 'template_zpl_store.dart';
-import 'template_zpl_on_create_editor.dart'; // (opcional) si separas editor
+// (opcional) si separas editor
 
 Future<void> showCreateZplTemplateDialog({
   required BuildContext context,
   required WidgetRef ref,
   required ZplTemplateStore store,
 }) async {
-  await showDialog<void>(
+  await showManageZplTemplatesSheet(
+    context: context,
+    ref: ref,
+    store: store,
+  );
+  /*await showDialog<void>(
     context: context,
     barrierDismissible: false,
     builder: (_) => _ManageTemplatesDialog(ref: ref, store: store),
+  );*/
+}
+Future<void> showManageZplTemplatesSheet({
+  required BuildContext context,
+  required WidgetRef ref,
+  required ZplTemplateStore store,
+}) async {
+  await showModalBottomSheet(
+    context: context,
+    isScrollControlled: true,
+    showDragHandle: true,
+    backgroundColor: Colors.white,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+    ),
+    builder: (ctx) {
+      final height = MediaQuery.of(ctx).size.height * 0.90;
+
+      return SizedBox(
+        height: height,
+        width: double.infinity,
+        child: _ManageTemplatesSheet(ref: ref, store: store),
+      );
+    },
   );
 }
 
-class _ManageTemplatesDialog extends ConsumerStatefulWidget {
+class _ManageTemplatesSheet extends ConsumerStatefulWidget {
   final WidgetRef ref;
   final ZplTemplateStore store;
 
-  const _ManageTemplatesDialog({required this.ref, required this.store});
+  const _ManageTemplatesSheet({required this.ref, required this.store});
 
   @override
-  ConsumerState<_ManageTemplatesDialog> createState() => _ManageTemplatesDialogState();
+  ConsumerState<_ManageTemplatesSheet> createState() => _ManageTemplatesSheetState();
 }
 
-class _ManageTemplatesDialogState extends ConsumerState<_ManageTemplatesDialog> {
+class _ManageTemplatesSheetState extends ConsumerState<_ManageTemplatesSheet> {
   late List<ZplTemplate> items;
 
   @override
   void initState() {
     super.initState();
     items = widget.store.loadAll();
+    ref.read(isDialogShowedProvider.notifier).state = true;
   }
+  @override
+  dispose() {
+    ref.read(isDialogShowedProvider.notifier).state = false;
+    super.dispose();
+  }
+
 
   Future<void> reload() async => setState(() => items = widget.store.loadAll());
 
+  String modeText(ZplTemplate t) =>
+      t.mode == ZplTemplateMode.movement
+          ? 'Modo: Movement (${t.rowPerpage})'
+          : 'Modo: N/A (${t.rowPerpage})';
+
   @override
   Widget build(BuildContext context) {
-    return AlertDialog(
-      title: const Text('Templates ZPL (Administrar)'),
-      content: SizedBox(
-        width: 920,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Row(
-              children: [
-                ElevatedButton.icon(
-                  onPressed: () async {
-                    final created = await showZplTemplateEditorDialogMode(
+    return Column(
+      children: [
+        // ===== Header =====
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+          child: Row(
+            children: [
+              Expanded(
+                child: Text(
+                  'Templates ZPL (Administrar)',
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+              ),
+              IconButton(
+                tooltip: 'Cerrar',
+                icon: const Icon(Icons.close),
+                onPressed: () => Navigator.pop(context),
+              ),
+            ],
+          ),
+        ),
+        const Divider(height: 1),
+
+        // ===== Actions top =====
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+          child: Row(
+            children: [
+              ElevatedButton.icon(
+                onPressed: () async {
+                  final created = await showZplTemplateEditorDialogMode(
+                    context: context,
+                    store: widget.store,
+                    ref: widget.ref,
+                    initial: null,
+                  );
+                  if (created != null) await reload();
+                },
+                icon: const Icon(Icons.add),
+                label: const Text('Agregar nuevo'),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  items.isEmpty
+                      ? 'No hay templates.'
+                      : 'Preview / Enviar DF / Imprimir Reference / Editar / Borrar',
+                  style: const TextStyle(fontSize: 12),
+                ),
+              ),
+            ],
+          ),
+        ),
+
+        // ===== List =====
+        Expanded(
+          child: items.isEmpty
+              ? const Center(child: Text('No hay templates guardados.'))
+              : ListView.builder(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+            itemCount: items.length,
+            itemBuilder: (_, i) {
+              final t = items[i];
+
+              return Card(
+                margin: const EdgeInsets.only(bottom: 10),
+                elevation: 0,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14),
+                  side: const BorderSide(color: Colors.black12),
+                ),
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(14),
+                  onTap: () async {
+                    final edited = await showZplTemplateEditorDialogMode(
                       context: context,
                       store: widget.store,
-                      ref: ref,
-                      initial: null,
+                      initial: t,
+                      ref: widget.ref,
                     );
-                    if (created != null) await reload();
+                    if (edited != null) await reload();
                   },
-                  icon: const Icon(Icons.add),
-                  label: const Text('Agregar nuevo'),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    items.isEmpty ? 'No hay templates.' : 'Preview / Enviar DF / Imprimir Reference / Editar / Borrar.',
-                    style: const TextStyle(fontSize: 12),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            ConstrainedBox(
-              constraints: const BoxConstraints(maxHeight: 420),
-              child: ListView.separated(
-                shrinkWrap: true,
-                itemCount: items.length,
-                separatorBuilder: (_, __) => const Divider(height: 1),
-                itemBuilder: (_, i) {
-                  final t = items[i];
-
-                  return ListTile(
-                    leading: const Icon(Icons.description),
-                    title: Text(t.templateFileName),
-                    subtitle: Text(
-                      t.mode == ZplTemplateMode.product ? 'Modo: Producto (8)' : 'Modo: Categoría (6)',
-                      style: const TextStyle(fontSize: 12),
-                    ),
-                    trailing: Wrap(
-                      spacing: 6,
+                  child: Padding(
+                    padding: const EdgeInsets.all(12),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        IconButton(
-                          tooltip: 'Preview',
-                          onPressed: () async {
-                            final movementAndLines = ref.read(movementAndLinesProvider);
-                            final filled = buildFilledPreviewFirstPage(template: t, movementAndLines: movementAndLines);
-                            final filledAll = buildFilledPreviewAllPages(
-                              template: t,
-                              movementAndLines: movementAndLines,
-                            );
+                        // ===== Row 1: Filename (ancho completo) =====
+                        Row(
+                          children: [
+                            const Icon(Icons.description, size: 18),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                t.templateFileName,
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 14,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
 
-                            final missing = validateMissingTokens(
-                              template: t,
-                              referenceTxt: t.zplReferenceTxt,
-                            );
-                            await showDialog(
-                              context: context,
-                              builder: (_) => ZplPreviewDialog(
+                        const SizedBox(height: 6),
+
+                        // ===== Row 2: Info =====
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                modeText(t),
+                                style: const TextStyle(fontSize: 12, color: Colors.black87),
+                              ),
+                            ),
+                            Text(
+                              _formatDateShort(t.createdAt),
+                              style: const TextStyle(fontSize: 12, color: Colors.black54),
+                            ),
+                          ],
+                        ),
+
+                        const SizedBox(height: 10),
+
+                        // ===== Row 3: Actions =====
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 6,
+                          children: [
+                            _miniAction(
+                              tooltip: 'Preview',
+                              icon: Icons.visibility,
+                              onTap: () async {
+                                final movementAndLines =
+                                widget.ref.read(movementAndLinesProvider);
+
+                                final filled = buildFilledPreviewFirstPage(
+                                  template: t,
+                                  movementAndLines: movementAndLines,
+                                );
+
+                                final filledAll = buildFilledPreviewAllPages(
+                                  template: t,
+                                  movementAndLines: movementAndLines,
+                                );
+
+                                final missing = validateMissingTokens(
+                                  template: t,
+                                  referenceTxt: t.zplReferenceTxt,
+                                );
+
+                                await showZplPreviewSheet(
                                   template: t,
                                   filledPreviewFirstPage: filled,
                                   filledPreviewAllPages: filledAll,
                                   missingTokens: missing,
-                              ),
-                            );
-                          },
-                          icon: const Icon(Icons.visibility),
-                        ),
-                        IconButton(
-                          tooltip: 'Enviar DF a impresora',
-                          onPressed: () async {
-                            final printerState = ref.read(printerScanProvider);
-                            final ip = printerState.ipController.text.trim();
-                            final port = int.tryParse(printerState.portController.text.trim()) ?? 9100;
-                            if (ip.isEmpty) return;
+                                  context: context,
+                                );
+                              },
+                            ),
+                            _miniAction(
+                              tooltip: 'Enviar DF a impresora',
+                              icon: Icons.upload,
+                              onTap: () async {
+                                final printerState =
+                                widget.ref.read(printerScanProvider);
+                                final ip = printerState.ipController.text.trim();
+                                final port = int.tryParse(
+                                  printerState.portController.text.trim(),
+                                ) ??
+                                    9100;
+                                final df = t.zplTemplateDf.trim();
+                                final canSendDf = df.isNotEmpty;
+                                if (!canSendDf) {
+                                  showWarningMessage(widget.ref.context, widget.ref, Messages.ERROR_EMPTY_DF);
+                                  return;
+                                }
 
-                            await sendZplBySocket(ip: ip, port: port, zpl: t.zplTemplateDf);
-                          },
-                          icon: const Icon(Icons.upload),
-                        ),
-                        IconButton(
-                          tooltip: 'Imprimir (Reference)',
-                          onPressed: () async {
-                            final printerState = ref.read(printerScanProvider);
-                            final ip = printerState.ipController.text.trim();
-                            final port = int.tryParse(printerState.portController.text.trim()) ?? 9100;
-                            if (ip.isEmpty) return;
+                                if (ip.isEmpty) {
+                                  showWarningMessage(widget.ref.context, widget.ref, 'IP inválida');
+                                  return;
+                                }
 
-                            final movementAndLines = ref.read(movementAndLinesProvider);
-                            await printReferenceBySocket(ip: ip, port: port, template: t, movementAndLines: movementAndLines);
-                          },
-                          icon: const Icon(Icons.print),
-                        ),
-                        IconButton(
-                          tooltip: 'Editar',
-                          onPressed: () async {
-                            final edited = await showZplTemplateEditorDialogMode(
-                              context: context,
-                              store: widget.store,
-                              ref: ref,
-                              initial: t,
-                            );
-                            if (edited != null) await reload();
-                          },
-                          icon: const Icon(Icons.edit),
-                        ),
-                        IconButton(
-                          tooltip: 'Borrar',
-                          onPressed: () async {
-                            await widget.store.deleteById(t.id);
-                            await reload();
-                          },
-                          icon: const Icon(Icons.delete),
+                                await sendZplBySocket(
+                                  ip: ip,
+                                  port: port,
+                                  zpl: t.zplTemplateDf,
+                                );
+                              },
+                            ),
+                            _miniAction(
+                              tooltip: 'Imprimir (Reference)',
+                              icon: Icons.print,
+                              onTap: () async {
+                                final printerState =
+                                widget.ref.read(printerScanProvider);
+                                final ip = printerState.ipController.text.trim();
+                                final port = int.tryParse(
+                                  printerState.portController.text.trim(),
+                                ) ??
+                                    9100;
+
+                                if (ip.isEmpty) {
+                                  showWarningMessage(widget.ref.context, widget.ref, 'IP inválida');
+                                  return;
+                                }
+
+                                final movementAndLines =
+                                widget.ref.read(movementAndLinesProvider);
+
+                                final missing = validateMissingTokens(
+                                  template: t,
+                                  referenceTxt: t.zplReferenceTxt,
+                                );
+                                if (missing.isNotEmpty) {
+                                  showWarningMessage(
+                                    widget.ref.context,
+                                    widget.ref,
+                                    'Tokens no soportados: ${missing.join(', ')}',
+                                  );
+                                  return;
+                                }
+
+                                await printReferenceBySocket(
+                                  ip: ip,
+                                  port: port,
+                                  template: t,
+                                  movementAndLines: movementAndLines,
+                                );
+                              },
+                            ),
+                            _miniAction(
+                              tooltip: 'Editar',
+                              icon: Icons.edit,
+                              onTap: () async {
+                                final edited = await showZplTemplateEditorDialogMode(
+                                  context: context,
+                                  store: widget.store,
+                                  ref: widget.ref,
+                                  initial: t,
+                                );
+                                if (edited != null) await reload();
+                              },
+                            ),
+                            _miniAction(
+                              tooltip: 'Borrar',
+                              icon: Icons.delete,
+                              onTap: () async {
+                                await widget.store.deleteById(t.id);
+                                await reload();
+                              },
+                            ),
+                          ],
                         ),
                       ],
                     ),
-                    onTap: () async {
-                      final edited = await showZplTemplateEditorDialogMode(
-                        context: context,
-                        store: widget.store,
-                        initial: t,
-                        ref: ref,
-                      );
-                      if (edited != null) await reload();
-                    },
-                  );
-                },
-              ),
-            ),
-          ],
+                  ),
+                ),
+              );
+            },
+          ),
         ),
-      ),
-      actions: [
-        TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cerrar')),
+
+        // ===== Footer =====
+        const Divider(height: 1),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+          child: Row(
+            children: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Cerrar'),
+              ),
+              const Spacer(),
+              Text(
+                'Total: ${items.length}',
+                style: const TextStyle(fontSize: 12, color: Colors.black54),
+              ),
+            ],
+          ),
+        ),
       ],
     );
   }
 }
+
+Widget _miniAction({
+  required String tooltip,
+  required IconData icon,
+  required Future<void> Function() onTap,
+}) {
+  return Tooltip(
+    message: tooltip,
+    child: InkWell(
+      borderRadius: BorderRadius.circular(10),
+      onTap: () async => await onTap(),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+        decoration: BoxDecoration(
+          border: Border.all(color: Colors.black12),
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: Icon(icon, size: 18),
+      ),
+    ),
+  );
+}
+
+String _formatDateShort(DateTime d) {
+  String two(int x) => x.toString().padLeft(2, '0');
+  return '${two(d.day)}/${two(d.month)}/${d.year} ${two(d.hour)}:${two(d.minute)}';
+}
+
+

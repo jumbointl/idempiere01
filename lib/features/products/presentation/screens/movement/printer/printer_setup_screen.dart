@@ -4,22 +4,17 @@ import 'package:awesome_dialog/awesome_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_riverpod/legacy.dart';
 import 'package:get_storage/get_storage.dart';
 import 'package:go_router/go_router.dart';
 import 'package:monalisa_app_001/config/config.dart';
 import 'package:monalisa_app_001/features/products/presentation/screens/movement/printer/mo_printer.dart';
 import 'package:monalisa_app_001/features/products/presentation/screens/movement/printer/printer_utils.dart';
 import 'package:monalisa_app_001/features/products/presentation/screens/movement/printer/widgets/printer_commands_menu.dart';
-import 'package:monalisa_app_001/features/products/presentation/screens/movement/printer/zpl/label_utils.dart';
-import 'package:monalisa_app_001/features/products/presentation/screens/movement/printer/zpl/new/template_zpl_models.dart';
-import 'package:monalisa_app_001/features/products/presentation/screens/movement/printer/zpl/new/template_zpl_on_create.dart';
-import 'package:monalisa_app_001/features/products/presentation/screens/movement/printer/zpl/new/template_zpl_on_use.dart';
+import 'package:monalisa_app_001/features/products/presentation/screens/movement/printer/zpl/new/template_zpl_on_create_editor_sheet.dart';
+import 'package:monalisa_app_001/features/products/presentation/screens/movement/printer/zpl/new/template_zpl_on_use_sheet.dart';
 import 'package:monalisa_app_001/features/products/presentation/screens/movement/printer/zpl/new/template_zpl_store.dart';
-import 'package:monalisa_app_001/features/products/presentation/screens/movement/printer/zpl/new/template_zpl_utils.dart';
-import 'package:monalisa_app_001/features/products/presentation/screens/movement/printer/zpl/zpl_label_printer_100x150.dart';
+import 'package:monalisa_app_001/features/products/presentation/screens/movement/printer/zpl/template/tspl_label_printer.dart';
 import 'package:monalisa_app_001/features/products/presentation/screens/movement/printer/zpl/zpl_print_profile_providers.dart';
-import 'package:monalisa_app_001/features/products/presentation/screens/movement/printer/zpl/zpl_print_widget.dart';
 import 'package:pdf/pdf.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:printing/printing.dart';
@@ -181,7 +176,7 @@ class _PrinterSetupScreenState extends ConsumerState<PrinterSetupScreen> {
       });
     });
   }
-  final enableScannerKeyboardProvider =  StateProvider<bool>((ref) => true);
+
   @override
   Widget build(BuildContext context) {
 
@@ -195,7 +190,12 @@ class _PrinterSetupScreenState extends ConsumerState<PrinterSetupScreen> {
     final savedPrinters  = ref.watch(savedPrintersProvider); // 👈
     // El FocusNode debe ser solicitado explícitamente después de que el widget se construya.
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      FocusScope.of(context).requestFocus(_focusNode);
+      bool b1= ref.read(enableScannerKeyboardProvider);
+      bool b2 = ref.read(isDialogShowedProvider);
+      if(b1 && !b2){
+        FocusScope.of(context).requestFocus(_focusNode);
+      }
+
     });
 
     return KeyboardListener(
@@ -241,7 +241,7 @@ class _PrinterSetupScreenState extends ConsumerState<PrinterSetupScreen> {
             const SizedBox(width: 4),
             // 👇 MENÚ DE COMANDOS ZPL / TSPL
             PrinterCommandsMenu(
-              onCopyZpl: () {
+              /*onCopyZpl: () {
                 final movementAndLinesNow = MovementAndLines.fromJson(jsonDecode(widget.argument));
 
                 final int rowsPerLabel = 4;
@@ -266,6 +266,13 @@ class _PrinterSetupScreenState extends ConsumerState<PrinterSetupScreen> {
                 );
 
                 copyToClipboard(context, zplAll);},
+              onConfigureZpl: () async {
+                await showZplPrintProfilesSheet(context, ref);
+              },
+              onPrintZplDirect: () async {
+                MovementAndLines movementAndLines = ref.read(movementAndLinesProvider);
+                await printZplDirectOrConfigure(ref,movementAndLines);
+              },*/
               onCopyTspl: () {
                 final movementAndLinesNow = MovementAndLines.fromJson(jsonDecode(widget.argument));
 
@@ -282,13 +289,9 @@ class _PrinterSetupScreenState extends ConsumerState<PrinterSetupScreen> {
                   return;
                 }
 
-                final tsplAll = buildTspl100x150NoLogoAll(
-                  movementAndLines: movementAndLinesNow,
-                  rowsPerLabel: rowsPerLabel,
-                  rowPerProductName: rowPerProductName,
+                final tsplAll = buildTspl100x150TemplateNoLogoAll(
                   marginX: marginX,
                   marginY: marginY,
-                  labelType: current,
                 );
                 copyToClipboard(context, tsplAll);},
                 onSaveTxt: () async {
@@ -304,13 +307,7 @@ class _PrinterSetupScreenState extends ConsumerState<PrinterSetupScreen> {
                 },
 
 
-              onConfigureZpl: () async {
-                await showZplPrintProfilesSheet(context, ref);
-              },
-              onPrintZplDirect: () async {
-                MovementAndLines movementAndLines = ref.read(movementAndLinesProvider);
-                await printZplDirectOrConfigure(ref,movementAndLines);
-              },
+
               onChooseLabelType: () async {
                 final box = GetStorage();
                 final current =
@@ -1020,29 +1017,24 @@ $tsplHeaderCompact
     final movementAndLinesNow = MovementAndLines.fromJson(jsonDecode(widget.argument));
    int id = movementAndLinesNow.id ?? 00 ;
     // Ejemplo configuración (o usa tu perfil guardado)
-    final int rowsPerLabel = 4;
-    final int rowPerProductName = 2;
+    final int rowsPerLabel = 8;
+    final int rowPerProductName = 1;
     final int marginX = 20;
     final int marginY = 20;
 
-    final zplAll = buildZpl100x150NoLogoAll(
-      movementAndLines: movementAndLinesNow,
-      rowsPerLabel: rowsPerLabel,
-      rowPerProductName: rowPerProductName,
+    final text = buildTspl100x150TemplateNoLogoAll(
       marginX: marginX,
       marginY: marginY,
-      labelType: current,
     );
 
-    final text = zplAll;
     final file = await saveTxtToDownloadsOrAppDir(
-      filename: 'mv_${id}_zpl_commands.txt',
+      filename: 'mv_${id}_tspl_commands.txt',
       content: text,
     );
 
     // Compartir por WhatsApp/Drive/etc
     final params = ShareParams(
-      text: 'Comandos ZPL',
+      text: 'Comandos TSPL',
       files: [XFile(file.path)],
     );
     await SharePlus.instance.share(
@@ -1055,30 +1047,69 @@ $tsplHeaderCompact
     );
   }
 
-
   Future<void> onCreateZplTemplate(
       BuildContext context,
       WidgetRef ref,
       ) async {
-    final store = ZplTemplateStore(GetStorage());
+    try {
+      final store = ZplTemplateStore(GetStorage());
 
-    await showCreateZplTemplateDialog(
-      context: context,
-      ref: ref,
-      store: store,
-    );
+      final created = await showZplTemplateEditorDialogMode(
+        context: context,
+        ref: ref,
+        store: store,
+        initial: null,
+      );
+
+      if (created == null) return;
+    } catch (e) {
+      showWarningMessage(context, ref, 'Error creando template: $e');
+    }
   }
-  Future<ZplTemplate?> onUseZplTemplate(
+  /*Future<void> onCreateZplTemplate(
       BuildContext context,
       WidgetRef ref,
       ) async {
-    final store = ZplTemplateStore(GetStorage());
+    try {
+      final store = ZplTemplateStore(GetStorage());
 
-    return await showUseZplTemplateDialog(
-      context: context,
-      ref: ref,
-      store: store,
-    );
+      final created = await showZplTemplateEditorDialogMode(
+        context: context,
+        store: store,
+        initial: null, // explícito: crear nuevo
+      );
+
+      // Si canceló o cerró
+      if (created == null) return;
+
+      // (Opcional) feedback simple
+      // showSuccessMessage(ref.context, ref, 'Template guardado: ${created.templateFileName}');
+    } catch (e) {
+      showWarningMessage(context, ref, 'Error creando template: $e');
+    }
+  }*/
+  Future<void> onUseZplTemplate(
+      BuildContext context,
+      WidgetRef ref,
+      ) async {
+    try {
+      final store = ZplTemplateStore(GetStorage());
+
+      final selected = await showUseZplTemplateSheet(
+        context: context,
+        ref: ref,
+        store: store,
+      );
+
+      if (selected == null) return;
+
+      // Si al “usar” quieres imprimir directo, hazlo aquí (opcional):
+      // final movementAndLines = ref.read(movementAndLinesProvider);
+      // await printTemplateSmart(ref: ref, template: selected, movementAndLines: movementAndLines);
+
+    } catch (e) {
+      showWarningMessage(context, ref, 'Error usando template: $e');
+    }
   }
 
 
@@ -1153,256 +1184,7 @@ $tsplHeaderCompact
     ^XZ
     ''';
   }
-  Future<ZplTemplate?> showZplTemplateEditorDialogMode({
-    required BuildContext context,
-    required ZplTemplateStore store,
-    ZplTemplate? initial,
-  }) async {
-    // ======================
-    // Estado inicial
-    // ======================
-    ZplTemplateMode mode = initial?.mode ?? ZplTemplateMode.category;
 
-    final nameCtrl = TextEditingController(
-      text: initial?.templateFileName ??
-          (mode == ZplTemplateMode.category
-              ? 'E:TEMPLATE_CATEGORY.ZPL'
-              : 'E:TEMPLATE_PRODUCT.ZPL'),
-    );
-
-    final dfCtrl = TextEditingController(text: initial?.zplTemplateDf ?? '');
-    final refCtrl = TextEditingController(text: initial?.zplReferenceTxt ?? '');
-
-    int rowsPerLabel(ZplTemplateMode m) => m == ZplTemplateMode.category ? 6 : 8;
-
-    String stripDrive(String file) {
-      final idx = file.indexOf(':');
-      return (idx >= 0 && idx < file.length - 1) ? file.substring(idx + 1) : file;
-    }
-
-    // ======================
-    // Cargar ejemplos
-    // ======================
-    void loadExampleForMode() {
-      final file = nameCtrl.text.trim().isEmpty
-          ? (mode == ZplTemplateMode.category
-          ? 'E:TEMPLATE_CATEGORY.ZPL'
-          : 'E:TEMPLATE_PRODUCT.ZPL')
-          : nameCtrl.text.trim();
-
-      if (nameCtrl.text.trim().isEmpty) {
-        nameCtrl.text = file;
-      }
-
-      // DF solo si es nuevo y está vacío
-      if (initial == null && dfCtrl.text.trim().isEmpty) {
-        if (mode == ZplTemplateMode.category) {
-          dfCtrl.text = buildTemplateZpl100x150ByCategoryDf(
-            printerFile: file,
-            rowsPerLabel: 6,
-          );
-        } else {
-          // DF de producto puede ser reemplazado luego por el layout real
-          dfCtrl.text = '''
-^XA
-^DF$file^FS
-^XZ
-'''.trim();
-        }
-      }
-
-      // Reference siempre se puede regenerar como ejemplo
-      if (mode == ZplTemplateMode.category) {
-        refCtrl.text = buildReferenceTxtByCategory(
-          templateFileNameNoDrive: stripDrive(file),
-        );
-      } else {
-        refCtrl.text = buildReferenceProductExample(
-          templateFileNoDrive: stripDrive(file),
-        );
-      }
-    }
-
-    if (initial == null) {
-      loadExampleForMode();
-    }
-
-    // ======================
-    // Insertar token en cursor
-    // ======================
-    void insertAtCursor(TextEditingController c, String text) {
-      final sel = c.selection;
-      final start = sel.start < 0 ? c.text.length : sel.start;
-      final end = sel.end < 0 ? c.text.length : sel.end;
-
-      c.text = c.text.replaceRange(start, end, text);
-      c.selection = TextSelection.collapsed(offset: start + text.length);
-    }
-
-    // ======================
-    // Dialog
-    // ======================
-    return showDialog<ZplTemplate>(
-      context: context,
-      barrierDismissible: false,
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setState) {
-          final rows = rowsPerLabel(mode);
-
-          return AlertDialog(
-            title: Text(initial == null ? 'Nuevo template ZPL' : 'Editar template ZPL'),
-            content: SizedBox(
-              width: 880,
-              child: SingleChildScrollView(
-                child: Column(
-                  children: [
-                    // ======================
-                    // Barra superior
-                    // ======================
-                    Row(
-                      children: [
-                        Expanded(
-                          child: DropdownButtonFormField<ZplTemplateMode>(
-                            value: mode,
-                            decoration: const InputDecoration(
-                              labelText: 'Modo del template',
-                              border: OutlineInputBorder(),
-                            ),
-                            items: ZplTemplateMode.values
-                                .map(
-                                  (m) => DropdownMenuItem(
-                                value: m,
-                                child: Text(
-                                  m == ZplTemplateMode.category
-                                      ? 'Categoría (6 filas)'
-                                      : 'Producto (8 filas)',
-                                ),
-                              ),
-                            )
-                                .toList(),
-                            onChanged: initial != null
-                                ? null
-                                : (m) {
-                              if (m == null) return;
-                              setState(() {
-                                mode = m;
-                                loadExampleForMode();
-                              });
-                            },
-                          ),
-                        ),
-                        const SizedBox(width: 10),
-                        ElevatedButton.icon(
-                          onPressed: () => setState(loadExampleForMode),
-                          icon: const Icon(Icons.auto_fix_high),
-                          label: const Text('Cargar ejemplo'),
-                        ),
-                        const SizedBox(width: 10),
-                        PopupMenuButton<String>(
-                          tooltip: 'Insertar token',
-                          itemBuilder: (_) =>
-                              tokenMenuItemsByMode(mode: mode, rowsPerLabel: rows),
-                          onSelected: (token) =>
-                              setState(() => insertAtCursor(refCtrl, token)),
-                          child: ElevatedButton.icon(
-                            onPressed: null,
-                            icon: const Icon(Icons.control_point_duplicate),
-                            label: const Text('Insertar token'),
-                          ),
-                        ),
-                      ],
-                    ),
-
-                    const SizedBox(height: 12),
-
-                    // ======================
-                    // Nombre template
-                    // ======================
-                    TextField(
-                      controller: nameCtrl,
-                      decoration: const InputDecoration(
-                        labelText: 'Nombre del template en impresora',
-                        hintText:
-                        'Ej: E:TEMPLATE_CATEGORY.ZPL / E:TEMPLATE_PRODUCT.ZPL',
-                        border: OutlineInputBorder(),
-                      ),
-                    ),
-
-                    const SizedBox(height: 12),
-
-                    // ======================
-                    // DF
-                    // ======================
-                    TextField(
-                      controller: dfCtrl,
-                      minLines: 10,
-                      maxLines: 18,
-                      decoration: const InputDecoration(
-                        labelText: 'TEMPLATE.ZPL (DF – crear plantilla)',
-                        alignLabelWithHint: true,
-                        border: OutlineInputBorder(),
-                      ),
-                    ),
-
-                    const SizedBox(height: 12),
-
-                    // ======================
-                    // Reference
-                    // ======================
-                    TextField(
-                      controller: refCtrl,
-                      minLines: 14,
-                      maxLines: 22,
-                      decoration: InputDecoration(
-                        labelText:
-                        'REFERENCE.TXT (XF + FN + TOKENS) — ${stripDrive(nameCtrl.text)}',
-                        alignLabelWithHint: true,
-                        border: const OutlineInputBorder(),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(ctx, null),
-                child: const Text('Desistir'),
-              ),
-              ElevatedButton(
-                onPressed: () async {
-                  final file = nameCtrl.text.trim();
-                  if (file.isEmpty) return;
-
-                  final result = (initial ??
-                      ZplTemplate(
-                        id: DateTime.now()
-                            .millisecondsSinceEpoch
-                            .toString(),
-                        templateFileName: file,
-                        zplTemplateDf: dfCtrl.text,
-                        zplReferenceTxt: refCtrl.text,
-                        mode: mode,
-                        createdAt: DateTime.now(),
-                      ))
-                      .copyWith(
-                    templateFileName: file,
-                    zplTemplateDf: dfCtrl.text,
-                    zplReferenceTxt: refCtrl.text,
-                    mode: mode,
-                  );
-
-                  await store.upsert(result);
-                  if (ctx.mounted) Navigator.pop(ctx, result);
-                },
-                child: const Text('Guardar'),
-              ),
-            ],
-          );
-        },
-      ),
-    );
-  }
 
 }
 

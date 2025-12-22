@@ -8,7 +8,6 @@ import '../../../../../shared/data/messages.dart';
 import '../../../../common/input_dialog.dart';
 import '../../../../common/messages_dialog.dart';
 import '../../../../domain/idempiere/delete_request.dart';
-import '../../../../domain/idempiere/idempiere_movement.dart';
 import '../../../../domain/idempiere/idempiere_movement_line.dart';
 import '../../../providers/product_provider_common.dart';
 import '../provider/new_movement_provider.dart';

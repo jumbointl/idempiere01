@@ -209,7 +209,59 @@ final goRouterProvider = Provider((ref) {
 
 
                   Future.microtask(() async {
-                    ref.invalidate(actualWarehouseToProvider);
+                    int userWarehouse = ref.read(authProvider).selectedWarehouse?.id ?? 0;
+                    ref.read(allowedWarehouseToProvider.notifier).update((state) => 0);
+                    ref.read(excludedWarehouseToProvider.notifier).update((state) => userWarehouse);
+                    ref.read(homeScreenTitleProvider.notifier).state = Messages.NEW_MOVEMENT;
+                    ref.read(productsHomeCurrentIndexProvider.notifier)
+                        .update((state) => Memory.PAGE_INDEX_STORE_ON_HAND);
+                    ref.read(actionScanProvider.notifier)
+                        .update((state) => Memory.ACTION_FIND_BY_UPC_SKU_FOR_STORE_ON_HAND);
+                    ref.read(isDialogShowedProvider.notifier).update((state) => false);
+                  });
+                  return const Scaffold(
+                    backgroundColor: Colors.white,
+                    body: Center(child: CircularProgressIndicator()),
+                  );
+                },
+              ),
+              transitionDuration: Duration(microseconds: transitionTimeMilliseconds),
+              transitionsBuilder: (context, animation, secondaryAnimation, child) {
+                const begin = Offset(-1.0, 0.0);
+                const end = Offset.zero;
+                final tween = Tween(begin: begin, end: end).chain(CurveTween(curve: Curves.easeInOut));
+                return SlideTransition(position: animation.drive(tween), child: child);
+              },
+            );
+          } else {
+            return const NoTransitionPage(child: HomeScreen());
+          }
+        },
+      ),
+      GoRoute(
+        path: '${AppRouter.PAGE_PRODUCT_STORE_ON_HAND}/:productId/:movementInSameWarehouse',
+        pageBuilder: (context, state) {
+          final productId = state.pathParameters['productId'] ?? '';
+          final hasPrivilege = RolesApp.canCreateMovementInSameOrganization || RolesApp.canSearchProductStock;
+
+          if (hasPrivilege) {
+            // Use a FutureBuilder to show a loading indicator for 2 seconds
+            return CustomTransitionPage(
+              key: state.pageKey,
+              child: FutureBuilder(
+                future: Future.delayed(Duration(milliseconds: transitionTimeMilliseconds)),
+                builder: (context, snapshot) {
+
+
+                  if (snapshot.connectionState == ConnectionState.done) {
+                    return ProductStoreOnHandScreen(productId: productId,);
+                  }
+
+
+                  Future.microtask(() async {
+                    int userWarehouse = ref.read(authProvider).selectedWarehouse?.id ?? 0;
+                    ref.read(allowedWarehouseToProvider.notifier).update((state) => userWarehouse);
+                    ref.read(excludedWarehouseToProvider.notifier).update((state) => 0);
                     ref.read(homeScreenTitleProvider.notifier).state = Messages.NEW_MOVEMENT;
                     ref.read(productsHomeCurrentIndexProvider.notifier)
                         .update((state) => Memory.PAGE_INDEX_STORE_ON_HAND);

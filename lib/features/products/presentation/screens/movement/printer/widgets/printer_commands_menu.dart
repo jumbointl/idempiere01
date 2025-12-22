@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 
 enum _PrinterCommandAction {
-  configureZplProfile,
-  printZplDirect,
+  //configureZplProfile,
+  //printZplDirect,
   labelToPrint,
-  copyZpl,
+  //copyZpl,
   copyTspl,
   saveTxt,
   createZplTemplate,
@@ -12,12 +12,10 @@ enum _PrinterCommandAction {
 }
 
 class PrinterCommandsMenu extends StatelessWidget {
-  final Future<void> Function() onConfigureZpl;
-  final Future<void> Function() onPrintZplDirect;
-
+  //final Future<void> Function() onConfigureZpl;
+  //final Future<void> Function() onPrintZplDirect;
+  //final VoidCallback onCopyZpl;
   final Future<void> Function() onChooseLabelType; // <-- NUEVO
-
-  final VoidCallback onCopyZpl;
   final VoidCallback onCopyTspl;
   final Future<void> Function() onCreateZplTemplate;
   final Future<void> Function() onUseZplTemplate;
@@ -25,10 +23,10 @@ class PrinterCommandsMenu extends StatelessWidget {
 
   const PrinterCommandsMenu({
     super.key,
-    required this.onConfigureZpl,
-    required this.onPrintZplDirect,
+    //required this.onConfigureZpl,
+    //required this.onPrintZplDirect,
     required this.onChooseLabelType, // <-- NUEVO
-    required this.onCopyZpl,
+    //required this.onCopyZpl,
     required this.onCopyTspl,
     required this.onSaveTxt,
     required this.onCreateZplTemplate,
@@ -42,19 +40,17 @@ class PrinterCommandsMenu extends StatelessWidget {
       icon: const Icon(Icons.more_vert),
       onSelected: (action) async {
         switch (action) {
-          case _PrinterCommandAction.configureZplProfile:
+          /*case _PrinterCommandAction.configureZplProfile:
             await onConfigureZpl();
             break;
           case _PrinterCommandAction.printZplDirect:
             await onPrintZplDirect();
             break;
-
-          case _PrinterCommandAction.labelToPrint: // <-- NUEVO
-            await onChooseLabelType();
-            break;
-
           case _PrinterCommandAction.copyZpl:
             onCopyZpl();
+            break;*/
+          case _PrinterCommandAction.labelToPrint: // <-- NUEVO
+            await onChooseLabelType();
             break;
           case _PrinterCommandAction.copyTspl:
             onCopyTspl();
@@ -71,7 +67,7 @@ class PrinterCommandsMenu extends StatelessWidget {
         }
       },
       itemBuilder: (context) => const [
-        PopupMenuItem(
+        /*PopupMenuItem(
           value: _PrinterCommandAction.configureZplProfile,
           child: ListTile(
             leading: Icon(Icons.settings),
@@ -84,7 +80,7 @@ class PrinterCommandsMenu extends StatelessWidget {
             leading: Icon(Icons.print),
             title: Text('Imprimir ZPL directo'),
           ),
-        ),
+        ),*/
 
         // ===== NUEVO ITEM =====
         PopupMenuItem(
@@ -96,13 +92,13 @@ class PrinterCommandsMenu extends StatelessWidget {
         ),
 
         PopupMenuDivider(),
-        PopupMenuItem(
+        /*PopupMenuItem(
           value: _PrinterCommandAction.copyZpl,
           child: ListTile(
             leading: Icon(Icons.copy),
             title: Text('Copiar ZPL'),
           ),
-        ),
+        ),*/
         PopupMenuItem(
           value: _PrinterCommandAction.copyTspl,
           child: ListTile(
