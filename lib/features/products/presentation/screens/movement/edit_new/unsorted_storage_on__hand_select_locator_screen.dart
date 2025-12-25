@@ -32,7 +32,7 @@ import '../../store_on_hand/memory_products.dart';
 import '../provider/products_home_provider.dart';
 import '../provider/new_movement_provider.dart';
 import 'custom_app_bar.dart';
-class UnsortedStorageOnHandSelectLocatorScreen extends ConsumerStatefulWidget implements InputDataProcessor{
+class UnsortedStorageOnHandSelectLocatorScreen extends ConsumerStatefulWidget implements InputDataProcessor {
 
   final IdempiereStorageOnHande storage;
   final MovementAndLines movementAndLines;
@@ -42,7 +42,8 @@ class UnsortedStorageOnHandSelectLocatorScreen extends ConsumerStatefulWidget im
   double width;
   final int pageIndex = Memory.PAGE_INDEX_UNSORTED_STORAGE_ON_HAND;
   final int actionScanType = Memory.ACTION_GET_LOCATOR_TO_VALUE;
-  String? productUPC ;
+  String? productUPC;
+
   String? argument;
 
 
@@ -57,49 +58,17 @@ class UnsortedStorageOnHandSelectLocatorScreen extends ConsumerStatefulWidget im
 
 
   @override
-  ConsumerState<UnsortedStorageOnHandSelectLocatorScreen> createState() =>UnsortedStorageOnHandScreenSelectLocatorState();
+  ConsumerState<UnsortedStorageOnHandSelectLocatorScreen> createState() =>
+      UnsortedStorageOnHandScreenSelectLocatorState();
 
   @override
-  Future<void> handleInputString({required WidgetRef ref, required String inputData,required int actionScan}) async {
+  Future<void> handleInputString(
+      {required WidgetRef ref, required String inputData, required int actionScan}) async {
     final scanHandleNotifier = ref.read(scanHandleNotifierProvider.notifier);
-    scanHandleNotifier.handleInputString(ref:ref, inputData: inputData,actionScan:actionScan);
-
+    scanHandleNotifier.handleInputString(
+        ref: ref, inputData: inputData, actionScan: actionScan);
   }
-  @override
-  void addQuantityText(BuildContext context, WidgetRef ref,
-      TextEditingController quantityController,int quantity) {
-    if(quantity==-1){
-      quantityController.text = '';
-      return;
-    }
-    String s =  quantityController.text;
-    String s1 = s;
-    String s2 ='';
-    if(s.contains('.')) {
-      s1 = s.split('.').first;
-      s2 = s.split('.').last;
-    }
-
-    String r ='';
-    if(s.contains('.')){
-      r='$s1$quantity.$s2';
-    } else {
-      r='$s1$quantity';
-    }
-
-    int? aux = int.tryParse(r);
-    if(aux==null || aux<=0){
-      String message =  '${Messages.ERROR_QUANTITY} $quantity';
-      showErrorMessage(context, ref, message);
-      return;
-    }
-    quantityController.text = aux.toString();
-
-  }
-
-
 }
-
 class UnsortedStorageOnHandScreenSelectLocatorState extends ConsumerState<UnsortedStorageOnHandSelectLocatorScreen> {
   late List<IdempiereStorageOnHande> unsortedStorageList = [];
   late List<IdempiereStorageOnHande> storageList = [];
@@ -151,7 +120,7 @@ class UnsortedStorageOnHandScreenSelectLocatorState extends ConsumerState<Unsort
 
       await Future.delayed(const Duration(milliseconds: 100),(){
         ref.read(actualLocatorFromProvider.notifier).state = id;
-        ref.read(actionScanProvider.notifier).state = 5;
+        //ref.read(actionScanProvider.notifier).state = 5;
         ref.read(isDialogShowedProvider.notifier).state = false;
         int warehouseToID = movementAndLines.mWarehouseToID?.id ?? 0;
         ref.read(allowedWarehouseToProvider.notifier).state = warehouseToID;
@@ -159,7 +128,11 @@ class UnsortedStorageOnHandScreenSelectLocatorState extends ConsumerState<Unsort
           if(movementAndLines.hasLastLocatorTo){
             ref.read(selectedLocatorToProvider.notifier).state = movementAndLines.lastLocatorTo!;
           }
+        } else {
+          //ref.invalidate(scannedLocatorToProvider);
+          //ref.invalidate(selectedLocatorToProvider);
         }
+
 
       });
 

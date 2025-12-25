@@ -21,6 +21,7 @@ import '../../../../domain/idempiere/idempiere_warehouse.dart';
 import '../../../providers/locator_provider.dart';
 import '../../../providers/product_provider_common.dart';
 import '../../../providers/products_scan_notifier_for_line.dart';
+import '../provider/new_movement_provider.dart';
 class StorageOnHandCardForLine extends ConsumerStatefulWidget {
   final ProductsScanNotifierForLine notifier;
   final IdempiereStorageOnHande storage;
@@ -218,10 +219,12 @@ class StorageOnHandCardForLineState extends ConsumerState<StorageOnHandCardForLi
     if(ref.context.mounted) {
       if(movementAndLines.canChangeLocatorForEachLine){
         print(' PAGE_UNSORTED_STORAGE_ON_HAND_FOR_LINE_SELECT_LOCATOR');
-        ref.invalidate(selectedLocatorToProvider);
-        await Future.delayed(const Duration(milliseconds: 100),(){
+        final copyLastLocatorTo = ref.read(copyLastLocatorToProvider);
+        if(!copyLastLocatorTo){
+          ref.invalidate(selectedLocatorToProvider);
+          ref.invalidate(scannedLocatorToProvider);
+        }
 
-        });
 
         ref.context.go(
             '${AppRouter.PAGE_UNSORTED_STORAGE_ON_HAND_FOR_LINE_SELECT_LOCATOR}/$argument',

@@ -1,4 +1,5 @@
 // --------- Helpers comunes: business days (si querés que sea común) ----------
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/legacy.dart';
 
 DateTime subtractBusinessDays(DateTime from, int days) {
@@ -24,3 +25,11 @@ DateTime initialBusinessDate() {
 final selectedDateProvider = StateProvider<DateTime>((ref) {
   return initialBusinessDate();
 });
+
+final selectedDatesProvider = StateProvider<DateTimeRange>((ref) {
+  return DateTimeRange(start: initialBusinessDate(), end: DateTime.now());
+});
+final selectedMInOutDatesProvider = StateProvider<DateTimeRange>((ref) {
+  return DateTimeRange(start: initialBusinessDate(), end: DateTime.now());
+});
+

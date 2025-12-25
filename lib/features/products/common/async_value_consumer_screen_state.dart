@@ -126,7 +126,7 @@ abstract class AsyncValueConsumerState<T extends ConsumerStatefulWidget>
   bool get scrollManinDataCard => true ;
 
   Widget getMainDataCard(BuildContext context, WidgetRef ref) {
-    // asyncResultHandled = false is setted al h;
+    // asyncResultHandled = false is set al h;
     return mainDataAsync.when(
       data: (ResponseAsyncValue result) {
         if(!result.isInitiated){

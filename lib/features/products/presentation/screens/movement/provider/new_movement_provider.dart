@@ -25,7 +25,10 @@ import '../../store_on_hand/memory_products.dart';
 final movementAndLinesProvider = StateProvider.autoDispose<MovementAndLines>((ref) {
   return MemoryProducts.movementAndLines;
 });
-final documentTyprFilterProvider = StateProvider<String>((ref) {
+final documentTypeFilterProvider = StateProvider<String>((ref) {
+  return 'DR'; // valor inicial
+});
+final documentTypeListMInOutFilterProvider = StateProvider<String>((ref) {
   return 'DR'; // valor inicial
 });
 
@@ -426,21 +429,24 @@ FutureProvider.autoDispose.family<double?, int>((ref, lineId) async {
 });
 
 
-final movementNotCompletedToFindByDateProvider  = StateProvider.autoDispose<IdempiereMovement?>((ref) {
+final movementNotCompletedToFindByDateProvider  = StateProvider.autoDispose<MovementAndLines?>((ref) {
   return null;
 });
 
 
 
 final findMovementNotCompletedByDateProvider = FutureProvider.autoDispose<ResponseAsyncValue>((ref) async {
-  final IdempiereMovement? movement = ref.watch(movementNotCompletedToFindByDateProvider);
+  final MovementAndLines? movement = ref.watch(movementNotCompletedToFindByDateProvider);
   print('----------------------------------findMovementNotCompletedByDateProvider');
   ResponseAsyncValue responseAsyncValue = ResponseAsyncValue();
-  if(movement== null || movement.movementDate == null) return responseAsyncValue;
+  if(movement== null || movement.filterMovementDateStartAt == null) return responseAsyncValue;
 
   responseAsyncValue.isInitiated = true;
-  String docStatus = movement.docStatus?.id ?? 'DR' ;
-
+  String docStatus = movement.filterDocumentStatus?.id ?? 'DR' ;
+  String endDate = '';
+  if(movement.filterMovementDateEndAt !=null){
+    endDate = 'AND MovementDate le ${movement.filterMovementDateEndAt!} ';
+  }
 
 
   /*if(movement.mWarehouseID !=null && movement.mWarehouseToID != null){
@@ -458,32 +464,34 @@ final findMovementNotCompletedByDateProvider = FutureProvider.autoDispose<Respon
     }
   }*/
 
-  String date = movement.movementDate!;
+  String date = movement.filterMovementDateStartAt!;
 
   String idempiereModelName ='m_movement';
   Dio dio = await DioClient.create();
   try {
     String url =  "/api/v1/models/$idempiereModelName";
     int warehouse = Memory.sqlUsersData.mWarehouseID?.id ?? -1;
-    if(movement.mWarehouseID ==null && movement.mWarehouseToID == null){
-      url = "/api/v1/models/$idempiereModelName?\$filter=DocStatus eq '$docStatus' AND MovementDate ge '$date' AND (M_WarehouseTo_ID eq $warehouse OR M_Warehouse_ID eq $warehouse)&\$orderby=MovementDate desc";
-    } else if(movement.mWarehouseID !=null && movement.mWarehouseToID != null){
-      int warehouse = movement.mWarehouseID!.id!;
-      int warehouseTo = movement.mWarehouseToID!.id!;
-      url = "/api/v1/models/$idempiereModelName?\$filter=DocStatus eq '$docStatus' AND MovementDate ge '$date' AND M_WarehouseTo_ID eq $warehouseTo AND M_Warehouse_ID eq $warehouse&\$orderby=MovementDate desc";
-    } else if(movement.mWarehouseID ==null){
-      //int warehouseTo = movement.mWarehouseToID!.id!;
+    if(movement.filterWarehouseFrom ==null && movement.filterWarehouseTo == null){
+      url = "/api/v1/models/$idempiereModelName?\$filter=DocStatus eq '$docStatus' AND MovementDate ge '$date' ${endDate}AND (M_WarehouseTo_ID eq $warehouse OR M_Warehouse_ID eq $warehouse)&\$orderby=MovementDate desc";
+    } else if(movement.filterWarehouseFrom !=null && movement.filterWarehouseTo  != null){
+      int warehouse = movement.filterWarehouseFrom!.id!;
+      int warehouseTo = movement.filterWarehouseTo !.id!;
+      url = "/api/v1/models/$idempiereModelName?\$filter=DocStatus eq '$docStatus' AND MovementDate ge '$date' ${endDate}AND M_WarehouseTo_ID eq $warehouseTo AND M_Warehouse_ID eq $warehouse&\$orderby=MovementDate desc";
+    } else if(movement.filterWarehouseFrom ==null){
+      //int warehouseTo = movement.filterWarehouseTo !.id!;
       //url = "/api/v1/models/$idempiereModelName?\$filter=DocStatus eq '$docStatus' AND MovementDate ge '$date' AND M_WarehouseTo_ID eq $warehouseTo&\$orderby=MovementDate desc";
-      int warehouse = movement.mWarehouseToID!.id!;
-      int warehouseTo = movement.mWarehouseToID!.id!;
-      url = "/api/v1/models/$idempiereModelName?\$filter=DocStatus eq '$docStatus' AND MovementDate ge '$date' AND M_WarehouseTo_ID eq $warehouseTo AND M_Warehouse_ID neq $warehouse&\$orderby=MovementDate desc";
+      int warehouse = movement.filterWarehouseTo !.id!;
+      int warehouseTo = movement.filterWarehouseTo !.id!;
+      url = "/api/v1/models/$idempiereModelName?\$filter=DocStatus eq '$docStatus' AND MovementDate ge '$date' ${endDate}AND M_WarehouseTo_ID eq $warehouseTo AND M_Warehouse_ID neq $warehouse&\$orderby=MovementDate desc";
     } else {
       //int warehouse = movement.mWarehouseID!.id!;
       //url = "/api/v1/models/$idempiereModelName?\$filter=DocStatus eq '$docStatus' AND MovementDate ge '$date' AND M_Warehouse_ID eq $warehouse&\$orderby=MovementDate desc";
-      int warehouse = movement.mWarehouseID!.id!;
-      int warehouseTo = movement.mWarehouseID!.id!;
-      url = "/api/v1/models/$idempiereModelName?\$filter=DocStatus eq '$docStatus' AND MovementDate ge '$date' AND M_WarehouseTo_ID neq $warehouseTo AND M_Warehouse_ID eq $warehouse&\$orderby=MovementDate desc";
+      int warehouse = movement.filterWarehouseFrom!.id!;
+      int warehouseTo = movement.filterWarehouseFrom!.id!;
+      url = "/api/v1/models/$idempiereModelName?\$filter=DocStatus eq '$docStatus' AND MovementDate ge '$date' ${endDate}AND M_WarehouseTo_ID neq $warehouseTo AND M_Warehouse_ID eq $warehouse&\$orderby=MovementDate desc";
     }
+
+
     print(url);
     url = url.replaceAll(' ', '%20');
     print(url);
@@ -614,4 +622,7 @@ final cancelMovementProvider = FutureProvider.autoDispose<MovementAndLines?>((re
     //throw Exception(e.toString());
   }
 
+});
+final movementLineDeletedCounterProvider = StateProvider<int>((ref) {
+  return 0;
 });

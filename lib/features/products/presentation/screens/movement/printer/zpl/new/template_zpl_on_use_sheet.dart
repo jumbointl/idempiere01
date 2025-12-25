@@ -72,9 +72,9 @@ class _UseZplTemplateSheetState extends ConsumerState<_UseZplTemplateSheet> {
       await _reload();
 
       final def = widget.store.loadDefaultByMode(selectedMode);
-      if (def != null && !_dfExists.containsKey(def.id)) {
+      /*if (def != null && !_dfExists.containsKey(def.id)) {
         await _checkTemplateExists(def);
-      }
+      }*/
     });
   }
 
@@ -168,7 +168,7 @@ class _UseZplTemplateSheetState extends ConsumerState<_UseZplTemplateSheet> {
     required String ip,
     required int port,
     required String drive,     // "E:" o "R:" etc
-    required String fileName,  // "MOVEMENT_BY_CATEGORY_TEMPLATE.ZPL"
+    required String fileName,  // "MOV_CAT1.ZPL"
     Duration timeout = const Duration(seconds: 2),
   }) async {
     final socket = await Socket.connect(ip, port, timeout: const Duration(seconds: 5));
@@ -422,11 +422,13 @@ class _UseZplTemplateSheetState extends ConsumerState<_UseZplTemplateSheet> {
                             const SizedBox(width: 8),
 
                             // BOTÓN VERIFICAR
-                            IconButton(
+                           /* IconButton(
                               tooltip: 'Verificar template en impresora',
                               icon: const Icon(Icons.cloud_sync),
-                              onPressed: () => _checkTemplateExists(x),
-                            ),
+                              onPressed: () {
+                                //_checkTemplateExists(x);
+                              }
+                            ),*/
 
                             // ELIMINAR
                             IconButton(

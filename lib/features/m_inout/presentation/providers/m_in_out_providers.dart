@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
+import 'package:intl/intl.dart';
 import 'package:monalisa_app_001/features/m_inout/domain/entities/line.dart';
 import 'package:monalisa_app_001/features/m_inout/domain/entities/m_in_out.dart';
 import 'package:monalisa_app_001/features/m_inout/domain/entities/m_in_out_confirm.dart';
@@ -12,6 +13,10 @@ import '../../../../config/constants/roles_app.dart';
 import '../../../../config/theme/app_theme.dart';
 import '../../../products/common/number_sum_panel.dart';
 import '../../../products/common/selections_dialog.dart';
+import '../../../products/domain/idempiere/idempiere_document_status.dart';
+import '../../../products/presentation/screens/movement/provider/new_movement_provider.dart';
+import '../../../shared/data/memory.dart';
+import '../../../shared/data/messages.dart';
 import '../../domain/entities/barcode.dart';
 import '../../domain/entities/line_confirm.dart';
 import '../../infrastructure/repositories/m_in_out_repository_impl.dart';
@@ -168,11 +173,71 @@ class MInOutNotifier extends StateNotifier<MInOutStatus> {
       await getMInOutList(ref);
     }
   }
+  Future<void> loadMInOutAndLine(
+      BuildContext context,
+      WidgetRef ref,
+      ) async {
+    final stateNow = state;
+    final String doc = stateNow.doc;
 
+    if (stateNow.mInOutType == MInOutType.shipmentConfirm ||
+        stateNow.mInOutType == MInOutType.receiptConfirm ||
+        stateNow.mInOutType == MInOutType.pickConfirm ||
+        stateNow.mInOutType == MInOutType.qaConfirm) {
+
+      _showScreenLoading(context);
+
+      try {
+        final mInOut = await getMInOutAndLine(ref);
+
+        if (!context.mounted) return;
+        Navigator.of(context).pop();
+
+        if (mInOut.id == null) {
+          showErrorMessage(context, ref,
+              '${Messages.NOT_M_IN_OUT_RECORD_FOUND} : $doc');
+        }
+      } catch (_) {
+        if (context.mounted) Navigator.of(context).pop();
+      }
+    }
+  }
+  void _showScreenLoading(BuildContext context) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return Center(
+          child: CircularProgressIndicator(color: themeBackgroundColor),
+        );
+      },
+    );
+  }
   Future<void> getMInOutList(WidgetRef ref) async {
     state = state.copyWith(isLoadingMInOutList: true, errorMessage: '');
     try {
       final mInOutResponse = await mInOutRepository.getMInOutList(ref);
+      if (mInOutResponse.isEmpty) {
+        state = state.copyWith(mInOutList: [], isLoadingMInOutList: false);
+        return;
+      }
+      state = state.copyWith(
+        mInOutList: mInOutResponse,
+        isLoadingMInOutList: false,
+      );
+    } catch (e) {
+      state = state.copyWith(
+        mInOutList: [],
+        errorMessage: e.toString().replaceAll('Exception: ', ''),
+        isLoadingMInOutList: false,
+      );
+    }
+  }
+  Future<void> getMInOutListByDateRange({required WidgetRef ref,required String inOut, required DateTimeRange dates, }) async {
+    state = state.copyWith(isLoadingMInOutList: true, errorMessage: '');
+    try {
+      final mInOutResponse = await mInOutRepository.getMInOutListByDateRange(
+          ref:ref,dates:dates, inOut: inOut);
       if (mInOutResponse.isEmpty) {
         state = state.copyWith(mInOutList: [], isLoadingMInOutList: false);
         return;
@@ -208,6 +273,28 @@ class MInOutNotifier extends StateNotifier<MInOutStatus> {
         errorMessage: e.toString().replaceAll('Exception: ', ''),
       );
       return [];
+    }
+  }
+  Future<void> getMovementListByDateRange(
+           {required DateTimeRange dates,required String inOut, required WidgetRef ref}) async {
+    state = state.copyWith(isLoadingMInOutList: true, errorMessage: '');
+    try {
+      final mInOutResponse = await mInOutRepository.getMovementListByDateRange(
+          ref,dates:dates, inOut: inOut);
+      if (mInOutResponse.isEmpty) {
+        state = state.copyWith(mInOutList: [], isLoadingMInOutList: false);
+        return;
+      }
+      state = state.copyWith(
+        mInOutList: mInOutResponse,
+        isLoadingMInOutList: false,
+      );
+    } catch (e) {
+      state = state.copyWith(
+        mInOutList: [],
+        errorMessage: e.toString().replaceAll('Exception: ', ''),
+        isLoadingMInOutList: false,
+      );
     }
   }
 
@@ -453,7 +540,7 @@ class MInOutNotifier extends StateNotifier<MInOutStatus> {
   }
 
   void clearMInOutData() {
-    print('clearMInOutData');
+    print('>>>clearMInOutData');
     state = state.copyWith(
       doc: '',
       mInOut: state.mInOut?.copyWith(id: null, lines: null),
@@ -762,54 +849,6 @@ class MInOutNotifier extends StateNotifier<MInOutStatus> {
     }
   }
 
- /* Future<void> setDocActionConfirm(WidgetRef ref) async {
-    state = state.copyWith(isLoading: true, errorMessage: '');
-
-    try {
-      for (final line in state.mInOut!.lines) {
-        if (line.editLocator != null) {
-          final update = await mInOutRepository.updateLocator(line, ref);
-          if (!update) {
-            state = state.copyWith(
-              errorMessage:
-                  'Error al actualizar la ubicación: ${line.mLocatorId!.identifier}',
-              isLoading: false,
-            );
-            return;
-          }
-        }
-        final lineConfirmResponse = await mInOutRepository.updateLineConfirm(
-          line,
-          ref,
-        );
-        if (lineConfirmResponse.id == null) {
-          state = state.copyWith(
-            errorMessage: 'Error al confirmar la línea ${line.line}',
-            isLoading: false,
-          );
-          return;
-        }
-      }
-
-      await mInOutRepository.setDocAction(ref);
-      if (state.mInOutType == MInOutType.moveConfirm) {
-        await getMovementConfirmAndLine(state.mInOutConfirm!.id!, ref);
-      } else {
-        await getMInOutConfirmAndLine(state.mInOutConfirm!.id!, ref);
-      }
-
-      state = state.copyWith(
-        errorMessage: '',
-        isLoading: false,
-        isComplete: true,
-      );
-    } catch (e) {
-      state = state.copyWith(
-        errorMessage: e.toString().replaceAll('Exception: ', ''),
-        isLoading: false,
-      );
-    }
-  }*/
 
   void addBarcode(String code, BuildContext context) {
     if (code.trim().isEmpty) return;
@@ -1415,6 +1454,23 @@ class MInOutNotifier extends StateNotifier<MInOutStatus> {
         }
       });
     }
+  }
+
+  Future<void> findMovementBetweenDates(WidgetRef ref, {required DateTimeRange<DateTime> dates,
+    required String inOut}) async {
+    debugPrint('>>> findMovementBetweenDates llamado');
+    final start = DateFormat('yyyy-MM-dd').format(dates.start);
+    final end   = DateFormat('yyyy-MM-dd').format(dates.end);
+
+
+
+    if (state.mInOutType == MInOutType.move ||
+        state.mInOutType == MInOutType.moveConfirm) {
+      await getMovementListByDateRange(ref:ref,dates: dates,inOut:inOut);
+    } else {
+      await getMInOutListByDateRange(ref:ref,dates:dates,inOut:inOut);
+    }
+
   }
 }
 

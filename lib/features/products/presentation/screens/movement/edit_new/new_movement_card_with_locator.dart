@@ -7,12 +7,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:monalisa_app_001/config/constants/roles_app.dart';
 import 'package:monalisa_app_001/features/products/domain/idempiere/movement_and_lines.dart';
+import 'package:slide_to_confirm/slide_to_confirm.dart';
 
 
 import '../../../../../../config/router/app_router.dart';
 import '../../../../../../config/theme/app_theme.dart';
 import '../../../../../shared/data/memory.dart';
 import '../../../../../shared/data/messages.dart';
+import '../../../../common/widget/show_delete_confirmation_sheet.dart';
 import '../../../providers/product_provider_common.dart';
 import '../provider/products_home_provider.dart';
 
@@ -40,7 +42,7 @@ class NewMovementCardWithLocator extends ConsumerStatefulWidget {
 
 
 class MovementHeaderCardWithLocatorState extends ConsumerState<NewMovementCardWithLocator> {
-  Widget get getActionMessage {
+  Widget get getActionCompleteMessage {
     if(widget.movementAndLines.canCompleteMovement){
       return GestureDetector(
         onTap: (){
@@ -70,51 +72,49 @@ class MovementHeaderCardWithLocatorState extends ConsumerState<NewMovementCardWi
         },
         child: Container(
           color: Colors.green,
-          child: Text(
-             Messages.COMPLETE ,
-            textAlign: TextAlign.end,
-            style: widget.movementStyle,
-            overflow: TextOverflow.ellipsis,
-            maxLines: 1,
+          child: SizedBox(
+            width: 100,
+            child: Text(
+               Messages.COMPLETE ,
+              textAlign: TextAlign.end,
+              style: widget.movementStyle,
+              overflow: TextOverflow.ellipsis,
+              maxLines: 1,
+            ),
           ),
         ),
       ) ;
-    } else if(widget.movementAndLines.canCancelMovement){
+    } else {
+      return Text('');
+    }
+  }
+  Widget get getActionCancelMessage {
+    if(widget.movementAndLines.canCancelMovement){
       return GestureDetector(
         onTap: (){
-
-          AwesomeDialog(
+          showDeleteConfirmationSheet(
             context: context,
-            animType: AnimType.scale,
-            dialogType: DialogType.question,
-            body: Center(child: Text(
-              Messages.CANCEL,
-              //style: TextStyle(fontStyle: FontStyle.italic),
-            ),), // correct here
-            title: '${Messages.CANCEL_MOVEMENT}?',
-            desc:   '',
-            //autoHide: const Duration(seconds: 3),
-            btnOkOnPress: () {
+            ref: ref,
+            onConfirm: ({required BuildContext context, required WidgetRef ref}) async {
               print('MovementCancelScreenState card') ;
               GoRouterHelper(context).go(
                   AppRouter.PAGE_MOVEMENTS_CANCEL_SCREEN,
                   extra: widget.movementAndLines);
-            },
-            btnCancelOnPress: () {},
-            btnOkColor: themeColorSuccessful,
-            btnCancelColor: themeColorError,
-            btnCancelText: Messages.CANCEL,
-            btnOkText: Messages.OK,
-          ).show();
+            }
+
+          );
         },
         child: Container(
-          color: Colors.green,
-          child: Text(
-            Messages.CANCEL ,
-            textAlign: TextAlign.end,
-            style: widget.movementStyle,
-            overflow: TextOverflow.ellipsis,
-            maxLines: 1,
+          color: Colors.red,
+          child: SizedBox(
+            width: 100,
+            child: Text(
+              Messages.CANCEL ,
+              textAlign: TextAlign.end,
+              style: widget.movementStyle,
+              overflow: TextOverflow.ellipsis,
+              maxLines: 1,
+            ),
           ),
         ),
       ) ;
@@ -137,7 +137,6 @@ class MovementHeaderCardWithLocatorState extends ConsumerState<NewMovementCardWi
     String date='';
     String id='';
     String documentType = widget.movementAndLines.cDocTypeID?.identifier ?? 'DOC';
-    bool canCompleteMovement = widget.movementAndLines.canCompleteMovement && RolesApp.cantConfirmMovement;
     if(widget.movementAndLines.hasMovement){      //id = movement.documentNo ?? '';
       id = widget.movementAndLines.id.toString();
       date = widget.movementAndLines.movementDate?.toString() ?? '';
@@ -192,7 +191,7 @@ class MovementHeaderCardWithLocatorState extends ConsumerState<NewMovementCardWi
                     ),
                     onPressed: () {
 
-                      GoRouterHelper(ref.context).push(AppRouter.PAGE_MOVEMENT_QR_LIST,
+                      GoRouterHelper(ref.context).push(AppRouter.PAGE_MOVEMENT_BARCODE_LIST,
                           extra: widget.movementAndLines);
 
                     },
@@ -233,10 +232,16 @@ class MovementHeaderCardWithLocatorState extends ConsumerState<NewMovementCardWi
                 ),
               ],
             ),
-            Text(
-              documentType,
-              style: widget.movementStyle,
-              overflow: TextOverflow.ellipsis,
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  documentType,
+                  style: widget.movementStyle,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                getActionCancelMessage,
+              ],
             ),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -246,10 +251,7 @@ class MovementHeaderCardWithLocatorState extends ConsumerState<NewMovementCardWi
                   style: widget.movementStyle,
                   overflow: TextOverflow.ellipsis,
                 ),
-                getActionMessage
-
-
-
+                getActionCompleteMessage
               ],
             ) ,
           ],

@@ -108,8 +108,9 @@ class NewMovementLineCardState extends ConsumerState<NewMovementLineCard> {
                   print('deleteMovementLineProvider success');
                   late String route;
                   final id = widget.movementLine.mMovementID?.id ?? 1;
-                  route = '${AppRouter.PAGE_MOVEMENT_REPAINT}/$id';
-
+                  final counter = ref.read(movementLineDeletedCounterProvider);
+                  route = '${AppRouter.PAGE_MOVEMENT_REPAINT}${counter%2}/$id';
+                  ref.read(movementLineDeletedCounterProvider.notifier).state++;
                   print('route: $route');
                   WidgetsBinding.instance.addPostFrameCallback((_) {
                     if (!mounted) return;

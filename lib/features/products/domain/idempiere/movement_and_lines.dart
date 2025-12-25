@@ -41,6 +41,13 @@ class MovementAndLines extends IdempiereMovement {
   IdempiereLocator? get locatorFromForMovementLineCreate => movementLineToCreate?.mLocatorID;
   IdempiereLocator? get locatorToForMovementLineCreate => movementLineToCreate?.mLocatorToID;
   String? nextProductIdUPC;
+  String? filterMovementDateStartAt;
+  String? filterMovementDateEndAt;
+  String? filterDocumentNo;
+  String? filterDocumentType;
+  IdempiereDocumentStatus? filterDocumentStatus;
+  IdempiereWarehouse? filterWarehouseFrom;
+  IdempiereWarehouse? filterWarehouseTo;
 
 
 
@@ -89,6 +96,13 @@ class MovementAndLines extends IdempiereMovement {
     this.movementLines,
     this.movementLineToCreate,
     this.nextProductIdUPC,
+    this.filterMovementDateStartAt,
+    this.filterMovementDateEndAt,
+    this.filterDocumentNo,
+    this.filterDocumentType,
+    this.filterDocumentStatus,
+    this.filterWarehouseFrom,
+    this.filterWarehouseTo,
   }){
     if(user!=null) setUser(user!);
   }
@@ -267,12 +281,7 @@ class MovementAndLines extends IdempiereMovement {
     return false;
   }
   bool  get canCancelMovement {
-    print('canDeleteMovement?');
     if(!hasMovement) return false;
-    print('hasMovementLines $hasMovementLines');
-    if(hasMovementLines) return false;
-    print('docStatus ${docStatus?.id}');
-    print('docStatus ${docStatus?.id} = ${Memory.IDEMPIERE_DOC_TYPE_DRAFT} ?');
 
     if(docStatus != null && docStatus!.id
         == Memory.IDEMPIERE_DOC_TYPE_DRAFT) {

@@ -16,7 +16,20 @@ import 'messages_dialog.dart';
 
 double get fontSizeMedium => themeFontSizeNormal;
 double get fontSizeLarge => themeFontSizeLarge;
+Future<String?> openInputDialogWithResultMultiLine(
+    BuildContext context,
+    WidgetRef ref,
+    bool history, {
+      required String title,
+      required String value,
+      required bool numberOnly,
+      required int maxLines,
+    }) async {
+        return openInputDialogWithResult(context, ref, history,
+            title: title, value: value,
+            numberOnly: numberOnly, maxLines: maxLines);
 
+    }
 
 Future<String?> openInputDialogWithResult(
     BuildContext context,
@@ -25,6 +38,7 @@ Future<String?> openInputDialogWithResult(
       required String title,
       required String value,
       required bool numberOnly,
+      int? maxLines = 1,
     }) async {
   final TextEditingController controller = TextEditingController();
   final FocusNode dialogFocusNode = FocusNode();
@@ -144,7 +158,7 @@ Future<String?> openInputDialogWithResult(
 
                                       return TextField(
                                         focusNode: dialogFocusNode,
-                                        maxLines: 3,
+                                        maxLines: maxLines,
                                         controller: controller,
                                         textAlign: TextAlign.center,
                                         style: TextStyle(
@@ -246,7 +260,7 @@ Future<String?> openInputDialogWithResult(
   );
 
   // ✅ Al cerrar: liberar foco + restaurar scanner
-  await Future.delayed(const Duration(milliseconds: 1000));
+  await Future.delayed(const Duration(milliseconds: 500));
   try {
     dialogFocusNode.unfocus();
     if(context.mounted)FocusScope.of(context).unfocus();
@@ -1133,6 +1147,7 @@ Widget numberButtonsNoProcessor(
     },
   );
 }*/
+
 Future<void> getDoubleDialog({
   required WidgetRef ref,
   required double quantity,
@@ -1145,11 +1160,13 @@ Future<void> getDoubleDialog({
   final context = ref.context;
 
   quantityController.text = quantity.toStringAsFixed(0);
+
   final int actualAction = ref.read(actionScanProvider);
   ref.read(actionScanProvider.notifier).state = Memory.ACTION_NO_SCAN_ACTION;
   ref.read(isDialogShowedProvider.notifier).state = true;
-  bool focusRequested = false;
 
+  bool focusRequested = false;
+  bool isClosing = false;
   try {
     await showModalBottomSheet(
       isDismissible: false,
@@ -1161,151 +1178,192 @@ Future<void> getDoubleDialog({
         borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
       ),
       builder: (ctx) {
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (!focusRequested && focusNodeQty.canRequestFocus){
-            focusNodeQty.requestFocus();
-            focusRequested = true;
-          }
-        });
+        // ✅ Consumer para que ref2.watch reactive el UI del bottomsheet
+        return Consumer(
+          builder: (context, ref2, _) {
+            final useScreenKeyBoard = ref2.watch(useScreenKeyboardProvider);
 
-        final useScreenKeyBoard = ref.watch(useScreenKeyboardProvider);
+            // ✅ Pedir foco solo cuando se usa teclado del sistema
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (isClosing) return;
+              if (!ctx.mounted) return;
+              if (!focusNodeQty.canRequestFocus) return;
+              if (!focusNodeQty.context!.mounted ?? true) return;
+              if (!useScreenKeyBoard &&
+                  !focusRequested &&
+                  focusNodeQty.canRequestFocus) {
+                focusNodeQty.requestFocus();
+                focusRequested = true;
+              }
+            });
 
-        return FractionallySizedBox(
-          heightFactor: 0.9,
-          child: Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: SingleChildScrollView(
-              child: Column(
-                spacing: 5,
-                children: [
-                  Text(
-                    Messages.QUANTITY_TO_MOVE,
-                    style: TextStyle(
-                      fontSize: fontSizeLarge,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 10.0),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: TextField(
-                            focusNode: focusNodeQty,
-                            controller: quantityController,
-                            textAlign: TextAlign.end,
-                            keyboardType: TextInputType.number,
-                            style: TextStyle(
-                              fontSize: fontSizeLarge,
-                              color: Colors.purple,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
-                        SizedBox(
-                          width: 60,
-                          child: IconButton(
-                            onPressed: () {
-                              final oldValue =
-                              ref.read(useScreenKeyboardProvider);
-                              ref
-                                  .read(useScreenKeyboardProvider.notifier)
-                                  .state = !oldValue;
-                            },
-                            icon: Icon(
-                              useScreenKeyBoard
-                                  ? Symbols.keyboard_off_rounded
-                                  : Symbols.keyboard_rounded,
-                              color: Colors.purple,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  numberButtonsNoProcessor(
-                    ref: ref,
-                    textController: quantityController,
-                    context: ctx,
-                    numberOnly: true,
-                  ),
-                  Row(
+            return FractionallySizedBox(
+              heightFactor: 0.9,
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: SingleChildScrollView(
+                  child: Column(
+                    spacing: 5,
                     children: [
-                      Expanded(
-                        child: OutlinedButton(
-                          style: OutlinedButton.styleFrom(
-                            foregroundColor: Colors.red,
-                          ),
-                          onPressed: () {
-                            FocusScope.of(ctx).unfocus(); // 👈 pierde foco
-                            ref.read(targetProvider.notifier).state = 0;
-                            ref.read(actionScanProvider.notifier).state =
-                                actualAction;
-                            ref.read(isDialogShowedProvider.notifier).state =
-                            false;
-                            Navigator.of(ctx).pop();
-                          },
-                          child: Text(Messages.CANCEL),
+                      Text(
+                        Messages.QUANTITY_TO_MOVE,
+                        style: TextStyle(
+                          fontSize: fontSizeLarge,
+                          fontWeight: FontWeight.bold,
                         ),
                       ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: ElevatedButton(
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.green,
-                            foregroundColor: Colors.white,
-                          ),
-                          onPressed: () {
-                            final txt = quantityController.text.trim();
-                            if (txt.isEmpty) {
-                              showErrorMessage(ctx, ref,
-                                  '${Messages.ERROR_QUANTITY} ${Messages.EMPTY}');
-                              return;
-                            }
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 10.0),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: TextField(
+                                focusNode: focusNodeQty,
+                                controller: quantityController,
+                                textAlign: TextAlign.end,
+                                keyboardType: TextInputType.number,
+                                style: TextStyle(
+                                  fontSize: fontSizeLarge,
+                                  color: Colors.purple,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                            SizedBox(
+                              width: 60,
+                              child: IconButton(
+                                onPressed: () {
+                                  final oldValue =
+                                  ref2.read(useScreenKeyboardProvider);
 
-                            final aux = double.tryParse(txt);
-                            if (aux != null && aux > 0) {
-                              if (aux <= qtyOnHand) {
-                                FocusScope.of(ctx).unfocus(); // 👈 pierde foco
-                                ref.read(targetProvider.notifier).state = aux;
-                                ref.read(actionScanProvider.notifier).state =
-                                    actualAction;
-                                ref.read(isDialogShowedProvider.notifier).state =
-                                false;
-                                Navigator.of(ctx).pop();
-                              } else {
-                                final msg =
-                                    '${Messages.ERROR_QUANTITY} ${Memory.numberFormatter0Digit.format(aux)} > ${Memory.numberFormatter0Digit.format(qtyOnHand)}';
-                                showErrorMessage(ctx, ref, msg);
-                                quantityController.text =
-                                    Memory.numberFormatter0Digit.format(qtyOnHand);
-                              }
-                            } else {
-                              showErrorMessage(
-                                  ctx,
-                                  ref,
-                                  '${Messages.ERROR_QUANTITY} '
-                                      '${aux == null ? Messages.EMPTY : txt}');
-                            }
-                          },
-                          child: Text(Messages.OK),
+                                  // Si se va a activar el teclado en pantalla,
+                                  // quitamos foco para esconder el teclado del sistema.
+                                  final newValue = !oldValue;
+                                  ref2
+                                      .read(useScreenKeyboardProvider.notifier)
+                                      .state = newValue;
+
+                                  if (newValue) {
+                                    FocusScope.of(ctx).unfocus();
+                                    focusRequested = false; // 👈 importante
+                                  } else {
+                                    // volveremos a pedir foco en el postFrame
+                                    focusRequested = false;
+                                  }
+                                },
+                                icon: Icon(
+                                  useScreenKeyBoard
+                                      ? Symbols.keyboard_off_rounded
+                                      : Symbols.keyboard_rounded,
+                                  color: Colors.purple,
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
+                      ),
+
+                      // ✅ Solo mostrar tu teclado “en pantalla” cuando está activo
+                      if (useScreenKeyBoard)
+                        numberButtonsNoProcessor(
+                          ref: ref2,
+                          textController: quantityController,
+                          context: ctx,
+                          numberOnly: true,
+                        ),
+
+                      Row(
+                        children: [
+                          Expanded(
+                            child: OutlinedButton(
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: Colors.red,
+                              ),
+                              onPressed: () {
+                                isClosing = true;
+                                FocusScope.of(ctx).unfocus();
+                                ref2.read(targetProvider.notifier).state = 0;
+                                ref2.read(actionScanProvider.notifier).state =
+                                    actualAction;
+                                ref2
+                                    .read(isDialogShowedProvider.notifier)
+                                    .state = false;
+                                Navigator.of(ctx).pop();
+                              },
+                              child: Text(Messages.CANCEL),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: ElevatedButton(
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.green,
+                                foregroundColor: Colors.white,
+                              ),
+                              onPressed: () {
+                                final txt = quantityController.text.trim();
+                                if (txt.isEmpty) {
+                                  showErrorMessage(
+                                    ctx,
+                                    ref2,
+                                    '${Messages.ERROR_QUANTITY} ${Messages.EMPTY}',
+                                  );
+                                  return;
+                                }
+
+                                final aux = double.tryParse(txt);
+                                if (aux != null && aux > 0) {
+                                  if (aux <= qtyOnHand) {
+                                    isClosing = true;
+                                    FocusScope.of(ctx).unfocus();
+                                    ref2
+                                        .read(targetProvider.notifier)
+                                        .state = aux;
+                                    ref2
+                                        .read(actionScanProvider.notifier)
+                                        .state = actualAction;
+                                    ref2
+                                        .read(isDialogShowedProvider.notifier)
+                                        .state = false;
+                                    Navigator.of(ctx).pop();
+                                  } else {
+                                    final msg =
+                                        '${Messages.ERROR_QUANTITY} ${Memory.numberFormatter0Digit.format(aux)} > ${Memory.numberFormatter0Digit.format(qtyOnHand)}';
+                                    showErrorMessage(ctx, ref2, msg);
+                                    quantityController.text =
+                                        Memory.numberFormatter0Digit
+                                            .format(qtyOnHand);
+                                  }
+                                } else {
+                                  showErrorMessage(
+                                    ctx,
+                                    ref2,
+                                    '${Messages.ERROR_QUANTITY} '
+                                        '${aux == null ? Messages.EMPTY : txt}',
+                                  );
+                                }
+                              },
+                              child: Text(Messages.OK),
+                            ),
+                          ),
+                        ],
                       ),
                     ],
                   ),
-                ],
+                ),
               ),
-            ),
-          ),
+            );
+          },
         );
       },
     );
   } finally {
-    await Future.delayed(const Duration(milliseconds: 100));
+    await Future.delayed(const Duration(milliseconds: 500));
     focusNodeQty.dispose();
     quantityController.dispose();
   }
 }
+
 
 
 void addQuantityText(BuildContext context, WidgetRef ref,

@@ -9,18 +9,19 @@ import '../../../shared/data/messages.dart';
 import '../../presentation/providers/common_provider.dart';
 import '../time_utils.dart';
 
-class MovementDateFilterRow extends ConsumerWidget {
+class DateFilterRowPanel extends ConsumerWidget {
   final bool orientationUpper;
 
-  const MovementDateFilterRow({
+  const DateFilterRowPanel({
     super.key,
     required this.onOk,
+    required this.onScanButtonPressed,
     this.orientationUpper = true,
   });
 
   /// Agora o callback recebe `String inOut` em vez de `bool?`
   final void Function(DateTime date, String inOut) onOk;
-
+  final VoidCallback? onScanButtonPressed;
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final selectedDate = ref.watch(selectedDateProvider);
@@ -75,7 +76,10 @@ class MovementDateFilterRow extends ConsumerWidget {
         ),
         OutlinedButton(
           onPressed: () {
-            context.go('${AppRouter.PAGE_MOVEMENTS_EDIT}/-1/-1');
+            if (onScanButtonPressed != null) {
+              onScanButtonPressed!();
+            }
+
           },
           style: OutlinedButton.styleFrom(
             foregroundColor: Colors.white,
@@ -105,18 +109,6 @@ class MovementDateFilterRow extends ConsumerWidget {
             },
           ),
         ),
-        /*OutlinedButton(
-          onPressed: () {
-            final date = ref.read(selectedDateProvider);
-            final inOut = ref.read(inOutFilterProvider);
-            onOk(date, inOut);
-          },
-          style: OutlinedButton.styleFrom(
-            visualDensity: VisualDensity.compact,
-            backgroundColor: Colors.white,
-          ),
-          child: const Icon(Icons.refresh, color: Colors.purple),
-        ),*/
       ],
     );
 

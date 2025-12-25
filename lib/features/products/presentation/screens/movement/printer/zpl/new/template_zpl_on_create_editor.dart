@@ -5,6 +5,7 @@ import 'package:monalisa_app_001/features/products/presentation/screens/movement
 import 'package:monalisa_app_001/features/products/presentation/screens/movement/printer/zpl/new/template_zpl_store.dart';
 import 'package:monalisa_app_001/features/products/presentation/screens/movement/printer/zpl/new/template_zpl_utils.dart';
 
+import '../../../../../../../auth/presentation/providers/auth_provider.dart';
 import '../../../../../../common/messages_dialog.dart';
 import '../../../../../../common/widget_utils.dart';
 import '../../../provider/new_movement_provider.dart';
@@ -24,8 +25,8 @@ Future<ZplTemplate?> showZplTemplateEditorDialogMode({
   final nameCtrl = TextEditingController(
     text: initial?.templateFileName ??
         (mode == ZplTemplateMode.movement
-            ? 'E:MOVEMENT_BY_CATEGORY_TEMPLATE.ZPL'
-            : 'E:TEMPLATE.ZPL'),
+            ? 'MOV_CAT1.ZPL'
+            : 'TEMPLATE.ZPL'),
   );
 
   final dfCtrl = TextEditingController(text: initial?.zplTemplateDf ?? '');
@@ -45,8 +46,8 @@ Future<ZplTemplate?> showZplTemplateEditorDialogMode({
   void loadExampleForMode() {
     final file = nameCtrl.text.trim().isEmpty
         ? (mode == ZplTemplateMode.movement
-        ? 'E:MOVEMENT_BY_CATEGORY_TEMPLATE.ZPL'
-        : 'E:TEMPLATE.ZPL')
+        ? 'MOV_CAT1.ZPL'
+        : 'TEMPLATE.ZPL')
         : nameCtrl.text.trim();
 
     if (nameCtrl.text.trim().isEmpty) {
@@ -58,7 +59,7 @@ Future<ZplTemplate?> showZplTemplateEditorDialogMode({
       dfCtrl.text = '''
 ^XA
 
-^DFE:MOVEMENT_BY_CATEGORY_TEMPLATE.ZPL^FS
+^DFE:MOV_CAT1.ZPL^FS
 ^CI28
 ^PW800
 ^LL1200
@@ -148,7 +149,7 @@ Future<ZplTemplate?> showZplTemplateEditorDialogMode({
 ^CI28
 ^XFE:${stripDrive(file)}^FS
 
-^FN1^FD__DOCUMENT_NUMBER^FS
+^FN1^FDLA,__DOCUMENT_NUMBER^FS
 ^FN2^FD__DOCUMENT_NUMBER^FS
 ^FN3^FD__DATE^FS
 ^FN4^FD__STATUS^FS
@@ -251,7 +252,6 @@ Future<ZplTemplate?> showZplTemplateEditorDialogMode({
     }
 
     final movementAndLines = ref.read(movementAndLinesProvider);
-
     final temp = (initial ??
         ZplTemplate(
           id: 'TEMP',
@@ -292,6 +292,7 @@ Future<ZplTemplate?> showZplTemplateEditorDialogMode({
     required int rows,
   }) async {
     final movementAndLines = ref.read(movementAndLinesProvider);
+    String userName = ref.read(authProvider).userName ?? '';
 
     final temp = (initial ??
         ZplTemplate(
@@ -480,6 +481,7 @@ Future<ZplTemplate?> showZplTemplateEditorDialogMode({
                             ElevatedButton.icon(
                               onPressed: () async {
                                 final token = await showZplTokenPickerSheet(
+                                  ref: ref,
                                   context: context,
                                   mode: mode,
                                   rowsPerLabel: rows,

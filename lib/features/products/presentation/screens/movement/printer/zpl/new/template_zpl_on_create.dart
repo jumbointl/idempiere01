@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:monalisa_app_001/features/auth/presentation/providers/auth_provider.dart';
 import 'package:monalisa_app_001/features/products/presentation/providers/product_provider_common.dart';
 import 'package:monalisa_app_001/features/products/presentation/screens/movement/printer/zpl/new/template_zpl_on_create_editor_sheet.dart';
 import 'package:monalisa_app_001/features/shared/data/messages.dart';
 
+import '../../../../../../../shared/data/memory.dart';
 import '../../../../../../common/messages_dialog.dart';
+import '../../../../../providers/common_provider.dart';
 import '../../../provider/new_movement_provider.dart';
 import '../../printer_scan_notifier.dart';
 import 'template_zpl_models.dart';
@@ -23,11 +26,7 @@ Future<void> showCreateZplTemplateDialog({
     ref: ref,
     store: store,
   );
-  /*await showDialog<void>(
-    context: context,
-    barrierDismissible: false,
-    builder: (_) => _ManageTemplatesDialog(ref: ref, store: store),
-  );*/
+  
 }
 Future<void> showManageZplTemplatesSheet({
   required BuildContext context,
@@ -35,6 +34,8 @@ Future<void> showManageZplTemplatesSheet({
   required ZplTemplateStore store,
 }) async {
   await showModalBottomSheet(
+    isDismissible: false,
+    enableDrag: false,
     context: context,
     isScrollControlled: true,
     showDragHandle: true,
@@ -44,11 +45,25 @@ Future<void> showManageZplTemplatesSheet({
     ),
     builder: (ctx) {
       final height = MediaQuery.of(ctx).size.height * 0.90;
-
-      return SizedBox(
-        height: height,
-        width: double.infinity,
-        child: _ManageTemplatesSheet(ref: ref, store: store),
+      int actualAction = ref.read(actionScanProvider);
+      ref.read(actionScanProvider.notifier).state = Memory.ACTION_NO_SCAN_ACTION;
+      ref.read(isDialogShowedProvider.notifier).state = true;
+      return PopScope(
+        canPop: false,
+        onPopInvokedWithResult: (bool didPop, Object? result) async {
+          if (didPop) {
+            return;
+          }
+          ref.read(enableScannerKeyboardProvider.notifier).state = true;
+          ref.read(isDialogShowedProvider.notifier).state = false;
+          ref.read(actionScanProvider.notifier).state = actualAction;
+          Navigator.pop(context, null);
+        },
+        child: SizedBox(
+          height: height,
+          width: double.infinity,
+          child: _ManageTemplatesSheet(ref: ref, store: store),
+        ),
       );
     },
   );
@@ -67,15 +82,23 @@ class _ManageTemplatesSheet extends ConsumerStatefulWidget {
 class _ManageTemplatesSheetState extends ConsumerState<_ManageTemplatesSheet> {
   late List<ZplTemplate> items;
 
+
+  late int actualAction;
+
   @override
   void initState() {
     super.initState();
     items = widget.store.loadAll();
     ref.read(isDialogShowedProvider.notifier).state = true;
+    actualAction = ref.read(actionScanProvider);
+    ref.read(actionScanProvider.notifier).state = Memory.ACTION_NO_SCAN_ACTION;
   }
   @override
   dispose() {
     ref.read(isDialogShowedProvider.notifier).state = false;
+    ref.read(actionScanProvider.notifier).state = actualAction;
+    ref.read(enableScannerKeyboardProvider.notifier).state = true;
+
     super.dispose();
   }
 
@@ -105,7 +128,12 @@ class _ManageTemplatesSheetState extends ConsumerState<_ManageTemplatesSheet> {
               IconButton(
                 tooltip: 'Cerrar',
                 icon: const Icon(Icons.close),
-                onPressed: () => Navigator.pop(context),
+                onPressed: () {
+                    ref.read(enableScannerKeyboardProvider.notifier).state = true;
+                    ref.read(isDialogShowedProvider.notifier).state = false;
+                    ref.read(actionScanProvider.notifier).state = actualAction;
+                    Navigator.pop(context);
+                } ,
               ),
             ],
           ),
@@ -361,7 +389,12 @@ class _ManageTemplatesSheetState extends ConsumerState<_ManageTemplatesSheet> {
           child: Row(
             children: [
               TextButton(
-                onPressed: () => Navigator.pop(context),
+                onPressed: () {
+                  ref.read(enableScannerKeyboardProvider.notifier).state = true;
+                  ref.read(isDialogShowedProvider.notifier).state = false;
+                  ref.read(actionScanProvider.notifier).state = actualAction;
+                  Navigator.pop(context);
+                },
                 child: const Text('Cerrar'),
               ),
               const Spacer(),

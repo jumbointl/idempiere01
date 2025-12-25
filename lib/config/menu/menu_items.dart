@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:material_symbols_icons/symbols.dart';
 
 import '../../features/products/presentation/screens/store_on_hand/product_store_on_hand_screen.dart';
 import '../../features/shared/data/messages.dart';
@@ -52,6 +53,13 @@ var appHomeOptionCol1Items = <MenuItem>[
       subTitle: '',
       link: '/mInOut/pickconfirm',
       icon: Icons.upload,
+    ),
+  if (RolesApp.appShipmentconfirm)
+    MenuItem(
+      title: 'InOut Conf Generate',
+      subTitle: '',
+      link: AppRouter.PAGE_M_IN_OUT_LIST_SCREEN,
+      icon: Symbols.event_list,
     ),
   if (RolesApp.canUpdateProductUPC)
   MenuItem(
@@ -120,17 +128,17 @@ final appHomeOptionCol3Items = <MenuItem>[
   ),
   if (RolesApp.canCreateMovementInSameWarehouse)
     MenuItem(
-      title: 'Move create same ware.',
+      title: ' PutAway',
       subTitle: '',
       link: '${AppRouter.PAGE_PRODUCT_STORE_ON_HAND}/-1/movementInSameWarehouse',
-      icon: Icons.inventory,
+      icon: Icons.arrow_forward,
     ),
   if (RolesApp.canCreateMovementInSameOrganization)
   MenuItem(
-    title: 'Move create diff ware',
+    title: 'Replenish',
     subTitle: '',
     link: '${AppRouter.PAGE_PRODUCT_STORE_ON_HAND}/-1',
-    icon: Icons.inventory,
+    icon: Icons.arrow_forward,
   ),
   if (RolesApp.showProductSearchScreen)
     MenuItem(
@@ -141,10 +149,10 @@ final appHomeOptionCol3Items = <MenuItem>[
     ),
   if (RolesApp.canCreateDeliveryNote)
   MenuItem(
-    title: Messages.TITLE_DELIVERY_CREATE,
+    title: 'Delivery Note Fiscal',
     subTitle: '',
     link: '${AppRouter.PAGE_PRODUCT_STORE_ON_HAND}/${ProductStoreOnHandScreen.MOVEMENT_DELIVERY_NOTE}',
-    icon: Icons.inventory,
+    icon: Icons.arrow_forward,
   ),
 
 

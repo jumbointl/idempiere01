@@ -76,7 +76,7 @@ String buildZpl100x150NoLogoAll({
 
       sb.writeln('^FO$qrX,$qrY');
       sb.writeln('^BQN,2,8');
-      sb.writeln('^FDLA,$qrData^FS');
+      sb.writeln('^FD$qrData^FS');
 
       final int textX = marginX + qrSize + gap;
       final int textWidth = usableWidth - qrSize - gap;
@@ -260,7 +260,7 @@ String buildZpl100x150NoLogoAll({
 
     sb.writeln('^FO$qrX,$qrY');
     sb.writeln('^BQN,2,8');
-    sb.writeln('^FDLA,$qrData^FS');
+    sb.writeln('^FD$qrData^FS');
 
     final int textX = marginX + qrSize + gap;
     final int textWidth = usableWidth - qrSize - gap;

@@ -486,14 +486,14 @@ Future<void> showCreateShipmentConfirmModalBottomSheet({
 
                              if(result!=null && result.success == true) {
                                 if (ctx.mounted && Navigator.of(ctx).canPop()) {
-                                Navigator.of(
-                                  ctx).pop();
-                                await onResultSuccess();
-                              }
-
-                            }
-
-
+                                  Navigator.of(ctx).pop();
+                                  await onResultSuccess();
+                                }
+                             } else {
+                                if (ctx.mounted && Navigator.of(ctx).canPop()) {
+                                  Navigator.of(ctx).pop();
+                                }
+                             }
                           },
                           child: Text(Messages.CANCEL),
                         ),
@@ -652,6 +652,11 @@ Future<void> showCreatePickConfirmModalBottomSheet({
                                 await onResultSuccess();
                               }
 
+                            } else {
+                              if (ctx.mounted && Navigator.of(ctx).canPop()) {
+                                Navigator.of(
+                                    ctx).pop();
+                              }
                             }
 
 

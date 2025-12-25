@@ -1,9 +1,12 @@
 
 import 'package:dio/dio.dart';
+import 'package:flutter/src/material/date.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:monalisa_app_001/features/m_inout/domain/entities/line_confirm.dart';
 import 'package:monalisa_app_001/features/m_inout/domain/entities/locate.dart';
+import 'package:monalisa_app_001/features/m_inout/presentation/providers/m_in_out_list_provider.dart';
+import 'package:monalisa_app_001/features/products/presentation/screens/movement/provider/new_movement_provider.dart';
 import 'package:monalisa_app_001/features/shared/domain/entities/model_crud.dart';
 import 'package:monalisa_app_001/features/shared/domain/entities/model_crud_request.dart';
 import 'package:monalisa_app_001/features/shared/domain/entities/response_api.dart';
@@ -13,6 +16,7 @@ import 'package:monalisa_app_001/features/shared/domain/entities/standard_respon
 
 import '../../../../config/config.dart';
 import '../../../auth/presentation/providers/auth_provider.dart';
+import '../../../products/domain/models/m_in_out_list_type.dart';
 import '../../../shared/domain/entities/ad_login_request.dart';
 import '../../../shared/domain/entities/field_crud.dart';
 import '../../../shared/domain/entities/model_set_doc_action.dart';
@@ -77,7 +81,7 @@ class MInOutDataSourceImpl implements MInOutDataSource {
     final String confirmType =
         mInOutState.mInOutType == MInOutType.receiptConfirm ||
                 mInOutState.mInOutType == MInOutType.shipmentConfirm
-            ? "%20AND%20ConfirmType%20neq%20'PC'"
+            ? "%20AND%20ConfirmType%20neq%20'SC'"
             : mInOutState.mInOutType == MInOutType.pickConfirm ||
                     mInOutState.mInOutType == MInOutType.qaConfirm
                 ? "%20AND%20ConfirmType%20eq%20'PC'"
@@ -807,6 +811,118 @@ class MInOutDataSourceImpl implements MInOutDataSource {
       } else {
         throw Exception(
             'Error al cargar los datos de la línea ${line.line}: ${response.statusCode}');
+      }
+    } on DioException catch (e) {
+      final authDataNotifier = ref.read(authProvider.notifier);
+      throw CustomErrorDioException(e, authDataNotifier);
+    } catch (e) {
+      throw Exception(e.toString());
+    }
+  }
+
+  @override
+  Future getMInOutListByDateRange({required WidgetRef ref, required DateTimeRange<DateTime> dates, required String inOut}) async{
+    await _dioInitialized;
+    final mInOutState = ref.watch(mInOutProvider);
+    final int warehouseID = ref.read(authProvider).selectedWarehouse!.id;
+    String filterEndDate = '';
+    String endDate = dates.end.toString().substring(0,10);
+    if(endDate.isNotEmpty){
+      filterEndDate = 'AND MovementDate le $endDate ';
+    }
+    String filterStartDate = '';
+    String startDate = dates.start.toString().substring(0,10);
+    if(startDate.isNotEmpty){
+      filterStartDate = 'AND MovementDate ge $startDate ';
+    }
+    String docStatus = ref.read(documentTypeListMInOutFilterProvider);
+    String filterInOut = '';
+
+    switch (inOut) {
+      case MInOutListTypeX.ALL:
+        filterInOut = '';
+        break;
+
+      case MInOutListTypeX.SHIPPING:
+        filterInOut = 'IsSOTrx%20eq%20true%20AND%20';
+        break;
+
+      case MInOutListTypeX.RECEIVE:
+        filterInOut = 'IsSOTrx%20eq%20false%20AND%20';
+        break;
+    }
+
+
+
+    try {
+      String url =
+          "/api/v1/models/m_inout?\$filter=${filterInOut}M_Warehouse_ID%20eq%20$warehouseID%20AND%20(DocStatus%20eq%20'$docStatus')";
+      //    "/api/v1/models/m_inout?\$filter=IsSOTrx%20eq%20${mInOutState.isSOTrx}%20AND%20M_Warehouse_ID%20eq%20$warehouseID%20AND%20(DocStatus%20eq%20'DR'%20OR%20DocStatus%20eq%20'IP')";
+      url = '$url $filterStartDate$filterEndDate'.trim();
+      url = url.replaceAll(' ','%20');
+      print(url);
+      final response = await dio.get(url);
+      if (response.statusCode == 200) {
+        final responseApi =
+        ResponseApi<MInOut>.fromJson(response.data, MInOut.fromJson);
+
+        if (responseApi.records != null && responseApi.records!.isNotEmpty) {
+          final mInOutList = responseApi.records!;
+          return mInOutList;
+        } else {
+          return <MInOut>[];
+        }
+      } else {
+        throw Exception(
+            'Error al obtener la lista de ${mInOutState.title}: ${response.statusCode}');
+      }
+    } on DioException catch (e) {
+      final authDataNotifier = ref.read(authProvider.notifier);
+      throw CustomErrorDioException(e, authDataNotifier);
+    } catch (e) {
+      print(e.toString());
+      throw Exception(e.toString());
+    }
+  }
+
+  @override
+  Future getMovementListByDateRange({required WidgetRef ref, required DateTimeRange<DateTime> dates, required String inOut}) async {
+    await _dioInitialized;
+    final int warehouseID = ref.read(authProvider).selectedWarehouse!.id;
+    final mInOutState = ref.watch(mInOutProvider);
+    String docStatus = ref.read(documentTypeListMInOutFilterProvider);
+    try {
+      String url =
+          "/api/v1/models/m_movement?\$filter=(M_Warehouse_ID%20eq%20$warehouseID%20OR%20M_Warehouse_ID%20eq%20null)%20AND%20(DocStatus%20eq%20'$docStatus')";
+      //    "/api/v1/models/m_movement?\$filter=(M_Warehouse_ID%20eq%20$warehouseID%20OR%20M_Warehouse_ID%20eq%20null)%20AND%20(DocStatus%20eq%20'DR'%20OR%20DocStatus%20eq%20'IP')";
+      String filterEndDate = '';
+      String endDate = dates.end.toString().substring(0,10);
+      if(endDate.isNotEmpty){
+        filterEndDate = 'AND MovementDate le $endDate ';
+      }
+      String filterStartDate = '';
+      String startDate = dates.start.toString().substring(0,10);
+      if(startDate.isNotEmpty){
+          filterStartDate = 'AND MovementDate ge $startDate ';
+      }
+      url = '$url $filterStartDate$filterEndDate'.trim();
+      url = url.replaceAll(' ','%20');
+      print(url);
+      final response = await dio.get(url);
+
+      if (response.statusCode == 200) {
+        final responseApi =
+        ResponseApi<MInOut>.fromJson(response.data, MInOut.fromJson);
+
+        if (responseApi.records != null && responseApi.records!.isNotEmpty) {
+          final mInOutList = responseApi.records!;
+          return mInOutList;
+        } else {
+          return <MInOut>[];
+        }
+      } else {
+        throw Exception(
+            'Error al obtener la lista de ${mInOutState.title}: ${response.statusCode}');
       }
     } on DioException catch (e) {
       final authDataNotifier = ref.read(authProvider.notifier);

@@ -1,3 +1,4 @@
+import 'package:flutter/src/material/date.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:monalisa_app_001/features/m_inout/domain/entities/line_confirm.dart';
 import 'package:monalisa_app_001/features/m_inout/domain/entities/m_in_out.dart';
@@ -98,5 +99,15 @@ class MInOutRepositoryImpl implements MInOutRepository {
   @override
   Future<bool> updateLocator(Line line, WidgetRef ref) {
     return dataSource.updateLocator(line, ref);
+  }
+
+  @override
+  Future getMInOutListByDateRange({required WidgetRef ref, required DateTimeRange<DateTime> dates, required String inOut}) {
+    return dataSource.getMInOutListByDateRange(ref:ref, dates:dates, inOut:inOut);
+  }
+
+  @override
+  Future getMovementListByDateRange(WidgetRef ref, {required DateTimeRange<DateTime> dates, required String inOut}) {
+    return dataSource.getMovementListByDateRange(ref:ref, dates:dates, inOut:inOut);
   }
 }

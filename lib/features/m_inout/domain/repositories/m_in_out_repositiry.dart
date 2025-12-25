@@ -1,3 +1,4 @@
+import 'package:flutter/src/material/date.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../entities/line.dart';
@@ -22,4 +23,10 @@ abstract class MInOutRepository {
   Future<LineConfirm> updateLineConfirm(Line line, WidgetRef ref);
   Future<int> getLocator(String value, WidgetRef ref);
   Future<bool> updateLocator(Line line, WidgetRef ref);
+
+  Future getMovementListByDateRange(WidgetRef ref, {required DateTimeRange<DateTime> dates,
+  required String inOut});
+
+  Future getMInOutListByDateRange({required WidgetRef ref, required DateTimeRange<DateTime> dates,
+    required String inOut}) async {}
 }

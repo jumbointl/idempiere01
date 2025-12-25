@@ -8,6 +8,7 @@ import 'package:image/image.dart' as img;
 import 'package:monalisa_app_001/features/products/presentation/screens/movement/printer/zpl/template/tspl_label_printer.dart';
 import 'package:monalisa_app_001/features/products/presentation/screens/movement/printer/zpl/zpl_print_widget.dart';
 
+import '../../../../../../auth/presentation/providers/auth_provider.dart';
 import '../../../../../common/messages_dialog.dart';
 import '../../../../../domain/idempiere/idempiere_movement_line.dart';
 import '../../../../../domain/idempiere/movement_and_lines.dart';
@@ -15,6 +16,7 @@ import '../pos_image_utility.dart';
 import '../printer_scan_notifier.dart';
 import 'label_utils.dart';
 import 'new/template_zpl_models.dart';
+import 'new/template_zpl_on_create_editor_sheet.dart';
 import 'new/template_zpl_store.dart';
 import 'new/template_zpl_utils.dart';
 import 'zpl_print_profile_providers.dart';
@@ -339,8 +341,167 @@ Future<void> printZplDirectOrConfigure(
       .loadAll()
       .where((t) => t.mode == ZplTemplateMode.movement)
       .toList();
+  if(movementTemplates.isEmpty) {
 
-  if (movementTemplates.isNotEmpty) {
+    ZplTemplate newTemplate = defaultZplMovementTemplate;
+    if (newTemplate.zplReferenceTxt.isNotEmpty) {
+      final missing = validateMissingTokens(
+          template: newTemplate, referenceTxt: newTemplate.zplReferenceTxt);
+      if (missing.isEmpty) {
+        await printReferenceBySocket(
+          ip: ip,
+          port: port,
+          template: newTemplate,
+          movementAndLines: movementAndLines,
+        );
+        return; // ✅ ya imprimió con template
+      }
+    }
+
+  } else {
+    ZplTemplate chosen;
+
+    // Elegir default si existe
+    final defaults = movementTemplates.where((t) => t.isDefault).toList();
+    if (defaults.isNotEmpty) {
+      chosen = defaults.first;
+    } else {
+      chosen = movementTemplates.first;
+    }
+
+    // ✅ Si hay 1 solo y no está default => marcarlo default
+    if (movementTemplates.length == 1 && chosen.isDefault == false) {
+      final updated = chosen.copyWith(isDefault: true);
+      await store.upsert(updated);
+      chosen = updated;
+    }
+
+    // Debe tener Reference
+    final referenceTxt = chosen.zplReferenceTxt.trim();
+
+    if (referenceTxt.isNotEmpty) {
+      print(referenceTxt);
+      final missing = validateMissingTokens(
+          template: chosen, referenceTxt: referenceTxt);
+      if (missing.isEmpty) {
+        await printReferenceBySocket(
+          ip: ip,
+          port: port,
+          template: chosen,
+          movementAndLines: movementAndLines,
+        );
+        return; // ✅ ya imprimió con template
+      }
+    }
+  }
+
+  // ============================================================
+  // ✅ 1) Si no hay template movement guardado, seguir flujo actual
+  // ============================================================
+
+  // ===== 0) Leer tipo guardado o pedirlo =====
+  ZplLabelType? labelType =
+  zplLabelTypeFromStorage(box.read<String>(kZplLabelTypeKey));
+
+  if (labelType == null && ref.context.mounted) {
+    labelType = await showZplLabelTypeSheet(ref.context);
+    if (labelType == null) return; // canceló
+  }
+
+  // ===== 1) Perfil =====
+  ZplPrintProfile? profile = loadActiveOrFirstProfile();
+
+  if (profile == null) {
+    if(ref.context.mounted) {
+      await showZplPrintProfilesSheet(ref.context, ref);
+    }
+
+    profile = loadActiveOrFirstProfile();
+    if (profile == null) return;
+  }
+
+  final int rows = profile.rowsPerLabel < 4 ? 4 : profile.rowsPerLabel;
+  final int my = profile.marginY > 40 ? profile.marginY : 40;
+  if (labelType == null) return;
+  // ===== 2) Imprimir según tipo =====
+  switch (labelType) {
+    case ZplLabelType.movementDetail:
+      await printLabelZplMovementByProduct100x150NoLogo(
+        ip: ip,
+        port: port,
+        movementAndLines: movementAndLines,
+        rowsPerLabel: rows <8 ? 8:rows,
+        marginX: profile.marginX,
+        marginY: my, ref: ref,
+      );
+      break;
+
+    case ZplLabelType.movementByCategory:
+      await printLabelZplMovementSortedByCategory100x150NoLogo(
+        ip: ip,
+        port: port,
+        movementAndLines: movementAndLines,
+        rowsPerLabel: rows,
+        marginX: profile.marginX,
+        marginY: my, ref: ref,
+      );
+      break;
+  }
+}
+/*Future<void> printZplDirectOrConfigure(
+    WidgetRef ref,
+    MovementAndLines movementAndLines,
+    ) async {
+  final state = ref.read(printerScanProvider);
+
+  final ip = state.ipController.text.trim();
+  final port = int.tryParse(state.portController.text.trim()) ?? 0;
+
+  if (ip.isEmpty || port == 0) {
+    showWarningMessage(ref.context, ref, 'IP/PORT inválido');
+    return;
+  }
+
+  // ============================================================
+  // ✅ 0) Intentar primero: template guardado (mode=movement)
+  // ============================================================
+  final box = GetStorage();
+  final store = ZplTemplateStore(box);
+
+  // Normaliza por si hay más de 1 default
+  await store.normalizeDefaults();
+
+  final movementTemplates = store
+      .loadAll()
+      .where((t) => t.mode == ZplTemplateMode.movement)
+      .toList();
+  if(movementTemplates.isEmpty) {
+
+    ZplTemplate newTemplate = ZplTemplate(
+      id:'',
+      isDefault: false,
+      zplReferenceTxt: referenceTxtOfMovementByCategoryNoTemplateTxt,
+      zplTemplateDf: '',
+      mode: ZplTemplateMode.movement,
+      rowPerpage: 8,
+      createdAt: DateTime.now(),
+      templateFileName: '',
+    );
+    if (newTemplate.zplReferenceTxt.isNotEmpty) {
+      final missing = validateMissingTokens(
+          template: newTemplate, referenceTxt: newTemplate.zplReferenceTxt);
+      if (missing.isEmpty) {
+        await printReferenceBySocket(
+          ip: ip,
+          port: port,
+          template: newTemplate,
+          movementAndLines: movementAndLines,
+        );
+        return; // ✅ ya imprimió con template
+      }
+    }
+
+  } else {
     ZplTemplate chosen;
 
     // Elegir default si existe
@@ -427,7 +588,7 @@ Future<void> printZplDirectOrConfigure(
       );
       break;
   }
-}
+}*/
 
 
 Future<void> printTsplDirectOrConfigure(WidgetRef ref,
@@ -547,7 +708,7 @@ Future<void> printLabelZplMovementDetail100x150NoLogo({
     // QR
     sb.writeln('^FO$qrX,$qrY');
     sb.writeln('^BQN,2,8'); // ajusta 7..9 si quieres
-    sb.writeln('^FDLA,$qrData^FS');
+    sb.writeln('^FD$qrData^FS');
 
     // Texto a la derecha del QR dentro de ancho usable
     final int textX = marginX + qrSize + gap;
@@ -882,7 +1043,7 @@ Future<void> printLabelZplMovementSortedByCategory100x150NoLogo({
 
       sb.writeln('^FO$qrX,$qrY');
       sb.writeln('^BQN,2,8');
-      sb.writeln('^FDLA,$qrData^FS');
+      sb.writeln('^FD$qrData^FS');
 
       final int textX = marginX + qrSize + gap;
       final int textWidth = usableWidth - qrSize - gap;
@@ -1214,7 +1375,7 @@ Future<void> printLabelZplMovementByProduct100x150NoLogo({
       sb
         ..writeln('^FO$marginX,$marginY')
         ..writeln('^BQN,2,8')
-        ..writeln('^FDLA,$qrData^FS');
+        ..writeln('^FD$qrData^FS');
 
       final int textX = marginX + qrSize + gap;
       final int textWidth = usableWidth - qrSize - gap;

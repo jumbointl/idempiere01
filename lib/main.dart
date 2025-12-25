@@ -26,10 +26,6 @@ class MainApp extends ConsumerWidget {
     final appRouter = ref.watch(goRouterProvider);
     Memory.setImageSize(context);
     return MaterialApp.router(
-      /*routeInformationProvider: appRouter.routeInformationProvider,
-      routeInformationParser: appRouter.routeInformationParser,
-      routerDelegate: appRouter.routerDelegate,
-      backButtonDispatcher: RootBackButtonDispatcher(),*/
       routerConfig: appRouter,
       theme: AppTheme().getTheme(),
       debugShowCheckedModeBanner: false,

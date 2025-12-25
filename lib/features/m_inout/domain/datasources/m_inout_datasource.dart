@@ -1,3 +1,4 @@
+import 'package:flutter/src/material/date.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:monalisa_app_001/features/m_inout/domain/entities/line_confirm.dart';
 import 'package:monalisa_app_001/features/m_inout/domain/entities/m_in_out.dart';
@@ -22,4 +23,10 @@ abstract class MInOutDataSource {
   Future<LineConfirm> updateLineConfirm(Line line, WidgetRef ref);
   Future<int> getLocator(String value, WidgetRef ref);
   Future<bool> updateLocator(Line line, WidgetRef ref);
+
+  Future getMInOutListByDateRange({required WidgetRef ref, required DateTimeRange<DateTime> dates
+    , required String inOut});
+
+  Future getMovementListByDateRange({required WidgetRef ref, required DateTimeRange<DateTime> dates
+    , required String inOut});
 }

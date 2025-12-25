@@ -19,7 +19,9 @@ import '../../../../../shared/data/messages.dart';
 import '../../../../common/async_value_consumer_simple_state.dart';
 import '../../../../common/messages_dialog.dart';
 import '../../../../common/time_utils.dart';
-import '../../../../common/widget/movement_date_filter_row.dart';
+import '../../../../common/widget/date_filter_row_panel.dart';
+import '../../../../common/widget/date_range_filter_row_panel.dart';
+import '../../../../domain/idempiere/movement_and_lines.dart';
 import '../../../../domain/idempiere/response_async_value.dart';
 import '../../../providers/common_provider.dart';
 import '../../../providers/persitent_provider.dart';
@@ -53,9 +55,9 @@ class MovementListScreenState extends AsyncValueConsumerSimpleState<MovementList
   @override
   void executeAfterShown() {
     ref.read(isScanningProvider.notifier).update((state) => false);
-    final date = ref.read(selectedDateProvider);
-    final isIn = ref.read(inOutFilterProvider);
-    findMovementAfterDate(date, inOut: isIn);
+    final dates = ref.read(selectedDatesProvider);
+    final inOut = ref.read(inOutFilterProvider);
+    findMovementAfterDates(dates, inOut: inOut);
     ref.read(pageFromProvider.notifier).state = 1 ;
   }
 
@@ -78,10 +80,18 @@ class MovementListScreenState extends AsyncValueConsumerSimpleState<MovementList
 
      return Column(
        children: [
-         MovementDateFilterRow(
+         DateRangeFilterRowPanel(
+             selectedDatesProvider: selectedDatesProvider,
+             values: ['ALL', 'IN', 'OUT', 'SWAP'],
              onOk: (date, inOut) {
-           findMovementAfterDate(date, inOut: inOut);
-         },),
+             findMovementAfterDates(date, inOut: inOut);
+
+         },
+             onScanButtonPressed: () {
+               context.go('${AppRouter.PAGE_MOVEMENTS_EDIT}/-1/-1');
+             }
+
+         ),
          mainDataAsync.when(
           data: (ResponseAsyncValue response) {
 
@@ -403,38 +413,6 @@ class MovementListScreenState extends AsyncValueConsumerSimpleState<MovementList
 
   }
 
-  @override
-  void addQuantityText(BuildContext context, WidgetRef ref,
-      TextEditingController quantityController,int quantity) {
-    if(quantity==-1){
-      quantityController.text = '';
-      return;
-    }
-    String s =  quantityController.text;
-    String s1 = s;
-    String s2 ='';
-    if(s.contains('.')) {
-      s1 = s.split('.').first;
-      s2 = s.split('.').last;
-    }
-
-    String r ='';
-    if(s.contains('.')){
-      r='$s1$quantity.$s2';
-    } else {
-      r='$s1$quantity';
-    }
-
-    int? aux = int.tryParse(r);
-    if(aux==null || aux<=0){
-      String message =  '${Messages.ERROR_QUANTITY} $quantity';
-      showErrorMessage(context, ref, message);
-      return;
-    }
-    quantityController.text = aux.toString();
-
-  }
-
 
  /* @override
   BottomAppBar getBottomAppBar(BuildContext context, WidgetRef ref) {
@@ -464,46 +442,96 @@ class MovementListScreenState extends AsyncValueConsumerSimpleState<MovementList
     }
 
   }
- @override
-  void findMovementAfterDate(DateTime date, {required String inOut}) {
-    String dateString = date.toString().substring(0,10);
+  void findMovementAfterDates(DateTimeRange dates, {required String inOut}) {
+    String startDateString = dates.start.toString().substring(0,10);
+    String endDateString = dates.end.toString().substring(0,10);
     Memory.sqlUsersData.mWarehouseID ;
     IdempiereWarehouse warehouse =Memory.sqlUsersData.mWarehouseID!;
-    IdempiereMovement? movement = IdempiereMovement(
-      movementDate: dateString,
+    MovementAndLines? movement = MovementAndLines(
+      filterMovementDateStartAt: startDateString,
+      filterMovementDateEndAt: endDateString,
+
     );
 
 
     switch(inOut){
       case 'IN':
         movement.mWarehouseToID = warehouse;
+        movement.filterWarehouseTo = warehouse ;
         break;
       case 'OUT':
         movement.mWarehouseID = warehouse;
+        movement.filterWarehouseFrom = warehouse ;
         break;
       case 'SWAP':
         movement.mWarehouseID = warehouse;
         movement.mWarehouseToID = warehouse;
+        movement.filterWarehouseFrom = warehouse ;
+        movement.filterWarehouseTo = warehouse ;
         break;
       case 'ALL':
         movement.mWarehouseID = null;
         movement.mWarehouseToID = null;
+        movement.filterWarehouseFrom = null ;
+        movement.filterWarehouseTo = null ;
         break;
     }
-    final docType = ref.read(documentTyprFilterProvider);
-    widget.movementDateFilter = dateString;
+    final docType = ref.read(documentTypeFilterProvider);
+    widget.movementDateFilter = startDateString;
 
     movement.docStatus = IdempiereDocumentStatus(id:docType) ;
+    movement.filterDocumentStatus =  IdempiereDocumentStatus(id:docType) ;
     ref.read(movementNotCompletedToFindByDateProvider.notifier).update((state) => movement);
 
 
   }
+  /*void findMovementAfterDate(DateTime date, {required String inOut}) {
+    String startDateString = date.toString().substring(0,10);
+    Memory.sqlUsersData.mWarehouseID ;
+    IdempiereWarehouse warehouse =Memory.sqlUsersData.mWarehouseID!;
+    MovementAndLines? movement = MovementAndLines(
+      filterMovementDateStartAt: startDateString,
+
+    );
+
+
+    switch(inOut){
+      case 'IN':
+        movement.mWarehouseToID = warehouse;
+        movement.filterWarehouseTo = warehouse ;
+        break;
+      case 'OUT':
+        movement.mWarehouseID = warehouse;
+        movement.filterWarehouseFrom = warehouse ;
+        break;
+      case 'SWAP':
+        movement.mWarehouseID = warehouse;
+        movement.mWarehouseToID = warehouse;
+        movement.filterWarehouseFrom = warehouse ;
+        movement.filterWarehouseTo = warehouse ;
+        break;
+      case 'ALL':
+        movement.mWarehouseID = null;
+        movement.mWarehouseToID = null;
+        movement.filterWarehouseFrom = null ;
+        movement.filterWarehouseTo = null ;
+        break;
+    }
+    final docType = ref.read(documentTyprFilterProvider);
+    widget.movementDateFilter = startDateString;
+
+    movement.docStatus = IdempiereDocumentStatus(id:docType) ;
+    movement.filterDocumentStatus =  IdempiereDocumentStatus(id:docType) ;
+    ref.read(movementNotCompletedToFindByDateProvider.notifier).update((state) => movement);
+
+
+  }*/
   @override
   bool get showSearchBar => false;
 
   @override
   List<Widget> getActionButtons(BuildContext context, WidgetRef ref) {
-    final String docType = ref.watch(documentTyprFilterProvider);
+    final String docType = ref.watch(documentTypeFilterProvider);
 
     return [
 
@@ -552,7 +580,7 @@ class MovementListScreenState extends AsyncValueConsumerSimpleState<MovementList
           ),
           child: Consumer(
             builder: (context, ref, _) {
-              final String selected = ref.watch(documentTyprFilterProvider);
+              final String selected = ref.watch(documentTypeFilterProvider);
 
               return Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -571,7 +599,7 @@ class MovementListScreenState extends AsyncValueConsumerSimpleState<MovementList
 
                   Center(
                     child: Text(
-                      Messages.DOCUMENT_TYPE,
+                      'Movement ${Messages.DOCUMENT_TYPE}',
                       style: TextStyle(
                         fontSize: themeFontSizeLarge,
                         fontWeight: FontWeight.bold,
@@ -609,12 +637,12 @@ class MovementListScreenState extends AsyncValueConsumerSimpleState<MovementList
                                 : null,
                             onTap: () {
                               // actualizar provider
-                              ref.read(documentTyprFilterProvider.notifier).state = type;
+                              ref.read(documentTypeFilterProvider.notifier).state = type;
 
                               // recargar búsqueda
-                              final date = ref.read(selectedDateProvider);
+                              final dates = ref.read(selectedDatesProvider);
                               final inOut = ref.read(inOutFilterProvider);
-                              findMovementAfterDate(date, inOut: inOut);
+                              findMovementAfterDates(dates, inOut: inOut);
 
                               Navigator.of(context).pop();
                             },

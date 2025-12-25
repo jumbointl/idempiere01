@@ -7,34 +7,37 @@ import '../../../../../../../shared/data/memory.dart';
 import '../../../../../../common/messages_dialog.dart';
 import '../../../../../../domain/idempiere/idempiere_movement_line.dart';
 import '../../../../../../domain/idempiere/movement_and_lines.dart';
+import '../../../../../providers/common_provider.dart';
+import '../../../../../providers/product_provider_common.dart';
 import '../../printer_scan_notifier.dart';
 import 'template_zpl_models.dart';
 
 // ========= Tokens base (tuyos) =========
-const String __DOCUMENT_NUMBER = '__DOCUMENT_NUMBER';
-const String __DATE = '__DATE';
-const String __STATUS = '__STATUS';
-const String __COMPANY = '__COMPANY';
-const String __TITLE = '__TITLE';
-const String __ADDRESS = '__ADDRESS';
-const String __WAREHOUSE_FROM = '__WAREHOUSE_FROM';
-const String __WAREHOUSE_TO = '__WAREHOUSE_TO';
+const String DOCUMENT_NUMBER__ = '__DOCUMENT_NUMBER';
+const String DATE__ = '__DATE';
+const String STATUS__ = '__STATUS';
+const String COMPANY__ = '__COMPANY';
+const String TITLE__ = '__TITLE';
+const String ADDRESS__ = '__ADDRESS';
+const String WAREHOUSE_FROM__ = '__WAREHOUSE_FROM';
+const String WAREHOUSE_TO__ = '__WAREHOUSE_TO';
+const String GENERATED_BY__ = '__GENERATED_BY';
 
-String __CATEGORY_SEQUENCE(int i) => '__CATEGORY_SEQUENCE$i';
-String __CATEGORY_NAME(int i)     => '__CATEGORY_NAME$i';
-String __CATEGORY_QTY(int i)      => '__CATEGORY_QTY$i';
+String CATEGORY_SEQUENCE__(int i) => '__CATEGORY_SEQUENCE$i';
+String CATEGORY_NAME__(int i)     => '__CATEGORY_NAME$i';
+String CATEGORY_QTY__(int i)      => '__CATEGORY_QTY$i';
 
-String __PRODUCT_SQCUENCE(int i) => '__PRODUCT_SEQUENCE$i';
-String __PRODUCT_NAME(int i)     => '__PRODUCT_NAME$i';
-String __PRODUCT_UPC(int i)      => '__PRODUCT_UPC$i';
-String __PRODUCT_SKU(int i)      => '__PRODUCT_SKU$i';
-String __PRODUCT_ATT(int i)      => '__PRODUCT_ATT$i';
+String PRODUCT_SQCUENCE__(int i) => '__PRODUCT_SEQUENCE$i';
+String PRODUCT_NAME__(int i)     => '__PRODUCT_NAME$i';
+String PRODUCT_UPC__(int i)      => '__PRODUCT_UPC$i';
+String PRODUCT_SKU__(int i)      => '__PRODUCT_SKU$i';
+String PRODUCT_ATT__(int i)      => '__PRODUCT_ATT$i';
 
-String __MOVEMENT_LINE_MOVEMENT_QTY(int i) => '__MOVEMENT_LINE_MOVEMENT_QTY$i';
-String __MOVEMENT_LINE_LINE(int i)         => '__MOVEMENT_LINE_LINE$i';
+String MOVEMENT_LINE_MOVEMENT_QTY__(int i) => '__MOVEMENT_LINE_MOVEMENT_QTY$i';
+String MOVEMENT_LINE_LINE__(int i)         => '__MOVEMENT_LINE_LINE$i';
 
-const String __TOTAL_QUANTITY = '__TOTAL_QUANTITY';
-const String __PAGE_NUMBER_OVER_TOTAL_PAGE = '__PAGE_NUMBER_OVER_TOTAL_PAGE';
+const String TOTAL_QUANTITY__ = '__TOTAL_QUANTITY';
+const String PAGE_NUMBER_OVER_TOTAL_PAGE__ = '__PAGE_NUMBER_OVER_TOTAL_PAGE';
 
 // ========= Helpers =========
 String s(dynamic v) {
@@ -81,7 +84,14 @@ List<List<T>> chunkByRows<T>(List<T> items, int rowsPerLabel) {
 
 String replaceAllTokens(String template, Map<String, String> tokens) {
   var out = template;
-  tokens.forEach((k, v) => out = out.replaceAll(k, v));
+
+  final sortedKeys = tokens.keys.toList()
+    ..sort((a, b) => b.length.compareTo(a.length)); // 🔑 CLAVE
+
+  for (final k in sortedKeys) {
+    out = out.replaceAll(k, tokens[k]!);
+  }
+
   return out;
 }
 
@@ -92,6 +102,7 @@ Future<void> sendZplBySocket({
   required String zpl,
 }) async {
   Socket? socket;
+  print(zpl);
   try{
     socket = await Socket.connect(ip, port, timeout: const Duration(seconds: 5));
     socket.add(zpl.codeUnits);
@@ -111,19 +122,22 @@ Map<String, String> buildCommonTokens({
   required String totalQty,
   required String pageInfo,
 }) {
+  String generatesBy = movementAndLines.createdBy?.identifier ?? '';
   return {
-    __DOCUMENT_NUMBER: zplText(movementAndLines.documentNumber),
-    __DATE: zplText(movementAndLines.movementDate),
-    __STATUS: zplText(movementAndLines.documentStatus),
-    __COMPANY: movementAndLines.cBPartnerID?.identifier == null ? ''
-        : '${Messages.COMPANY} : ${zplText(movementAndLines.cBPartnerID?.identifier)}',
-    __TITLE: zplText(movementAndLines.documentMovementTitle),
-    __ADDRESS: zplText(movementAndLines.cBPartnerLocationID?.identifier),
-    __WAREHOUSE_FROM: '${Messages.FROM} : ${zplText(movementAndLines.mWarehouseID?.identifier)}',
-    __WAREHOUSE_TO: '${Messages.TO} : ${zplText(movementAndLines.warehouseTo?.identifier)}',
 
-    __TOTAL_QUANTITY: zplText(totalQty),
-    __PAGE_NUMBER_OVER_TOTAL_PAGE: zplText(pageInfo),
+    GENERATED_BY__ : zplText(generatesBy),
+    DOCUMENT_NUMBER__: zplText(movementAndLines.documentNumber),
+    DATE__: zplText(movementAndLines.movementDate),
+    STATUS__: zplText(movementAndLines.documentStatus),
+    COMPANY__: movementAndLines.cBPartnerID?.identifier == null ? ''
+        : '${Messages.COMPANY} : ${zplText(movementAndLines.cBPartnerID?.identifier)}',
+    TITLE__: zplText(movementAndLines.documentMovementTitle),
+    ADDRESS__: zplText(movementAndLines.cBPartnerLocationID?.identifier),
+    WAREHOUSE_FROM__: '${Messages.FROM} : ${zplText(movementAndLines.mWarehouseID?.identifier)}',
+    WAREHOUSE_TO__: '${Messages.TO} : ${zplText(movementAndLines.warehouseTo?.identifier)}',
+
+    TOTAL_QUANTITY__: zplText(totalQty),
+    PAGE_NUMBER_OVER_TOTAL_PAGE__: zplText(pageInfo),
   };
 }
 
@@ -135,9 +149,9 @@ Map<String, String> buildMovementLineCategoryTokensPage({
   final tokens = <String, String>{};
   for (int i = 0; i < rowsPerLabel; i++) {
     final row = (i < pageRows.length) ? pageRows[i] : null;
-    tokens[__CATEGORY_SEQUENCE(i)] = zplText(row?.sequence ?? (i + 1));
-    tokens[__CATEGORY_NAME(i)]     = zplText(row?.categoryName ?? '');
-    tokens[__CATEGORY_QTY(i)]      = zplText(row?.totalQty  ?? '');
+    tokens[CATEGORY_SEQUENCE__(i)] = zplText(row?.sequence ?? (i + 1));
+    tokens[CATEGORY_NAME__(i)]     = zplText(row?.categoryName ?? '');
+    tokens[CATEGORY_QTY__(i)]      = zplText(row?.totalQty  ?? '');
   }
   return tokens;
 }
@@ -152,14 +166,14 @@ Map<String, String> buildByMovementLineProductTokensPage({
   for (int i = 0; i < rowsPerLabel; i++) {
     final IdempiereMovementLine? ml = (i < pageLines.length) ? pageLines[i] : null;
 
-    tokens[__PRODUCT_SQCUENCE(i)] = zplText(ml?.line ?? (i + 1));
-    tokens[__PRODUCT_NAME(i)]     = zplText(ml?.productName);
-    tokens[__PRODUCT_UPC(i)]      = zplText(ml?.uPC);
-    tokens[__PRODUCT_SKU(i)]      = zplText(ml?.sKU);
-    tokens[__PRODUCT_ATT(i)]      = zplText(ml?.mAttributeSetInstanceID?.identifier);
+    tokens[PRODUCT_SQCUENCE__(i)] = zplText(ml?.line ?? (i + 1));
+    tokens[PRODUCT_NAME__(i)]     = zplText(ml?.productName);
+    tokens[PRODUCT_UPC__(i)]      = zplText(ml?.uPC);
+    tokens[PRODUCT_SKU__(i)]      = zplText(ml?.sKU);
+    tokens[PRODUCT_ATT__(i)]      = zplText(ml?.mAttributeSetInstanceID?.identifier);
 
-    tokens[__MOVEMENT_LINE_LINE(i)]         = zplText(ml?.line);
-    tokens[__MOVEMENT_LINE_MOVEMENT_QTY(i)] = zplText(ml?.movementQty);
+    tokens[MOVEMENT_LINE_LINE__(i)]         = zplText(ml?.line);
+    tokens[MOVEMENT_LINE_MOVEMENT_QTY__(i)] = zplText(ml?.movementQty);
   }
 
   return tokens;
@@ -249,7 +263,6 @@ Future<void> printReferenceBySocket({
             rowsPerLabel: rowsPerLabel,
           ));
         String result = replaceAllTokens(refTxt, tokens);
-        print(result);
         try{
           await sendZplBySocket(
             ip: ip,
@@ -274,18 +287,19 @@ Future<void> printReferenceBySocket({
 
       for (int p = 0; p < safePages.length; p++) {
         final pageInfo = '${p + 1}/$totalPages';
+        final categoryTokens =buildMovementLineCategoryTokensPage(
+          pageRows: safePages[p],
+          rowsPerLabel: rowsPerLabel,
+        ) ;
         final tokens = <String, String>{}
           ..addAll(buildCommonTokens(
             movementAndLines: movementAndLines,
             totalQty: totalQty,
             pageInfo: pageInfo,
           ))
-          ..addAll(buildMovementLineCategoryTokensPage(
-            pageRows: safePages[p],
-            rowsPerLabel: rowsPerLabel,
-          ));
+          ..addAll(categoryTokens);
+
         String result = replaceAllTokens(refTxt, tokens);
-        print(result);
         try{
           await sendZplBySocket(
             ip: ip,
@@ -308,7 +322,6 @@ Future<void> printReferenceBySocket({
         pageInfo: '1/1',
       ));
     String result = replaceAllTokens(refTxt, tokens);
-    print(result);
     try{
       await sendZplBySocket(
         ip: ip,
@@ -330,7 +343,6 @@ Future<void> printReferenceBySocket({
       pageInfo: '1/1',
     ));
   String result = replaceAllTokens(refTxt, tokens);
-  print(result);
   try{
     await sendZplBySocket(
       ip: ip,
@@ -444,30 +456,31 @@ Set<String> buildAvailableTokenSet({
   required int rowsPerLabel,
 }) {
   final s = <String>{
-    __DOCUMENT_NUMBER,
-    __DATE,
-    __STATUS,
-    __COMPANY,
-    __TITLE,
-    __ADDRESS,
-    __WAREHOUSE_FROM,
-    __WAREHOUSE_TO,
-    __TOTAL_QUANTITY,
-    __PAGE_NUMBER_OVER_TOTAL_PAGE,
+    DOCUMENT_NUMBER__,
+    DATE__,
+    STATUS__,
+    COMPANY__,
+    TITLE__,
+    ADDRESS__,
+    WAREHOUSE_FROM__,
+    WAREHOUSE_TO__,
+    TOTAL_QUANTITY__,
+    PAGE_NUMBER_OVER_TOTAL_PAGE__,
+    GENERATED_BY__,
   };
 
   if (mode == ZplTemplateMode.movement) {
     for (int i = 0; i < rowsPerLabel; i++) {
-      s.add(__CATEGORY_SEQUENCE(i));
-      s.add(__CATEGORY_NAME(i));
-      s.add(__CATEGORY_QTY(i));
-      s.add(__MOVEMENT_LINE_LINE(i));
-      s.add(__MOVEMENT_LINE_MOVEMENT_QTY(i));
-      s.add(__PRODUCT_SQCUENCE(i));
-      s.add(__PRODUCT_NAME(i));
-      s.add(__PRODUCT_UPC(i));
-      s.add(__PRODUCT_SKU(i));
-      s.add(__PRODUCT_ATT(i));
+      s.add(CATEGORY_SEQUENCE__(i));
+      s.add(CATEGORY_NAME__(i));
+      s.add(CATEGORY_QTY__(i));
+      s.add(MOVEMENT_LINE_LINE__(i));
+      s.add(MOVEMENT_LINE_MOVEMENT_QTY__(i));
+      s.add(PRODUCT_SQCUENCE__(i));
+      s.add(PRODUCT_NAME__(i));
+      s.add(PRODUCT_UPC__(i));
+      s.add(PRODUCT_SKU__(i));
+      s.add(PRODUCT_ATT__(i));
 
     }
   }
@@ -479,8 +492,8 @@ List<String> validateMissingTokens({
 }) {
   final used = extractTokensUsed(referenceTxt);
   final rows = template.rowPerpage;
-  final available = buildAvailableTokenSet(mode: template.mode, rowsPerLabel: rows);
 
+  final available = buildAvailableTokenSet(mode: template.mode, rowsPerLabel: rows);
   final missing = used.difference(available).toList()..sort();
   return missing;
 }
@@ -619,38 +632,39 @@ List<TokenItem> buildTokenCatalog({
   // HEADER
   const header = 'HEADER';
   list.addAll([
-    const TokenItem(header, __DOCUMENT_NUMBER),
-    const TokenItem(header, __DATE),
-    const TokenItem(header, __STATUS),
-    const TokenItem(header, __COMPANY),
-    const TokenItem(header, __TITLE),
-    const TokenItem(header, __ADDRESS),
-    const TokenItem(header, __WAREHOUSE_FROM),
-    const TokenItem(header, __WAREHOUSE_TO),
+    const TokenItem(header, DOCUMENT_NUMBER__),
+    const TokenItem(header, DATE__),
+    const TokenItem(header, STATUS__),
+    const TokenItem(header, COMPANY__),
+    const TokenItem(header, TITLE__),
+    const TokenItem(header, ADDRESS__),
+    const TokenItem(header, WAREHOUSE_FROM__),
+    const TokenItem(header, WAREHOUSE_TO__),
   ]);
 
   // CATEGORY
   if (mode == ZplTemplateMode.movement) {
     const sec = 'LINE (por fila)';
     for (int i = 0; i < rows; i++) {
-      list.add(TokenItem(sec, __CATEGORY_SEQUENCE(i)));
-      list.add(TokenItem(sec, __CATEGORY_NAME(i)));
-      list.add(TokenItem(sec, __CATEGORY_QTY(i)));
-      list.add(TokenItem(sec, __MOVEMENT_LINE_LINE(i)));
-      list.add(TokenItem(sec, __MOVEMENT_LINE_MOVEMENT_QTY(i)));
-      list.add(TokenItem(sec, __PRODUCT_SQCUENCE(i)));
-      list.add(TokenItem(sec, __PRODUCT_NAME(i)));
-      list.add(TokenItem(sec, __PRODUCT_UPC(i)));
-      list.add(TokenItem(sec, __PRODUCT_SKU(i)));
-      list.add(TokenItem(sec, __PRODUCT_ATT(i)));
+      list.add(TokenItem(sec, CATEGORY_SEQUENCE__(i)));
+      list.add(TokenItem(sec, CATEGORY_NAME__(i)));
+      list.add(TokenItem(sec, CATEGORY_QTY__(i)));
+      list.add(TokenItem(sec, MOVEMENT_LINE_LINE__(i)));
+      list.add(TokenItem(sec, MOVEMENT_LINE_MOVEMENT_QTY__(i)));
+      list.add(TokenItem(sec, PRODUCT_SQCUENCE__(i)));
+      list.add(TokenItem(sec, PRODUCT_NAME__(i)));
+      list.add(TokenItem(sec, PRODUCT_UPC__(i)));
+      list.add(TokenItem(sec, PRODUCT_SKU__(i)));
+      list.add(TokenItem(sec, PRODUCT_ATT__(i)));
     }
   }
 
   // FOOTER
   const footer = 'FOOTER';
   list.addAll([
-    const TokenItem(footer, __TOTAL_QUANTITY),
-    const TokenItem(footer, __PAGE_NUMBER_OVER_TOTAL_PAGE),
+    const TokenItem(footer, TOTAL_QUANTITY__),
+    const TokenItem(footer, PAGE_NUMBER_OVER_TOTAL_PAGE__),
+    const TokenItem(footer, GENERATED_BY__),
   ]);
 
   return list;
@@ -659,13 +673,17 @@ List<TokenItem> buildTokenCatalog({
 /// BottomSheet con búsqueda.
 /// Devuelve el token seleccionado o null si canceló.
 Future<String?> showZplTokenPickerSheet({
+  required WidgetRef ref,
   required BuildContext context,
   required ZplTemplateMode mode,
   required int rowsPerLabel,
 }) async {
   final all = buildTokenCatalog(mode: mode, rowsPerLabel: rowsPerLabel);
-
+  ref.read(enableScannerKeyboardProvider.notifier).state = false;
+  ref.read(isDialogShowedProvider.notifier).state = true;
   return showModalBottomSheet<String>(
+    isDismissible: false,
+    enableDrag: false,
     context: context,
     isScrollControlled: true,
     showDragHandle: true,
@@ -674,6 +692,7 @@ Future<String?> showZplTokenPickerSheet({
       borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
     ),
     builder: (ctx) {
+
       return StatefulBuilder(
         builder: (ctx, setState) {
           String q = '';
@@ -694,73 +713,88 @@ Future<String?> showZplTokenPickerSheet({
 
           final height = MediaQuery.of(ctx).size.height * 0.85;
 
-          return SizedBox(
-            height: height,
-            child: Column(
-              children: [
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-                  child: TextField(
-                    autofocus: true,
-                    decoration: InputDecoration(
-                      labelText: 'Buscar token',
-                      hintText: 'Ej: PRODUCT_NAME, TOTAL, PAGE, CATEGORY_QTY…',
-                      prefixIcon: const Icon(Icons.search),
-                      border: const OutlineInputBorder(),
-                      suffixIcon: (q.isEmpty)
-                          ? null
-                          : IconButton(
-                        icon: const Icon(Icons.clear),
-                        onPressed: () => setState(() => q = ''),
+          return PopScope(
+            canPop: false,
+            onPopInvokedWithResult: (bool didPop, Object? result) async {
+              if (didPop) {
+                return;
+              }
+              ref.read(enableScannerKeyboardProvider.notifier).state = true;
+              ref.read(isDialogShowedProvider.notifier).state = false;
+              Navigator.pop(context, null);
+            },
+            child: SizedBox(
+              height: height,
+              child: Column(
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+                    child: TextField(
+                      autofocus: true,
+                      decoration: InputDecoration(
+                        labelText: 'Buscar token',
+                        hintText: 'Ej: PRODUCT_NAME, TOTAL, PAGE, CATEGORY_QTY…',
+                        prefixIcon: const Icon(Icons.search),
+                        border: const OutlineInputBorder(),
+                        suffixIcon: (q.isEmpty)
+                            ? null
+                            : IconButton(
+                          icon: const Icon(Icons.clear),
+                          onPressed: () => setState(() => q = ''),
+                        ),
                       ),
+                      onChanged: (v) => setState(() => q = v),
                     ),
-                    onChanged: (v) => setState(() => q = v),
                   ),
-                ),
 
-                Expanded(
-                  child: ListView(
-                    padding: const EdgeInsets.fromLTRB(12, 4, 12, 12),
-                    children: [
-                      for (final entry in sections.entries) ...[
-                        Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 10),
-                          child: Text(
-                            entry.key,
-                            style: const TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 14,
-                            ),
-                          ),
-                        ),
-                        ...entry.value.map(
-                              (it) => Card(
-                            elevation: 0,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(10),
-                              side: const BorderSide(color: Colors.black12),
-                            ),
-                            child: ListTile(
-                              dense: true,
-                              title: Text(
-                                it.token,
-                                style: const TextStyle(fontFamily: 'monospace'),
+                  Expanded(
+                    child: ListView(
+                      padding: const EdgeInsets.fromLTRB(12, 4, 12, 12),
+                      children: [
+                        for (final entry in sections.entries) ...[
+                          Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 10),
+                            child: Text(
+                              entry.key,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 14,
                               ),
-                              trailing: const Icon(Icons.arrow_forward_ios, size: 14),
-                              onTap: () => Navigator.pop(ctx, it.token),
                             ),
                           ),
-                        ),
+                          ...entry.value.map(
+                                (it) => Card(
+                              elevation: 0,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(10),
+                                side: const BorderSide(color: Colors.black12),
+                              ),
+                              child: ListTile(
+                                dense: true,
+                                title: Text(
+                                  it.token,
+                                  style: const TextStyle(fontFamily: 'monospace'),
+                                ),
+                                trailing: const Icon(Icons.arrow_forward_ios, size: 14),
+                                onTap: () {
+                                  ref.read(enableScannerKeyboardProvider.notifier).state = true;
+                                  ref.read(isDialogShowedProvider.notifier).state = false;
+                                  Navigator.pop(ctx, it.token);
+                                },
+                              ),
+                            ),
+                          ),
+                        ],
+                        if (filtered.isEmpty)
+                          const Padding(
+                            padding: EdgeInsets.all(16),
+                            child: Text('No hay resultados.'),
+                          ),
                       ],
-                      if (filtered.isEmpty)
-                        const Padding(
-                          padding: EdgeInsets.all(16),
-                          child: Text('No hay resultados.'),
-                        ),
-                    ],
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           );
         },
@@ -773,6 +807,7 @@ Future<void> printTemplateSmart({
   required WidgetRef ref,
   required ZplTemplate template,
   required MovementAndLines movementAndLines,
+  required userName,
 }) async {
   if(!Memory.isAdmin) return ;
   final printerState = ref.read(printerScanProvider);
@@ -809,7 +844,7 @@ String buildReferenceProductExample({required String templateFileNoDrive}) {
   sb.writeln('^CI28');
   sb.writeln('^XFE:$templateFileNoDrive^FS');
   sb.writeln('');
-  sb.writeln('^FN1^FD__DOCUMENT_NUMBER^FS');
+  sb.writeln('^FN1^FDLA,__DOCUMENT_NUMBER^FS');
   sb.writeln('^FN2^FD__DOCUMENT_NUMBER^FS');
   sb.writeln('^FN3^FD__DATE^FS');
   sb.writeln('^FN4^FD__STATUS^FS');
@@ -824,13 +859,13 @@ String buildReferenceProductExample({required String templateFileNoDrive}) {
   // OJO: esto es un ejemplo de “reference”; tu TEMPLATE DF debe tener esos FN puestos en el layout de producto.
   int fn = 101;
   for (int i = 0; i < 8; i++) {
-    sb.writeln('^FN${fn++}^FD${__PRODUCT_SQCUENCE(i)}^FS');
-    sb.writeln('^FN${fn++}^FD${__PRODUCT_NAME(i)}^FS');
-    sb.writeln('^FN${fn++}^FD${__PRODUCT_UPC(i)}^FS');
-    sb.writeln('^FN${fn++}^FD${__PRODUCT_SKU(i)}^FS');
-    sb.writeln('^FN${fn++}^FD${__PRODUCT_ATT(i)}^FS');
-    sb.writeln('^FN${fn++}^FD${__MOVEMENT_LINE_LINE(i)}^FS');
-    sb.writeln('^FN${fn++}^FD${__MOVEMENT_LINE_MOVEMENT_QTY(i)}^FS');
+    sb.writeln('^FN${fn++}^FD${PRODUCT_SQCUENCE__(i)}^FS');
+    sb.writeln('^FN${fn++}^FD${PRODUCT_NAME__(i)}^FS');
+    sb.writeln('^FN${fn++}^FD${PRODUCT_UPC__(i)}^FS');
+    sb.writeln('^FN${fn++}^FD${PRODUCT_SKU__(i)}^FS');
+    sb.writeln('^FN${fn++}^FD${PRODUCT_ATT__(i)}^FS');
+    sb.writeln('^FN${fn++}^FD${MOVEMENT_LINE_LINE__(i)}^FS');
+    sb.writeln('^FN${fn++}^FD${MOVEMENT_LINE_MOVEMENT_QTY__(i)}^FS');
     sb.writeln('');
   }
 
@@ -858,14 +893,14 @@ List<PopupMenuEntry<String>> tokenMenuItemsByMode({
   // HEADER
   items.add(header('HEADER'));
   items.addAll([
-    token(__DOCUMENT_NUMBER),
-    token(__DATE),
-    token(__STATUS),
-    token(__COMPANY),
-    token(__TITLE),
-    token(__ADDRESS),
-    token(__WAREHOUSE_FROM),
-    token(__WAREHOUSE_TO),
+    token(DOCUMENT_NUMBER__),
+    token(DATE__),
+    token(STATUS__),
+    token(COMPANY__),
+    token(TITLE__),
+    token(ADDRESS__),
+    token(WAREHOUSE_FROM__),
+    token(WAREHOUSE_TO__),
   ]);
   items.add(const PopupMenuDivider());
 
@@ -873,16 +908,16 @@ List<PopupMenuEntry<String>> tokenMenuItemsByMode({
     items.add(header('TABLE(por fila)'));
     for (int i = 0; i < rows; i++) {
       items.addAll([
-        token(__CATEGORY_SEQUENCE(i)),
-        token(__CATEGORY_NAME(i)),
-        token(__CATEGORY_QTY(i)),
-        token(__MOVEMENT_LINE_LINE(i)),
-        token(__MOVEMENT_LINE_MOVEMENT_QTY(i)),
-        token(__PRODUCT_SQCUENCE(i)),
-        token(__PRODUCT_NAME(i)),
-        token(__PRODUCT_UPC(i)),
-        token(__PRODUCT_SKU(i)),
-        token(__PRODUCT_ATT(i)),
+        token(CATEGORY_SEQUENCE__(i)),
+        token(CATEGORY_NAME__(i)),
+        token(CATEGORY_QTY__(i)),
+        token(MOVEMENT_LINE_LINE__(i)),
+        token(MOVEMENT_LINE_MOVEMENT_QTY__(i)),
+        token(PRODUCT_SQCUENCE__(i)),
+        token(PRODUCT_NAME__(i)),
+        token(PRODUCT_UPC__(i)),
+        token(PRODUCT_SKU__(i)),
+        token(PRODUCT_ATT__(i)),
       ]);
       if (i != rows - 1) items.add(const PopupMenuDivider());
     }
@@ -893,8 +928,8 @@ List<PopupMenuEntry<String>> tokenMenuItemsByMode({
   // FOOTER
   items.add(header('FOOTER'));
   items.addAll([
-    token(__TOTAL_QUANTITY),
-    token(__PAGE_NUMBER_OVER_TOTAL_PAGE),
+    token(TOTAL_QUANTITY__),
+    token(PAGE_NUMBER_OVER_TOTAL_PAGE__),
   ]);
 
   return items;
@@ -909,7 +944,7 @@ String buildReferenceTxtByCategory({
 ^CI28
 ^XFE:$templateFileNameNoDrive^FS
 
-^FN1^FD__DOCUMENT_NUMBER^FS
+^FN1^FDLA,__DOCUMENT_NUMBER^FS
 ^FN2^FD__DOCUMENT_NUMBER^FS
 ^FN3^FD__DATE^FS
 ^FN4^FD__STATUS^FS
@@ -960,7 +995,7 @@ String buildReferenceTxtByCategory({
 '''.trim();
 }
 String buildTemplateZpl100x150ByCategoryDf({
-  String printerFile = 'E:TEMPLATE.ZPL',
+  String printerFile = 'TEMPLATE.ZPL',
   int rowsPerLabel = 6,
 }) {
   final sb = StringBuffer();

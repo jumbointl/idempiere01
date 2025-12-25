@@ -12,6 +12,7 @@ import 'package:monalisa_app_001/features/products/domain/idempiere/idempiere_do
 import 'package:monalisa_app_001/features/products/domain/idempiere/idempiere_locator.dart';
 import 'package:monalisa_app_001/features/products/domain/idempiere/idempiere_movement.dart';
 import 'package:monalisa_app_001/features/products/domain/idempiere/idempiere_warehouse.dart';
+import 'package:monalisa_app_001/features/products/domain/idempiere/movement_and_lines.dart';
 import 'package:monalisa_app_001/features/products/domain/idempiere/response_async_value.dart';
 import 'package:monalisa_app_001/features/products/presentation/screens/movement/edit_new/custom_app_bar.dart';
 import 'package:monalisa_app_001/features/products/presentation/screens/movement/provider/products_home_provider.dart';
@@ -22,7 +23,9 @@ import '../../../../../shared/data/memory.dart';
 import '../../../../../shared/data/messages.dart';
 import '../../../../common/messages_dialog.dart';
 import '../../../../common/time_utils.dart';
-import '../../../../common/widget/movement_date_filter_row.dart';
+import '../../../../common/widget/date_filter_row_panel.dart';
+import '../../../../common/widget/date_range_filter_row_panel.dart';
+import '../../../../common/widget/show_document_type_filter_sheet.dart';
 import '../../../providers/common_provider.dart';
 import '../../../providers/persitent_provider.dart';
 import '../../../providers/product_provider_common.dart';
@@ -36,7 +39,7 @@ class MovementListScreenNew extends ConsumerStatefulWidget {
   bool isMovementSearchedShowed = false;
 
   static const String COMMAND_DO_NOTHING ='-1';
-  String movementDateFilter;
+  List<String> movementDateFilter;
 
   int actionTypeInt=0;
 
@@ -60,14 +63,12 @@ class MovementListScreenNewState extends AsyncValueConsumerState<MovementListScr
   @override
   late var isDialogShowed;
 
-
-
   @override
   void executeAfterShown() {
     ref.read(isScanningProvider.notifier).update((state) => false);
-    final date = ref.read(selectedDateProvider);
-    final isIn = ref.read(inOutFilterProvider);
-    findMovementAfterDate(date, inOut: isIn);
+    final dates = ref.read(selectedDatesProvider);
+    final inOut = ref.read(inOutFilterProvider);
+    findMovementAfterDates(ref: ref, dates: dates, inOut: inOut);
     ref.read(pageFromProvider.notifier).state = 1 ;
   }
 
@@ -90,9 +91,16 @@ class MovementListScreenNewState extends AsyncValueConsumerState<MovementListScr
 
      return Column(
        children: [
-         MovementDateFilterRow(onOk: (date, inOut) {
-           findMovementAfterDate(date, inOut: inOut);
-         },),
+         DateRangeFilterRowPanel(
+           values: ['ALL', 'IN', 'OUT', 'SWAP'],
+           selectedDatesProvider: selectedDatesProvider,
+           onOk: (dates, inOut) {
+           findMovementAfterDates(ref: ref, dates: dates, inOut: inOut);
+         },
+           onScanButtonPressed: () {
+             context.go('${AppRouter.PAGE_MOVEMENTS_EDIT}/-1/-1');
+           }
+         ),
          mainDataAsync.when(
           data: (ResponseAsyncValue response) {
             if(!response.isInitiated) {
@@ -214,22 +222,10 @@ class MovementListScreenNewState extends AsyncValueConsumerState<MovementListScr
               return;
             }
             Clipboard.setData(ClipboardData(text: movement.documentNo ?? ''));
-            /*ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-              content: Text('${Messages.COPIED_TO_CLIPBOARD}: ${movement.documentNo ?? ''}'),
-              duration: const Duration(seconds: 1),
-            ));*/
             String docStatus = movement.docStatus?.id ?? '';
 
             if(movement.docStatus?.id == 'DR'){
               context.go('${AppRouter.PAGE_MOVEMENTS_EDIT}/$movementId/1');
-              /*String documentNo = movement.documentNo ?? '-1';
-              if(RolesApp.cantConfirmMovement){
-                showMovementOptionsSheet(context: context, documentNo: documentNo, movementId:
-                   movementId, docStatus:docStatus);
-              } else {
-                context.go('${AppRouter.PAGE_MOVEMENTS_EDIT}/$movementId/1');
-              }*/
-
 
             } else if(movement.docStatus?.id == 'IP'){
               String documentNo = movement.documentNo ?? '-1';
@@ -394,17 +390,10 @@ class MovementListScreenNewState extends AsyncValueConsumerState<MovementListScr
         if(!response.isInitiated) {
           return Text(Messages.MOVEMENT_SEARCH,style: textStyleTitle);
         }
-        //if(movements==null) return Text(Messages.MOVEMENT_SEARCH,style: textStyleTitle);
-        WidgetsBinding.instance.addPostFrameCallback((_) async {
-
-
-        });
         if(response.success && response.data!=null) {
-          print('response.dataInJson: ${response.data}');
           List<IdempiereMovement> list = response.data;
           String title = Messages.MOVEMENT_SEARCH;
           if (list.isEmpty || list[0].id == null || list[0].id! < 0) {
-            //return Text(Messages.MOVEMENT_SEARCH,style: textStyleTitle);
             return commonAppBarTitle(
               onBack: () => popScopeAction(context, ref),
             );
@@ -418,20 +407,6 @@ class MovementListScreenNewState extends AsyncValueConsumerState<MovementListScr
         } else {
           return Text(Messages.MOVEMENT_SEARCH,style: textStyleTitle);
         }
-        /*return Row(
-          children: [
-            IconButton(
-              icon: const Icon(Icons.arrow_back),
-              padding: EdgeInsets.zero,
-              constraints: const BoxConstraints(
-                minWidth: 32,
-                minHeight: 32,
-              ),
-              onPressed: () => popScopeAction(context, ref),
-            ),
-            Text('${Messages.RECORDS} : ${list.length}',style: textStyleLarge),
-          ],
-        );*/
 
       },error: (error, stackTrace) => Text('Error: $error'),
       loading: () => LinearProgressIndicator(
@@ -441,47 +416,50 @@ class MovementListScreenNewState extends AsyncValueConsumerState<MovementListScr
 
   }
 
-  @override
-  void addQuantityText(BuildContext context, WidgetRef ref,
-      TextEditingController quantityController,int quantity) {
-    if(quantity==-1){
-      quantityController.text = '';
-      return;
-    }
-    String s =  quantityController.text;
-    String s1 = s;
-    String s2 ='';
-    if(s.contains('.')) {
-      s1 = s.split('.').first;
-      s2 = s.split('.').last;
-    }
 
-    String r ='';
-    if(s.contains('.')){
-      r='$s1$quantity.$s2';
-    } else {
-      r='$s1$quantity';
-    }
+  Future<void> findMovementAfterDates({required WidgetRef ref,required DateTimeRange dates, required String inOut}) async {
+    String startDateString = dates.start.toString().substring(0,10);
+    String endDateString = dates.end.toString().substring(0,10);
+    Memory.sqlUsersData.mWarehouseID ;
+    IdempiereWarehouse warehouse =Memory.sqlUsersData.mWarehouseID!;
 
-    int? aux = int.tryParse(r);
-    if(aux==null || aux<=0){
-      String message =  '${Messages.ERROR_QUANTITY} $quantity';
-      showErrorMessage(context, ref, message);
-      return;
+    MovementAndLines movement  = MovementAndLines(
+      filterMovementDateStartAt: startDateString,
+      filterMovementDateEndAt: endDateString,
+    );
+
+    switch(inOut){
+      case 'IN':
+        movement.mWarehouseToID = warehouse;
+        break;
+      case 'OUT':
+        movement.mWarehouseID = warehouse;
+        break;
+      case 'SWAP':
+        movement.mWarehouseID = warehouse;
+        movement.mWarehouseToID = warehouse;
+        break;
+      case 'ALL':
+        movement.mWarehouseID = null;
+        movement.mWarehouseToID = null;
+        break;
     }
-    quantityController.text = aux.toString();
+    final docType = ref.read(documentTypeFilterProvider);
+    widget.movementDateFilter = [startDateString,endDateString];
+
+    movement.docStatus = IdempiereDocumentStatus(id:docType) ;
+    ref.read(movementNotCompletedToFindByDateProvider.notifier).update((state) => movement);
+
 
   }
-
- @override
-  void findMovementAfterDate(DateTime date, {required String inOut}) {
+  /*Future<void> findMovementAfterDate(DateTime date, {required String inOut}) async {
     String dateString = date.toString().substring(0,10);
     Memory.sqlUsersData.mWarehouseID ;
     IdempiereWarehouse warehouse =Memory.sqlUsersData.mWarehouseID!;
     IdempiereMovement? movement = IdempiereMovement(
       movementDate: dateString,
     );
-
+    MovementAndLines m ;
 
     switch(inOut){
       case 'IN':
@@ -500,19 +478,19 @@ class MovementListScreenNewState extends AsyncValueConsumerState<MovementListScr
         break;
     }
     final docType = ref.read(documentTyprFilterProvider);
-    widget.movementDateFilter = dateString;
+    widget.movementDateFilterStart = dateString;
 
     movement.docStatus = IdempiereDocumentStatus(id:docType) ;
     ref.read(movementNotCompletedToFindByDateProvider.notifier).update((state) => movement);
 
 
-  }
+  }*/
   @override
   bool get showSearchBar => false;
 
   @override
   List<Widget> getActionButtons(BuildContext context, WidgetRef ref) {
-    final String docType = ref.watch(documentTyprFilterProvider);
+    final String docType = ref.watch(documentTypeFilterProvider);
 
     return [
 
@@ -524,7 +502,14 @@ class MovementListScreenNewState extends AsyncValueConsumerState<MovementListScr
             backgroundColor: Colors.white,
           ),
           onPressed: () {
-            _showDocumentTypeFilterSheet(context, ref);
+            showDocumentTypeFilterMultipleDatesSheet(context: context, ref: ref,
+            onDataChange: findMovementAfterDates,
+            title: Messages.DOCUMENT_TYPE,
+            documentTypeOptions: documentTypeOptionsAll,
+            selectedProvider: documentTypeFilterProvider,
+            datesRangeProvider: selectedDatesProvider,
+
+            );
           },
           child: Text(
             docType,
@@ -534,131 +519,8 @@ class MovementListScreenNewState extends AsyncValueConsumerState<MovementListScr
       ),
     ];
   }
-  void _showDocumentTypeFilterSheet(BuildContext context, WidgetRef ref) {
-    final screenHeight = MediaQuery.of(context).size.height;
-    var documentTypeOptions = documentTypeOptionsAll;
-    /*if(RolesApp.canDoAppInventory){
-      documentTypeOptions = documentTypeOptionsForInventory ;
-    } else if (RolesApp.canConfirmMovementWithConfirm){
-      documentTypeOptions = documentTypeOptionsForMovementConfirm ;
-    }*/
 
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent, // permite ver el borde redondeado
-      builder: (context) {
-        return Container(
-          height: screenHeight * 0.7,
-          padding: const EdgeInsets.all(40),
-          decoration: BoxDecoration(
-            color: Colors.white,               // fondo del modal
-            borderRadius: const BorderRadius.vertical(
-              top: Radius.circular(24),
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.25),
-                blurRadius: 12,
-                offset: const Offset(0, -4),
-              ),
-            ],
-          ),
-          child: Consumer(
-            builder: (context, ref, _) {
-              final String selected = ref.watch(documentTyprFilterProvider);
 
-              return Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Center(
-                    child: Container(
-                      width: 40,
-                      height: 5,
-                      decoration: BoxDecoration(
-                        color: Colors.grey.shade400,
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-
-                  Center(
-                    child: Text(
-                      Messages.DOCUMENT_TYPE,
-                      style: TextStyle(
-                        fontSize: themeFontSizeLarge,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-
-                  const SizedBox(height: 30),
-
-                  Expanded(
-                    child: ListView(
-                      children: documentTypeOptions.map((type) {
-                        final color = _colorForDocType(type);
-
-                        return Card(
-                          elevation: 3,
-                          shadowColor: Colors.black26,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                          child: ListTile(
-                            tileColor: color,
-                            title: Text(
-                              type,
-                              style: TextStyle(
-                                fontWeight: type == selected
-                                    ? FontWeight.bold
-                                    : FontWeight.normal,
-                                color: Colors.black,
-                              ),
-                            ),
-                            trailing: type == selected
-                                ? Icon(Icons.check_circle,
-                                color: Colors.purple, size: 26)
-                                : null,
-                            onTap: () {
-                              // actualizar provider
-                              ref.read(documentTyprFilterProvider.notifier).state = type;
-
-                              // recargar búsqueda
-                              final date = ref.read(selectedDateProvider);
-                              final inOut = ref.read(inOutFilterProvider);
-                              findMovementAfterDate(date, inOut: inOut);
-
-                              Navigator.of(context).pop();
-                            },
-                          ),
-                        );
-                      }).toList(),
-                    ),
-                  ),
-                ],
-              );
-            },
-          ),
-        );
-      },
-    );
-  }
-
-  /// Colores para cada tipo de documento
-  Color _colorForDocType(String code) {
-    switch (code) {
-      case 'DR': // Draft / Borrador
-        return Colors.grey.shade200;
-      case 'CO': // Completed
-        return Colors.green.shade200;
-      case 'IP': // In Progress
-        return Colors.cyan.shade200;
-      default:
-        return Colors.grey.shade200;
-    }
-  }
 
 
   @override
