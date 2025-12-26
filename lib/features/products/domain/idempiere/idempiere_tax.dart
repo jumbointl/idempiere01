@@ -9,6 +9,7 @@ import 'idempiere_object.dart';
 import 'idempiere_organization.dart';
 import 'idempiere_sopo_type.dart';
 import 'idempiere_tax_posting_indicator_type.dart';
+import 'object_with_name_and_id.dart';
 
 class IdempiereTax extends IdempiereObject {
   String? uid;
@@ -121,7 +122,7 @@ class IdempiereTax extends IdempiereObject {
     mOLICTaxID = json['MOLI_C_Tax_ID'];
     modelName = json['model-name'];
     active = json['active'];
-    category = json['category'];
+    category = json['category'] != null ? ObjectWithNameAndId.fromJson(json['category']) : null;;
     propertyLabel = json['propertyLabel'];
     image = json['image'];
     identifier = json['identifier'];
@@ -179,7 +180,7 @@ class IdempiereTax extends IdempiereObject {
     data['MOLI_C_Tax_ID'] = mOLICTaxID;
     data['model-name'] = modelName;
     data['active'] = active;
-    data['category'] = category;
+    data['category'] = category?.toJson();
     data['propertyLabel'] = propertyLabel;
     data['image'] = image;
     data['identifier'] = identifier;

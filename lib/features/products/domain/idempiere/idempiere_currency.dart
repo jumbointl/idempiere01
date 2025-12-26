@@ -112,7 +112,7 @@ class IdempiereCurrency extends IdempiereObject {
     data['IsEMUMember'] = isEMUMember;
     data['model-name'] = modelName;
     data['active'] = active;
-    data['category'] = category;
+    data['category'] = category?.toJson();
     data['identifier'] = identifier;
     data['propertyLabel'] = propertyLabel;
     data['image'] = image;

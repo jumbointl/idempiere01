@@ -7,6 +7,7 @@ import 'idempiere_tenant.dart';
 import 'idempiere_user.dart';
 
 import 'idempiere_attribute_set_instance.dart';
+import 'object_with_name_and_id.dart';
 
 class IdempiereStorageOnHande extends IdempiereObject{
   String? uid;
@@ -83,7 +84,7 @@ class IdempiereStorageOnHande extends IdempiereObject{
     identifier = json['identifier'];
     propertyLabel = json['propertyLabel'];
     active = json['active'];
-    category = json['category'];
+    category = json['category'] != null ? ObjectWithNameAndId.fromJson(json['category']) : null;;
     name = json['name'];
     image = json['image'];
   }
@@ -124,7 +125,7 @@ class IdempiereStorageOnHande extends IdempiereObject{
     data['identifier'] = identifier;
     data['propertyLabel'] = propertyLabel;
     data['active'] = active;
-    data['category'] = category;
+    data['category'] = category?.toJson();
     data['name'] = name;
     data['image'] = image;
     

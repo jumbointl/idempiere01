@@ -5,6 +5,7 @@ import 'package:monalisa_app_001/features/products/domain/idempiere/idempiere_us
 import 'idempiere_document_status.dart';
 import 'idempiere_object.dart';
 import 'idempiere_tenant.dart';
+import 'object_with_name_and_id.dart';
 
 class IdempiereMovementConfirm  extends IdempiereObject {
   String? uid;
@@ -84,7 +85,7 @@ class IdempiereMovementConfirm  extends IdempiereObject {
     propertyLabel = json['propertyLabel'];
     identifier = json['identifier'];
     image = json['image'];
-    category = json['category'];
+    category = json['category'] != null ? ObjectWithNameAndId.fromJson(json['category']) : null;;
     name = json['name'];
 
 
@@ -126,7 +127,7 @@ class IdempiereMovementConfirm  extends IdempiereObject {
     data['propertyLabel'] = propertyLabel;
     data['identifier'] = identifier;
     data['image'] = image;
-    data['category'] = category;
+    data['category'] = category?.toJson();
     data['name'] = name;
 
     return data;

@@ -56,9 +56,9 @@ var appHomeOptionCol1Items = <MenuItem>[
     ),
   if (RolesApp.appShipmentconfirm)
     MenuItem(
-      title: 'InOut Conf Generate',
+      title: 'Order Processing',
       subTitle: '',
-      link: AppRouter.PAGE_M_IN_OUT_LIST_SCREEN,
+      link: AppRouter.PAGE_SALES_ORDER_LIST_SCREEN,
       icon: Symbols.event_list,
     ),
   if (RolesApp.canUpdateProductUPC)

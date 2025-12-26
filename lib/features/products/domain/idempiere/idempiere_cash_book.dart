@@ -5,6 +5,7 @@ import 'idempiere_tenant.dart';
 import '../../../shared/data/messages.dart';
 import 'idempiere_object.dart';
 import 'idempiere_user.dart';
+import 'object_with_name_and_id.dart';
 
 class IdempiereCashBook extends IdempiereObject {
   String? uid;
@@ -68,7 +69,7 @@ class IdempiereCashBook extends IdempiereObject {
     propertyLabel = json['propertyLabel'];
     identifier = json['identifier'];
     image = json['image'];
-    category = json['category'];
+    category = json['category'] != null ? ObjectWithNameAndId.fromJson(json['category']) : null;;
     
   }
 
@@ -102,7 +103,7 @@ class IdempiereCashBook extends IdempiereObject {
     data['propertyLabel'] = propertyLabel;
     data['identifier'] = identifier;
     data['image'] = image;
-    data['category'] = category;
+    data['category'] = category?.toJson();
     return data;
   }
   static List<IdempiereCashBook> fromJsonList(List<dynamic> list){

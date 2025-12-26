@@ -98,13 +98,9 @@ class ProductsScanNotifierForLine  extends StateNotifier<List<IdempiereProduct>>
 
   }
   void addBarcodeToSearchMovement(String result) {
-    print('----------------------------------start searchMovementByIdOrDocumentNo $result');
-    //ref.read(isScanningProvider.notifier).update((state) => true);
     ref.read(scannedMovementIdForSearchProvider.notifier).update((state) => result);
   }
   void addBarcodeToSearchMovementNew(String result) {
-    print('------------------------------line start New SearchMovementByIdOrDocumentNo $result');
-    //ref.read(isScanningProvider.notifier).update((state) => true);
     ref.read(newScannedMovementIdForSearchProvider.notifier).update((state) => result);
   }
   void confirmMovement(int? id) {
@@ -114,7 +110,6 @@ class ProductsScanNotifierForLine  extends StateNotifier<List<IdempiereProduct>>
   @override
   Future<void> handleInputString({required WidgetRef ref, required String inputData,required actionScan}) async {
 
-    //int action  = ref.read(actionScanProvider);
     print('handleInputString $actionScan');
     switch(actionScan){
       case Memory.ACTION_FIND_MOVEMENT_BY_ID:

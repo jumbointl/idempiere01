@@ -5,6 +5,7 @@ import 'idempiere_user.dart';
 
 import '../../../shared/data/messages.dart';
 import 'idempiere_object.dart';
+import 'object_with_name_and_id.dart';
 
 
 class IdempiereTaxCategory extends IdempiereObject{
@@ -67,7 +68,7 @@ class IdempiereTaxCategory extends IdempiereObject{
     propertyLabel = json['propertyLabel'];
     identifier = json['identifier'];
     image = json['image'];
-    category = json['category'];
+    category = json['category'] != null ? ObjectWithNameAndId.fromJson(json['category']) : null;;
   }
 
   @override
@@ -98,7 +99,7 @@ class IdempiereTaxCategory extends IdempiereObject{
     data['propertyLabel'] = propertyLabel;
     data['identifier'] = identifier;
     data['image'] = image;
-    data['category'] = category;
+    data['category'] = category?.toJson();
     return data;
   }
   static List<IdempiereTaxCategory> fromJsonList(dynamic json) {

@@ -28,5 +28,6 @@ abstract class MInOutRepository {
   required String inOut});
 
   Future getMInOutListByDateRange({required WidgetRef ref, required DateTimeRange<DateTime> dates,
-    required String inOut}) async {}
+    required String inOut});
+  Future getSalesOrderListByDateRange({required WidgetRef ref, required DateTimeRange<DateTime> dates});
 }

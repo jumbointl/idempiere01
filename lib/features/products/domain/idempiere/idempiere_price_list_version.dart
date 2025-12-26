@@ -7,6 +7,7 @@ import '../../../shared/data/messages.dart';
 import 'idempiere_object.dart';
 import 'idempiere_organization.dart';
 import 'idempiere_price_list.dart';
+import 'object_with_name_and_id.dart';
 
 class IdempierePriceListVersion  extends IdempiereObject{
   String? uid;
@@ -77,7 +78,7 @@ class IdempierePriceListVersion  extends IdempiereObject{
         : null;
     modelName = json['model-name'];
     active = json['active'];
-    category = json['category'];
+    category = json['category'] != null ? ObjectWithNameAndId.fromJson(json['category']) : null;;
     identifier = json['identifier'];
     propertyLabel = json['propertyLabel'];
     image = json['image'];
@@ -117,7 +118,7 @@ class IdempierePriceListVersion  extends IdempiereObject{
     }
     data['model-name'] = modelName;
     data['active'] = active;
-    data['category'] = category;
+    data['category'] = category?.toJson();
     data['identifier'] = identifier;
     data['propertyLabel'] = propertyLabel;
     data['image'] = image;

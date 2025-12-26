@@ -6,6 +6,7 @@ import 'idempiere_user.dart';
 
 import '../../../shared/data/messages.dart';
 import 'idempiere_object.dart';
+import 'object_with_name_and_id.dart';
 
 class IdempiereCity extends IdempiereObject {
   String? uid;
@@ -113,7 +114,7 @@ class IdempiereCity extends IdempiereObject {
     mOLIALP3CountryCode = json['MOLI_ALP3CountryCode'];
     modelName = json['model-name'];
     active = json['active'];
-    category = json['category'];
+    category = json['category'] != null ? ObjectWithNameAndId.fromJson(json['category']) : null;;
     identifier = json['identifier'];
     propertyLabel = json['propertyLabel'];
     image = json['image'];
@@ -163,7 +164,7 @@ class IdempiereCity extends IdempiereObject {
     data['MOLI_ALP3CountryCode'] = mOLIALP3CountryCode;
     data['model-name'] = modelName;
     data['active'] = active;
-    data['category'] = category;
+    data['category'] = category?.toJson();
     data['identifier'] = identifier;
     data['propertyLabel'] = propertyLabel;
     data['image'] = image;

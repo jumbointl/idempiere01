@@ -272,7 +272,14 @@ class ProductStoreOnHandScreenState extends ConsumerState<ProductStoreOnHandScre
            ],
          );
        },error: (error, stackTrace) => Text('Error: $error'),
-       loading: () => const LinearProgressIndicator(),
+       loading: () {
+         final p = ref.watch(putAwayOnHandProgressProvider);
+         return LinearProgressIndicator(
+           minHeight: 36,
+           value: (p > 0 && p < 1) ? p : null,
+         );
+       },
+
      );
 
 

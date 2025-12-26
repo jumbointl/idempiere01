@@ -1,6 +1,7 @@
 
 import '../../../shared/data/messages.dart';
 import 'idempiere_object_id_string.dart';
+import 'object_with_name_and_id.dart';
 
 class IdempiereAutoArchive extends IdempiereObjectIdString {
 
@@ -23,7 +24,7 @@ class IdempiereAutoArchive extends IdempiereObjectIdString {
     name = json['name'];
     active = json['active'];
     image = json['image'];
-    category = json['category'];
+    category = json['category'] != null ? ObjectWithNameAndId.fromJson(json['category']) : null;;
   }
 
   @override
@@ -36,7 +37,7 @@ class IdempiereAutoArchive extends IdempiereObjectIdString {
     data['name'] = name;
     data['active'] = active;
     data['image'] = image;
-    data['category'] = category;
+    data['category'] = category?.toJson();
     return data;
   }
   static List<IdempiereAutoArchive> fromJsonList(dynamic json) {

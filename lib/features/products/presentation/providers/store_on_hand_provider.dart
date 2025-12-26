@@ -23,15 +23,247 @@ final scannedCodeForStoredOnHandProvider = StateProvider.autoDispose<String?>((r
 final scrollToUpProvider = StateProvider.autoDispose<bool>((ref) {
   return false;
 });
+final findProductByUPCOrSKUForStoreOnHandProvider =
+FutureProvider.autoDispose<ProductWithStock>((ref) async {
+  final String? scannedCode =
+  ref.watch(scannedCodeForStoredOnHandProvider)?.toUpperCase();
 
-final findProductByUPCOrSKUForStoreOnHandProvider = FutureProvider.autoDispose<ProductWithStock>((ref) async {
-  print('---------------------findProductByUPCOrSKUForStoreOnHandProvider---');
+  ProductWithStock productWithStock =
+  ProductWithStock(searched: false, showResultCard: true);
+
+  // reset progress
+  ref.read(storeOnHandProgressProvider.notifier).state = 0.0;
+
+  if (scannedCode == null || scannedCode == '') return productWithStock;
+
+  productWithStock.searched = true;
+  productWithStock.searchString = scannedCode;
+
+  int? aux = int.tryParse(scannedCode);
+  String searchField = 'upc';
+  if (aux == null) {
+    searchField = 'sku';
+  }
+
+  Dio dio = await DioClient.create();
+  ref.read(showResultCardProvider.notifier).state = true;
+
+  try {
+    // =========================
+    // 1) Buscar producto
+    // =========================
+    String url =
+        "/api/v1/models/m_product?\$filter=$searchField eq '$scannedCode'";
+    url = url.replaceAll(' ', '%20');
+    print(url);
+
+    final response = await dio.get(url);
+
+    if (response.statusCode == 200) {
+      final responseApi = ResponseApi<IdempiereProduct>.fromJson(
+        response.data,
+        IdempiereProduct.fromJson,
+      );
+
+      if (responseApi.records != null && responseApi.records!.isNotEmpty) {
+        final productsList = responseApi.records!;
+        if (productsList.isEmpty) {
+          return productWithStock;
+        }
+
+        IdempiereProduct product = productsList[0];
+        productWithStock.copyWithProduct(product);
+
+        if (productWithStock.hasProduct) {
+          // =========================
+          // 2) Buscar storage on hand (PAGINADO)
+          // =========================
+          final String productId = product.id.toString();
+
+          int totalRecords = 0;  // rowCount total a extraer
+          int totalPages = 0;    // pageCount total
+          int recordsSize = 100; // top
+          int skipRecords = 0;   // skip actual
+
+          bool firstPage = true;
+
+          final List<IdempiereStorageOnHande> allStorage = [];
+
+          while (true) {
+            if (!ref.mounted) break;
+
+            String urlStorage =
+                "/api/v1/models/m_storageonhand?"
+                "\$expand=M_Locator_ID"
+                "&\$filter=QtyOnHand%20neq%200%20AND%20M_Product_ID%20eq%20$productId"
+                "&\$top=$recordsSize"
+                "&\$skip=$skipRecords";
+
+            print(urlStorage);
+
+            final responseStorage = await dio.get(urlStorage);
+
+            if (responseStorage.statusCode != 200) {
+              break;
+            }
+
+            final responseApiStorage =
+            ResponseApi<IdempiereStorageOnHande>.fromJson(
+              responseStorage.data,
+              IdempiereStorageOnHande.fromJson,
+            );
+
+            // ✅ variables pedidas
+            totalRecords = responseApiStorage.rowCount ?? 0;
+            totalPages = responseApiStorage.pageCount ?? 0;
+            recordsSize = responseApiStorage.recordsSize ?? recordsSize;
+            skipRecords = responseApiStorage.skipRecords ?? skipRecords;
+
+            if (firstPage) {
+              firstPage = false;
+              // al inicio, si pageCount es 0 pero hay registros, igual dejamos avance por items
+              if (totalPages <= 0 && totalRecords > 0) {
+                ref.read(storeOnHandProgressProvider.notifier).state = 0.01;
+              }
+            }
+
+            final pageRecords =
+                responseApiStorage.records ?? <IdempiereStorageOnHande>[];
+
+            if (pageRecords.isNotEmpty) {
+              allStorage.addAll(pageRecords);
+            }
+
+            // ✅ progreso (por páginas si existe, si no por items)
+            if (ref.mounted) {
+              double p = 0.0;
+              if (totalPages > 0) {
+                final currentPage = (skipRecords ~/ recordsSize) + 1;
+                p = currentPage / totalPages;
+              } else if (totalRecords > 0) {
+                p = allStorage.length / totalRecords;
+              }
+              ref.read(storeOnHandProgressProvider.notifier).state =
+                  p.clamp(0.0, 1.0);
+            }
+
+            // condición fin
+            if (totalRecords == 0) break;
+            if (allStorage.length >= totalRecords) break;
+            if (pageRecords.isEmpty) break;
+
+            // siguiente página
+            skipRecords += recordsSize;
+          }
+
+          // asignar lista total
+          if (allStorage.isNotEmpty) {
+            ref.read(showResultCardProvider.notifier).state = true;
+
+            productWithStock.listStorageOnHande = allStorage;
+            ref.read(unsortedStoreOnHandListProvider.notifier).state = allStorage;
+
+            // =========================
+            // 3) Agrupar, ordenar y calcular warehouse user (igual que tu lógica)
+            // =========================
+            Map<String, IdempiereStorageOnHande> groupedProducts = {};
+            int warehouseUser = ref.read(authProvider).selectedWarehouse?.id ?? 0;
+
+            for (var data in allStorage) {
+              if (product.id == data.mProductID?.id) {
+                String key =
+                    '${data.mLocatorID?.value}-${data.mAttributeSetInstanceID?.id}';
+                if (groupedProducts.containsKey(key)) {
+                  groupedProducts[key]!.qtyOnHand =
+                      (groupedProducts[key]!.qtyOnHand ?? 0) + (data.qtyOnHand ?? 0);
+                } else {
+                  groupedProducts[key] = IdempiereStorageOnHande(
+                    mLocatorID: data.mLocatorID,
+                    mAttributeSetInstanceID: data.mAttributeSetInstanceID,
+                    qtyOnHand: data.qtyOnHand,
+                    mProductID: data.mProductID,
+                  );
+                }
+              }
+            }
+
+            List<IdempiereStorageOnHande> productsList =
+            groupedProducts.values.toList();
+
+            Map<int, List<IdempiereStorageOnHande>> groupedByWarehouse = {};
+            for (var p in productsList) {
+              int warehouseID = p.mLocatorID?.mWarehouseID?.id ?? 0;
+              groupedByWarehouse.putIfAbsent(warehouseID, () => []).add(p);
+            }
+
+            groupedByWarehouse.forEach((key, value) {
+              value.sort((a, b) => (b.qtyOnHand ?? 0).compareTo(a.qtyOnHand ?? 0));
+            });
+
+            List<int> sortedWarehouseIDs =
+            groupedByWarehouse.keys.toList()..sort();
+            if (groupedByWarehouse.containsKey(warehouseUser)) {
+              sortedWarehouseIDs.remove(warehouseUser);
+              sortedWarehouseIDs.insert(0, warehouseUser);
+            }
+
+            List<IdempiereStorageOnHande> sortedProductsList = [];
+            for (var warehouseID in sortedWarehouseIDs) {
+              sortedProductsList.addAll(
+                groupedByWarehouse[warehouseID]!
+                    .where((x) => (x.qtyOnHand ?? 0) != 0),
+              );
+            }
+
+            productWithStock.sortedStorageOnHande = sortedProductsList;
+
+            final userWarehouse = ref.read(authProvider).selectedWarehouse;
+            int userWarehouseId = userWarehouse?.id ?? 0;
+            String userWarehouseName = userWarehouse?.name ?? '';
+
+            double quantity = 0;
+            if (productWithStock.hasListStorageOnHande) {
+              for (var data in productWithStock.sortedStorageOnHande!) {
+                int warehouseID = data.mLocatorID?.mWarehouseID?.id ?? 0;
+                if (warehouseID == userWarehouseId) {
+                  quantity += data.qtyOnHand ?? 0;
+                }
+              }
+            }
+
+            String qtyTxt = Memory.numberFormatter0Digit.format(quantity);
+            ref.read(resultOfSameWarehouseProvider.notifier)
+                .update((state) => [qtyTxt, userWarehouseName]);
+          }
+
+          // 100%
+          if (ref.mounted) {
+            ref.read(storeOnHandProgressProvider.notifier).state = 1.0;
+          }
+        }
+      }
+    }
+
+    return productWithStock;
+  } on DioException catch (e) {
+    final authDataNotifier = ref.read(authProvider.notifier);
+    throw CustomErrorDioException(e, authDataNotifier);
+  } catch (e) {
+    throw Exception(e.toString());
+  } finally {
+    ref.read(isScanningProvider.notifier).state = false;
+    if (ref.mounted) {
+      ref.read(storeOnHandProgressProvider.notifier).state = 1.0;
+    }
+  }
+});
+
+/*final findProductByUPCOrSKUForStoreOnHandProvider = FutureProvider.autoDispose<ProductWithStock>((ref) async {
   final String? scannedCode = ref.watch(scannedCodeForStoredOnHandProvider)?.toUpperCase();
 
   ProductWithStock productWithStock = ProductWithStock(searched: false,showResultCard: true);
 
   if(scannedCode==null || scannedCode=='') return productWithStock;
-  print('---------------------findProductByUPCOrSKUForStoreOnHandProvider $scannedCode');
   productWithStock.searched = true;
   productWithStock.searchString = scannedCode;
   int? aux = int.tryParse(scannedCode);
@@ -59,12 +291,12 @@ final findProductByUPCOrSKUForStoreOnHandProvider = FutureProvider.autoDispose<P
         }
         IdempiereProduct product = productsList[0];
         productWithStock.copyWithProduct(product);
-
+        int skip=100;
 
         if(productWithStock.hasProduct){
           String productId = product.id.toString();
           String url = "/api/v1/models/m_storageonhand?\$expand=M_Locator_ID&\$IsActive=true"
-              "&\$filter=QtyOnHand%20neq%200%20AND%20M_Product_ID%20eq%20$productId";
+              "&\$filter=QtyOnHand%20neq%200%20AND%20M_Product_ID%20eq%20$productId&\$top=100&\$skip=$skip";
 
           print(url);
           final response = await dio.get(url);
@@ -73,6 +305,11 @@ final findProductByUPCOrSKUForStoreOnHandProvider = FutureProvider.autoDispose<P
             final responseApi =
             ResponseApi<IdempiereStorageOnHande>.fromJson(response.data, IdempiereStorageOnHande.fromJson);
             //print(response.data);
+            int totalRecords = responseApi.rowCount ?? 0; //registros totales que debe ser extraidos
+            int totalPages = responseApi.pageCount ?? 0; // veces a ejecutar  para todos los registros
+            int recordsSize = responseApi.recordsSize ?? 100; // default = 100 (catidad de registro maximo enviado por cada consulta)
+            int skipRecords = responseApi.skipRecords ?? 0; // inicio de posicion de registros a extrae
+
             print(responseApi.records?.length ?? 'null');
             if (responseApi.records != null && responseApi.records!.isNotEmpty) {
               ref.watch(showResultCardProvider.notifier).update((state) =>true);
@@ -150,13 +387,6 @@ final findProductByUPCOrSKUForStoreOnHandProvider = FutureProvider.autoDispose<P
               ref.read(resultOfSameWarehouseProvider.notifier).update((state) =>  [aux,userWarehouseName]);
             }
           }
-
-
-          print('200---------------------findProductWithStock---');
-          print(productWithStock.sortedStorageOnHande?.length ?? ' s empty');
-          print(productWithStock.listStorageOnHande?.length ?? ' l empty');
-          print('200---------------------findProductWithStock---end');
-
         }
       }
     }
@@ -170,8 +400,11 @@ final findProductByUPCOrSKUForStoreOnHandProvider = FutureProvider.autoDispose<P
     ref.read(isScanningProvider.notifier).state = false;
   }
 
-});
+});*/
 
+
+final storeOnHandProgressProvider =
+StateProvider.autoDispose<double>((ref) => 0.0);
 final findProductsByMOLIConfigurableSKUProvider = FutureProvider.autoDispose<List<IdempiereProduct>>((ref) async {
   final scannedCode = ref.watch(scannedSKUCodeProvider);
   if(scannedCode==null || scannedCode=='') return [];

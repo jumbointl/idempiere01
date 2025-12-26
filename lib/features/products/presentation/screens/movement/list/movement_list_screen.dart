@@ -81,8 +81,11 @@ class MovementListScreenState extends AsyncValueConsumerSimpleState<MovementList
      return Column(
        children: [
          DateRangeFilterRowPanel(
+             selectionFilterProvider: inOutFilterProvider,
              selectedDatesProvider: selectedDatesProvider,
-             values: ['ALL', 'IN', 'OUT', 'SWAP'],
+             values: [DateRangeFilterRowPanel.ALL,
+               DateRangeFilterRowPanel.IN, DateRangeFilterRowPanel.OUT,
+               DateRangeFilterRowPanel.SWAP],
              onOk: (date, inOut) {
              findMovementAfterDates(date, inOut: inOut);
 
@@ -108,9 +111,13 @@ class MovementListScreenState extends AsyncValueConsumerSimpleState<MovementList
             return getMovements(list);
 
           },error: (error, stackTrace) => Text('Error'),
-           loading: () => LinearProgressIndicator(
-             minHeight: 36,
-           ),
+           loading: () {
+             final p = ref.watch(movementSearchProgressProvider);
+             return LinearProgressIndicator(
+               minHeight: 36,
+               value: (p > 0 && p < 1) ? p : null, // null = indeterminado al inicio
+             );
+           },
              ),
        ]
      );

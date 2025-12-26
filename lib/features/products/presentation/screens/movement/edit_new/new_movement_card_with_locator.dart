@@ -27,6 +27,8 @@ class NewMovementCardWithLocator extends ConsumerStatefulWidget {
   //MovementsScreen movementScreen;
   TextStyle movementStyle = const TextStyle(fontWeight: FontWeight.bold,color: Colors.white,
         fontSize: themeFontSizeLarge);
+  TextStyle movementStyleMedium = const TextStyle(fontWeight: FontWeight.bold,color: Colors.white,
+      fontSize: themeFontSizeNormal);
   NewMovementCardWithLocator({
     super.key,
     required this.bgColor,
@@ -148,6 +150,7 @@ class MovementHeaderCardWithLocatorState extends ConsumerState<NewMovementCardWi
       id = widget.movementAndLines.name ?? Messages.EMPTY;
       titleLeft =widget.movementAndLines.identifier ?? Messages.EMPTY;
     }
+    TextStyle textStyle = documentType.length>20 ? widget.movementStyleMedium : widget.movementStyle;
 
     return Card(
       elevation: 1,
@@ -237,7 +240,7 @@ class MovementHeaderCardWithLocatorState extends ConsumerState<NewMovementCardWi
               children: [
                 Text(
                   documentType,
-                  style: widget.movementStyle,
+                  style: textStyle,
                   overflow: TextOverflow.ellipsis,
                 ),
                 getActionCancelMessage,

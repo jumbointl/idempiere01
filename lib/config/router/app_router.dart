@@ -16,6 +16,7 @@ import 'package:monalisa_app_001/features/m_inout/presentation/providers/m_in_ou
 import 'package:monalisa_app_001/features/m_inout/presentation/screens/m_in_out_barcode_list_screen.dart';
 import 'package:monalisa_app_001/features/m_inout/presentation/screens/m_in_out_screen.dart';
 import 'package:monalisa_app_001/features/products/domain/idempiere/put_away_movement.dart';
+import 'package:monalisa_app_001/features/products/domain/idempiere/sales_order_and_lines.dart';
 import 'package:monalisa_app_001/features/products/presentation/screens/movement/edit_new/movement_barcode_list_screen.dart';
 import 'package:monalisa_app_001/features/products/presentation/screens/movement/list/movement_list_screen.dart';
 import 'package:monalisa_app_001/features/products/presentation/screens/movement/printer/movement_print_screen.dart';
@@ -23,10 +24,9 @@ import 'package:monalisa_app_001/features/products/presentation/screens/movement
 import 'package:monalisa_app_001/features/products/presentation/screens/store_on_hand/memory_products.dart';
 import 'package:monalisa_app_001/features/products/presentation/screens/movement/edit_new/product_store_on_hand_screen_for_line.dart';
 import 'package:monalisa_app_001/features/products/presentation/screens/store_on_hand/unsorted_storage_on__hand_read_only_screen.dart';
+import 'package:monalisa_app_001/features/sales_order/screen/sales_order_barcode_list_screen.dart';
 import '../../features/auth/presentation/screens/auth_data_screen.dart';
 import '../../features/m_inout/domain/entities/m_in_out.dart';
-import '../../features/m_inout/presentation/providers/m_in_out_list_provider.dart';
-import '../../features/m_inout/presentation/screens/m_in_out_list_screen.dart';
 import '../../features/products/domain/idempiere/movement_and_lines.dart';
 import '../../features/products/presentation/providers/common_provider.dart';
 import '../../features/products/presentation/providers/locator_provider.dart';
@@ -46,6 +46,7 @@ import '../../features/products/presentation/screens/store_on_hand/product_store
 import '../../features/products/presentation/screens/movement/create/unsorted_storage_on__hand_screen.dart';
 import '../../features/products/presentation/screens/movement/edit_new/unsorted_storage_on__hand_screen_for_line.dart';
 import '../../features/products/presentation/screens/search/update_product_upc_screen.dart';
+import '../../features/sales_order/screen/sales_order_list_screen.dart';
 import '../../features/shared/data/memory.dart';
 import '../../features/shared/data/messages.dart';
 
@@ -97,9 +98,10 @@ class AppRouter {
   static String PAGE_MOVEMENT_REPAINT0='/movement_repaint0';
 
   static String PAGE_MOVEMENTS_CANCEL_SCREEN='/movement_cancel';
-  static String PAGE_M_IN_OUT_LIST_SCREEN='/m_in_out_list';
+  static String PAGE_SALES_ORDER_LIST_SCREEN='/sales_order_list';
 
   static String PAGE_M_IN_OUT_BARCODE_LIST='/m_in_out_barcode_list';
+  static String PAGE_SALES_ORDER_BARCODE_LIST='/sales_order_barcode_list';
 
 
 
@@ -198,17 +200,56 @@ final goRouterProvider = Provider((ref) {
           return MInOutScreen(type: type, documentNo: documentNo);
         },
       ),
+
       GoRoute(
-        path: AppRouter.PAGE_M_IN_OUT_LIST_SCREEN,
+        path: AppRouter.PAGE_SALES_ORDER_LIST_SCREEN,
+        pageBuilder: (context, state) {
+          final hasPrivilege = RolesApp.cantConfirmMovement;
+
+          if (hasPrivilege) {
+
+            // Use a FutureBuilder to show a loading indicator for 2 seconds
+            return CustomTransitionPage(
+              key: state.pageKey,
+              child: FutureBuilder(
+                future: Future.delayed(Duration(milliseconds: transitionTimeMilliseconds)),
+                builder: (context, snapshot) {
+
+
+                  if (snapshot.connectionState == ConnectionState.done) {
+                    return SalesOrderListScreen();
+                  }
+                  return const Scaffold(
+                    backgroundColor: Colors.white,
+                    body: Center(child: CircularProgressIndicator()),
+                  );
+                },
+              ),
+              transitionDuration: Duration(microseconds: transitionTimeMilliseconds),
+              transitionsBuilder: (context, animation, secondaryAnimation, child) {
+                // left to right : transition begin = Offset(1.0, 0.0), right to left : begin = Offset(-1.0, 0.0)
+                const begin = Offset(1.0, 0.0);
+                const end = Offset.zero;
+                final tween = Tween(begin: begin, end: end).chain(CurveTween(curve: Curves.easeInOut));
+                return SlideTransition(position: animation.drive(tween), child: child);
+              },
+            );
+          } else {
+            return const NoTransitionPage(child: HomeScreen());
+          }
+        },
+      ),
+      /*GoRoute(
+        path: AppRouter.PAGE_SALES_ORDER_LIST_SCREEN,
         pageBuilder: (context, state) {
           final hasPrivilege = RolesApp.cantConfirmMovement;
 
           if (hasPrivilege) {
             Future.microtask(() async {
-               ref.invalidate(mInOutProvider);
-               ref.invalidate(mInOutListProvider);
-               ref.invalidate(selectedMInOutIdsProvider);
-               ref.invalidate(selectedMInOutJobsProvider);
+              ref.invalidate(mInOutProvider);
+              ref.invalidate(mInOutListProvider);
+              ref.invalidate(selectedMInOutIdsProvider);
+              ref.invalidate(selectedMInOutJobsProvider);
 
 
             });
@@ -242,7 +283,7 @@ final goRouterProvider = Provider((ref) {
             return const NoTransitionPage(child: HomeScreen());
           }
         },
-      ),
+      ),*/
       GoRoute(
         path: '${AppRouter.PAGE_PRODUCT_STORE_ON_HAND}/:productId',
         pageBuilder: (context, state) {
@@ -407,6 +448,22 @@ final goRouterProvider = Provider((ref) {
               return PrinterSetupScreen(
                 movementAndLines: movementAndLines,
                 argument: argument);
+
+            } else{
+              return const HomeScreen();
+            }
+          }
+
+
+      ),
+      GoRoute(
+          path: AppRouter.PAGE_SALES_ORDER_BARCODE_LIST,
+          builder: (context, state){
+            if( RolesApp.hasStockPrivilege){
+              SalesOrderAndLines data = state.extra as  SalesOrderAndLines;
+              return SalesOrderBarcodeListScreen(
+                argument: jsonEncode(data.toJson()),
+                salesOrder: data, );
 
             } else{
               return const HomeScreen();

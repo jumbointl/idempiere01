@@ -107,7 +107,6 @@ final newMovementIdForMovementLineSearchProvider  = StateProvider.autoDispose<in
 
 final newFindMovementByIdOrDocumentNOProvider = FutureProvider.autoDispose<ResponseAsyncValue>((ref) async {
   final String scannedCode = ref.watch(newScannedMovementIdForSearchProvider).toUpperCase();
-  print('--------------------------------provider--start new searchMovementByIdOrDocumentNo $scannedCode');
   ResponseAsyncValue responseAsyncValue = ResponseAsyncValue();
   if(scannedCode=='') {
     MemoryProducts.movementAndLines.clearData();
@@ -132,7 +131,6 @@ final newFindMovementByIdOrDocumentNOProvider = FutureProvider.autoDispose<Respo
     if (response.statusCode == 200) {
 
       responseAsyncValue.success = true;
-      print(response.data);
       final responseApi =
       ResponseApi<IdempiereMovement>.fromJson(response.data, IdempiereMovement.fromJson);
       late IdempiereMovement m;
@@ -428,14 +426,199 @@ FutureProvider.autoDispose.family<double?, int>((ref, lineId) async {
   }
 });
 
+final movementSearchProgressProvider =
+StateProvider.autoDispose<double>((ref) => 0.0);
 
 final movementNotCompletedToFindByDateProvider  = StateProvider.autoDispose<MovementAndLines?>((ref) {
   return null;
 });
 
+final findMovementNotCompletedByDateProvider =
+FutureProvider.autoDispose<ResponseAsyncValue>((ref) async {
+  final MovementAndLines? movement =
+  ref.watch(movementNotCompletedToFindByDateProvider);
+
+  print('----------------------------------findMovementNotCompletedByDateProvider');
+
+  // reset progress
+  ref.read(movementSearchProgressProvider.notifier).state = 0.0;
+
+  ResponseAsyncValue responseAsyncValue = ResponseAsyncValue();
+  if (movement == null || movement.filterMovementDateStartAt == null) {
+    return responseAsyncValue;
+  }
+
+  responseAsyncValue.isInitiated = true;
+
+  final String docStatus = movement.filterDocumentStatus?.id ?? 'DR';
+  final String date = movement.filterMovementDateStartAt!;
+
+  String endDateClause = '';
+  if (movement.filterMovementDateEndAt != null) {
+    endDateClause = "AND MovementDate le ${movement.filterMovementDateEndAt!} ";
+  }
+
+  const String idempiereModelName = 'm_movement';
+  final Dio dio = await DioClient.create();
+
+  try {
+    // ===========================
+    // Construir baseUrl (sin top/skip)
+    // ===========================
+    int warehouseDefault = Memory.sqlUsersData.mWarehouseID?.id ?? -1;
+
+    String baseUrl = "/api/v1/models/$idempiereModelName";
+
+    if (movement.filterWarehouseFrom == null && movement.filterWarehouseTo == null) {
+      baseUrl =
+      "/api/v1/models/$idempiereModelName?\$filter=DocStatus eq '$docStatus' "
+          "AND MovementDate ge '$date' "
+          "${endDateClause}"
+          "AND (M_WarehouseTo_ID eq $warehouseDefault OR M_Warehouse_ID eq $warehouseDefault)"
+          "&\$orderby=MovementDate desc";
+    } else if (movement.filterWarehouseFrom != null && movement.filterWarehouseTo != null) {
+      final int warehouse = movement.filterWarehouseFrom!.id!;
+      final int warehouseTo = movement.filterWarehouseTo!.id!;
+      baseUrl =
+      "/api/v1/models/$idempiereModelName?\$filter=DocStatus eq '$docStatus' "
+          "AND MovementDate ge '$date' "
+          "${endDateClause}"
+          "AND M_WarehouseTo_ID eq $warehouseTo "
+          "AND M_Warehouse_ID eq $warehouse"
+          "&\$orderby=MovementDate desc";
+    } else if (movement.filterWarehouseFrom == null) {
+      final int warehouse = movement.filterWarehouseTo!.id!;
+      final int warehouseTo = movement.filterWarehouseTo!.id!;
+      baseUrl =
+      "/api/v1/models/$idempiereModelName?\$filter=DocStatus eq '$docStatus' "
+          "AND MovementDate ge '$date' "
+          "${endDateClause}"
+          "AND M_WarehouseTo_ID eq $warehouseTo "
+          "AND M_Warehouse_ID neq $warehouse"
+          "&\$orderby=MovementDate desc";
+    } else {
+      final int warehouse = movement.filterWarehouseFrom!.id!;
+      final int warehouseTo = movement.filterWarehouseFrom!.id!;
+      baseUrl =
+      "/api/v1/models/$idempiereModelName?\$filter=DocStatus eq '$docStatus' "
+          "AND MovementDate ge '$date' "
+          "${endDateClause}"
+          "AND M_WarehouseTo_ID neq $warehouseTo "
+          "AND M_Warehouse_ID eq $warehouse"
+          "&\$orderby=MovementDate desc";
+    }
+
+    // ===========================
+    // Paginación
+    // ===========================
+    final List<IdempiereMovement> all = [];
+
+    int totalRecords = 0; // rowCount
+    int totalPages = 0;   // pageCount
+    int recordsSize = 100;
+    int skipRecords = 0;
+
+    bool firstPage = true;
+
+    while (true) {
+      if (!ref.mounted) break;
+
+      final String url =
+      "$baseUrl&\$top=$recordsSize&\$skip=$skipRecords"
+          .replaceAll(' ', '%20');
+
+      print(url);
+
+      final response = await dio.get(url);
+
+      if (response.statusCode != 200) {
+        responseAsyncValue.success = true;
+        responseAsyncValue.data = [
+          IdempiereMovement(name: Messages.ERROR, id: response.statusCode)
+        ];
+        ref.read(movementSearchProgressProvider.notifier).state = 1.0;
+        return responseAsyncValue;
+      }
+
+      responseAsyncValue.success = true;
+
+      final responseApi = ResponseApi<IdempiereMovement>.fromJson(
+        response.data,
+        IdempiereMovement.fromJson,
+      );
+
+      // ✅ Variables pedidas
+      totalRecords = responseApi.rowCount ?? 0;
+      totalPages = responseApi.pageCount ?? 0;
+      recordsSize = responseApi.recordsSize ?? recordsSize;
+      skipRecords = responseApi.skipRecords ?? skipRecords;
+
+      // records de esta página
+      final pageRecords = responseApi.records ?? <IdempiereMovement>[];
+      if (pageRecords.isNotEmpty) {
+        all.addAll(pageRecords);
+      }
+
+      // ✅ Progreso:
+      // - si ya sabemos totalPages, usamos determinado
+      // - si no, dejamos indeterminado (0.0) hasta la 1ª respuesta
+      if (ref.mounted) {
+        if (firstPage) {
+          firstPage = false;
+        }
+
+        if (totalPages > 0) {
+          // pág actual aproximada (0-based -> 1-based)
+          final currentPage = (skipRecords ~/ recordsSize) + 1;
+          final p = currentPage / totalPages;
+          ref.read(movementSearchProgressProvider.notifier).state =
+              p.clamp(0.0, 1.0);
+        } else {
+          // si API no da pageCount, progreso por items
+          final p = (totalRecords > 0) ? (all.length / totalRecords) : 0.0;
+          ref.read(movementSearchProgressProvider.notifier).state =
+              p.clamp(0.0, 1.0);
+        }
+      }
+
+      // condición fin
+      if (totalRecords == 0) break;
+      if (all.length >= totalRecords) break;
+      if (pageRecords.isEmpty) break;
+
+      // siguiente página
+      skipRecords += recordsSize;
+    }
+
+    // Si no hay datos
+    if (all.isEmpty) {
+      responseAsyncValue.data = [
+        IdempiereMovement(name: Messages.NO_DATA_FOUND, id: Memory.NOT_FOUND_ID)
+      ];
+    } else {
+      responseAsyncValue.data = all;
+    }
+
+    // 100%
+    if (ref.mounted) {
+      ref.read(movementSearchProgressProvider.notifier).state = 1.0;
+    }
+    return responseAsyncValue;
+  } on DioException {
+    responseAsyncValue.success = false;
+    responseAsyncValue.message = '${Messages.ERROR} DioException';
+    ref.read(movementSearchProgressProvider.notifier).state = 1.0;
+    return responseAsyncValue;
+  } catch (e) {
+    responseAsyncValue.success = false;
+    responseAsyncValue.message = Messages.ERROR + e.toString();
+    ref.read(movementSearchProgressProvider.notifier).state = 1.0;
+    return responseAsyncValue;
+  }
+});
 
 
-final findMovementNotCompletedByDateProvider = FutureProvider.autoDispose<ResponseAsyncValue>((ref) async {
+/*final findMovementNotCompletedByDateProvider = FutureProvider.autoDispose<ResponseAsyncValue>((ref) async {
   final MovementAndLines? movement = ref.watch(movementNotCompletedToFindByDateProvider);
   print('----------------------------------findMovementNotCompletedByDateProvider');
   ResponseAsyncValue responseAsyncValue = ResponseAsyncValue();
@@ -447,22 +630,6 @@ final findMovementNotCompletedByDateProvider = FutureProvider.autoDispose<Respon
   if(movement.filterMovementDateEndAt !=null){
     endDate = 'AND MovementDate le ${movement.filterMovementDateEndAt!} ';
   }
-
-
-  /*if(movement.mWarehouseID !=null && movement.mWarehouseToID != null){
-    isIn = null;
-    warehouse = movement.mWarehouseID!.id!;
-  } else {
-    if(movement.mWarehouseID ==null){
-      isIn = false;
-
-      fileWarehouse ='M_WarehouseTo_ID';
-    } else {
-      isIn = true;
-
-      fileWarehouse ='M_Warehouse_ID';
-    }
-  }*/
 
   String date = movement.filterMovementDateStartAt!;
 
@@ -490,8 +657,8 @@ final findMovementNotCompletedByDateProvider = FutureProvider.autoDispose<Respon
       int warehouseTo = movement.filterWarehouseFrom!.id!;
       url = "/api/v1/models/$idempiereModelName?\$filter=DocStatus eq '$docStatus' AND MovementDate ge '$date' ${endDate}AND M_WarehouseTo_ID neq $warehouseTo AND M_Warehouse_ID eq $warehouse&\$orderby=MovementDate desc";
     }
-
-
+    int skip = 0 ;
+    url='$url&\$top=100&\$skip=$skip';
     print(url);
     url = url.replaceAll(' ', '%20');
     print(url);
@@ -501,6 +668,13 @@ final findMovementNotCompletedByDateProvider = FutureProvider.autoDispose<Respon
       responseAsyncValue.success = true;
       final responseApi =
       ResponseApi<IdempiereMovement>.fromJson(response.data, IdempiereMovement.fromJson);
+
+
+      int totalRecords = responseApi.rowCount ?? 0; //registros totales que debe ser extraidos
+      int totalPages = responseApi.pageCount ?? 0; // veces a ejecutar  para todos los registros
+      int recordsSize = responseApi.recordsSize ?? 100; // default = 100 (catidad de registro maximo enviado por cada consulta)
+      int skipRecords = responseApi.skipRecords ?? 0; // inicio de posicion de registros a extraer
+
       late List<IdempiereMovement> m;
       if (responseApi.records != null && responseApi.records!.isNotEmpty) {
         m = responseApi.records!;
@@ -529,7 +703,7 @@ final findMovementNotCompletedByDateProvider = FutureProvider.autoDispose<Respon
     return  responseAsyncValue;
   }
 
-});
+});*/
 final movementIdForConfirmProvider = StateProvider.autoDispose<int?>((ref) {
   return null;
 });

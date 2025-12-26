@@ -7,6 +7,7 @@ import '../../../shared/data/messages.dart';
 import 'idempiere_asset_group.dart';
 import 'idempiere_material_policy.dart';
 import 'idempiere_paint_color.dart';
+import 'object_with_name_and_id.dart';
 
 class IdempiereProductCategory extends IdempiereObject {
 
@@ -93,7 +94,7 @@ class IdempiereProductCategory extends IdempiereObject {
         : null;
     modelName = json['model-name'];
     active = json['active'];
-    category = json['category'];
+    category = json['category'] != null ? ObjectWithNameAndId.fromJson(json['category']) : null;;
     identifier = json['identifier'];
     propertyLabel = json['propertyLabel'];
     image = json['image'];
@@ -136,7 +137,7 @@ class IdempiereProductCategory extends IdempiereObject {
     }
     data['model-name'] = modelName;
     data['active'] = active;
-    data['category'] = category;
+    data['category'] = category?.toJson();
     data['identifier'] = identifier;
     data['propertyLabel'] = propertyLabel;
     data['image'] = image;

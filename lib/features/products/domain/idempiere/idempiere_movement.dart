@@ -17,6 +17,7 @@ import '../../../shared/data/messages.dart';
 import 'idempiere_object.dart';
 import 'idempiere_organization.dart';
 import 'idempiere_user.dart';
+import 'object_with_name_and_id.dart';
 
 
 
@@ -134,7 +135,7 @@ class IdempiereMovement extends IdempiereObject {
     propertyLabel = json['propertyLabel'];
     identifier = json['identifier'];
     image = json['image'];
-    category = json['category'];
+    category = json['category'] != null ? ObjectWithNameAndId.fromJson(json['category']) : null;;
     name = json['name'];
 
     chargeAmt = json['ChargeAmt']!= null ? double.parse(json['ChargeAmt'].toString()) : null;
@@ -211,7 +212,7 @@ class IdempiereMovement extends IdempiereObject {
     data['propertyLabel'] = propertyLabel;
     data['identifier'] = identifier;
     data['image'] = image;
-    data['category'] = category;
+    data['category'] = category?.toJson();
     data['name'] = name;
 
     if (mWarehouseID != null) {

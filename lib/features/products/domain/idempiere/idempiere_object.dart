@@ -31,7 +31,7 @@ class IdempiereObject implements CommonSqlData {
     image = json['image'];
     name = json['name'];
     active = json['active'];
-    category = json['category'] != null ? ObjectWithNameAndId.fromJson(json['category']) : null;
+    category = json['category'] != null ? ObjectWithNameAndId.fromJson(json['category']) : null; 
   }
 
 
@@ -42,7 +42,7 @@ class IdempiereObject implements CommonSqlData {
     data['identifier'] = identifier;
     data['model-name'] = modelName;
     data['image'] = image;
-    data['category'] = category;
+    data['category'] = category?.toJson();
     data['name'] = name;
     data['active'] = active;
     return data;

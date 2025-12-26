@@ -94,6 +94,7 @@ class MovementListScreenNewState extends AsyncValueConsumerState<MovementListScr
          DateRangeFilterRowPanel(
            values: ['ALL', 'IN', 'OUT', 'SWAP'],
            selectedDatesProvider: selectedDatesProvider,
+           selectionFilterProvider: inOutFilterProvider,
            onOk: (dates, inOut) {
            findMovementAfterDates(ref: ref, dates: dates, inOut: inOut);
          },
@@ -131,9 +132,13 @@ class MovementListScreenNewState extends AsyncValueConsumerState<MovementListScr
 
 
           },error: (error, stackTrace) => Text('Error'),
-           loading: () => LinearProgressIndicator(
-             minHeight: 36,
-           ),
+           loading: () {
+             final p = ref.watch(movementSearchProgressProvider);
+             return LinearProgressIndicator(
+               minHeight: 36,
+               value: (p > 0 && p < 1) ? p : null, // null = indeterminado al inicio
+             );
+           },
              ),
        ]
      );
@@ -452,39 +457,7 @@ class MovementListScreenNewState extends AsyncValueConsumerState<MovementListScr
 
 
   }
-  /*Future<void> findMovementAfterDate(DateTime date, {required String inOut}) async {
-    String dateString = date.toString().substring(0,10);
-    Memory.sqlUsersData.mWarehouseID ;
-    IdempiereWarehouse warehouse =Memory.sqlUsersData.mWarehouseID!;
-    IdempiereMovement? movement = IdempiereMovement(
-      movementDate: dateString,
-    );
-    MovementAndLines m ;
 
-    switch(inOut){
-      case 'IN':
-        movement.mWarehouseToID = warehouse;
-        break;
-      case 'OUT':
-        movement.mWarehouseID = warehouse;
-        break;
-      case 'SWAP':
-        movement.mWarehouseID = warehouse;
-        movement.mWarehouseToID = warehouse;
-        break;
-      case 'ALL':
-        movement.mWarehouseID = null;
-        movement.mWarehouseToID = null;
-        break;
-    }
-    final docType = ref.read(documentTyprFilterProvider);
-    widget.movementDateFilterStart = dateString;
-
-    movement.docStatus = IdempiereDocumentStatus(id:docType) ;
-    ref.read(movementNotCompletedToFindByDateProvider.notifier).update((state) => movement);
-
-
-  }*/
   @override
   bool get showSearchBar => false;
 

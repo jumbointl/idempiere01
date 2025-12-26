@@ -4,6 +4,7 @@ import 'idempiere_tenant.dart';
 import 'idempiere_object.dart';
 import 'idempiere_user.dart';
 import 'idempiere_discount_type.dart';
+import 'object_with_name_and_id.dart';
 
 class IdempiereDiscountSchema extends IdempiereObject {
   String? uid;
@@ -73,7 +74,7 @@ class IdempiereDiscountSchema extends IdempiereObject {
     isBPartnerFlatDiscount = json['IsBPartnerFlatDiscount'];
     modelName = json['model-name'];
     image = json['image'];
-    category = json['category'];
+    category = json['category'] != null ? ObjectWithNameAndId.fromJson(json['category']) : null;;
     propertyLabel = json['propertyLabel'];
     identifier = json['identifier'];
     active = json['active'];
@@ -110,7 +111,7 @@ class IdempiereDiscountSchema extends IdempiereObject {
     data['IsBPartnerFlatDiscount'] = isBPartnerFlatDiscount;
     data['model-name'] = modelName;
     data['image'] = image;
-    data['category'] = category;
+    data['category'] = category?.toJson();
     data['propertyLabel'] = propertyLabel;
     data['identifier'] = identifier;
     data['active'] = active;

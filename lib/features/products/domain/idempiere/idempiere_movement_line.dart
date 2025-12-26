@@ -9,6 +9,7 @@ import '../../../shared/data/messages.dart';
 import 'idempiere_attribute_set_instance.dart';
 import 'idempiere_object.dart';
 import 'idempiere_organization.dart';
+import 'object_with_name_and_id.dart';
 
 class IdempiereMovementLine extends IdempiereObject {
   String? uid;
@@ -132,7 +133,7 @@ class IdempiereMovementLine extends IdempiereObject {
     propertyLabel = json['propertyLabel'];
     identifier = json['identifier'];
     image = json['image'];
-    category = json['category'];
+    category = json['category'] != null ? ObjectWithNameAndId.fromJson(json['category']) : null;;
     name = json['name'];
     sKU = json['SKU'];
     uPC = json['UPC'];
@@ -203,7 +204,7 @@ class IdempiereMovementLine extends IdempiereObject {
     data['propertyLabel'] = propertyLabel;
     data['identifier'] = identifier;
     data['image'] = image;
-    data['category'] = category;
+    data['category'] = category?.toJson();
     data['name'] = name;
     data['SKU'] = sKU;
     data['UPC'] = uPC;

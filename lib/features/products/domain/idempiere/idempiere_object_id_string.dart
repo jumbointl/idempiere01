@@ -26,7 +26,7 @@ class IdempiereObjectIdString{
     identifier = json['identifier'];
     modelName = json['model-name'];
     image = json['image'];
-    category = json['category'] != null ? ObjectWithNameAndId.fromJson(json['category']) : null;
+    category = json['category'] != null ? ObjectWithNameAndId.fromJson(json['category']) : null; 
   }
 
 
@@ -37,7 +37,7 @@ class IdempiereObjectIdString{
     data['identifier'] = identifier;
     data['model-name'] = modelName;
     data['image'] = image;
-    data['category'] = category;
+    data['category'] = category?.toJson();
     return data;
   }
   Map<String, dynamic> toJsonForIdempiereSqlUse() {

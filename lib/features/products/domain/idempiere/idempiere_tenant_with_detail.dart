@@ -7,6 +7,7 @@ import 'idempiere_tenant.dart';
 import 'idempiere_user.dart';
 
 import '../../../shared/data/messages.dart';
+import 'object_with_name_and_id.dart';
 
 class IdempiereTenantWithDetail extends IdempiereTenant {
   String? uid;
@@ -109,7 +110,7 @@ class IdempiereTenantWithDetail extends IdempiereTenant {
         : null;
     modelName = json['model-name'];
     active = json['active'];
-    category = json['category'];
+    category = json['category'] != null ? ObjectWithNameAndId.fromJson(json['category']) : null;;
     identifier = json['identifier'];
     propertyLabel = json['propertyLabel'];
     image = json['image'];
@@ -159,7 +160,7 @@ class IdempiereTenantWithDetail extends IdempiereTenant {
     }
     data['model-name'] = modelName;
     data['active'] = active;
-    data['category'] = category;
+    data['category'] = category?.toJson();
     data['identifier'] = identifier;
     data['propertyLabel'] = propertyLabel;
     data['image'] = image;

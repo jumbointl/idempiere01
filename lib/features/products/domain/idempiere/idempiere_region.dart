@@ -5,6 +5,7 @@ import 'idempiere_user.dart';
 
 import '../../../shared/data/messages.dart';
 import 'idempiere_object.dart';
+import 'object_with_name_and_id.dart';
 
 class IdempiereRegion extends IdempiereObject  {
   String? uid;
@@ -69,7 +70,7 @@ class IdempiereRegion extends IdempiereObject  {
     isDefault = json['IsDefault'];
     modelName = json['model-name'];
     active = json['active'];
-    category = json['category'];
+    category = json['category'] != null ? ObjectWithNameAndId.fromJson(json['category']) : null;;
     identifier = json['identifier'];
     propertyLabel = json['propertyLabel'];
     image = json['image'];
@@ -103,7 +104,7 @@ class IdempiereRegion extends IdempiereObject  {
     data['IsDefault'] = isDefault;
     data['model-name'] = modelName;
     data['active'] = active;
-    data['category'] = category;
+    data['category'] = category?.toJson();
     data['identifier'] = identifier;
     data['propertyLabel'] = propertyLabel;
     data['image'] = image;

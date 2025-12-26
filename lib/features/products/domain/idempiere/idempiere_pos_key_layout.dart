@@ -8,6 +8,7 @@ import 'idempiere_object.dart';
 import 'idempiere_pos_key_layout_type.dart';
 import 'idempiere_print_color.dart';
 import 'idempiere_user.dart';
+import 'object_with_name_and_id.dart';
 
 
 class IdempierePosKeyLayout extends IdempiereObject {
@@ -82,7 +83,7 @@ class IdempierePosKeyLayout extends IdempiereObject {
     propertyLabel = json['propertyLabel'];
     identifier = json['identifier'];
     image = json['image'];
-    category = json['category'];
+    category = json['category'] != null ? ObjectWithNameAndId.fromJson(json['category']) : null;;
   }
 
   @override
@@ -121,7 +122,7 @@ class IdempierePosKeyLayout extends IdempiereObject {
     data['propertyLabel'] = propertyLabel;
     data['identifier'] = identifier;
     data['image'] = image;
-    data['category'] = category;
+    data['category'] = category?.toJson();
     return data;
   }
   static List<IdempierePosKeyLayout> fromJsonList(List<dynamic> list){

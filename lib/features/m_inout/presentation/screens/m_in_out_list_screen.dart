@@ -130,6 +130,7 @@ class _MInOutListScreenState extends ConsumerState<MInOutListScreen> {
       body: Column(
         children: [
           DateRangeFilterRowPanel(
+            selectionFilterProvider: selectedMInOutTypeProvider,
             selectedDatesProvider: selectedDatesProvider,
             values:  MInOutListTypeX.mInOutTypes,
             onScanButtonPressed: null,

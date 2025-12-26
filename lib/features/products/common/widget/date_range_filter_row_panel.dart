@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import 'package:material_symbols_icons/symbols.dart';
 
 import '../../../../config/router/app_router.dart';
 import '../../../../config/theme/app_theme.dart';
@@ -13,9 +14,25 @@ import '../../presentation/providers/common_provider.dart';
 import '../time_utils.dart';
 
 class DateRangeFilterRowPanel extends ConsumerWidget {
+  static const String ALL ='ALL';
+  static const String IN ='IN';
+  static const String OUT ='OUT';
+  static const String SWAP ='SWAP';
+  static const String TO_DO ='TO DO';
+  static const String DONE ='DONE';
+  static const String CANCELLED ='CANCELLED';
+  static const String RUNNING ='RUNNING';
+  static const String IN_PROGRESS ='IN PROGRESS';
+  static const String COMPLETED ='COMPLETED';
+  static const String RECEIVE ='RECEIVE';
+  static const String SHIPPING ='SHIPPING';
+  static const String CANCEL ='CANCEL';
+
+
   final bool orientationUpper;
-  List<String> values = ['ALL', 'IN', 'OUT', 'SWAP'];
+  final List<String> values ;
   StateProvider<DateTimeRange> selectedDatesProvider;
+  StateProvider<String>selectionFilterProvider;
 
 
   DateRangeFilterRowPanel({
@@ -25,14 +42,16 @@ class DateRangeFilterRowPanel extends ConsumerWidget {
     this.orientationUpper = true,
     required this.values,
     required this.selectedDatesProvider,
+    required this.selectionFilterProvider,
   });
 
   final void Function(DateTimeRange dateRange, String inOut) onOk;
   final VoidCallback? onScanButtonPressed;
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final selectedDates = ref.watch(selectedDatesProvider);
-    final inOutValue = ref.watch(inOutFilterProvider); // 'ALL', 'IN', 'OUT', 'SWAP'
+    final selectedValue = ref.watch(selectionFilterProvider);
     final dateTexts = [DateFormat('dd/MM/yyyy').format(selectedDates.start),
                 DateFormat('dd/MM/yyyy').format(selectedDates.end)];
 
@@ -121,13 +140,7 @@ class DateRangeFilterRowPanel extends ConsumerWidget {
             );
 
             if (picked != null) {
-              //final start = DateTime(picked.start.year, picked.start.month, picked.start.day);
-              //final end = DateTime(picked.end.year, picked.end.month, picked.end.day);
-
-              ref.read(selectedDatesProvider.notifier).state = picked;
-
-              final inOut = ref.read(inOutFilterProvider);
-              onOk(picked, inOut);
+              datesPicked(picked, ref);
             }
           },
           child: Text(dateTexts[0]==dateTexts[1] ? dateTexts[0] :
@@ -141,12 +154,7 @@ class DateRangeFilterRowPanel extends ConsumerWidget {
             backgroundColor: Colors.white,
           ),
           onPressed: () {
-            final now = DateTime.now();
-            final today = DateTime(now.year, now.month, now.day);
-            ref.read(selectedDatesProvider.notifier).state = DateTimeRange(start: today, end: today);
-            final dates = ref.read(selectedDatesProvider);
-            final inOut = ref.read(inOutFilterProvider);
-            onOk(dates, inOut);
+            toDayPressed(context, ref);
           },
           child: Text(
             Messages.TODAY,
@@ -170,7 +178,6 @@ class DateRangeFilterRowPanel extends ConsumerWidget {
             style: TextStyle(color: Colors.white),
           ),
         ),
-
         Container(
           height: 32, // Altura similar a OutlinedButton con VisualDensity.compact
           decoration: BoxDecoration(
@@ -182,9 +189,8 @@ class DateRangeFilterRowPanel extends ConsumerWidget {
             visualDensity: VisualDensity.compact,
             icon: const Icon(Icons.refresh, color: Colors.purple),
             onPressed: () {
-              final dates = ref.read(selectedDatesProvider);
-              final inOut = ref.read(inOutFilterProvider);
-              onOk(dates, inOut);
+              refreshButtonPressed(context, ref);
+
             },
           ),
         ),
@@ -192,60 +198,102 @@ class DateRangeFilterRowPanel extends ConsumerWidget {
     );
 
     // --------- SEGUNDA LINHA (filtro IN/OUT/...) ----------
-    final secondRow = Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Expanded(
-          child: SegmentedButton<String>(
-            segments: values.map((value) {
-              return ButtonSegment<String>(
-                value: value,
-                icon: Icon(_iconFor(value), size: 20),
-                label: Text(
-                  value,
-                  style: TextStyle(fontSize: themeFontSizeSmall),
-                ),
-              );
-            }).toList(),
-            selected: <String>{inOutValue},
-            onSelectionChanged: (newSelection) {
-              final value = newSelection.first;
-              ref.read(inOutFilterProvider.notifier).state = value;
+    if(values.isNotEmpty) {
+      final secondRow = Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Expanded(
+            child: SegmentedButton<String>(
+              segments: values.map((value) {
+                return ButtonSegment<String>(
+                  value: value,
+                  icon: Icon(_iconFor(value), size: 20),
+                  label: Text(
+                    value,
+                    style: TextStyle(fontSize: themeFontSizeSmall),
+                  ),
+                );
+              }).toList(),
+              selected: <String>{selectedValue},
+              onSelectionChanged: (newSelection) {
 
-              final dates = ref.read(selectedDatesProvider);
-              onOk(dates, value);
-            },
-            style: ButtonStyle(
-              visualDensity: VisualDensity.compact,
-              padding: WidgetStateProperty.all(
-                const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                onSelectionChanged(newSelection, ref);
+
+              },
+              style: ButtonStyle(
+                visualDensity: VisualDensity.compact,
+                padding: WidgetStateProperty.all(
+                  const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                ),
               ),
             ),
+
           ),
 
-        ),
+        ],
+      );
+      return Column(
+        children: orientationUpper ? [secondRow, firstRow] : [firstRow, secondRow],
+      );
+    } else {
+      return firstRow ;
+    }
 
-      ],
-    );
 
-    return Column(
-      children: orientationUpper ? [secondRow, firstRow] : [firstRow, secondRow],
-    );
   }
   IconData _iconFor(String value) {
     switch (value) {
-      case 'IN':
-      case MInOutListTypeX.RECEIVE:
+      case DateRangeFilterRowPanel.IN:
+      case DateRangeFilterRowPanel.RECEIVE:
         return Icons.arrow_downward;
-      case 'OUT':
-      case MInOutListTypeX.SHIPPING:
+      case DateRangeFilterRowPanel.OUT:
+      case DateRangeFilterRowPanel.SHIPPING:
         return Icons.arrow_upward;
-      case 'SWAP':
+      case DateRangeFilterRowPanel.SWAP:
         return Icons.swap_horiz;
-      case 'ALL':
+      case DateRangeFilterRowPanel.ALL:
         return Icons.all_inclusive;
+      case DateRangeFilterRowPanel.TO_DO:
+        return Symbols.pending_rounded;
+      case DateRangeFilterRowPanel.DONE:
+        return Symbols.done_all_rounded;
+      case DateRangeFilterRowPanel.CANCELLED:
+        return Icons.cancel;
+      case DateRangeFilterRowPanel.RUNNING:
+      case DateRangeFilterRowPanel.IN_PROGRESS:
+        return Symbols.arrow_upload_progress_rounded;
+
       default:
         return Icons.question_mark;
     }
+  }
+
+  void refreshButtonPressed(BuildContext context, WidgetRef ref) {
+    final dates = ref.read(selectedDatesProvider);
+    final inOut = ref.read(selectionFilterProvider);
+    onOk(dates, inOut);
+  }
+
+  void datesPicked(DateTimeRange<DateTime> picked, WidgetRef ref) {
+    ref.read(selectedDatesProvider.notifier).state = picked;
+    final inOut = ref.read(selectionFilterProvider);
+    onOk(picked, inOut);
+  }
+
+  void toDayPressed(BuildContext context, WidgetRef ref) {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    ref.read(selectedDatesProvider.notifier).state = DateTimeRange(start: today, end: today);
+    final dates = ref.read(selectedDatesProvider);
+    final inOut = ref.read(selectionFilterProvider);
+    onOk(dates, inOut);
+  }
+
+  void onSelectionChanged(Set<String> newSelection, WidgetRef ref) {
+    final value = newSelection.first;
+    ref.read(selectionFilterProvider.notifier)
+        .state = value;
+    final dates = ref.read(selectedDatesProvider);
+    onOk(dates, value);
   }
 }

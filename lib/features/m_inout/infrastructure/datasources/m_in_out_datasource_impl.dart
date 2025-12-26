@@ -43,7 +43,7 @@ class MInOutDataSourceImpl implements MInOutDataSource {
     await _dioInitialized;
     final mInOutState = ref.watch(mInOutProvider);
     final int warehouseID = ref.read(authProvider).selectedWarehouse!.id;
-
+    MInOut a;
     try {
       final String url =
           "/api/v1/models/m_inout?\$filter=IsSOTrx%20eq%20${mInOutState.isSOTrx}%20AND%20M_Warehouse_ID%20eq%20$warehouseID%20AND%20(DocStatus%20eq%20'DR'%20OR%20DocStatus%20eq%20'IP')";
@@ -884,6 +884,55 @@ class MInOutDataSourceImpl implements MInOutDataSource {
       throw Exception(e.toString());
     }
   }
+  @override
+  Future getSalesOrderListByDateRange({required WidgetRef ref, required DateTimeRange<DateTime> dates}) async{
+    await _dioInitialized;
+    final mInOutState = ref.watch(mInOutProvider);
+    final int warehouseID = ref.read(authProvider).selectedWarehouse!.id;
+    String filterEndDate = '';
+    String endDate = dates.end.toString().substring(0,10);
+    if(endDate.isNotEmpty){
+      filterEndDate = 'AND MovementDate le $endDate ';
+    }
+    String filterStartDate = '';
+    String startDate = dates.start.toString().substring(0,10);
+    if(startDate.isNotEmpty){
+      filterStartDate = 'AND MovementDate ge $startDate ';
+    }
+    String docStatus = ref.read(documentTypeListMInOutFilterProvider);
+    String filterInOut = 'IsSOTrx%20eq%20true%20AND%20';
+
+    try {
+      String url =
+          "/api/v1/models/m_inout?\$filter=${filterInOut}M_Warehouse_ID%20eq%20$warehouseID%20AND%20(DocStatus%20eq%20'$docStatus')";
+      //    "/api/v1/models/m_inout?\$filter=IsSOTrx%20eq%20${mInOutState.isSOTrx}%20AND%20M_Warehouse_ID%20eq%20$warehouseID%20AND%20(DocStatus%20eq%20'DR'%20OR%20DocStatus%20eq%20'IP')";
+      url = '$url $filterStartDate$filterEndDate'.trim();
+      url = url.replaceAll(' ','%20');
+      print(url);
+      final response = await dio.get(url);
+      if (response.statusCode == 200) {
+        final responseApi =
+        ResponseApi<MInOut>.fromJson(response.data, MInOut.fromJson);
+
+        if (responseApi.records != null && responseApi.records!.isNotEmpty) {
+          final mInOutList = responseApi.records!;
+          return mInOutList;
+        } else {
+          return <MInOut>[];
+        }
+      } else {
+        throw Exception(
+            'Error al obtener la lista de ${mInOutState.title}: ${response.statusCode}');
+      }
+    } on DioException catch (e) {
+      final authDataNotifier = ref.read(authProvider.notifier);
+      throw CustomErrorDioException(e, authDataNotifier);
+    } catch (e) {
+      print(e.toString());
+      throw Exception(e.toString());
+    }
+  }
+
 
   @override
   Future getMovementListByDateRange({required WidgetRef ref, required DateTimeRange<DateTime> dates, required String inOut}) async {

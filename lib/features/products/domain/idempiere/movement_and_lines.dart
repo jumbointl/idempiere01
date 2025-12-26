@@ -19,6 +19,7 @@ import 'idempiere_organization.dart';
 import 'idempiere_price_list.dart';
 import 'idempiere_tenant.dart';
 import 'idempiere_user.dart';
+import 'object_with_name_and_id.dart';
 
 class MovementAndLines extends IdempiereMovement {
   SqlUsersData? user;
@@ -151,7 +152,7 @@ class MovementAndLines extends IdempiereMovement {
     propertyLabel = json['propertyLabel'];
     identifier = json['identifier'];
     image = json['image'];
-    category = json['category'];
+    category = json['category'] != null ? ObjectWithNameAndId.fromJson(json['category']) : null;;
     name = json['name'];
 
     chargeAmt = json['ChargeAmt']!= null ? double.parse(json['ChargeAmt'].toString()) : null;
@@ -223,7 +224,7 @@ class MovementAndLines extends IdempiereMovement {
     data['propertyLabel'] = propertyLabel;
     data['identifier'] = identifier;
     data['image'] = image;
-    data['category'] = category;
+    data['category'] = category?.toJson();
     data['name'] = name;
 
     if (mWarehouseID != null) {
@@ -266,13 +267,8 @@ class MovementAndLines extends IdempiereMovement {
     return warehouseFrom!.id == warehouseTo!.id;
   }
   bool  get canCompleteMovement {
-    print('canCompleteMovement?');
-    print('hasMovement $hasMovement');
     if(!hasMovement) return false;
-    print('hasMovementLines $hasMovementLines');
     if(!hasMovementLines) return false;
-    print('docStatus ${docStatus?.id}');
-    print('docStatus ${docStatus?.id} = ${Memory.IDEMPIERE_DOC_TYPE_DRAFT} ?');
 
     if(docStatus != null && docStatus!.id
         == Memory.IDEMPIERE_DOC_TYPE_DRAFT) {

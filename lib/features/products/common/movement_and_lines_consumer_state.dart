@@ -106,10 +106,8 @@ abstract class MovementAndLinesConsumerState<T extends ConsumerStatefulWidget>
     }
     MovementAndLines movementAndLines = this.movementAndLines ;
     if(!movementAndLines.hasMovement) {
-      print('show movementAndLinesFrom result.data');
       movementAndLines = result.data!;
     } else {
-      print('show movementAndLinesFrom movementAndLines provider');
     }
 
     setWidgetMovementId(movementAndLines.id?.toString() ?? '-1');
