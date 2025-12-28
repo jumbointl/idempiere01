@@ -8,22 +8,18 @@ import 'package:monalisa_app_001/features/shared/domain/entities/run_process_res
 import '../../../../config/http/dio_client.dart';
 import '../../../auth/presentation/providers/auth_provider.dart';
 import '../../../products/domain/idempiere/response_async_value.dart';
-import '../../../shared/domain/entities/ad_login_request.dart';
-import '../../../shared/domain/entities/model_run_process_action.dart';
-import '../../../shared/domain/entities/model_set_doc_action_request.dart';
-import '../../../shared/domain/entities/standard_response.dart';
-import '../../../shared/infrastructure/errors/custom_error.dart';
 
 final idForCreateShipmentConfirmProvider = StateProvider.autoDispose<String>((ref) {
   return '';
 });
 final createShipmentConfirmProvider = FutureProvider.autoDispose<ResponseAsyncValue?>((ref) async {
   final String mInOutId = ref.watch(idForCreateShipmentConfirmProvider).toUpperCase();
-  print('--------------------------------provider--start findSearchConfirmProvide $mInOutId');
+
   ResponseAsyncValue responseAsyncValue = ResponseAsyncValue();
   if(mInOutId=='') {
     return null;
   }
+  print('---createShipmentConfirmProvider $mInOutId');
   responseAsyncValue.isInitiated = true;
 
   try {

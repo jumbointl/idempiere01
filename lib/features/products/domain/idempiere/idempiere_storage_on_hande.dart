@@ -84,7 +84,7 @@ class IdempiereStorageOnHande extends IdempiereObject{
     identifier = json['identifier'];
     propertyLabel = json['propertyLabel'];
     active = json['active'];
-    category = json['category'] != null ? ObjectWithNameAndId.fromJson(json['category']) : null;;
+    category = json['category'] != null ? ObjectWithNameAndId.fromJson(json['category']) : null;
     name = json['name'];
     image = json['image'];
   }

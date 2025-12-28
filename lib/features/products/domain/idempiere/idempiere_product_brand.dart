@@ -67,7 +67,7 @@ class IdempiereProductBrand extends IdempiereObject  {
     mOLIIsApproval = json['MOLI_isApproval'];
     modelName = json['model-name'];
     active = json['active'];
-    category = json['category'] != null ? ObjectWithNameAndId.fromJson(json['category']) : null;;
+    category = json['category'] != null ? ObjectWithNameAndId.fromJson(json['category']) : null;
     identifier = json['identifier'];
     propertyLabel = json['propertyLabel'];
     image = json['image'];

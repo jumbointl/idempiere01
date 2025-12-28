@@ -66,7 +66,7 @@ class IdempiereSalesRegion extends IdempiereObject {
     isDefault = json['IsDefault'];
     modelName = json['model-name'];
     active = json['active'];
-    category = json['category'] != null ? ObjectWithNameAndId.fromJson(json['category']) : null;;
+    category = json['category'] != null ? ObjectWithNameAndId.fromJson(json['category']) : null;
     identifier = json['identifier'];
     propertyLabel = json['propertyLabel'];
     image = json['image'];

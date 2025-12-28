@@ -192,6 +192,7 @@ class SalesOrderAndLines extends IdempiereSalesOrder {
   // =========================================================
   // copyWith
   // =========================================================
+  @override
   SalesOrderAndLines copyWith({
     List<IdempiereSalesOrderLine>? salesOrderLines,
     List<MInOut>? mInOuts,
@@ -268,7 +269,7 @@ class SalesOrderAndLines extends IdempiereSalesOrder {
   }) {
     return SalesOrderAndLines(
       salesOrderLines: salesOrderLines ?? this.salesOrderLines,
-      mInOutsInProgress: mInOuts ?? this.mInOutsInProgress,
+      mInOutsInProgress: mInOuts ?? mInOutsInProgress,
 
 
 

@@ -47,10 +47,10 @@ class ModelRunProcessRequest {
           "user": authData.userName,
           "pass": authData.password,
           "lang": "es_PY",
-          "ClientID": authData.selectedClient!.id,
-          "RoleID": authData.selectedRole!.id,
-          "OrgID": authData.selectedOrganization!.id,
-          "WarehouseID": authData.selectedWarehouse!.id,
+          "ClientID": authData.selectedClient.id,
+          "RoleID": authData.selectedRole.id,
+          "OrgID": authData.selectedOrganization.id,
+          "WarehouseID": authData.selectedWarehouse.id,
           "stage": 9,
         }
       }

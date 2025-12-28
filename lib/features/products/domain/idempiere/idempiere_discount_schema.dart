@@ -74,7 +74,7 @@ class IdempiereDiscountSchema extends IdempiereObject {
     isBPartnerFlatDiscount = json['IsBPartnerFlatDiscount'];
     modelName = json['model-name'];
     image = json['image'];
-    category = json['category'] != null ? ObjectWithNameAndId.fromJson(json['category']) : null;;
+    category = json['category'] != null ? ObjectWithNameAndId.fromJson(json['category']) : null;
     propertyLabel = json['propertyLabel'];
     identifier = json['identifier'];
     active = json['active'];

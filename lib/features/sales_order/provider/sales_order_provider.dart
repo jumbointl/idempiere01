@@ -1,6 +1,5 @@
 
 
-import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
@@ -15,9 +14,9 @@ import '../../products/common/time_utils.dart';
 import '../../products/common/widget/date_range_filter_row_panel.dart';
 import '../../products/domain/idempiere/response_async_value.dart';
 import '../../products/domain/idempiere/sales_order_and_lines.dart';
+import '../../products/domain/models/idempiere_query_page_utils.dart';
 import '../../shared/data/memory.dart';
 import '../../shared/data/messages.dart';
-import '../../shared/domain/entities/response_api.dart';
 
 final selectedSalesOrderDatesProvider = StateProvider<DateTimeRange>((ref) {
   return DateTimeRange(start: initialBusinessDate(), end: DateTime.now());
@@ -34,8 +33,14 @@ final selectedDocumentStatusToFindSalesOrderProvider  = StateProvider.autoDispos
   return 'CO';
 });
 
+final salesOrderTotalRecordsProvider = StateProvider<int>((ref) => 0);
+final salesOrderExtractedRecordsProvider = StateProvider<int>((ref) => 0);
 final salesOrderProgressColorProvider =
 StateProvider.autoDispose<Color>((ref) => themeColorPrimary);
+
+
+final salesOrderProgressProvider =
+StateProvider.autoDispose<double>((ref) => 0.0);
 
 String get allString =>'ALL';
 final salesOrderBusinessPartnerProvider =
@@ -44,8 +49,7 @@ StateProvider.autoDispose<IdempiereBusinessPartner>((ref) => IdempiereBusinessPa
   id: Memory.INITIAL_STATE_ID,
 ));
 
-final salesOrderProgressProvider =
-StateProvider.autoDispose<double>((ref) => 0.0);
+
 
 int? normalizeId(dynamic v) {
   if (v == null) return null;
@@ -61,8 +65,192 @@ List<List<int>> chunkIds(List<int> ids, int chunkSize) {
   }
   return chunks;
 }
+const int progressSteps = 20;
+double progressFromCounts({
+  required int extracted,
+  required int total,
+}) {
+  if (total <= 0) return 0.0;
+
+  final ratio = extracted / total;        // 0..1 real
+  final stepped =
+      (ratio * progressSteps).floor() / progressSteps;
+
+  return stepped.clamp(0.0, 1.0);
+}
+
+void updateProgressFromCounters(Ref ref) {
+  final total = ref.read(salesOrderTotalRecordsProvider);
+  final extracted = ref.read(salesOrderExtractedRecordsProvider);
+
+  final p = progressFromCounts(
+    extracted: extracted,
+    total: total,
+  );
+
+  ref.read(salesOrderProgressProvider.notifier).state = p;
+}
 
 final findSalesOrderToProcessByDateProvider =
+FutureProvider.autoDispose<ResponseAsyncValue>((ref) async {
+  // ================= RESET =================
+  ref.read(salesOrderProgressProvider.notifier).state = 0.0;
+  ref.read(salesOrderTotalRecordsProvider.notifier).state = 0;
+  ref.read(salesOrderExtractedRecordsProvider.notifier).state = 0;
+
+  final DateTimeRange? dates =
+  ref.watch(selectDatesToFindSalesOrderProvider);
+
+  final response = ResponseAsyncValue();
+  if (dates == null) return response;
+
+  response.isInitiated = true;
+
+  final dio = await DioClient.create();
+  final docStatus =
+  ref.read(selectedDocumentStatusToFindSalesOrderProvider);
+
+  final startDate = dates.start.toString().substring(0, 10);
+  final endDate   = dates.end.toString().substring(0, 10);
+  final warehouse = ref.read(authProvider).selectedWarehouse?.id ?? 0;
+
+  try {
+    // =========================================================
+    // 1) SALES ORDERS
+    // =========================================================
+    final orders = await fetchAllPages<SalesOrderAndLines>(
+      dio: dio,
+      baseUrl:
+      "/api/v1/models/c_order?\$filter="
+          "DocStatus eq '$docStatus' "
+          "AND DateOrdered ge '$startDate' "
+          "AND DateOrdered le '$endDate' "
+          "AND (M_Warehouse_ID eq $warehouse)",
+      filterSuffix: "",
+      parser: SalesOrderAndLines.fromJson,
+      orderByColumn: 'C_Order_ID',
+    );
+
+    // ---- sin resultados ----
+    if (orders.isEmpty) {
+      response.success = true;
+      response.data = <SalesOrderAndLines>[];
+
+      // mostrar avance mínimo (5%)
+      ref.read(salesOrderProgressProvider.notifier).state = 0.05;
+
+      return response;
+    }
+    // inicializar contenedores
+    for (final o in orders) {
+      o.salesOrderLines ??= <IdempiereSalesOrderLine>[];
+      o.mInOutsInProgress ??= <MInOut>[];
+    }
+
+    response.data = orders;
+    response.success = true;
+
+    // =========================================================
+    // 2) PREPARAR BLOQUES (10 BLOQUES FIJOS)
+    // =========================================================
+    final orderIds = orders
+        .map((e) => normalizeId(e.id))
+        .whereType<int>()
+        .toList();
+
+    /*final int blockSize =
+    (orderIds.length / 10).ceil().clamp(1, orderIds.length);*/
+    final int blockSize = 10;
+    final blocks = chunkIds(orderIds, blockSize);
+    // =========================================================
+    // 3) TOTAL GLOBAL (ORDERS + LINES + INOUTS)
+    // =========================================================
+    int totalRecords = orders.length;
+    int extractedRecords = 0;
+
+    ref.read(salesOrderTotalRecordsProvider.notifier).state = totalRecords;
+    ref.read(salesOrderExtractedRecordsProvider.notifier).state =
+        extractedRecords;
+
+    updateProgressFromCounters(ref);
+
+    final orderById = {
+      for (final o in orders)
+        if (normalizeId(o.id) != null) normalizeId(o.id)!: o
+    };
+
+    // =========================================================
+    // 4) POR BLOQUE: LINES + INOUT
+    // =========================================================
+    for (final block in blocks) {
+    //for (final block in orders) {
+      if (!ref.mounted) break;
+      for (final oid in block) {
+        orderById[oid]?.salesOrderLines = <IdempiereSalesOrderLine>[];
+        orderById[oid]?.mInOutsInProgress = <MInOut>[];
+      }
+      final inList = block.join(',');
+      //final inList = block.id ?? 0;
+
+      // ---------- ORDER LINES ----------
+      final lines = await fetchAllPages<IdempiereSalesOrderLine>(
+        dio: dio,
+        baseUrl:
+        "/api/v1/models/c_orderline?\$filter="
+            "C_Order_ID in ($inList)",
+        filterSuffix: "",
+        parser: IdempiereSalesOrderLine.fromJson,
+        orderByColumn: 'C_OrderLine_ID',
+      );
+      //block.salesOrderLines = lines ;
+      for (final l in lines) {
+        final oid = normalizeId(l.cOrderID?.id);
+        if (oid != null) {
+          orderById[oid]?.salesOrderLines?.add(l);
+        }
+      }
+
+      // ---------- M_INOUT ----------
+      final inouts = await fetchAllPages<MInOut>(
+        dio: dio,
+        baseUrl:
+        "/api/v1/models/m_inout?\$filter="
+            "C_Order_ID in ($inList) "
+            "AND (DocStatus eq 'DR' OR DocStatus eq 'IP')",
+        filterSuffix: "",
+        parser: MInOut.fromJson,
+        orderByColumn: 'M_InOut_ID',
+      );
+      //block.mInOutsInProgress = inouts ;
+      for (final m in inouts) {
+        final oid = normalizeId(m.cOrderId.id);
+        if (oid != null) {
+          orderById[oid]?.mInOutsInProgress?.add(m);
+        }
+      }
+
+      extractedRecords += block.length;
+      //extractedRecords += 1;
+      ref.read(salesOrderExtractedRecordsProvider.notifier).state =
+          extractedRecords;
+      updateProgressFromCounters(ref);
+    }
+
+    // =========================================================
+    // 5) FINAL
+    // =========================================================
+    ref.read(salesOrderProgressProvider.notifier).state = 1.0;
+    return response;
+  } catch (e) {
+    response.success = false;
+    response.message = Messages.ERROR + e.toString();
+    ref.read(salesOrderProgressProvider.notifier).state = 1.0;
+    return response;
+  }
+});
+
+
+/*final findSalesOrderToProcessByDateProvider =
 FutureProvider.autoDispose<ResponseAsyncValue>((ref) async {
   // reset progress
   ref.read(salesOrderProgressProvider.notifier).state = 0.0;
@@ -180,9 +368,9 @@ FutureProvider.autoDispose<ResponseAsyncValue>((ref) async {
     }
 
     if (m.isEmpty) {
-      /*final noData = [
+      *//*final noData = [
         SalesOrderAndLines(name: Messages.NO_DATA_FOUND, id: Memory.NOT_FOUND_ID)
-      ];*/
+      ];*//*
       responseAsyncValue.success = true;
       responseAsyncValue.data = <SalesOrderAndLines>[];
       ref.read(salesOrderProgressProvider.notifier).state = 1.0;
@@ -382,7 +570,8 @@ FutureProvider.autoDispose<ResponseAsyncValue>((ref) async {
     ref.read(salesOrderProgressProvider.notifier).state = 1.0;
     return responseAsyncValue;
   }
-});
+});*/
+
 
 /*final findSalesOrderToProcessByDateProvider = FutureProvider.autoDispose<ResponseAsyncValue>((ref) async {
   final DateTimeRange? dates = ref.watch(selectDatesToFindSalesOrderProvider);

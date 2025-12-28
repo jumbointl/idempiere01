@@ -12,7 +12,6 @@ import 'package:monalisa_app_001/config/router/app_router_notifier.dart';
 import 'package:monalisa_app_001/features/auth/auth.dart';
 import 'package:monalisa_app_001/features/auth/presentation/providers/auth_provider.dart';
 import 'package:monalisa_app_001/features/home/presentation/screens/home_screen.dart';
-import 'package:monalisa_app_001/features/m_inout/presentation/providers/m_in_out_providers.dart';
 import 'package:monalisa_app_001/features/m_inout/presentation/screens/m_in_out_barcode_list_screen.dart';
 import 'package:monalisa_app_001/features/m_inout/presentation/screens/m_in_out_screen.dart';
 import 'package:monalisa_app_001/features/products/domain/idempiere/put_away_movement.dart';

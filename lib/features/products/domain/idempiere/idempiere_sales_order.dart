@@ -1,4 +1,3 @@
-import 'package:idempiere_rest/idempiere_rest.dart';
 import 'package:monalisa_app_001/features/products/domain/idempiere/idempiere_business_partner_location.dart';
 import 'package:monalisa_app_001/features/products/domain/idempiere/idempiere_currency.dart';
 import 'package:monalisa_app_001/features/products/domain/idempiere/idempiere_document_status.dart';
@@ -8,7 +7,6 @@ import 'package:monalisa_app_001/features/products/domain/idempiere/idempiere_or
 import 'package:monalisa_app_001/features/products/domain/idempiere/idempiere_payment_rule.dart';
 import 'package:monalisa_app_001/features/products/domain/idempiere/idempiere_payment_term.dart';
 import 'package:monalisa_app_001/features/products/domain/idempiere/idempiere_price_list.dart';
-import 'package:monalisa_app_001/features/products/domain/idempiere/idempiere_product.dart';
 import 'package:monalisa_app_001/features/products/domain/idempiere/idempiere_tenant.dart';
 import 'package:monalisa_app_001/features/products/domain/idempiere/idempiere_user.dart';
 
@@ -255,10 +253,11 @@ class IdempiereSalesOrder  extends IdempiereObject{
     propertyLabel = json['propertyLabel'];
     identifier = json['identifier'];
     image = json['image'];
-    category = json['category'] != null ? ObjectWithNameAndId.fromJson(json['category']) : null;;
+    category = json['category'] != null ? ObjectWithNameAndId.fromJson(json['category']) : null;
     name = json['name'];
   }
 
+  @override
   Map<String, dynamic> toJson() {
     final Map<String, dynamic> data = <String, dynamic>{};
     data['id'] = id;

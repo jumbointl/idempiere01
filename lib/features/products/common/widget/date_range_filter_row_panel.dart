@@ -1,17 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_addons/flutter_addons.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
-import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:material_symbols_icons/symbols.dart';
 
-import '../../../../config/router/app_router.dart';
 import '../../../../config/theme/app_theme.dart';
 import '../../../shared/data/messages.dart';
-import '../../domain/models/m_in_out_list_type.dart';
-import '../../presentation/providers/common_provider.dart';
-import '../time_utils.dart';
 
 class DateRangeFilterRowPanel extends ConsumerWidget {
   static const String ALL ='ALL';
@@ -39,6 +33,7 @@ class DateRangeFilterRowPanel extends ConsumerWidget {
     super.key,
     required this.onOk,
     required this.onScanButtonPressed,
+    required this.onReloadButtonPressed,
     this.orientationUpper = true,
     required this.values,
     required this.selectedDatesProvider,
@@ -47,6 +42,7 @@ class DateRangeFilterRowPanel extends ConsumerWidget {
 
   final void Function(DateTimeRange dateRange, String inOut) onOk;
   final VoidCallback? onScanButtonPressed;
+  final VoidCallback? onReloadButtonPressed;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -269,9 +265,13 @@ class DateRangeFilterRowPanel extends ConsumerWidget {
   }
 
   void refreshButtonPressed(BuildContext context, WidgetRef ref) {
-    final dates = ref.read(selectedDatesProvider);
-    final inOut = ref.read(selectionFilterProvider);
-    onOk(dates, inOut);
+    if(onReloadButtonPressed!=null) {
+      onReloadButtonPressed!();
+    } else {
+      final dates = ref.read(selectedDatesProvider);
+      final inOut = ref.read(selectionFilterProvider);
+      onOk(dates, inOut);
+    }
   }
 
   void datesPicked(DateTimeRange<DateTime> picked, WidgetRef ref) {

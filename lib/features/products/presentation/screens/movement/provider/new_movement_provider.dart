@@ -473,7 +473,7 @@ FutureProvider.autoDispose<ResponseAsyncValue>((ref) async {
       baseUrl =
       "/api/v1/models/$idempiereModelName?\$filter=DocStatus eq '$docStatus' "
           "AND MovementDate ge '$date' "
-          "${endDateClause}"
+          "$endDateClause"
           "AND (M_WarehouseTo_ID eq $warehouseDefault OR M_Warehouse_ID eq $warehouseDefault)"
           "&\$orderby=MovementDate desc";
     } else if (movement.filterWarehouseFrom != null && movement.filterWarehouseTo != null) {
@@ -482,7 +482,7 @@ FutureProvider.autoDispose<ResponseAsyncValue>((ref) async {
       baseUrl =
       "/api/v1/models/$idempiereModelName?\$filter=DocStatus eq '$docStatus' "
           "AND MovementDate ge '$date' "
-          "${endDateClause}"
+          "$endDateClause"
           "AND M_WarehouseTo_ID eq $warehouseTo "
           "AND M_Warehouse_ID eq $warehouse"
           "&\$orderby=MovementDate desc";
@@ -492,7 +492,7 @@ FutureProvider.autoDispose<ResponseAsyncValue>((ref) async {
       baseUrl =
       "/api/v1/models/$idempiereModelName?\$filter=DocStatus eq '$docStatus' "
           "AND MovementDate ge '$date' "
-          "${endDateClause}"
+          "$endDateClause"
           "AND M_WarehouseTo_ID eq $warehouseTo "
           "AND M_Warehouse_ID neq $warehouse"
           "&\$orderby=MovementDate desc";
@@ -502,7 +502,7 @@ FutureProvider.autoDispose<ResponseAsyncValue>((ref) async {
       baseUrl =
       "/api/v1/models/$idempiereModelName?\$filter=DocStatus eq '$docStatus' "
           "AND MovementDate ge '$date' "
-          "${endDateClause}"
+          "$endDateClause"
           "AND M_WarehouseTo_ID neq $warehouseTo "
           "AND M_Warehouse_ID eq $warehouse"
           "&\$orderby=MovementDate desc";

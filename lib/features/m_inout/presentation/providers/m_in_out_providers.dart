@@ -13,10 +13,9 @@ import '../../../../config/constants/roles_app.dart';
 import '../../../../config/theme/app_theme.dart';
 import '../../../products/common/number_sum_panel.dart';
 import '../../../products/common/selections_dialog.dart';
-import '../../../products/domain/idempiere/idempiere_document_status.dart';
-import '../../../products/presentation/screens/movement/provider/new_movement_provider.dart';
-import '../../../shared/data/memory.dart';
+import '../../../products/common/widget/with_loading.dart';
 import '../../../shared/data/messages.dart';
+import '../../../shared/presentation/widgets/custom_filled_button.dart';
 import '../../domain/entities/barcode.dart';
 import '../../domain/entities/line_confirm.dart';
 import '../../infrastructure/repositories/m_in_out_repository_impl.dart';
@@ -165,7 +164,337 @@ class MInOutNotifier extends StateNotifier<MInOutStatus> {
     }
   }
 
-  Future<void> cargarLista(WidgetRef ref) async {
+  Future<void> loadMInOutAndLine(BuildContext context, WidgetRef ref) async {
+    final mInOutNotifier = ref.read(mInOutProvider.notifier);
+
+    debugPrint('[loadMInOutAndLine] START');
+
+    final stateNow = state;
+    final String doc = stateNow.doc;
+
+    debugPrint('[loadMInOutAndLine] type=${stateNow.mInOutType} doc=$doc');
+
+    // ---------------- CONFIRM FLOWS ----------------
+    if (_isConfirmType(stateNow.mInOutType)) {
+      debugPrint('[loadMInOutAndLine] route=CONFIRM');
+
+      try {
+        final mInOut = await withLoading(
+          context: context,
+          tag: 'CONFIRM getMInOutAndLine',
+          action: () => mInOutNotifier.getMInOutAndLine(ref),
+        );
+
+        if (mInOut == null || mInOut.id == null) {
+          if (!context.mounted) return;
+          showErrorMessage(
+            context,
+            ref,
+            '${Messages.NOT_M_IN_OUT_RECORD_FOUND} : $doc',
+          );
+          return;
+        }
+        if(!context.mounted) return;
+        final confirmList = await withLoading(
+          context: context,
+          tag: 'CONFIRM getMInOutConfirmList',
+          action: () => mInOutNotifier.getMInOutConfirmList(mInOut.id!, ref),
+        );
+
+        if (!context.mounted) return;
+        await _handleConfirmFlow(
+          context: context,
+          ref: ref,
+          notifier: mInOutNotifier,
+          stateNow: stateNow,
+          doc: doc,
+          mInOut: mInOut,
+          confirmList: confirmList ?? const [],
+        );
+      } catch (e) {
+        // Error already logged by _withLoading
+      }
+
+      return;
+    }
+
+    // ---------------- MOVE CONFIRM ----------------
+    if (_isMoveConfirmType(stateNow.mInOutType)) {
+      debugPrint('[loadMInOutAndLine] route=MOVE_CONFIRM');
+
+      // Keep your existing handler, but now it can optionally use _withLoading too
+      await _handleMoveConfirmFlow(
+        context: context,
+        ref: ref,
+        notifier: mInOutNotifier,
+        stateNow: stateNow,
+      );
+
+      return;
+    }
+
+    // ---------------- MOVE ----------------
+    if (_isMoveType(stateNow.mInOutType)) {
+      debugPrint('[loadMInOutAndLine] route=MOVE');
+      await mInOutNotifier.getMovementAndLine(ref);
+      return;
+    }
+
+    // ---------------- NORMAL IN/OUT ----------------
+    debugPrint('[loadMInOutAndLine] route=NORMAL');
+    await _handleNormalFlow(ref: ref, notifier: mInOutNotifier);
+  }
+
+
+  bool _isConfirmType(MInOutType t) {
+    return t == MInOutType.shipmentConfirm ||
+        t == MInOutType.receiptConfirm ||
+        t == MInOutType.pickConfirm ||
+        t == MInOutType.qaConfirm;
+  }
+
+  bool _isMoveConfirmType(MInOutType t) {
+    return t == MInOutType.moveConfirm;
+  }
+
+  bool _isMoveType(MInOutType t) {
+    return t == MInOutType.move;
+  }
+
+
+  bool _isConfirmFlow(MInOutType type, List<MInOutConfirm> mInOutConfirmList) {
+    if(mInOutConfirmList.isNotEmpty) return false;
+    if(!RolesApp.canCreateConfirm) return false;
+    return type == MInOutType.shipmentConfirm ||
+        type == MInOutType.receiptConfirm ||
+        type == MInOutType.pickConfirm ||
+        type == MInOutType.qaConfirm;
+  }
+  Future<void> _handleConfirmFlow({
+    required BuildContext context,
+    required WidgetRef ref,
+    required MInOutNotifier notifier,
+    required MInOutStatus stateNow,
+    required String doc,
+    required MInOut mInOut,
+    required List<MInOutConfirm> confirmList,
+  }) async {
+    // Decide whether to auto-create a confirm or let user pick one
+    if (_isConfirmFlow(stateNow.mInOutType, confirmList)) {
+      final isPickConfirm = stateNow.mInOutType == MInOutType.pickConfirm;
+      final isQaConfirm = stateNow.mInOutType == MInOutType.qaConfirm;
+      final isShipmentConfirm = stateNow.mInOutType == MInOutType.shipmentConfirm;
+
+      // Capability flags from backend
+      final canCreatePickConfirm = mInOut.canCreatePickConfirm;
+      final canCreateShipmentConfirm = mInOut.canCreateShipmentConfirm;
+      final canCreateQaConfirm = mInOut.canCreateQaConfirm;
+
+      debugPrint('[loadMInOutAndLine] auto-create confirm flow');
+
+      await Future.delayed(const Duration(milliseconds: 500));
+      if (!context.mounted) return;
+
+      if (isPickConfirm && canCreatePickConfirm) {
+        await showCreatePickOrQaConfirmModalBottomSheet(
+          ref: ref,
+          isQaConfirm: false,
+          documentNo: doc,
+          mInOutId: mInOut.id?.toString() ?? '',
+          type: MInOutType.pickConfirm,
+          onResultSuccess: () async {
+            if (!context.mounted) return;
+            await loadMInOutAndLine(context, ref);
+          },
+        );
+        return;
+      }
+
+      if (isShipmentConfirm && canCreateShipmentConfirm) {
+        await showCreateShipmentConfirmModalBottomSheet(
+          ref: ref,
+          documentNo: doc,
+          mInOutId: mInOut.id?.toString() ?? '',
+          type: MInOutType.shipmentConfirm,
+          onResultSuccess: () async {
+            if (!context.mounted) return;
+            await loadMInOutAndLine(context, ref);
+          },
+        );
+        return;
+      }
+
+      if (isQaConfirm && canCreateQaConfirm) {
+        await showCreatePickOrQaConfirmModalBottomSheet(
+          ref: ref,
+          isQaConfirm: true,
+          documentNo: doc,
+          mInOutId: mInOut.id?.toString() ?? '',
+          type: MInOutType.qaConfirm,
+          onResultSuccess: () async {
+            if (!context.mounted) return;
+            await loadMInOutAndLine(context, ref);
+          },
+        );
+        return;
+      }
+
+      // If none matched, fall back to selection
+    }
+
+    // Show selection modal
+    _showSelectMInOutConfirm(confirmList, context, notifier, stateNow, ref);
+  }
+  Future<void> _handleMoveConfirmFlow({
+    required BuildContext context,
+    required WidgetRef ref,
+    required MInOutNotifier notifier,
+    required MInOutStatus stateNow,
+  }) async {
+    // Fetch movement with loading
+    try {
+      final mInOut = await withLoading(
+        context: context,
+        tag: 'MOVE_CONFIRM getMovementAndLine',
+        action: () => notifier.getMovementAndLine(ref),
+      );
+
+      if (mInOut == null || mInOut.id == null) return;
+      if (!context.mounted) return;
+      if(context.mounted) {
+        final confirmList = await withLoading(
+          context: context,
+          tag: 'MOVE_CONFIRM getMovementConfirmList',
+          action: () => notifier.getMovementConfirmList(mInOut.id!, ref),
+        );
+        if (!context.mounted) return;
+
+        _showSelectMInOutConfirm(
+          confirmList ?? const [],
+          context,
+          notifier,
+          stateNow,
+          ref,
+        );
+      }
+
+
+    } catch (e) {
+      // Error already logged by _withLoading
+
+    }
+  }
+
+  Future<void> _handleNormalFlow({
+    required WidgetRef ref,
+    required MInOutNotifier notifier,
+  }) async {
+    // Normal flow: just fetch MInOut + lines and let the state drive the UI
+    await notifier.getMInOutAndLine(ref);
+  }
+
+
+  Future<void> _showSelectMInOutConfirm(
+      List<MInOutConfirm> mInOutConfirmList,
+      BuildContext context,
+      MInOutNotifier mInOutNotifier,
+      MInOutStatus mInOutState,
+      WidgetRef ref,
+      ) {
+    return showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (context) {
+        return FractionallySizedBox(
+          heightFactor: 0.7, // ocupa el 70% de la pantalla
+          child: Column(
+            children: [
+              // ---------- HEADER ----------
+              Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Text(
+                  'Seleccione el ${mInOutState.title}',
+                  style: const TextStyle(
+                    fontSize: themeFontSizeLarge,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+
+              const Divider(height: 0),
+
+              // ---------- LISTA O MENSAJE ----------
+              Expanded(
+                child: mInOutConfirmList.isNotEmpty
+                    ? ListView.builder(
+                  itemCount: mInOutConfirmList.length,
+                  itemBuilder: (context, index) {
+                    final item = mInOutConfirmList[index];
+
+                    return InkWell(
+                      onTap: () {
+                        if (mInOutState.mInOutType == MInOutType.moveConfirm) {
+                          mInOutNotifier.getMovementConfirmAndLine(item.id!, ref);
+                        } else {
+                          mInOutNotifier.getMInOutConfirmAndLine(item.id!, ref);
+                        }
+                        Navigator.of(context).pop();
+                      },
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              item.documentNo.toString(),
+                              style: const TextStyle(
+                                fontSize: themeFontSizeLarge,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            Text(
+                              item.mInOutId.identifier ?? '',
+                              style: TextStyle(
+                                fontSize: themeFontSizeSmall,
+                                color: themeColorGray,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            const Divider(height: 0),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                )
+                    : const Center(
+                  child: Text(
+                    'No hay confirmaciones pendientes.',
+                    style: TextStyle(fontSize: themeFontSizeNormal),
+                  ),
+                ),
+              ),
+
+              // ---------- BOTONES ----------
+              Padding(
+                padding: const EdgeInsets.all(16),
+                child: CustomFilledButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  label: 'Cerrar',
+                  icon: const Icon(Icons.close_rounded),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+  Future<void> loadDataList(WidgetRef ref) async {
     if (state.mInOutType == MInOutType.move ||
         state.mInOutType == MInOutType.moveConfirm) {
       await getMovementList(ref);
@@ -173,46 +502,7 @@ class MInOutNotifier extends StateNotifier<MInOutStatus> {
       await getMInOutList(ref);
     }
   }
-  Future<void> loadMInOutAndLine(
-      BuildContext context,
-      WidgetRef ref,
-      ) async {
-    final stateNow = state;
-    final String doc = stateNow.doc;
 
-    if (stateNow.mInOutType == MInOutType.shipmentConfirm ||
-        stateNow.mInOutType == MInOutType.receiptConfirm ||
-        stateNow.mInOutType == MInOutType.pickConfirm ||
-        stateNow.mInOutType == MInOutType.qaConfirm) {
-
-      _showScreenLoading(context);
-
-      try {
-        final mInOut = await getMInOutAndLine(ref);
-
-        if (!context.mounted) return;
-        Navigator.of(context).pop();
-
-        if (mInOut.id == null) {
-          showErrorMessage(context, ref,
-              '${Messages.NOT_M_IN_OUT_RECORD_FOUND} : $doc');
-        }
-      } catch (_) {
-        if (context.mounted) Navigator.of(context).pop();
-      }
-    }
-  }
-  void _showScreenLoading(BuildContext context) {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (BuildContext context) {
-        return Center(
-          child: CircularProgressIndicator(color: themeBackgroundColor),
-        );
-      },
-    );
-  }
   Future<void> getMInOutList(WidgetRef ref) async {
     state = state.copyWith(isLoadingMInOutList: true, errorMessage: '');
     try {
@@ -363,7 +653,7 @@ class MInOutNotifier extends StateNotifier<MInOutStatus> {
 
     try {
       final mInOutResponse = await mInOutRepository.getMInOut(state.doc, ref);
-      print('mInOutResponse ${mInOutResponse.toJson()}');
+      print('mInOutResponse ${mInOutResponse.id} ${mInOutResponse.lines.length}');
       final filteredLines = mInOutResponse.lines
           .where((line) => line.mProductId?.id != null)
           .toList();

@@ -20,7 +20,7 @@ import '../providers/m_in_out_list_provider.dart';
 
 class MInOutListScreen extends ConsumerStatefulWidget {
   final bool isMovement;
-  MInOutListScreen({super.key,required this.isMovement});
+  const MInOutListScreen({super.key,required this.isMovement});
 
   @override
   ConsumerState<MInOutListScreen> createState() => _MInOutListScreenState();
@@ -130,6 +130,7 @@ class _MInOutListScreenState extends ConsumerState<MInOutListScreen> {
       body: Column(
         children: [
           DateRangeFilterRowPanel(
+            onReloadButtonPressed: null,
             selectionFilterProvider: selectedMInOutTypeProvider,
             selectedDatesProvider: selectedDatesProvider,
             values:  MInOutListTypeX.mInOutTypes,
@@ -199,9 +200,9 @@ Widget _buildMInOutList(
                           : (v) {
                         final next = {...ref.read(selectedMInOutIdsProvider)};
                         if (v == true) {
-                          next.add(id!);
+                          next.add(id);
                         } else {
-                          next.remove(id!);
+                          next.remove(id);
                         }
                         ref.read(selectedMInOutIdsProvider.notifier).state =
                             next;

@@ -227,7 +227,7 @@ class IdempiereProduct extends IdempiereObject {
     propertyLabel = json['propertyLabel'];
     identifier = json['identifier'];
     image = json['image'];
-    category = json['category'] != null ? ObjectWithNameAndId.fromJson(json['category']) : null;;
+    category = json['category'] != null ? ObjectWithNameAndId.fromJson(json['category']) : null;
     descriptionURL = json['DescriptionURL'];
     mOLIProductBrandID = json['MOLI_ProductBrand_ID'] != null
         ? IdempiereProductBrand.fromJson(json['MOLI_ProductBrand_ID'])

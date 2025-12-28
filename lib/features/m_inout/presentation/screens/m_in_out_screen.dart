@@ -1,24 +1,16 @@
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:get_storage/get_storage.dart';
 import 'package:monalisa_app_001/config/config.dart';
-import 'package:monalisa_app_001/config/constants/roles_app.dart';
 import 'package:monalisa_app_001/features/m_inout/domain/entities/m_in_out.dart';
-import 'package:monalisa_app_001/features/m_inout/domain/entities/m_in_out_confirm.dart';
-import 'package:monalisa_app_001/features/products/common/messages_dialog.dart';
 import 'package:monalisa_app_001/features/shared/shared.dart';
 import 'package:monalisa_app_001/features/m_inout/domain/entities/line.dart';
 import 'package:monalisa_app_001/features/m_inout/presentation/widgets/barcode_list.dart';
 import 'package:intl/intl.dart';
-import '../../../auth/presentation/providers/auth_provider.dart';
 import '../../../products/common/selections_dialog.dart';
 import '../../../products/presentation/providers/common_provider.dart';
-import '../../../shared/data/messages.dart';
-import '../../../shared/domain/entities/ad_login_request.dart';
-import '../../../shared/domain/entities/model_run_process_action.dart';
-import '../../../shared/domain/entities/model_run_process_request.dart';
 import '../../domain/entities/barcode.dart';
-import '../providers/m_in_ot_utils.dart';
 import '../providers/m_in_out_providers.dart';
 import '../widgets/enter_barcode_button.dart';
 
@@ -37,6 +29,7 @@ class MInOutScreenState extends ConsumerState<MInOutScreen> {
   late String documentNo;
 
 
+
   @override
   void initState() {
     super.initState();
@@ -48,7 +41,7 @@ class MInOutScreenState extends ConsumerState<MInOutScreen> {
       quantityOfMovementAndScannedToAllowInputScannedQuantity = quantityToAllow;
     }
     WidgetsBinding.instance.addPostFrameCallback((_) async {
-      mInOutNotifier = ref.read(mInOutProvider.notifier);
+      final mInOutNotifier = ref.read(mInOutProvider.notifier);
       mInOutNotifier.setParameters(widget.type);
       if(documentNo.isNotEmpty && documentNo !='-1'){
         print('----documentNo: $documentNo');
@@ -56,12 +49,11 @@ class MInOutScreenState extends ConsumerState<MInOutScreen> {
         await mInOutNotifier.loadMInOutAndLine(context, ref);
         //String message = Messages.PASTE_THE_DOCUMENT_NUMBER_IN_THE_FIELD_THEN_SEARCH ;
         //showWarningMessage(context, ref, message);
-      } else {
-        await mInOutNotifier.cargarLista(ref);
       }
-
+      await mInOutNotifier.loadDataList(ref);
     });
   }
+
 
   @override
   Widget build(BuildContext context) {
@@ -264,35 +256,37 @@ class _MInOutViewState extends ConsumerState<_MInOutView> {
   bool _sentInitialToNotifier = false;
   String initialDocumentNo = '';
 
+
   @override
   void initState() {
     super.initState();
-
+    //mInOutState = widget.mInOutState;
     mInOutNotifier = widget.mInOutNotifier;
-
     // Envia o valor inicial para o notifier só uma vez
-
+    if (widget.initialDocumentNo.isNotEmpty && widget.initialDocumentNo != '-1') {
       WidgetsBinding.instance.addPostFrameCallback((_) async {
-        if (widget.initialDocumentNo.isNotEmpty && widget.initialDocumentNo != '-1') {
-          if (!_sentInitialToNotifier) {
-            mInOutNotifier.onDocChange(widget.initialDocumentNo);
-            if (context.mounted) {
-              await mInOutNotifier.loadMInOutAndLine(context, ref);
-              _sentInitialToNotifier = true;
-            }
+        if (!_sentInitialToNotifier) {
+          widget.mInOutNotifier.onDocChange(widget.initialDocumentNo);
+          //await Future.delayed(Duration(microseconds: 100));
+          if(context.mounted){
+            await loadMInOutAndLine(context, ref);
+            _sentInitialToNotifier = true;
           }
-        } else {
-          await mInOutNotifier.loadMInOutAndLine(context, ref);
         }
-
       });
+    }
+  }
 
+  @override
+  void dispose() {
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    final stateNow = widget.mInOutState;
-
+    //final mInOutState = widget.mInOutState;
+    final stateNow = ref.watch(mInOutProvider);
+    final mInOutNotifier = ref.read(mInOutProvider.notifier);
     return SafeArea(
       child: !stateNow.viewMInOut
           ? Column(
@@ -308,14 +302,14 @@ class _MInOutViewState extends ConsumerState<_MInOutView> {
                 mInOutNotifier.onDocChange(value);
               },
               onFieldSubmitted: (value) async {
-                await mInOutNotifier.loadMInOutAndLine(context, ref);
+                await loadMInOutAndLine(context, ref);
               },
               prefixIcon: const Icon(Icons.qr_code_scanner_rounded),
               suffixIcon: IconButton(
                 icon: const Icon(Icons.send_rounded),
                 color: themeColorPrimary,
                 onPressed: () async {
-                  await mInOutNotifier.loadMInOutAndLine(context, ref);
+                  await loadMInOutAndLine(context, ref);
                 },
               ),
             ),
@@ -327,7 +321,7 @@ class _MInOutViewState extends ConsumerState<_MInOutView> {
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: ListView(
                 children: [
-                  _buildMInOutList(ref, stateNow),
+                  _buildMInOutList(ref,stateNow),
                 ],
               ),
             ),
@@ -338,18 +332,250 @@ class _MInOutViewState extends ConsumerState<_MInOutView> {
           ? const Center(child: CircularProgressIndicator())
           : ListView(
         children: [
-          _buildMInOutHeader(context, ref, stateNow),
+          _buildMInOutHeader(context, ref,stateNow),
           const SizedBox(height: 5),
-          _buildActionOrderList(stateNow),
+          _buildActionOrderList(mInOutNotifier,stateNow),
           const SizedBox(height: 5),
           _buildMInOutLineList(stateNow, ref),
           stateNow.linesOver.isNotEmpty
-              ? _buildListOver(context, stateNow.linesOver, mInOutNotifier)
+              ? _buildListOver(
+            context,
+            stateNow.linesOver,
+            mInOutNotifier,
+          )
               : const SizedBox(),
         ],
       ),
     );
   }
+
+
+
+
+  Widget _buildMInOutHeader(BuildContext context, WidgetRef ref,MInOutStatus stateNow) {
+  //  final mInOutState = widget.mInOutState;
+    final mInOutNotifier = widget.mInOutNotifier;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 4),
+      child: Stack(
+        children: [
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(themeBorderRadius),
+              color: ref.watch(mInOutHeaderColorProvider(stateNow)),
+            ),
+            child: Row(
+              children: [
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: const [
+                    Text(
+                      'Document No.: ',
+                      style: TextStyle(
+                        fontSize: themeFontSizeSmall,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    Text(
+                      'Confirm No.: ',
+                      style: TextStyle(
+                        fontSize: themeFontSizeSmall,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    Text(
+                      'Date: ',
+                      style: TextStyle(
+                        fontSize: themeFontSizeSmall,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    Text(
+                      'Order: ',
+                      style: TextStyle(
+                        fontSize: themeFontSizeSmall,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    Text(
+                      'O. Date: ',
+                      style: TextStyle(
+                        fontSize: themeFontSizeSmall,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    Text(
+                      'Org.: ',
+                      style: TextStyle(
+                        fontSize: themeFontSizeSmall,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    Text(
+                      'Whs.: ',
+                      style: TextStyle(
+                        fontSize: themeFontSizeSmall,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    Text(
+                      'BP: ',
+                      style: TextStyle(
+                        fontSize: themeFontSizeSmall,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(width: 10),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      stateNow.mInOut?.documentNo ?? '',
+                      style: const TextStyle(fontSize: themeFontSizeSmall),
+                    ),
+                    if (stateNow.mInOutType == MInOutType.shipmentConfirm ||
+                        stateNow.mInOutType == MInOutType.receiptConfirm ||
+                        stateNow.mInOutType == MInOutType.pickConfirm ||
+                        stateNow.mInOutType == MInOutType.qaConfirm)
+                      Text(
+                        stateNow.mInOutConfirm?.documentNo ?? '',
+                        style:
+                        const TextStyle(fontSize: themeFontSizeSmall),
+                      ),
+                    Text(
+                      stateNow.mInOut?.movementDate != null
+                          ? DateFormat('dd/MM/yyyy').format(
+                        stateNow.mInOut!.movementDate!,
+                      )
+                          : '',
+                      style: const TextStyle(fontSize: themeFontSizeSmall),
+                    ),
+                    Text(
+                      stateNow.mInOut?.cOrderId.identifier ?? '',
+                      style: const TextStyle(fontSize: themeFontSizeSmall),
+                    ),
+                    Text(
+                      stateNow.mInOut?.dateOrdered != null
+                          ? DateFormat('dd/MM/yyyy').format(
+                        stateNow.mInOut!.dateOrdered!,
+                      )
+                          : '',
+                      style: const TextStyle(fontSize: themeFontSizeSmall),
+                    ),
+                    Text(
+                      stateNow.mInOut?.adOrgId.identifier ?? '',
+                      style: const TextStyle(fontSize: themeFontSizeSmall),
+                    ),
+                    Text(
+                      stateNow.mInOut?.mWarehouseId.identifier ?? '',
+                      style: const TextStyle(fontSize: themeFontSizeSmall),
+                    ),
+                    Text(
+                      stateNow.mInOut?.cBPartnerId.identifier ?? '',
+                      style: const TextStyle(fontSize: themeFontSizeSmall),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          Positioned(
+            right: 0,
+            top: 0,
+            child: IconButton(
+              icon: const Icon(Icons.clear, size: 20),
+              onPressed: stateNow.scanBarcodeListTotal.isNotEmpty
+                  ? () => _showConfirmclearMInOutData(
+                context,
+                mInOutNotifier,
+                stateNow,
+                ref,
+              )
+                  : () async {
+                mInOutNotifier.clearMInOutData();
+                await mInOutNotifier.loadDataList(ref);
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _showResetManualLine(BuildContext context, Line line) {
+    return showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(themeBorderRadius),
+          ),
+          title: const Text('Resetear Manual'),
+          content: const Text(
+              '¿Estás seguro de que deseas resetear la confirmación manual?'),
+          actions: <Widget>[
+            CustomFilledButton(
+              onPressed: () {
+                mInOutNotifier.resetManualLine(line);
+                Navigator.of(context).pop();
+              },
+              label: 'Si',
+              icon: const Icon(Icons.check),
+              buttonColor: themeColorError,
+            ),
+            CustomFilledButton(
+              onPressed: () => Navigator.of(context).pop(),
+              label: 'No',
+              icon: const Icon(Icons.close_rounded),
+              buttonColor: themeColorGray,
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Future<void> _showEditLocator(BuildContext context, MInOutStatus mInOutState,
+      Line item, WidgetRef ref) {
+    return showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(themeBorderRadius),
+          ),
+          title: const Text('Cambiar Estante'),
+          content: CustomTextFormField(
+            label: 'Estante Nueva',
+            initialValue: _sentInitialToNotifier ? '' :initialDocumentNo,
+            onChanged: mInOutNotifier.onEditLocatorChange,
+            autofocus: true,
+          ),
+          actions: <Widget>[
+            CustomFilledButton(
+              onPressed: () {
+                mInOutNotifier.confirmEditLocator(item, ref);
+                Navigator.of(context).pop();
+              },
+              label: 'Confirmar',
+              icon: const Icon(Icons.check),
+            ),
+            CustomFilledButton(
+              onPressed: () => Navigator.of(context).pop(),
+              label: 'Cancelar',
+              icon: const Icon(Icons.close_rounded),
+              buttonColor: themeColorGray,
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   Column _buildListOver(BuildContext context, List<Barcode> barcodeList,
       MInOutNotifier mInOutNotifier) {
 
@@ -377,6 +603,7 @@ class _MInOutViewState extends ConsumerState<_MInOutView> {
       ],
     );
   }
+
   Future<void> _showConfirmDeleteItemOver(
       BuildContext context, MInOutNotifier mInOutNotifier, Barcode barcode) {
     return showDialog(
@@ -413,202 +640,21 @@ class _MInOutViewState extends ConsumerState<_MInOutView> {
     );
   }
 
-  Future<void> _showSelectMInOutConfirm(
-      List<MInOutConfirm> mInOutConfirmList,
-      BuildContext context,
-      MInOutNotifier mInOutNotifier,
-      MInOutStatus mInOutState,
-      WidgetRef ref,
-      ) {
-    return showModalBottomSheet(
+  void _showScreenLoading(BuildContext context) {
+    showDialog(
       context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-      ),
-      builder: (context) {
-        return FractionallySizedBox(
-          heightFactor: 0.7, // ocupa el 70% de la pantalla
-          child: Column(
-            children: [
-              // ---------- HEADER ----------
-              Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Text(
-                  'Seleccione el ${mInOutState.title}',
-                  style: const TextStyle(
-                    fontSize: themeFontSizeLarge,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-
-              const Divider(height: 0),
-
-              // ---------- LISTA O MENSAJE ----------
-              Expanded(
-                child: mInOutConfirmList.isNotEmpty
-                    ? ListView.builder(
-                  itemCount: mInOutConfirmList.length,
-                  itemBuilder: (context, index) {
-                    final item = mInOutConfirmList[index];
-
-                    return InkWell(
-                      onTap: () {
-                        if (mInOutState.mInOutType == MInOutType.moveConfirm) {
-                          mInOutNotifier.getMovementConfirmAndLine(item.id!, ref);
-                        } else {
-                          mInOutNotifier.getMInOutConfirmAndLine(item.id!, ref);
-                        }
-                        Navigator.of(context).pop();
-                      },
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              item.documentNo.toString(),
-                              style: const TextStyle(
-                                fontSize: themeFontSizeLarge,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            Text(
-                              item.mInOutId.identifier ?? '',
-                              style: TextStyle(
-                                fontSize: themeFontSizeSmall,
-                                color: themeColorGray,
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            const Divider(height: 0),
-                          ],
-                        ),
-                      ),
-                    );
-                  },
-                )
-                    : const Center(
-                  child: Text(
-                    'No hay confirmaciones pendientes.',
-                    style: TextStyle(fontSize: themeFontSizeNormal),
-                  ),
-                ),
-              ),
-
-              // ---------- BOTONES ----------
-              Padding(
-                padding: const EdgeInsets.all(16),
-                child: CustomFilledButton(
-                  onPressed: () => Navigator.of(context).pop(),
-                  label: 'Cerrar',
-                  icon: const Icon(Icons.close_rounded),
-                ),
-              ),
-            ],
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return Center(
+          child: CircularProgressIndicator(
+            color: themeBackgroundColor,
           ),
         );
       },
     );
   }
-  // =========================
-  // HELPERS (corregidos para usar stateNow, no variables cacheadas)
-  // =========================
-
-  Widget _buildMInOutHeader(BuildContext context, WidgetRef ref, MInOutStatus stateNow) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 4),
-      child: Stack(
-        children: [
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(themeBorderRadius),
-              color: ref.watch(mInOutHeaderColorProvider(stateNow)),
-            ),
-            child: Row(
-              children: [
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: const [
-                    Text('Document No.: ',
-                        style: TextStyle(fontSize: themeFontSizeSmall, fontWeight: FontWeight.bold)),
-                    Text('Confirm No.: ',
-                        style: TextStyle(fontSize: themeFontSizeSmall, fontWeight: FontWeight.bold)),
-                    Text('Date: ',
-                        style: TextStyle(fontSize: themeFontSizeSmall, fontWeight: FontWeight.bold)),
-                    Text('Order: ',
-                        style: TextStyle(fontSize: themeFontSizeSmall, fontWeight: FontWeight.bold)),
-                    Text('O. Date: ',
-                        style: TextStyle(fontSize: themeFontSizeSmall, fontWeight: FontWeight.bold)),
-                    Text('Org.: ',
-                        style: TextStyle(fontSize: themeFontSizeSmall, fontWeight: FontWeight.bold)),
-                    Text('Whs.: ',
-                        style: TextStyle(fontSize: themeFontSizeSmall, fontWeight: FontWeight.bold)),
-                    Text('BP: ',
-                        style: TextStyle(fontSize: themeFontSizeSmall, fontWeight: FontWeight.bold)),
-                  ],
-                ),
-                const SizedBox(width: 10),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(stateNow.mInOut?.documentNo ?? '',
-                        style: const TextStyle(fontSize: themeFontSizeSmall)),
-                    if (stateNow.mInOutType == MInOutType.shipmentConfirm ||
-                        stateNow.mInOutType == MInOutType.receiptConfirm ||
-                        stateNow.mInOutType == MInOutType.pickConfirm ||
-                        stateNow.mInOutType == MInOutType.qaConfirm)
-                      Text(stateNow.mInOutConfirm?.documentNo ?? '',
-                          style: const TextStyle(fontSize: themeFontSizeSmall)),
-                    Text(
-                      stateNow.mInOut?.movementDate != null
-                          ? DateFormat('dd/MM/yyyy').format(stateNow.mInOut!.movementDate!)
-                          : '',
-                      style: const TextStyle(fontSize: themeFontSizeSmall),
-                    ),
-                    Text(stateNow.mInOut?.cOrderId.identifier ?? '',
-                        style: const TextStyle(fontSize: themeFontSizeSmall)),
-                    Text(
-                      stateNow.mInOut?.dateOrdered != null
-                          ? DateFormat('dd/MM/yyyy').format(stateNow.mInOut!.dateOrdered!)
-                          : '',
-                      style: const TextStyle(fontSize: themeFontSizeSmall),
-                    ),
-                    Text(stateNow.mInOut?.adOrgId.identifier ?? '',
-                        style: const TextStyle(fontSize: themeFontSizeSmall)),
-                    Text(stateNow.mInOut?.mWarehouseId.identifier ?? '',
-                        style: const TextStyle(fontSize: themeFontSizeSmall)),
-                    Text(stateNow.mInOut?.cBPartnerId.identifier ?? '',
-                        style: const TextStyle(fontSize: themeFontSizeSmall)),
-                  ],
-                ),
-              ],
-            ),
-          ),
-          Positioned(
-            right: 0,
-            top: 0,
-            child: IconButton(
-              icon: const Icon(Icons.clear, size: 20),
-              onPressed: stateNow.scanBarcodeListTotal.isNotEmpty
-                  ? () => _showConfirmclearMInOutData(context, mInOutNotifier, stateNow, ref)
-                  : () async {
-                mInOutNotifier.clearMInOutData();
-                await mInOutNotifier.cargarLista(ref);
-              },
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildMInOutList(WidgetRef ref, MInOutStatus stateNow) {
+  Widget _buildMInOutList(WidgetRef ref,MInOutStatus stateNow) {
     final mInOutList = stateNow.mInOutList;
-
     return mInOutList.isNotEmpty
         ? Column(
       children: [
@@ -621,47 +667,55 @@ class _MInOutViewState extends ConsumerState<_MInOutView> {
             return GestureDetector(
               onTap: () async {
                 mInOutNotifier.onDocChange(item.documentNo.toString());
-                await mInOutNotifier.loadMInOutAndLine(context, ref);
+                await loadMInOutAndLine(context, ref);
               },
               child: Column(
                 children: [
-                  const Divider(height: 0),
+                  Divider(height: 0),
                   Container(
-                    color: item.docStatus.id == 'IP' ? themeColorWarningLight : null,
+                    color: item.docStatus.id == 'IP'
+                        ? themeColorWarningLight
+                        : null,
                     child: Row(
                       children: [
                         Padding(
                           padding: const EdgeInsets.fromLTRB(16, 8, 8, 8),
                           child: Text(
                             item.movementDate != null
-                                ? DateFormat('dd/MM/yyyy').format(item.movementDate!)
+                                ? DateFormat('dd/MM/yyyy')
+                                .format(item.movementDate!)
                                 : '',
                             style: TextStyle(
-                              fontSize: themeFontSizeSmall,
-                              color: themeColorGray,
-                            ),
+                                fontSize: themeFontSizeSmall,
+                                color: themeColorGray),
                           ),
                         ),
                         Expanded(
                           child: Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 8),
+                            padding:
+                            const EdgeInsets.symmetric(horizontal: 8),
                             child: Text(
                               item.documentNo.toString(),
-                              style: const TextStyle(fontSize: themeFontSizeLarge),
+                              style: const TextStyle(
+                                fontSize: themeFontSizeLarge,
+                              ),
                             ),
                           ),
                         ),
                         Padding(
                           padding: const EdgeInsets.all(8),
                           child: GestureDetector(
-                            onTap: () => _showMInOutData(context, stateNow, item),
-                            child: Icon(Icons.info_rounded, color: themeColorPrimary),
+                            onTap: () => _showMInOutData(context, item,stateNow),
+                            child: Icon(
+                              Icons.info_rounded,
+                              color: themeColorPrimary,
+                            ),
                           ),
                         ),
                       ],
                     ),
                   ),
-                  const Divider(height: 0),
+                  Divider(height: 0),
                 ],
               ),
             );
@@ -670,9 +724,11 @@ class _MInOutViewState extends ConsumerState<_MInOutView> {
       ],
     )
         : stateNow.isLoadingMInOutList
-        ? const Padding(
-      padding: EdgeInsets.only(top: 32),
-      child: Center(child: CircularProgressIndicator()),
+        ? Padding(
+      padding: const EdgeInsets.only(top: 32),
+      child: Center(
+        child: CircularProgressIndicator(),
+      ),
     )
         : Padding(
       padding: const EdgeInsets.only(top: 32),
@@ -680,71 +736,126 @@ class _MInOutViewState extends ConsumerState<_MInOutView> {
         child: CustomFilledButton(
           label: 'Cargar lista',
           onPressed: () async {
-            await mInOutNotifier.cargarLista(ref);
+            await mInOutNotifier.loadDataList(ref);
           },
         ),
       ),
     );
   }
-
-  Future<void> _showMInOutData(BuildContext context, MInOutStatus stateNow, MInOut mInOut) {
+  Future<void> _showMInOutData(BuildContext context, MInOut mInOut,MInOutStatus stateNow) {
     return showDialog(
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(themeBorderRadius)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(themeBorderRadius),
+          ),
           title: Text(stateNow.title),
           content: SingleChildScrollView(
             child: Row(
               children: [
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
-                  children: const [
-                    Text('Doc. No.: ',
-                        style: TextStyle(fontSize: themeFontSizeSmall, fontWeight: FontWeight.bold)),
-                    Text('Date: ',
-                        style: TextStyle(fontSize: themeFontSizeSmall, fontWeight: FontWeight.bold)),
-                    Text('Order: ',
-                        style: TextStyle(fontSize: themeFontSizeSmall, fontWeight: FontWeight.bold)),
-                    Text('O. Date: ',
-                        style: TextStyle(fontSize: themeFontSizeSmall, fontWeight: FontWeight.bold)),
-                    Text('Org.: ',
-                        style: TextStyle(fontSize: themeFontSizeSmall, fontWeight: FontWeight.bold)),
-                    Text('Whs.: ',
-                        style: TextStyle(fontSize: themeFontSizeSmall, fontWeight: FontWeight.bold)),
-                    Text('BP: ',
-                        style: TextStyle(fontSize: themeFontSizeSmall, fontWeight: FontWeight.bold)),
-                    Text('Status: ',
-                        style: TextStyle(fontSize: themeFontSizeSmall, fontWeight: FontWeight.bold)),
+                  children: [
+                    Text(
+                      'Doc. No.: ',
+                      style: const TextStyle(
+                        fontSize: themeFontSizeSmall,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    Text(
+                      'Date: ',
+                      style: const TextStyle(
+                        fontSize: themeFontSizeSmall,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    Text(
+                      'Order: ',
+                      style: const TextStyle(
+                        fontSize: themeFontSizeSmall,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    Text(
+                      'O. Date: ',
+                      style: const TextStyle(
+                        fontSize: themeFontSizeSmall,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    Text(
+                      'Org.: ',
+                      style: const TextStyle(
+                        fontSize: themeFontSizeSmall,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    Text(
+                      'Whs.: ',
+                      style: const TextStyle(
+                        fontSize: themeFontSizeSmall,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    Text(
+                      'BP: ',
+                      style: const TextStyle(
+                        fontSize: themeFontSizeSmall,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    Text(
+                      'Status: ',
+                      style: const TextStyle(
+                        fontSize: themeFontSizeSmall,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
                   ],
                 ),
-                const SizedBox(width: 10),
+                SizedBox(width: 10),
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(mInOut.documentNo ?? '', style: const TextStyle(fontSize: themeFontSizeSmall)),
+                    Text(
+                      mInOut.documentNo ?? '',
+                      style: TextStyle(fontSize: themeFontSizeSmall),
+                    ),
                     Text(
                       mInOut.movementDate != null
-                          ? DateFormat('dd/MM/yyyy').format(mInOut.movementDate!)
+                          ? DateFormat('dd/MM/yyyy')
+                          .format(mInOut.movementDate!)
                           : '',
-                      style: const TextStyle(fontSize: themeFontSizeSmall),
+                      style: TextStyle(fontSize: themeFontSizeSmall),
                     ),
-                    Text(mInOut.cOrderId.identifier ?? '',
-                        style: const TextStyle(fontSize: themeFontSizeSmall)),
+                    Text(
+                      mInOut.cOrderId.identifier ?? '',
+                      style: TextStyle(fontSize: themeFontSizeSmall),
+                    ),
                     Text(
                       mInOut.dateOrdered != null
                           ? DateFormat('dd/MM/yyyy').format(mInOut.dateOrdered!)
                           : '',
-                      style: const TextStyle(fontSize: themeFontSizeSmall),
+                      style: TextStyle(fontSize: themeFontSizeSmall),
                     ),
-                    Text(mInOut.adOrgId.identifier ?? '',
-                        style: const TextStyle(fontSize: themeFontSizeSmall)),
-                    Text(mInOut.mWarehouseId.identifier ?? '',
-                        style: const TextStyle(fontSize: themeFontSizeSmall)),
-                    Text(mInOut.cBPartnerId.identifier ?? '',
-                        style: const TextStyle(fontSize: themeFontSizeSmall)),
-                    Text(mInOut.docStatus.identifier ?? '',
-                        style: const TextStyle(fontSize: themeFontSizeSmall)),
+                    Text(
+                      mInOut.adOrgId.identifier ?? '',
+                      style: TextStyle(fontSize: themeFontSizeSmall),
+                    ),
+                    Text(
+                      mInOut.mWarehouseId.identifier ?? '',
+                      style: TextStyle(fontSize: themeFontSizeSmall),
+                    ),
+                    Text(
+                      mInOut.cBPartnerId.identifier ?? '',
+                      style: TextStyle(fontSize: themeFontSizeSmall),
+                    ),
+                    Text(
+                      mInOut.docStatus.identifier ?? '',
+                      style: TextStyle(fontSize: themeFontSizeSmall),
+                    ),
                   ],
                 ),
               ],
@@ -761,26 +872,24 @@ class _MInOutViewState extends ConsumerState<_MInOutView> {
       },
     );
   }
-
-  Future<void> _showConfirmclearMInOutData(
-      BuildContext context,
-      MInOutNotifier notifier,
-      MInOutStatus stateNow,
-      WidgetRef ref,
-      ) {
+  Future<void> _showConfirmclearMInOutData(BuildContext context,
+      MInOutNotifier mInOutNotifier, MInOutStatus mInOutState, WidgetRef ref) {
     return showDialog(
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(themeBorderRadius)),
-          title: Text('Limpiar ${stateNow.title}'),
-          content: Text('¿Estás seguro de que deseas limpiar este ${stateNow.title}?'),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(themeBorderRadius),
+          ),
+          title: Text('Limpiar ${mInOutState.title}'),
+          content: Text(
+              '¿Estás seguro de que deseas limpiar este ${mInOutState.title}?'),
           actions: <Widget>[
             CustomFilledButton(
               onPressed: () async {
-                notifier.clearMInOutData();
+                mInOutNotifier.clearMInOutData();
                 Navigator.of(context).pop();
-                await notifier.cargarLista(ref);
+                await mInOutNotifier.loadDataList(ref);
               },
               label: 'Si',
               icon: const Icon(Icons.check),
@@ -797,97 +906,98 @@ class _MInOutViewState extends ConsumerState<_MInOutView> {
       },
     );
   }
-
-  Widget _buildActionOrderList(MInOutStatus stateNow) {
+  Widget _buildActionOrderList(MInOutNotifier mInOutNotifier,MInOutStatus stateNow) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
+        // pendiente
         _buildOrderList(
-          stateNow: stateNow,
           icon: Icons.circle_outlined,
           color: themeColorError,
           background: themeColorErrorLight,
           onPressed: () => mInOutNotifier.setOrderBy('pending'),
           name: 'pending',
+          mInOutState: stateNow,
         ),
-        const SizedBox(width: 4),
+        SizedBox(width: 4),
+        // menor
         _buildOrderList(
-          stateNow: stateNow,
           icon: Icons.radio_button_checked_rounded,
           color: themeColorWarning,
           background: themeColorWarningLight,
           onPressed: () => mInOutNotifier.setOrderBy('minor'),
           name: 'minor',
+          mInOutState: stateNow,
         ),
-        const SizedBox(width: 4),
+        SizedBox(width: 4),
+        // supera
         _buildOrderList(
-          stateNow: stateNow,
           icon: Icons.warning_amber_rounded,
           color: themeColorWarning,
           background: themeColorWarningLight,
           onPressed: () => mInOutNotifier.setOrderBy('over'),
           name: 'over',
+          mInOutState: stateNow,
         ),
-        const SizedBox(width: 4),
+        SizedBox(width: 4),
+        // manual
         _buildOrderList(
-          stateNow: stateNow,
           icon: Icons.touch_app_outlined,
           color: themeColorSuccessful,
           background: themeColorSuccessfulLight,
           onPressed: () => mInOutNotifier.setOrderBy('manually'),
           name: 'manually',
+          mInOutState: stateNow,
         ),
-        const SizedBox(width: 4),
+        SizedBox(width: 4),
+        // correcto
         _buildOrderList(
-          stateNow: stateNow,
           icon: Icons.check_circle_outline_rounded,
           color: themeColorSuccessful,
           background: themeColorSuccessfulLight,
           onPressed: () => mInOutNotifier.setOrderBy('correct'),
           name: 'correct',
+          mInOutState: stateNow,
         ),
       ],
     );
   }
-
   Widget _buildOrderList({
-    required MInOutStatus stateNow,
     required IconData icon,
     required VoidCallback onPressed,
     required Color color,
     required Color background,
     required String name,
+    required MInOutStatus mInOutState,
   }) {
-    final selected = stateNow.orderBy == name;
     return GestureDetector(
       onTap: onPressed,
       child: Container(
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(themeBorderRadius),
-          color: selected ? background : themeBackgroundColorLight,
+          color: mInOutState.orderBy == name
+              ? background
+              : themeBackgroundColorLight,
         ),
-        padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
+        padding: EdgeInsets.symmetric(vertical: 4, horizontal: 8),
         child: Center(
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(Icons.straight_rounded, size: 18, color: selected ? color : themeColorGray),
-              Icon(icon, size: 18, color: selected ? color : themeColorGray),
+              Icon(Icons.straight_rounded,
+                  size: 18,
+                  color: mInOutState.orderBy == name ? color : themeColorGray),
+              Icon(icon,
+                  size: 18,
+                  color: mInOutState.orderBy == name ? color : themeColorGray),
             ],
           ),
         ),
       ),
     );
   }
-
-  // =========================
-  // Los métodos siguientes se mantienen igual que los tuyos,
-  // pero OJO: deben usar "stateNow" que les pasas, no variables globales.
-  // =========================
-
-  // ✅ Este ya estaba bien (usa el parámetro)
-  Widget _buildMInOutLineList(MInOutStatus stateNow, WidgetRef ref) {
-    final mInOutLines = stateNow.mInOut?.lines ?? [];
+  Widget _buildMInOutLineList(MInOutStatus mInOutState, WidgetRef ref) {
+    final mInOutLines = mInOutState.mInOut?.lines ?? [];
     return ListView.builder(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
@@ -895,12 +1005,14 @@ class _MInOutViewState extends ConsumerState<_MInOutView> {
       itemBuilder: (context, index) {
         final item = mInOutLines[index];
         return GestureDetector(
-          onTap: () => _selectLine(context, mInOutNotifier, stateNow, item, ref),
+          onTap: () =>
+              _selectLine(context, mInOutNotifier, mInOutState, item, ref),
           child: Column(
             children: [
-              const Divider(height: 0),
+              Divider(height: 0),
               Container(
-                color: item.verifiedStatus == 'over' || item.verifiedStatus == 'manually-over'
+                color: item.verifiedStatus == 'over' ||
+                    item.verifiedStatus == 'manually-over'
                     ? themeColorWarningLight
                     : null,
                 child: Row(
@@ -909,7 +1021,9 @@ class _MInOutViewState extends ConsumerState<_MInOutView> {
                       padding: const EdgeInsets.fromLTRB(16, 8, 8, 8),
                       child: Text(
                         item.line.toString(),
-                        style: TextStyle(fontSize: themeFontSizeSmall, color: themeColorGray),
+                        style: TextStyle(
+                            fontSize: themeFontSizeSmall,
+                            color: themeColorGray),
                       ),
                     ),
                     Expanded(
@@ -920,48 +1034,66 @@ class _MInOutViewState extends ConsumerState<_MInOutView> {
                             scrollDirection: Axis.horizontal,
                             reverse: true,
                             child: Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 8),
+                              padding:
+                              const EdgeInsets.symmetric(horizontal: 8),
                               child: Text(
-                                item.upc?.isNotEmpty == true ? item.upc.toString() : '',
-                                style: const TextStyle(fontSize: themeFontSizeLarge),
+                                item.upc?.isNotEmpty == true
+                                    ? item.upc.toString()
+                                    : '',
+                                style: const TextStyle(
+                                  fontSize: themeFontSizeLarge,
+                                ),
                               ),
                             ),
                           ),
                           SingleChildScrollView(
                             scrollDirection: Axis.horizontal,
                             child: Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 8),
+                              padding:
+                              const EdgeInsets.symmetric(horizontal: 8),
                               child: Text(
                                 '${item.sku ?? ''} - ${item.productName.toString()}',
-                                style: TextStyle(fontSize: themeFontSizeSmall, color: themeColorGray),
+                                style: TextStyle(
+                                  fontSize: themeFontSizeSmall,
+                                  color: themeColorGray,
+                                ),
                               ),
                             ),
                           ),
                           SingleChildScrollView(
                             scrollDirection: Axis.horizontal,
                             child: Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 8),
+                              padding:
+                              const EdgeInsets.symmetric(horizontal: 8),
                               child: Text(
                                 '${item.mLocatorId!.identifier}',
-                                style: TextStyle(fontSize: themeFontSizeSmall, color: themeColorGray),
+                                style: TextStyle(
+                                  fontSize: themeFontSizeSmall,
+                                  color: themeColorGray,
+                                ),
                               ),
                             ),
                           ),
+                          // SingleChildScrollView(
+                          //   scrollDirection: Axis.horizontal,
+                          //   child: Text(
+                          //     'Tar:${item.targetQty}/Man:${item.manualQty}/Sca:${item.scanningQty}/Con:${item.confirmedQty}/Scr:${item.scrappedQty}',
+                          //   ),
+                          // ),
                         ],
                       ),
                     ),
-                    stateNow.rolShowQty
+                    mInOutState.rolShowQty
                         ? Padding(
                       padding: const EdgeInsets.all(8),
                       child: Text(
                         item.targetQty.toString(),
                         style: const TextStyle(
-                          fontSize: themeFontSizeLarge,
-                          fontWeight: FontWeight.bold,
-                        ),
+                            fontSize: themeFontSizeLarge,
+                            fontWeight: FontWeight.bold),
                       ),
                     )
-                        : const SizedBox(width: 5),
+                        : SizedBox(width: 5),
                     Padding(
                       padding: const EdgeInsets.all(8),
                       child: Icon(
@@ -970,13 +1102,15 @@ class _MInOutViewState extends ConsumerState<_MInOutView> {
                             : item.verifiedStatus == 'over'
                             ? Icons.warning_amber_rounded
                             : item.verifiedStatus == 'manually-correct' ||
-                            item.verifiedStatus == 'manually-minor' ||
+                            item.verifiedStatus ==
+                                'manually-minor' ||
                             item.verifiedStatus == 'manually-over'
                             ? Icons.touch_app_outlined
                             : item.verifiedStatus == 'minor'
                             ? Icons.radio_button_checked_rounded
                             : Icons.circle_outlined,
-                        color: item.verifiedStatus == 'correct' || item.verifiedStatus == 'manually-correct'
+                        color: item.verifiedStatus == 'correct' ||
+                            item.verifiedStatus == 'manually-correct'
                             ? themeColorSuccessful
                             : item.verifiedStatus == 'minor' ||
                             item.verifiedStatus == 'over' ||
@@ -989,7 +1123,7 @@ class _MInOutViewState extends ConsumerState<_MInOutView> {
                   ],
                 ),
               ),
-              const Divider(height: 0),
+              Divider(height: 0),
             ],
           ),
         );
@@ -1103,76 +1237,6 @@ class _MInOutViewState extends ConsumerState<_MInOutView> {
       },
     );
   }
-  Future<void> _showResetManualLine(BuildContext context, Line line) {
-    return showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(themeBorderRadius),
-          ),
-          title: const Text('Resetear Manual'),
-          content: const Text(
-              '¿Estás seguro de que deseas resetear la confirmación manual?'),
-          actions: <Widget>[
-            CustomFilledButton(
-              onPressed: () {
-                mInOutNotifier.resetManualLine(line);
-                Navigator.of(context).pop();
-              },
-              label: 'Si',
-              icon: const Icon(Icons.check),
-              buttonColor: themeColorError,
-            ),
-            CustomFilledButton(
-              onPressed: () => Navigator.of(context).pop(),
-              label: 'No',
-              icon: const Icon(Icons.close_rounded),
-              buttonColor: themeColorGray,
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-  Future<void> _showEditLocator(BuildContext context, MInOutStatus mInOutState,
-      Line item, WidgetRef ref) {
-    return showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(themeBorderRadius),
-          ),
-          title: const Text('Cambiar Estante'),
-          content: CustomTextFormField(
-            label: 'Estante Nueva',
-            initialValue: _sentInitialToNotifier ? '' :initialDocumentNo,
-            onChanged: mInOutNotifier.onEditLocatorChange,
-            autofocus: true,
-          ),
-          actions: <Widget>[
-            CustomFilledButton(
-              onPressed: () {
-                mInOutNotifier.confirmEditLocator(item, ref);
-                Navigator.of(context).pop();
-              },
-              label: 'Confirmar',
-              icon: const Icon(Icons.check),
-            ),
-            CustomFilledButton(
-              onPressed: () => Navigator.of(context).pop(),
-              label: 'Cancelar',
-              icon: const Icon(Icons.close_rounded),
-              buttonColor: themeColorGray,
-            ),
-          ],
-        );
-      },
-    );
-  }
-
   Future<void> _showUpdateManualLine(
       BuildContext context, MInOutStatus mInOutState, Line item) {
     return showDialog(
@@ -1285,24 +1349,14 @@ class _MInOutViewState extends ConsumerState<_MInOutView> {
     );
   }
 
-  // ======================================
-  // TODO: tus otros métodos (_selectLine, _showEditLocator, _buildListOver, etc.)
-  // deben quedarse como los tenías, pero evitando usar "mInOutState" global.
-  // Siempre usa el "MInOutStatus" que reciben como parámetro.
-  // ======================================
-
-  void _showScreenLoading(BuildContext context) {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (BuildContext context) {
-        return Center(
-          child: CircularProgressIndicator(color: themeBackgroundColor),
-        );
-      },
-    );
+  Future<void> loadMInOutAndLine(BuildContext context, WidgetRef ref) async {
+    ref.read(mInOutProvider.notifier).loadMInOutAndLine(context, ref);
   }
+
 }
+
+
+
 
 TableRow _buildTableRow(String label, String value, bool alignRight) {
 
@@ -1626,7 +1680,3 @@ class _ScanView extends ConsumerWidget {
     );
   }
 }
-
-
-
-

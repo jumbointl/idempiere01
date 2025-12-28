@@ -110,9 +110,5 @@ class MInOutRepositoryImpl implements MInOutRepository {
   Future getMovementListByDateRange(WidgetRef ref, {required DateTimeRange<DateTime> dates, required String inOut}) {
     return dataSource.getMovementListByDateRange(ref:ref, dates:dates, inOut:inOut);
   }
-  @override
-  Future getSalesOrderListByDateRange({required WidgetRef ref, required DateTimeRange<DateTime> dates}){
-    return dataSource.getSalesOrderListByDateRange(ref:ref, dates:dates);
 
-  }
 }

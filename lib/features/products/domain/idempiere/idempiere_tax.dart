@@ -122,7 +122,7 @@ class IdempiereTax extends IdempiereObject {
     mOLICTaxID = json['MOLI_C_Tax_ID'];
     modelName = json['model-name'];
     active = json['active'];
-    category = json['category'] != null ? ObjectWithNameAndId.fromJson(json['category']) : null;;
+    category = json['category'] != null ? ObjectWithNameAndId.fromJson(json['category']) : null;
     propertyLabel = json['propertyLabel'];
     image = json['image'];
     identifier = json['identifier'];

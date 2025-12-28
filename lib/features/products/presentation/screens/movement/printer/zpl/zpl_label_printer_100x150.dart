@@ -8,7 +8,6 @@ import 'package:image/image.dart' as img;
 import 'package:monalisa_app_001/features/products/presentation/screens/movement/printer/zpl/template/tspl_label_printer.dart';
 import 'package:monalisa_app_001/features/products/presentation/screens/movement/printer/zpl/zpl_print_widget.dart';
 
-import '../../../../../../auth/presentation/providers/auth_provider.dart';
 import '../../../../../common/messages_dialog.dart';
 import '../../../../../domain/idempiere/idempiere_movement_line.dart';
 import '../../../../../domain/idempiere/movement_and_lines.dart';

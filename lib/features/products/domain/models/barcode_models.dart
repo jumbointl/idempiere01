@@ -7,22 +7,27 @@ class DocumentQrItem {
   final String code;
   final String subtitle;
 
+
   const DocumentQrItem({
     required this.title,
     required this.code,
     required this.subtitle,
+
   });
 }
 
 class BarcodeItem {
   final String code;     // UPC/EAN/Code128 data
   final String title;    // titulo o sku
-  final String subtitle; // nombre producto / etc
+  final String subtitle;
+  final double? line;       // numero de linea
+  // nombre producto / etc
 
   const BarcodeItem({
     required this.code,
     required this.title,
     required this.subtitle,
+    required this.line,
   });
 }
 

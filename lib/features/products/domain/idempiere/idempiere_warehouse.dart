@@ -81,7 +81,7 @@ class IdempiereWarehouse extends IdempiereObject  {
         : null;
     modelName = json['model-name'];
     active = json['active'];
-    category = json['category'] != null ? ObjectWithNameAndId.fromJson(json['category']) : null;;
+    category = json['category'] != null ? ObjectWithNameAndId.fromJson(json['category']) : null;
     identifier = json['identifier'];
     propertyLabel = json['propertyLabel'];
     image = json['image'];

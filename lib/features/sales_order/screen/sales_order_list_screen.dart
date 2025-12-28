@@ -1,8 +1,10 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:monalisa_app_001/config/config.dart';
 import 'package:monalisa_app_001/features/products/common/messages_dialog.dart';
+import 'package:monalisa_app_001/features/sales_order/screen/sales_order_barcode_list_screen.dart';
 import 'package:monalisa_app_001/features/sales_order/screen/sales_order_no_data_card.dart';
 
 import '../../products/common/async_value_consumer_screen_state.dart';
@@ -13,6 +15,7 @@ import '../../products/domain/idempiere/sales_order_and_lines.dart';
 import '../../products/presentation/screens/movement/edit_new/custom_app_bar.dart';
 import '../../shared/data/memory.dart';
 import '../../shared/data/messages.dart';
+import '../provider/priority_color.dart';
 import '../provider/sales_order_provider.dart';
 
 class SalesOrderListScreen extends ConsumerStatefulWidget {
@@ -41,7 +44,12 @@ class _SalesOrderListScreenState
       spacing: 8,
       children: [
         DateRangeFilterRowPanel(
-
+          onReloadButtonPressed: () async {
+            final dates = ref.read(selectedSalesOrderDatesProvider);
+            ref.invalidate(selectDatesToFindSalesOrderProvider);
+            await Future.delayed(const Duration(milliseconds: 100));
+            ref.read(selectDatesToFindSalesOrderProvider.notifier).state = dates;
+          },
           values: const[],
           selectedDatesProvider: selectedSalesOrderDatesProvider,
           onOk: (dates, _) {
@@ -67,14 +75,38 @@ class _SalesOrderListScreenState
 
             return SalesOrderNoDataCard(response: response);
           },
-            loading: () {
+          /*loading: () {
             final p = ref.watch(salesOrderProgressProvider);
-            final c = ref.watch(salesOrderProgressColorProvider);
             return LinearProgressIndicator(
-            color: c,
-            minHeight: 36,
+              minHeight: 36,
+              value: (p > 0 && p < 1) ? p : null,
+            );
+          },*/
+          loading: () {
+            final p = ref.watch(salesOrderProgressProvider);
+            final total = ref.watch(salesOrderTotalRecordsProvider);
+            final extracted = ref.watch(salesOrderExtractedRecordsProvider);
 
-            value: (p > 0 && p < 1) ? p : null,
+            return SizedBox(
+              height: 36,
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  LinearProgressIndicator(
+                    minHeight: 36,
+                    value: total > 0 ? p : null,
+                  ),
+                  Text(
+                    total > 0
+                        ? 'Extraído: $extracted / $total'
+                        : 'Cargando...',
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
+                ],
+              ),
             );
           },
           error: (e, _) => Text('Error: $e'),
@@ -122,33 +154,43 @@ class _SalesOrderListScreenState
   }
 
   Color _priorityIconColor(int p) {
-    if (p == 1) return Colors.red;
-    if (p >= 2 && p <= 4) return Colors.orange;
-    return Colors.yellow[800]!;
+    if (p == 1) {
+      return PriorityColors.urgent;
+    } else if (p == 3) {
+      return PriorityColors.high;
+    } else if (p == 5) {
+      return PriorityColors.medium;
+    } else if (p == 7) {
+      return PriorityColors.low;
+    } else if (p == 9) {
+      return PriorityColors.minor;
+    } else {
+      return Colors.white;
+    }
   }
 
   Widget _priorityBadge(SalesOrderAndLines order) {
     final p = _priorityOf(order);
 
-    // Solo mostrar badge para TO DO (como pediste)
-    if (!order.hasToDoWorks) return const SizedBox.shrink();
+    if (!order.hasToDoWorks) return _lineBadge(order);
 
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.85),
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: Colors.black12),
-      ),
+    return _baseBadge(
       child: Row(
         mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          Icon(_priorityIcon(p), size: 18, color: _priorityIconColor(p)),
+          Icon(
+            _priorityIcon(p),
+            size: 16, // ⬅ control fino
+            color: _priorityIconColor(p),
+          ),
           const SizedBox(width: 4),
           Text(
             'P$p',
             style: TextStyle(
               fontWeight: FontWeight.bold,
+              fontSize: 12,
+              height: 1.0,
               color: _priorityIconColor(p),
             ),
           ),
@@ -156,7 +198,91 @@ class _SalesOrderListScreenState
       ),
     );
   }
+  Widget _lineBadge(SalesOrderAndLines order) {
+    String aux ='';
+    if(order.isRunning){
+      aux = 'F:${order.inCompletedLines ?? 0}';
+    }else if(order.isDone){
+      aux = 'L:${order.salesOrderLines?.length ?? 0}';
+    }
 
+    return _baseBadge(
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+           Text(
+            aux,
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: 12,
+              height: 1.0,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _qrBadge(SalesOrderAndLines order) {
+
+    return _baseBadge(
+      child: InkWell(
+        borderRadius: BorderRadius.circular(999),
+        onTap: () {
+          showModalBottomSheet(
+            context: context,
+            isScrollControlled: true,
+            useSafeArea: true,
+            backgroundColor: Colors.transparent,
+            shape: const RoundedRectangleBorder(
+              borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+            ),
+            builder: (ctx) {
+              final h = MediaQuery.of(ctx).size.height;
+
+              return SizedBox(
+                height: h,
+                child: ClipRRect(
+                  borderRadius:
+                  const BorderRadius.vertical(top: Radius.circular(16)),
+                  child: Material(
+                    color: Colors.white,
+                    child: SalesOrderBarcodeListScreen(
+                      argument: jsonEncode(order.toJson()),
+                      salesOrder: order,
+                    ),
+                  ),
+                ),
+              );
+            },
+          );
+        },
+        child: const Icon(
+          Icons.qr_code,
+          size: 18, // ⬅ igualado visualmente
+          color: Colors.purple,
+        ),
+      ),
+    );
+  }
+
+  Widget _baseBadge({
+    required Widget child,
+  }) {
+    return Container(
+      width: 60,
+      height: 28, // ⬅ ALTURA FIJA (ambos iguales)
+      padding: const EdgeInsets.symmetric(horizontal: 8),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: Colors.black12),
+      ),
+      alignment: Alignment.center,
+      child: child,
+    );
+  }
   List<SalesOrderAndLines> _sortAll(List<SalesOrderAndLines> orders) {
     final todo = orders
         .where((o) => o.hasToDoWorks)
@@ -197,7 +323,6 @@ class _SalesOrderListScreenState
           itemBuilder: (context, index) {
             final order = filteredOrders[index];
             final isChecked = selected.any((o) => o.id == order.id);
-            final p = _priorityOf(order);
 
             Color? bgColor;
             if (order.isDone) {bgColor = Colors.grey[200];}
@@ -205,47 +330,81 @@ class _SalesOrderListScreenState
             else if (order.hasToDoWorks) {
               final p = _priorityOf(order);
               if (p == 1) {
-                bgColor = Colors.red[200];
-              } else if (p >= 2 && p <= 4) {
-                bgColor = Colors.orange[200];
-              } else if(p<999){
-                bgColor = Colors.yellow[200];
+                bgColor = PriorityColors.urgent;
+              } else if (p == 3) {
+                bgColor = PriorityColors.high;
+              } else if (p == 5) {
+                bgColor = PriorityColors.medium;
+              } else if (p == 7) {
+                bgColor = PriorityColors.low;
+              } else if (p == 9) {
+                bgColor = PriorityColors.minor;
               } else {
-                bgColor = Colors.grey[200];
+                bgColor = Colors.white;
               }
 
             }
             int incompletedLines = order.inCompletedLines ?? 0;
             String name = order.cBPartnerID?.identifier ?? '';
+            String incompleted = '';
+            if(incompletedLines>0) {
+              incompleted = '$incompletedLines/${order.salesOrderLines?.length ?? 0}';
+            } else {
+              incompleted = '${order.salesOrderLines?.length ?? 0}';
+            }
 
 
             return Card(
               color: bgColor,
-              child: CheckboxListTile(
-                value: isChecked,
-                enabled: order.hasToDoWorks,
-                onChanged: (v) =>
-                    toggleOrderSelection(ref, order, v ?? false),
-                title: Text('${order.documentNo} : ${Messages.LESS}: $incompletedLines  /  ${order.salesOrderLines?.length ?? 0}',overflow: TextOverflow.ellipsis,),
-                subtitle: Text(
-                  '${Messages.DATE}: ${order.dateOrdered ?? ''}\n'
-                      '$name',
-                ),
-                secondary: Column(
-                  children: [
-                    _priorityBadge(order),
-                    /*const SizedBox(height: 6),
-                    IconButton(
-                      icon: const Icon(Icons.qr_code, color: Colors.purple),
-                      onPressed: () {
-                        context.push(
-                          AppRouter.PAGE_SALES_ORDER_BARCODE_LIST,
-                          extra: order,
-                        );
-                      },
-                    ),*/
-                  ],
-                ),
+              child: Column(
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.only(top: 10,left: 15,right: 15),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text('No: ${order.documentNo ?? ''}',
+                          style: TextStyle(
+                            fontSize: themeFontSizeLarge,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.purple,
+
+                          ),overflow: TextOverflow.ellipsis,),
+                        const SizedBox(width: 4),
+                        Text('ID: ${order.id ?? ''}',overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: themeFontSizeLarge,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.purple,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  CheckboxListTile(
+                    value: isChecked,
+                    enabled: order.hasToDoWorks,
+                    onChanged: (v) =>
+                        toggleOrderSelection(ref, order, v ?? false),
+                    title: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(order.dateOrdered ?? '',overflow: TextOverflow.ellipsis,),
+                        Text(incompleted,overflow: TextOverflow.ellipsis,),
+                      ],
+                    ),
+                    subtitle: Text(name,
+                    ),
+                    secondary:Column(
+                      children: [
+                        _priorityBadge(order),
+                        _qrBadge(order),
+
+                      ],
+                    ),
+
+                  ),
+                ],
               ),
             );
           },
@@ -365,17 +524,84 @@ class _SalesOrderListScreenState
   }
 
   @override
-  void executeAfterShown() {
+  Future<void> executeAfterShown() async {
     if(searched) return ;
-    searched = true;
-    final dates = ref.read(selectedSalesOrderDatesProvider);
-    ref.read(selectDatesToFindSalesOrderProvider.notifier).state = dates;
+    final bool? confirm = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false, // obliga a elegir
+      builder: (ctx) {
+        return AlertDialog(
+          title: Row(
+            children: [
+              Icon(Icons.search,size: 36,color: Colors.purple,),
+              const SizedBox(width: 8),
+              Text(Messages.FIND),
+            ],
+          ),
+          content: Text(Messages.SEARCH_SALES_ORDER,style: TextStyle(fontSize: themeFontSizeTitle),),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(false),
+              child: Text(Messages.CANCEL),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.green,
+                foregroundColor: Colors.white,
+              ),
+              onPressed: () => Navigator.of(ctx).pop(true),
+              child: Text(Messages.CONFIRM),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (confirm == true && context.mounted) {
+      searched = true;
+      final dates = ref.read(selectedSalesOrderDatesProvider);
+      ref.read(selectDatesToFindSalesOrderProvider.notifier).state = dates;
+    }
+
   }
   @override
   bool get showLeading => false;
   @override
-  void popScopeAction(BuildContext context, WidgetRef ref) {
-   Navigator.of(context).pop();
+  void popScopeAction(BuildContext context, WidgetRef ref) async {
+    final bool? confirm = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false, // obliga a elegir
+      builder: (ctx) {
+        return AlertDialog(
+          title: Row(
+            children: [
+              Icon(Icons.home,color: Colors.red,size: 36,),
+              const SizedBox(width: 8),
+              Text(Messages.GO_TO_HOME_PAGE,style: TextStyle(fontSize: themeFontSizeNormal),),
+            ],
+          ),
+          content: Text(Messages.EXIT_THIS_PAGE,style: TextStyle(fontSize: themeFontSizeTitle),),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(false),
+              child: Text(Messages.CANCEL),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.red,
+                foregroundColor: Colors.white,
+              ),
+              onPressed: () => Navigator.of(ctx).pop(true),
+              child: Text(Messages.QUIT),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (confirm == true && context.mounted) {
+      Navigator.of(context).pop();
+    }
   }
   @override
   Color? getAppBarBackgroundColor(BuildContext context, WidgetRef ref) {
@@ -386,7 +612,7 @@ class _SalesOrderListScreenState
     return mainDataAsync.when(
       data: (ResponseAsyncValue response) {
         if(!response.isInitiated) {
-          return Text(Messages.SALES_ORDER_SEARCH,style: textStyleTitle);
+          return Text(Messages.SALES_ORDER_SEARCH,style: textStyleLarge);
         }
         if(response.success && response.data!=null) {
           List<SalesOrderAndLines> list = response.data;
@@ -403,7 +629,7 @@ class _SalesOrderListScreenState
             onBack: () => popScopeAction(context, ref),
           );
         } else {
-          return Text(Messages.SALES_ORDER_SEARCH,style: textStyleTitle);
+          return Text(Messages.SALES_ORDER_SEARCH,style: textStyleLarge);
         }
 
       },error: (error, stackTrace) => Text('Error: $error'),
@@ -495,6 +721,7 @@ class _SalesOrderListScreenState
     await showModalBottomSheet(
       context: ref.context,
       isScrollControlled: true,
+      useSafeArea: true,
       builder: (ctx) {
         final actions = SalesOrderAction.values;
         final selectedActions = <SalesOrderAction>{};
@@ -504,35 +731,70 @@ class _SalesOrderListScreenState
           child: StatefulBuilder(
             builder: (ctx, setState) {
               return Padding(
-                padding: const EdgeInsets.all(16),
+                // 👇 esto empuja el contenido si aparece teclado
+                padding: EdgeInsets.only(
+                  left: 16,
+                  right: 16,
+                  top: 16,
+                  bottom: 16 + MediaQuery.of(ctx).viewInsets.bottom,
+                ),
                 child: Column(
-                  mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(Messages.SELECTED_ORDERS),
-                    ...selectedOrders.map((o) => Text(o.documentNo ?? '—',style:
-                      TextStyle(color: Colors.purple,fontSize: themeFontSizeLarge),)),
+                    // ========= CONTENIDO SCROLL =========
+                    Expanded(
+                      child: SingleChildScrollView(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(Messages.SELECTED_ORDERS),
+                            const SizedBox(height: 8),
 
-                    const SizedBox(height: 16),
-                    Text(Messages.AVAILABLE_ACTIONS),
+                            ...selectedOrders.map(
+                                  (o) => ListTile(
+                                    leading: _priorityBadge(o),
+                                    title: Text(o.documentNo ?? '—',
+                                      style: TextStyle(
+                                    color: Colors.purple,
+                                    fontSize: themeFontSizeLarge,),
+                                    ),
+                                    subtitle: Text(o.cBPartnerID?.identifier ?? '',
+                                       style: TextStyle(fontSize: themeFontSizeNormal),
+                                    )
+                                  ),
+                            ),
 
-                    ...actions.map(
-                          (a) => CheckboxListTile(
-                        value: selectedActions.contains(a),
-                        title: Text(actionLabel(a),style: TextStyle(color: themeColorPrimary)),
-                        onChanged: (v) {
-                          setState(() {
-                            v == true
-                                ? selectedActions.add(a)
-                                : selectedActions.remove(a);
-                          });
-                        },
+                            const SizedBox(height: 16),
+                            Text(Messages.AVAILABLE_ACTIONS),
+                            const SizedBox(height: 8),
+
+                            ...actions.map(
+                                  (a) => CheckboxListTile(
+                                dense: true,
+                                contentPadding: EdgeInsets.zero,
+                                value: selectedActions.contains(a),
+                                title: Text(
+                                  actionLabel(a),
+                                  style: TextStyle(color: themeColorPrimary),
+                                ),
+                                onChanged: (v) {
+                                  setState(() {
+                                    v == true
+                                        ? selectedActions.add(a)
+                                        : selectedActions.remove(a);
+                                  });
+                                },
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
 
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 12),
+
+                    // ========= BOTONES FIJOS ABAJO =========
                     Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Expanded(
                           child: TextButton(
@@ -563,7 +825,7 @@ class _SalesOrderListScreenState
                           ),
                         ),
                       ],
-                    )
+                    ),
                   ],
                 ),
               );
@@ -573,6 +835,7 @@ class _SalesOrderListScreenState
       },
     );
   }
+
 
   void showBusinessPartnerModalSheet(BuildContext context, WidgetRef ref) {
     final async = ref.read(findSalesOrderToProcessByDateProvider);

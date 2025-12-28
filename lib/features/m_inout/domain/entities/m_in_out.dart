@@ -113,11 +113,12 @@ class MInOut {
 
   };
   bool get canCreatePickConfirm {
-    print('canCreatePickConfirm ${docStatus.id}');
     return docStatus.id == 'DR';
   }
   bool get canCreateShipmentConfirm  {
-    print('canCreateShipmentConfirm ${docStatus.id}');
+    return docStatus.id == 'DR';
+  }
+  bool get canCreateQaConfirm  {
     return docStatus.id == 'DR';
   }
 

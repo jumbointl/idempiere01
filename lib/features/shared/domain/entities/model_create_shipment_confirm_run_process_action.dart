@@ -2,7 +2,7 @@ import 'model_run_process_action.dart';
 
 class ModelCreateShipmentConfirmRunProcessAction
     extends ModelRunProcessAction {
-  String confirmType ='PC';
+  String confirmType ='SC';
   ModelCreateShipmentConfirmRunProcessAction({
     super.columnValue,
   }) : super(

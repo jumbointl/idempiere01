@@ -6,11 +6,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../products/common/widget/date_range_filter_row_panel.dart';
 
 class SalesOrderDateRangerPanel extends DateRangeFilterRowPanel{
-  SalesOrderDateRangerPanel({required super.onOk, required 
+  SalesOrderDateRangerPanel({super.key, required super.onOk, required 
   super.onScanButtonPressed, 
     required super.values, 
     required super.selectedDatesProvider,
     required super.selectionFilterProvider,
+    super.onReloadButtonPressed,
   });
   @override
   void refreshButtonPressed(BuildContext context, WidgetRef ref) {

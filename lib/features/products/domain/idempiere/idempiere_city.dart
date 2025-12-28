@@ -114,7 +114,7 @@ class IdempiereCity extends IdempiereObject {
     mOLIALP3CountryCode = json['MOLI_ALP3CountryCode'];
     modelName = json['model-name'];
     active = json['active'];
-    category = json['category'] != null ? ObjectWithNameAndId.fromJson(json['category']) : null;;
+    category = json['category'] != null ? ObjectWithNameAndId.fromJson(json['category']) : null;
     identifier = json['identifier'];
     propertyLabel = json['propertyLabel'];
     image = json['image'];

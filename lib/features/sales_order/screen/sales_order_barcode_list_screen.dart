@@ -11,7 +11,7 @@ import '../../products/domain/models/barcode_models.dart';
 
 class SalesOrderBarcodeListScreen
     extends BarcodeListScreen<SalesOrderAndLines> {
-  SalesOrderBarcodeListScreen({
+  const SalesOrderBarcodeListScreen({
     super.key,
     required super.argument,
     required SalesOrderAndLines salesOrder,
@@ -51,14 +51,15 @@ class _SalesOrderBarcodeListScreenState
   // Info principal
   // =========================================================
   @override
-  String get documentTitle => 'SALES ORDER';
+  String get documentTitle => 'SALES ORDER (ID: ${d.id ?? 0})';
 
   @override
   String get documentNo => d.documentNo ?? '';
 
   @override
   String get documentStatusText =>
-      d.docStatus?.identifier ?? d.docStatus?.id ?? '';
+      '${d.docStatus?.identifier ?? d.docStatus?.id ?? ''}'
+          ' (LINES: ${d.salesOrderLines?.length ?? 0})';
 
   @override
   Color get documentCardColor => Colors.orange[200]!;
@@ -74,24 +75,28 @@ class _SalesOrderBarcodeListScreenState
   // =========================================================
   @override
   List<BarcodeItem> get productBarcodes {
+
     final lines = d.salesOrderLines ?? [];
 
     final filtered = lines
         .where((l) => (l.uPC ?? '').trim().isNotEmpty)
-        .toList();
+        .toList()
+      ..sort((a, b) => (a.line ?? 0).compareTo(b.line ?? 0));
 
     return filtered.map((l) {
       final code = (l.uPC ?? '').trim();
-      final subtitle =
-      (l.productName ?? l.mProductID?.identifier ?? '').trim();
+      String subtitle = (l.mProductID?.identifier ?? '').trim();
+      subtitle = '${l.line} : $subtitle';
 
       return BarcodeItem(
+        line: l.line?.toDouble(),
         code: code,
         title: code,
         subtitle: subtitle,
       );
     }).toList();
   }
+
 
   // =========================================================
   // Locators (Sales Order normalmente no tiene locators)
@@ -157,4 +162,7 @@ class _SalesOrderBarcodeListScreenState
       }) {
     return const SizedBox.shrink();
   }
+
+
+
 }

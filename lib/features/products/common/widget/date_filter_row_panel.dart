@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
-import '../../../../config/router/app_router.dart';
 import '../../../../config/theme/app_theme.dart';
 import '../../../shared/data/messages.dart';
 import '../../presentation/providers/common_provider.dart';

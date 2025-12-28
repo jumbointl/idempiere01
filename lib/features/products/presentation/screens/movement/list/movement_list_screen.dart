@@ -19,7 +19,6 @@ import '../../../../../shared/data/messages.dart';
 import '../../../../common/async_value_consumer_simple_state.dart';
 import '../../../../common/messages_dialog.dart';
 import '../../../../common/time_utils.dart';
-import '../../../../common/widget/date_filter_row_panel.dart';
 import '../../../../common/widget/date_range_filter_row_panel.dart';
 import '../../../../domain/idempiere/movement_and_lines.dart';
 import '../../../../domain/idempiere/response_async_value.dart';
@@ -81,6 +80,7 @@ class MovementListScreenState extends AsyncValueConsumerSimpleState<MovementList
      return Column(
        children: [
          DateRangeFilterRowPanel(
+             onReloadButtonPressed: null,
              selectionFilterProvider: inOutFilterProvider,
              selectedDatesProvider: selectedDatesProvider,
              values: [DateRangeFilterRowPanel.ALL,

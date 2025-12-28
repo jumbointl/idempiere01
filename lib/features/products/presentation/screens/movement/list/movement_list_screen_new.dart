@@ -23,7 +23,6 @@ import '../../../../../shared/data/memory.dart';
 import '../../../../../shared/data/messages.dart';
 import '../../../../common/messages_dialog.dart';
 import '../../../../common/time_utils.dart';
-import '../../../../common/widget/date_filter_row_panel.dart';
 import '../../../../common/widget/date_range_filter_row_panel.dart';
 import '../../../../common/widget/show_document_type_filter_sheet.dart';
 import '../../../providers/common_provider.dart';
@@ -92,6 +91,7 @@ class MovementListScreenNewState extends AsyncValueConsumerState<MovementListScr
      return Column(
        children: [
          DateRangeFilterRowPanel(
+           onReloadButtonPressed: null,
            values: ['ALL', 'IN', 'OUT', 'SWAP'],
            selectedDatesProvider: selectedDatesProvider,
            selectionFilterProvider: inOutFilterProvider,

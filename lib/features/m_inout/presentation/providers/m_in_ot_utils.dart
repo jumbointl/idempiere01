@@ -8,7 +8,6 @@ import 'package:monalisa_app_001/features/m_inout/presentation/providers/pick_co
 import 'package:monalisa_app_001/features/products/common/messages_dialog.dart';
 import 'package:monalisa_app_001/features/shared/data/messages.dart';
 
-import '../../../products/domain/idempiere/response_async_value.dart';
 import '../../domain/entities/line.dart';
 import '../../domain/entities/line_confirm.dart';
 import '../../domain/entities/m_in_out.dart';
@@ -398,7 +397,7 @@ Future<void> showCreateShipmentConfirmModalBottomSheet({
         builder: (context, ref2, _) {
           final asyncValue = ref2.watch(createShipmentConfirmProvider);
           final result = asyncValue.value;
-          print('creating shipment confirm 1');
+          print('showCreateShipmentConfirmModalBottomSheet');
           return SizedBox(
             height: height,
             child: Container(
@@ -533,12 +532,13 @@ Future<void> showCreateShipmentConfirmModalBottomSheet({
   );
 }
 
-Future<void> showCreatePickConfirmModalBottomSheet({
+Future<void> showCreatePickOrQaConfirmModalBottomSheet({
   required WidgetRef ref,
   required String mInOutId,
   required String documentNo,
   required MInOutType type,
   required Future<void> Function() onResultSuccess,
+  required bool isQaConfirm,
 }) async {
   final color = Colors.grey.shade200;
 
@@ -557,7 +557,7 @@ Future<void> showCreatePickConfirmModalBottomSheet({
         builder: (context, ref2, _) {
           final asyncValue = ref2.watch(createPickConfirmProvider);
           final result = asyncValue.value;
-          print('creating pick confirm 1');
+          print('creating pick or qa confirm 1');
           return SizedBox(
             height: height,
             child: Container(
@@ -570,15 +570,20 @@ Future<void> showCreatePickConfirmModalBottomSheet({
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   Text(
-                    Messages.CREATE_PICK_CONFIRM,
+                    isQaConfirm ? Messages.CREATE_QA_CONFIRM : Messages.CREATE_PICK_CONFIRM,
                     style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                   ),
                   Text(
-                    Messages.TO_CREATE_PICK_CONFIRM_DOC_STATUS_MUST_EQUAL_DR,
+                    isQaConfirm ? Messages.TO_CREATE_QA_CONFIRM_DOC_STATUS_MUST_EQUAL_DR
+                        : Messages.TO_CREATE_PICK_CONFIRM_DOC_STATUS_MUST_EQUAL_DR,
                     style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                   ),
                   Text(
                     'Document No: $documentNo',
+                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                  Text(
+                    'ID: $mInOutId',
                     style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                   ),
 
@@ -649,6 +654,7 @@ Future<void> showCreatePickConfirmModalBottomSheet({
                               if (ctx.mounted && Navigator.of(ctx).canPop()) {
                                 Navigator.of(
                                     ctx).pop();
+
                                 await onResultSuccess();
                               }
 

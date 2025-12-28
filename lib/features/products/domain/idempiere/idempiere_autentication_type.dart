@@ -25,7 +25,7 @@ class IdempiereAuthenticationType extends IdempiereObjectIdString {
     name = json['name'];
     active = json['active'];
     image = json['image'];
-    category = json['category'] != null ? ObjectWithNameAndId.fromJson(json['category']) : null;;
+    category = json['category'] != null ? ObjectWithNameAndId.fromJson(json['category']) : null;
   }
 
   @override

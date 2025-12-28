@@ -5,13 +5,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:monalisa_app_001/features/m_inout/domain/entities/m_in_out.dart';
 import 'package:monalisa_app_001/features/products/domain/idempiere/response_async_value.dart';
-import 'package:monalisa_app_001/features/shared/data/messages.dart';
 
 import '../../../products/common/barcode_list_screen.dart';
 import '../../../products/domain/models/barcode_models.dart';
 
 class MInOutBarcodeListScreen extends BarcodeListScreen<MInOut> {
-  MInOutBarcodeListScreen({
+  const MInOutBarcodeListScreen({
     super.key,
     required super.argument,
     required MInOut minOut,
@@ -68,6 +67,7 @@ class _MInOutBarcodeListScreenState
       final subtitle = (l.productName ?? l.mProductId?.identifier ?? '').trim();
 
       return BarcodeItem(
+        line: l.line?.toDouble(),
         code: upc,
         title: title,
         subtitle: subtitle,
@@ -154,4 +154,5 @@ class _MInOutBarcodeListScreenState
     // TODO: implement setDefaultValues
     throw UnimplementedError();
   }
+
 }

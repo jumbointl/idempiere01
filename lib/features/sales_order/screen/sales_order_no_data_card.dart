@@ -3,8 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:monalisa_app_001/features/products/domain/idempiere/response_async_value.dart';
 
 import '../../../../../config/theme/app_theme.dart';
-import '../../products/presentation/providers/product_provider_common.dart';
-import '../../products/presentation/providers/store_on_hand_provider.dart';
 import '../../shared/data/messages.dart';
 class SalesOrderNoDataCard extends ConsumerStatefulWidget {
   Color? backgroundColor;
