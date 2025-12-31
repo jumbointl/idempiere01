@@ -10,7 +10,7 @@ import 'package:monalisa_app_001/features/shared/data/messages.dart';
 import '../../../../../shared/data/memory.dart';
 import '../../../../domain/idempiere/idempiere_movement_confirm.dart';
 import '../../../../domain/idempiere/idempiere_movement_line.dart';
-import '../printer/pos_image_utility.dart';
+import 'provider/pos_image_utility.dart';
 
 final maxCharacterBarcodeOneRow = 17;
 Future<void> printReceiptWithQr(WidgetRef ref,String ip, int port,MovementAndLines movementAndLines) async {

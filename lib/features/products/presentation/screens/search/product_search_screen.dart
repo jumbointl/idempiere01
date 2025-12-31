@@ -1,19 +1,22 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+
 import 'package:monalisa_app_001/features/products/presentation/screens/search/product_detail_with_photo_card.dart';
 import 'package:monalisa_app_001/features/products/presentation/screens/search/update_product_upc_screen.dart';
 import 'package:monalisa_app_001/features/products/presentation/screens/search/update_product_upc_view.dart';
 
 import '../../../../../config/router/app_router.dart';
-import '../../../../../config/theme/app_theme.dart';
 import '../../../../shared/common/scanner.dart';
+import '../../../common/common_consumer_with_tab_bar_state.dart';
 import '../../../common/input_dialog.dart';
 import '../../../common/scan_button_by_action_fixed_short.dart';
-import '../../providers/common_provider.dart';
-import '../movement/provider/products_home_provider.dart';
+
 import '../../../../shared/data/memory.dart';
 import '../../../../shared/data/messages.dart';
+
+import '../../providers/common_provider.dart';
+import '../movement/provider/products_home_provider.dart';
 import '../../providers/product_provider_common.dart';
 import '../../providers/product_search_provider.dart';
 import '../../providers/products_scan_notifier.dart';
@@ -21,499 +24,183 @@ import '../../widget/no_data_card.dart';
 
 
 class ProductSearchScreen extends ConsumerStatefulWidget implements Scanner {
-  int countScannedCamera =0;
-  late ProductsScanNotifier productsNotifier ;
-  final int actionTypeInt = Memory.ACTION_FIND_BY_UPC_SKU ;
-  late int pageIndex = Memory.PAGE_INDEX_SEARCH;
+  int countScannedCamera = 0;
+  late ProductsScanNotifier productsNotifier;
 
-  final int actionScanType=Memory.ACTION_FIND_BY_UPC_SKU;
+  final int actionTypeInt = Memory.ACTION_FIND_BY_UPC_SKU;
+  final int actionScanType = Memory.ACTION_FIND_BY_UPC_SKU;
+  late int pageIndex = Memory.PAGE_INDEX_SEARCH;
 
   ProductSearchScreen({super.key});
 
   @override
-  ConsumerState<ConsumerStatefulWidget> createState() => _ProductSearchScreenState();
+  ConsumerState<ConsumerStatefulWidget> createState() =>
+      _ProductSearchScreenState();
 
   @override
   void inputFromScanner(String scannedData) {
-    // TODO: implement inputFromScanner
+    // handled by notifier
   }
 
   @override
   void scanButtonPressed(BuildContext context, WidgetRef ref) {
     ref.read(usePhoneCameraToScanProvider.notifier).update((state) => !state);
   }
-
-
 }
 
-class _ProductSearchScreenState extends ConsumerState<ProductSearchScreen> {
+class _ProductSearchScreenState
+    extends CommonConsumerWithTabBarState<ProductSearchScreen> {
+
   @override
-  void initState() {
-    super.initState();
-  }
+  int get tabLength => 2;
   @override
-  Widget build(BuildContext context){
-    widget.pageIndex = ref.read(productsHomeCurrentIndexProvider.notifier).state;
-    final productAsync = ref.watch(findProductByUPCOrSKUProvider);
+  EdgeInsets get tabPadding => const EdgeInsets.symmetric(horizontal: 8, vertical: 6);
+  @override
+  bool get tabSafeArea => true;
+
+
+  @override
+  List<Widget> buildTabs() => [
+    Tab(text: Messages.FIND),
+    Tab(text: Messages.IMAGE),
+  ];
+
+  @override
+  List<Widget> buildAppBarActions() {
+    final showScan = ref.watch(showScanFixedButtonProvider(widget.actionScanType));
     widget.productsNotifier = ref.watch(scanHandleNotifierProvider.notifier);
+
+    return [
+      if (showScan)
+        ScanButtonByActionFixedShort(
+          actionTypeInt: widget.actionScanType,
+          onOk: widget.productsNotifier.handleInputString,
+        ),
+      IconButton(
+        icon: const Icon(Icons.keyboard, color: Colors.purple),
+        onPressed: () {
+          openInputDialogWithAction(
+            ref: ref,
+            history: false,
+            onOk: widget.productsNotifier.handleInputString,
+            actionScan: widget.actionScanType,
+          );
+        },
+      ),
+    ];
+  }
+
+  @override
+  List<Widget> buildTabViews() => [
+    _buildFindTab(),
+    UpdateProductUpcView(),
+  ];
+
+  @override
+  void onBackPressed() {
+    // English: Keep original behavior to return home
+    unfocus();
+    context.go(AppRouter.PAGE_HOME);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // English: Keep original behavior for home index tracking
+    widget.pageIndex = ref.read(productsHomeCurrentIndexProvider.notifier).state;
+
+    return GestureDetector(
+      onTap: unfocus,
+      child: buildTabScaffold(),
+    );
+  }
+
+  Widget _buildFindTab() {
+    final productAsync = ref.watch(findProductByUPCOrSKUProvider);
+
     final double width = MediaQuery.of(context).size.width - 30;
     final double bodyHeight = MediaQuery.of(context).size.height - 200;
-    final showScan = ref.watch(showScanFixedButtonProvider(widget.actionScanType));
 
-    String imageUrl =Memory.IMAGE_HTTP_SAMPLE_1; // Example image URL
-    widget.countScannedCamera = ref.watch(scannedCodeTimesProvider.notifier).state;
-    if(widget.countScannedCamera.isEven){
-       imageUrl = Memory.IMAGE_HTTP_SAMPLE_2;
-    } else {
-      imageUrl = Memory.IMAGE_HTTP_SAMPLE_1;
-    }
-    Color foreGroundProgressBar = Colors.purple;
-    return GestureDetector(
-      onTap: () => FocusScope.of(context).unfocus(),
-      child: DefaultTabController(
-        length: 2,
-        child: Scaffold(
-          appBar: AppBar(
-            automaticallyImplyLeading: false,
-            leading: IconButton(
-              icon: const Icon(Icons.arrow_back),
-              onPressed: () {
-                FocusScope.of(context).unfocus();
-                context.go(AppRouter.PAGE_HOME);
-              },
-            ),
-            title: Row(
-              children: [
-                TabBar(
-                  tabs: [
-                    Tab(text: Messages.FIND),
-                    Tab(text: Messages.IMAGE),
-                  ],
-                  isScrollable: true,
-                  indicatorWeight: 4,
-                  indicatorColor: themeColorPrimary,
-                  dividerColor: themeColorPrimary,
-                  tabAlignment: TabAlignment.start,
-                  labelStyle: TextStyle(
-                    fontSize: themeFontSizeLarge,
-                    fontWeight: FontWeight.bold,
-                    color: themeColorPrimary,
-                  ),
-                  unselectedLabelStyle: TextStyle(fontSize: themeFontSizeLarge),
-                ),
-                const Spacer(),
-                if(showScan) ScanButtonByActionFixedShort(
-                  actionTypeInt: widget.actionScanType,
-                  onOk: widget.productsNotifier.handleInputString,),
-                IconButton(
-                  icon: const Icon(Icons.keyboard,color: Colors.purple),
-                  onPressed: () => {
-                    openInputDialogWithAction(ref: ref, history: false,
-                        onOk: widget.productsNotifier.handleInputString,
-                        actionScan:  widget.actionScanType)
-                  },
-                ),
-                /*IconButton(
-                  onPressed: () {
-                    // toggle del provider
-                    final notifier =
-                    ref.read(usePhoneCameraToScanProvider.notifier);
-                    notifier.state = !usePhoneCamera;
-                  },
-                  icon: Icon(
-                    usePhoneCamera
-                        ? Icons.barcode_reader
-                        : Icons.camera,
-                    color: Colors.black,
-                  ),
-                ),*/
-              ],
-            ),
-          ),
+    widget.countScannedCamera =
+        ref.watch(scannedCodeTimesProvider.notifier).state;
 
-          body: PopScope(
-            onPopInvokedWithResult: (bool didPop, Object? result) async {
-              if (didPop) {
-                return;
-              }
-              context.go(AppRouter.PAGE_HOME);
-            },
-            child: TabBarView(
-
-              children: [
-                SizedBox(
-                  height: bodyHeight,
-                  child: Column(
-                    spacing: 10,
-                    children: [
-                      Container(
-                        width: width,
-                        //height: singleProductDetailCardHeight,
-                        margin: EdgeInsets.symmetric(horizontal: 10),
-                        decoration: BoxDecoration(
-                          color: Colors.grey[200],
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: productAsync.when(
-                          data: (products) {
-                            WidgetsBinding.instance.addPostFrameCallback((_) async {
-                              ref.read(isScanningProvider.notifier).state = false;
-                            });
-                            return  (products.id != null && products.id! > 0) ?
-                            getProductDetailCard(productsNotifier: widget.productsNotifier,
-                                product: products.copyWith(imageURL: imageUrl,uPC: null)) : NoDataCard();
-
-                          },error: (error, stackTrace) => Text('Error: $error'),
-                          loading: () =>  LinearProgressIndicator(),
-                        ),
-                      ),
-                      if(isCanEditUPC())Padding(
-                          padding: const EdgeInsets.all(20.0),
-                          child: SizedBox(
-                            width: MediaQuery.of(context).size.width,
-                            child: TextButton(
-                                style: TextButton.styleFrom(
-                                  backgroundColor: Colors.purple,
-                                  foregroundColor: Colors.white,
-                                ),
-                                onPressed: (){
-                                  Navigator.of(context).push(MaterialPageRoute(builder: (context)
-                                  => UpdateProductUpcScreen()));
-                                },
-                                child: Text(Messages.UPDATE_UPC)),
-                          )),
-
-                    ],
-                  ),
-                ),
-
-                /*SizedBox(
-                  height: bodyHeight,
-                  child: ListView.separated(
-                    itemCount: 6, // Adjust the number of items as needed
-                    separatorBuilder: (context, index) => SizedBox(height: 5), // Spacing between items
-                    itemBuilder: (context, index) {
-                      if (index == 0) {
-                        //return getScanButton(context);
-                        return Container();
-                      } else if (index == 1) {
-                        return Container();
-                        *//*return isScanning
-                            ? LinearProgressIndicator(
-                          backgroundColor: Colors.cyan,
-                          color: foreGroundProgressBar,
-                          minHeight: 36,
-                        )
-                            : getSearchBar(context);*//*
-                      }
-                      else if (index == 2) {
-                        return Container(
-                            width: width,
-                            //height: singleProductDetailCardHeight,
-                            margin: EdgeInsets.symmetric(horizontal: 10),
-                            decoration: BoxDecoration(
-                              color: Colors.grey[200],
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                            child: productAsync.when(
-                              data: (products) {
-                                WidgetsBinding.instance.addPostFrameCallback((_) async {
-                                  ref.read(isScanningProvider.notifier).state = false;
-                                });
-                                 return  (products.id != null && products.id! > 0) ?
-                                 getProductDetailCard(productsNotifier: widget.productsNotifier,
-                                     product: products.copyWith(imageURL: imageUrl,uPC: null)) : NoDataCard();
-
-                              },error: (error, stackTrace) => Text('Error: $error'),
-                              loading: () =>  LinearProgressIndicator(),
-                            ),
-                          );
-                      } else if (index == 3) {
-                        return isCanEditUPC() ? Padding(
-                                padding: const EdgeInsets.all(20.0),
-                                child: SizedBox(
-                                  width: MediaQuery.of(context).size.width,
-                                  child: TextButton(
-                                style: TextButton.styleFrom(
-                                  backgroundColor: Colors.purple,
-                                  foregroundColor: Colors.white,
-                                ),
-                                onPressed: (){
-                                    Navigator.of(context).push(MaterialPageRoute(builder: (context) => UpdateProductUpcScreen3()));
-                                },
-                                child: Text(Messages.UPDATE_UPC)),
-                          )): Container();
-                      } else if (index == 4) {
-                        return SizedBox(height: 40);
-                      }
-
-                      return SizedBox.shrink(); // Should not happen with proper itemCount
-                    },
-
-                  ),
-                ),*/
-                // Add more TabBarView children if you have more tabs
-                UpdateProductUpcView(),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  /*Widget _buttonScanWithPhone(BuildContext context,WidgetRef ref) {
-    bool isScanning = ref.watch(isScanningProvider);
-    return GestureDetector(
-      onTap: isScanning ? null :  () async {
-        ref.watch(isScanningProvider.notifier).state = true;
-
-        String? result= await SimpleBarcodeScanner.scanBarcode(
-          context,
-          barcodeAppBar: BarcodeAppBar(
-            appBarTitle: Messages.SCANNING,
-            centerTitle: false,
-            enableBackButton: true,
-            backButtonIcon: Icon(Icons.arrow_back_ios),
-          ),
-          isShowFlashIcon: true,
-          delayMillis: 300,
-          cameraFace: CameraFace.back,
-        );
-        if(result!=null){
-
-          ref.read(scanHandleNotifierProvider.notifier).addBarcodeByUPCOrSKUForSearch(result);
-        }
-
-      },
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        spacing: 10,
-        children: [
-          Icon(Icons.camera, color: isScanning ? Colors.grey : Colors.white),
-          Text(Messages.OPEN_CAMERA,style: TextStyle(color: Colors.white,
-              fontSize: themeFontSizeLarge,),
-              ),
-        ],
-      ));
-  }
-
-
-  Widget getSearchBar(BuildContext context){
-    final isScanning = ref.watch(isScanningProvider);
-    final usePhoneCamera = ref.watch(usePhoneCameraToScanProvider); // bool
+    final imageUrl = widget.countScannedCamera.isEven
+        ? Memory.IMAGE_HTTP_SAMPLE_2
+        : Memory.IMAGE_HTTP_SAMPLE_1;
 
     return SizedBox(
-      width: MediaQuery.of(context).size.width - 30,
-      height: 36,
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      height: bodyHeight,
+      child: Column(
+        spacing: 10,
         children: [
-          const SizedBox(width: 5),
-          IconButton(
-            onPressed: () {
-              final notifier =
-              ref.read(usePhoneCameraToScanProvider.notifier);
-              notifier.state = !usePhoneCamera;
-            },
-            icon: Icon(
-              usePhoneCamera ? Icons.qr_code_scanner : Icons.barcode_reader,
-              color: Colors.purple,
+          Container(
+            width: width,
+            margin: const EdgeInsets.symmetric(horizontal: 10),
+            decoration: BoxDecoration(
+              color: Colors.grey[200],
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: productAsync.when(
+              data: (product) {
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  stopScanning();
+                });
+
+                return (product.id != null && product.id! > 0)
+                    ? ProductDetailWithPhotoCard(
+                  product: product.copyWith(imageURL: imageUrl, uPC: null),
+                  actionTypeInt: widget.actionTypeInt,
+                )
+                    : NoDataCard();
+              },
+              loading: () => const LinearProgressIndicator(),
+              error: (e, _) => Text('Error: $e'),
             ),
           ),
-          Expanded(
-            child: Text(
-              Messages.FIND_PRODUCT_BY_UPC_SKU,
-              textAlign: TextAlign.center,
+          if (isCanEditUPC())
+            Padding(
+              padding: const EdgeInsets.all(20.0),
+              child: SizedBox(
+                width: MediaQuery.of(context).size.width,
+                child: TextButton(
+                  style: TextButton.styleFrom(
+                    backgroundColor: Colors.purple,
+                    foregroundColor: Colors.white,
+                  ),
+                  onPressed: () async {
+                    // English: Confirmation via bottom sheet
+                    final ok = await confirmAction(
+                      title: Messages.CONFIRM,
+                      message: Messages.UPDATE_UPC,
+                    );
+                    if (!ok) return;
+
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => UpdateProductUpcScreen(),
+                      ),
+                    );
+                  },
+                  child: Text(Messages.UPDATE_UPC),
+                ),
+              ),
             ),
-          ),
-          IconButton(
-            onPressed: isScanning ? null : () async {
-              getBarCode(context, false);
-            },
-            icon: Icon(
-              Icons.search,
-              color: isScanning ? Colors.grey : Colors.purple,
-            ),
-          ),
-          IconButton(
-            onPressed: isScanning ? null : () async {
-              getBarCode(context, true);
-            },
-            icon: Icon(
-              Icons.history,
-              color: isScanning ? Colors.grey : Colors.purple,
-            ),
-          ),
-          const SizedBox(width: 5),
         ],
       ),
     );
-  }
-  Future<void> getBarCode(BuildContext context, bool history) async{
-    TextEditingController controller = TextEditingController();
-    if(history){
-      String lastSearch = Memory.lastSearch;
-      controller.text = lastSearch.isEmpty
-          ? Messages.NO_RECORDS_FOUND
-          : lastSearch;
-    }
-
-    final cameraNotifier = ref.read(usePhoneCameraToScanProvider.notifier);
-    final bool stateActual = cameraNotifier.state;
-    cameraNotifier.state = true;
-
-    AwesomeDialog(
-      context: context,
-      headerAnimationLoop: false,
-      dialogType: DialogType.noHeader,
-      body: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 40),
-        child: Center(
-          child: Column(
-            children: [
-              Text(Messages.FIND_PRODUCT_BY_UPC_SKU),
-              const SizedBox(height: 10),
-              TextField(
-                controller: controller,
-                style: const TextStyle(fontStyle: FontStyle.italic),
-                keyboardType: TextInputType.text,
-              ),
-            ],
-          ),
-        ),
-      ),
-      title: Messages.FIND_PRODUCT_BY_UPC_SKU,
-      desc: Messages.FIND_PRODUCT_BY_UPC_SKU,
-      btnCancelText: Messages.CANCEL,
-      btnOkText: Messages.OK,
-      btnOkOnPress: () {
-        cameraNotifier.state = stateActual;
-        final result = controller.text;
-        if(result.isEmpty){
-          AwesomeDialog(
-            context: context,
-            animType: AnimType.scale,
-            dialogType: DialogType.error,
-            body: Center(
-              child: Text(
-                Messages.ERROR_UPC_EMPTY,
-                style: const TextStyle(fontStyle: FontStyle.italic),
-              ),
-            ),
-            title: Messages.ERROR_UPC_EMPTY,
-            desc: '',
-            autoHide: const Duration(seconds: 3),
-            btnOkOnPress: () {},
-            btnOkColor: Colors.amber,
-            btnCancelText: Messages.CANCEL,
-            btnOkText: Messages.OK,
-          ).show();
-          return;
-        }
-        widget.productsNotifier.addBarcodeByUPCOrSKUForSearch(result);
-      },
-      btnCancelOnPress: () {
-        cameraNotifier.state = stateActual;
-      },
-    ).show();
-  }*/
-
-  Widget getProductDetailCard({required ProductsScanNotifier productsNotifier, required product}) {
-    switch(widget.actionTypeInt){
-      case Memory.ACTION_CALL_UPDATE_PRODUCT_UPC_PAGE:
-        return ProductDetailWithPhotoCard(
-          product: product,
-          actionTypeInt: widget.actionTypeInt,
-        );
-      default:
-        return ProductDetailWithPhotoCard(
-          product: product,
-          actionTypeInt: widget.actionTypeInt,
-        );
-
-    }
-
-
   }
 
   bool isCanEditUPC() {
-    if(ref.read(productForUpcUpdateProvider).id==null || ref.read(productForUpcUpdateProvider).id==0){
-      return false ;
+    final product = ref.read(productForUpcUpdateProvider);
 
-    }
-    if(ref.read(productForUpcUpdateProvider).uPC==null || ref.read(productForUpcUpdateProvider).uPC=='' ){
-       return true;
-    }
+    if (product.id == null || product.id == 0) return false;
+    if (product.uPC == null || product.uPC!.isEmpty) return true;
+
     return false;
-
-  }
-  void showUpdateUPCDialog(BuildContext context,WidgetRef ref){
-    showDialog<String>(
-      context: context,
-      barrierDismissible: false, // user must tap button!
-      builder:  (BuildContext context) =>Consumer(builder: (_, ref, __) {
-
-        return AlertDialog(
-          backgroundColor:Colors.grey[200],
-          content: Container(
-            decoration: BoxDecoration(
-              color: Colors.grey[200], // Change background color based on isSelected
-              borderRadius: BorderRadius.circular(10),
-            ),
-            height: MediaQuery.of(context).size.height,
-            width: MediaQuery.of(context).size.width,
-            child: UpdateProductUpcScreen(),
-
-          ),
-          actions: <Widget>[
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              spacing: 5,
-              children: <Widget>[
-                  TextButton(
-                    style: TextButton.styleFrom(
-                      backgroundColor: Colors.red[300],
-                    ),
-                    child: Text(Messages.CONTINUE),
-                    onPressed: () async {
-
-                      Navigator.of(context).pop();
-
-                    },
-                  ),
-
-                Expanded(
-                  child: TextButton(
-                    style: TextButton.styleFrom(
-                      backgroundColor: Colors.red[300],
-                    ),
-                    child: Text(Messages.CANCEL),
-                    onPressed: () async {
-                      ref.read(isDialogShowedProvider.notifier).update((state) => false);
-                      Navigator.of(context).pop();
-                    },
-                  ),
-                ),
-                Expanded(
-                  child: TextButton(
-                    style: TextButton.styleFrom(
-                      backgroundColor: Colors.green[300],
-                    ),
-                    child: Text(Messages.CREATE),
-                    onPressed: () {
-                      Navigator.of(context).pop();
-                    },
-                  ),
-                ),
-              ],
-            ),
-          ],
-          actionsAlignment: MainAxisAlignment.center,
-          actionsPadding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-        );
-      }),
-    );
   }
 
+  @override
+  Future<void> handleInputString({required WidgetRef ref, required String inputData, required int actionScan}) {
+    // TODO: implement handleInputString
+    throw UnimplementedError();
+  }
 }

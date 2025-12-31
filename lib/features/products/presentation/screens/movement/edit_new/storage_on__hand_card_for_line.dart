@@ -1,272 +1,300 @@
 
 import 'dart:convert';
 
-import 'package:awesome_dialog/awesome_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
-import 'package:monalisa_app_001/features/products/domain/idempiere/idempiere_product.dart';
 import 'package:monalisa_app_001/features/products/domain/idempiere/movement_and_lines.dart';
+import 'package:monalisa_app_001/features/products/presentation/screens/movement/edit_new/unsorted_storage_on__hand_screen_for_line.dart';
+import 'package:monalisa_app_001/features/products/presentation/screens/movement/edit_new/unsorted_storage_on__hand_select_locator_screen.dart';
 import 'package:monalisa_app_001/features/products/presentation/screens/movement/provider/products_home_provider.dart';
 import 'package:monalisa_app_001/features/products/presentation/screens/store_on_hand/memory_products.dart';
 
-import '../../../../../../config/router/app_router.dart';
-import '../../../../../../config/theme/app_theme.dart';
-import '../../../../../auth/presentation/providers/auth_provider.dart';
 import '../../../../../shared/data/memory.dart';
 import '../../../../../shared/data/messages.dart';
-import '../../../../domain/idempiere/idempiere_movement_line.dart';
 import '../../../../domain/idempiere/idempiere_storage_on_hande.dart';
-import '../../../../domain/idempiere/idempiere_warehouse.dart';
 import '../../../providers/locator_provider.dart';
 import '../../../providers/product_provider_common.dart';
 import '../../../providers/products_scan_notifier_for_line.dart';
 import '../provider/new_movement_provider.dart';
+
+
 class StorageOnHandCardForLine extends ConsumerStatefulWidget {
-  final ProductsScanNotifierForLine notifier;
+  final ProductsScanNotifierForLine productsNotifier;
   final IdempiereStorageOnHande storage;
+
   final int index;
   final int listLength;
-  final Color colorSameWarehouse = themeColorSuccessfulLight;
-  final Color colorDifferentWarehouse = themeColorGrayLight;
+
   final double width;
-  final double height = 120;
-  IdempiereWarehouse? allowedWarehouseFrom;
+
+  /// English: Original argument used across navigation (movement json or '-1')
+  final String argument;
+
   final MovementAndLines movementAndLines;
-  String? argument;
 
-  StorageOnHandCardForLine(
+  /// English: Used to restrict warehouses in some flows
+  final dynamic allowedWarehouseFrom;
 
-      this.notifier,
+  const StorageOnHandCardForLine(
+      this.productsNotifier,
       this.storage,
       this.index,
       this.listLength, {
-      required this.movementAndLines,
-      required this.width,this.allowedWarehouseFrom,
-      super.key, required this.argument,});
-
+        super.key,
+        required this.width,
+        required this.argument,
+        required this.movementAndLines,
+        this.allowedWarehouseFrom,
+      });
 
   @override
-  ConsumerState<StorageOnHandCardForLine> createState() =>StorageOnHandCardForLineState();
+  ConsumerState<StorageOnHandCardForLine> createState() =>
+      _StorageOnHandCardForLineState();
 }
 
-class StorageOnHandCardForLineState extends ConsumerState<StorageOnHandCardForLine> {
-  late var usePhoneCamera ;
-  late var allowedWarehouseId;
-  MovementAndLines get movementAndLines {
-    if(widget.argument!=null && widget.argument!.isNotEmpty && widget.argument!='-1') {
-      return MovementAndLines.fromJson(jsonDecode(widget.argument!));
-    } else {
-      return widget.movementAndLines;
-    }
-  }
-  //late int movementId;
+class _StorageOnHandCardForLineState
+    extends ConsumerState<StorageOnHandCardForLine> {
+  bool _opening = false;
 
-  @override
-  Widget build(BuildContext context) {
-    // No sé porque, sin hacer preguntas no muestras....widget.movementAndLines
-    String lines = '0';
-    if(movementAndLines.hasMovement){
-      lines = movementAndLines.movementLines?.length.toString() ?? '0';
-      if(movementAndLines.hasMovementLines){
-        widget.allowedWarehouseFrom = movementAndLines.lastLocatorFrom?.mWarehouseID;
-      } else {
-        widget.allowedWarehouseFrom = widget.storage.mLocatorID?.mWarehouseID;
-      }
-    }
+  // ---------------------------------------------------------------------------
+  // Navigation (BottomSheet instead of GoRouter)
+  // ---------------------------------------------------------------------------
 
-
-    usePhoneCamera = ref.watch(usePhoneCameraToScanForLineProvider.notifier);
-    allowedWarehouseId = widget.allowedWarehouseFrom?.id ?? -1;
-    final warehouse = ref.read(authProvider).selectedWarehouse;
-    int warehouseID = warehouse?.id ?? 0;
-    IdempiereWarehouse? warehouseStorage = widget.storage.mLocatorID?.mWarehouseID;
-    bool canMove = false ;
-    Color background = widget.colorDifferentWarehouse;
-    if(allowedWarehouseId > 0){
-      if(widget.storage.mLocatorID?.mWarehouseID?.id != allowedWarehouseId){
-        background = widget.colorDifferentWarehouse;
-      } else {
-        background = widget.colorSameWarehouse;
-        canMove = true;
-      }
-
-    } else {
-      if(warehouseStorage?.id == warehouseID){
-        background = widget.colorSameWarehouse;
-        canMove = true;
-      }
-    }
-
-    double widthLarge = (widget.width-15)/3*2;
-    double widthSmall = (widget.width-15)/3;
-    String warehouseName = warehouseStorage?.identifier ?? '';
-    double qtyOnHand = widget.storage.qtyOnHand ?? 0;
-    String quantity = Memory.numberFormatter0Digit.format(qtyOnHand) ;
-    return  GestureDetector(
-      onTap: () async {
-        if(!canMove){
-          showErrorMessage(context, ref, Messages.ERROR_CANNOT_MOVE_STORAGE);
-          return;
-        }
-
-        IdempiereProduct product = widget.storage.mProductID ?? IdempiereProduct();
-        List<IdempiereMovementLine>? movementLines = MemoryProducts.movementAndLines.movementLines;
-        bool isProductMoved = false;
-        if(MemoryProducts.movementAndLines.hasMovementLines){
-          List<IdempiereProduct> products = [];
-          for(int i=0;i<movementLines!.length;i++){
-            if(movementLines[i].mProductID != null){
-              products.add(movementLines[i].mProductID!);
-            }
-          }
-          for(int i=0;i<products.length;i++){
-            if(products[i].id == product.id){
-              isProductMoved = true;
-              break;
-            }
-          }
-
-        }
-        if(isProductMoved){
-          AwesomeDialog(
-            context: context,
-            animType: AnimType.scale,
-            dialogType: DialogType.error,
-            body: Center(child: Text(
-              Messages.ERROR_PRODUCT_REAPEATED,
-              style: TextStyle(fontStyle: FontStyle.italic),
-            ),), // correct here
-            title: Messages.ERROR_UPC_EMPTY,
-            desc:   '',
-            autoHide: const Duration(seconds: 3),
-            btnOkOnPress: () {},
-            btnOkColor: Colors.amber,
-            btnCancelText: Messages.CANCEL,
-            btnOkText: Messages.OK,
-          ).show();
-          return;
-
-        }
-
-        ref.read(isDialogShowedProvider.notifier).update((state)=>true);
-        ref.read(isScanningFromDialogProvider.notifier).update((state)=>false);
-        _goToNextPage(ref,movementAndLines);
-
-      },
-      child: Container(
-        height: widget.height,
-        decoration: BoxDecoration(
-          color: background,
-          borderRadius: BorderRadius.circular(10),
-        ),
-        child: Padding(
-          padding: const EdgeInsets.all(8.0),
-          child: Row(
-            spacing: 5,
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              SizedBox(
-                width: widthSmall,
-                child: Column(
-                  spacing: 5,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(Messages.WAREHOUSE_SHORT),
-                    Text(Messages.LOCATOR_SHORT),
-                    Text(Messages.QUANTITY_SHORT),
-                    Text(Messages.ATTRIBUET_INSTANCE),
-
-                  ],
-                ),
-              ),
-              SizedBox(
-                width: widthLarge,
-                child: Column(
-                  spacing: 5,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(warehouseName),
-                    Text(widget.storage.mLocatorID?.value ?? '', overflow: TextOverflow.ellipsis),
-                    Text(
-                      quantity,
-                      style: TextStyle(
-                        color: qtyOnHand < 0 ? Colors.redAccent : Colors.black,
-                      ),
-                    ),
-                    Text(widget.storage.mAttributeSetInstanceID?.identifier ?? '', overflow: TextOverflow.ellipsis),
-                  ],
-                ),
-              ),
-
-            ],
-          ),
-        ),
-      ),
-    );
-  }
   Future<void> _goToNextPage(WidgetRef ref, MovementAndLines movementAndLines) async {
+    if (_opening) return;
+    _opening = true;
 
-
+    // English: Persist current selection context
     MemoryProducts.index = widget.index;
     MemoryProducts.listLength = widget.listLength;
     MemoryProducts.storage = widget.storage;
     MemoryProducts.width = widget.width;
-    movementAndLines.nextProductIdUPC = widget.storage.mProductID?.id?.toString() ?? '-1';
-    ref.read(actionScanProvider.notifier).update((state) => Memory.ACTION_GET_LOCATOR_TO_VALUE);
-    ref.read(productsHomeCurrentIndexProvider.notifier).state = Memory.PAGE_INDEX_UNSORTED_STORAGE_ON_HAND;
-    String argument = movementAndLines.nextProductIdUPC ??'-1';
-    if(ref.context.mounted) {
-      if(movementAndLines.canChangeLocatorForEachLine){
-        print(' PAGE_UNSORTED_STORAGE_ON_HAND_FOR_LINE_SELECT_LOCATOR');
-        final copyLastLocatorTo = ref.read(copyLastLocatorToProvider);
-        if(!copyLastLocatorTo){
-          ref.invalidate(selectedLocatorToProvider);
-          ref.invalidate(scannedLocatorToProvider);
-        }
 
+    // English: For next page logic, keep what you did (ID or UPC depending your flow)
+    movementAndLines.nextProductIdUPC =
+        widget.storage.mProductID?.id?.toString() ?? '-1';
 
-        ref.context.go(
-            '${AppRouter.PAGE_UNSORTED_STORAGE_ON_HAND_FOR_LINE_SELECT_LOCATOR}/$argument',
-            extra: movementAndLines);
-      } else {
-        print(' PAGE_UNSORTED_STORAGE_ON_HAND_FOR_LINE');
-        ref.context.go(
-            '${AppRouter.PAGE_UNSORTED_STORAGE_ON_HAND_FOR_LINE}/$argument',
-            extra: movementAndLines);
+    // English: Set scan action + home index (same behavior)
+    ref.read(actionScanProvider.notifier).update(
+          (_) => Memory.ACTION_GET_LOCATOR_TO_VALUE,
+    );
+    ref.read(productsHomeCurrentIndexProvider.notifier).state =
+        Memory.PAGE_INDEX_UNSORTED_STORAGE_ON_HAND;
+
+    // English: Build argument (you were using nextProductIdUPC)
+    final String argument = movementAndLines.nextProductIdUPC ?? '-1';
+
+    if (!mounted) {
+      _opening = false;
+      return;
+    }
+
+    // English: Decide which sheet to open
+    if (movementAndLines.canChangeLocatorForEachLine) {
+      // English: Invalidate locator selection if not copying last locator
+      final copyLastLocatorTo = ref.read(copyLastLocatorToProvider);
+      if (!copyLastLocatorTo) {
+        ref.invalidate(selectedLocatorToProvider);
+        ref.invalidate(scannedLocatorToProvider);
       }
 
+      await _showSelectLocatorSheet(
+        ref: ref,
+        movementAndLines: movementAndLines,
+        argument: argument,
+      );
+    } else {
+      ref.read(actionScanProvider.notifier).update(
+            (_) => Memory.ACTION_NO_SCAN_ACTION,
+      );
+      await _showUnsortedForLineSheet(
+        ref: ref,
+        movementAndLines: movementAndLines,
+        argument: argument,
+      );
     }
 
+    _opening = false;
   }
-  void showErrorMessage(BuildContext context, WidgetRef ref, String message) {
-    if (!context.mounted) {
-      Future.delayed(const Duration(seconds: 1));
-      if(!context.mounted) return;
-    }
-    AwesomeDialog(
+
+  Future<void> _showSelectLocatorSheet({
+    required WidgetRef ref,
+    required MovementAndLines movementAndLines,
+    required String argument,
+  }) async {
+    // English: Keep movement snapshot as json if needed
+    final String movementJson = jsonEncode(movementAndLines.toJson());
+    final String upc = MemoryProducts.storage.mProductID?.uPC ?? '-1';
+
+    // English: Do provider updates after this frame (avoids build-phase issues)
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final copyTo = ref.read(copyLastLocatorToProvider);
+      if (!copyTo) {
+        ref.invalidate(selectedLocatorToProvider);
+      }
+
+      ref.read(productsHomeCurrentIndexProvider.notifier).update(
+            (_) => Memory.PAGE_INDEX_UNSORTED_STORAGE_ON_HAND,
+      );
+      ref.read(actionScanProvider.notifier).update(
+            (_) => Memory.ACTION_GET_LOCATOR_TO_VALUE,
+      );
+    });
+
+    await showModalBottomSheet<void>(
       context: context,
-      animType: AnimType.scale,
-      dialogType: DialogType.error,
-      body: Center(child: Column(
-        children: [
-          Text(message,
-            style: TextStyle(fontStyle: FontStyle.italic),
-          ),
-        ],
-      ),),
-      title:  message,
-      desc:   '',
-      autoHide: const Duration(seconds: 3),
-      btnOkOnPress: () {},
-      btnOkColor: Colors.amber,
-      btnCancelText: Messages.CANCEL,
-      btnOkText: Messages.OK,
-    ).show();
-    return;
+      isScrollControlled: true,
+      useSafeArea: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (_) => FractionallySizedBox(
+        heightFactor: 0.95,
+        child: UnsortedStorageOnHandSelectLocatorScreen(
+          argument: movementJson, // you were using jsonEncode(movement.toJson())
+          movementAndLines: movementAndLines,
+          index: MemoryProducts.index,
+          storage: MemoryProducts.storage,
+          productUPC: upc,
+          width: MemoryProducts.width,
+        ),
+      ),
+    );
   }
 
+  Future<void> _showUnsortedForLineSheet({
+    required WidgetRef ref,
+    required MovementAndLines movementAndLines,
+    required String argument,
+  }) async {
+    // English: Keep movement snapshot as json if needed
+    final String movementJson = jsonEncode(movementAndLines.toJson());
+    final String upc = MemoryProducts.storage.mProductID?.uPC ?? '-1';
 
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(productsHomeCurrentIndexProvider.notifier).update(
+            (_) => Memory.PAGE_INDEX_UNSORTED_STORAGE_ON_HAND,
+      );
+      ref.read(actionScanProvider.notifier).update(
+            (_) => Memory.ACTION_GET_LOCATOR_TO_VALUE,
+      );
+    });
+
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (_) => FractionallySizedBox(
+        heightFactor: 0.95,
+        child: UnsortedStorageOnHandScreenForLine(
+          argument: movementJson,
+          movementAndLines: movementAndLines,
+          index: MemoryProducts.index,
+          storage: MemoryProducts.storage,
+          width: MemoryProducts.width,
+        ),
+      ),
+    );
+  }
+
+  // ---------------------------------------------------------------------------
+  // UI
+  // ---------------------------------------------------------------------------
+
+  @override
+  Widget build(BuildContext context) {
+    final s = widget.storage;
+
+    final locator = s.mLocatorID?.value ??
+        s.mLocatorID?.identifier ??
+        Messages.NO_DATA_FOUND;
+
+    final warehouseName = s.mLocatorID?.mWarehouseID?.identifier ?? '--';
+    final warehouseId = s.mLocatorID?.mWarehouseID?.id ?? -1;
+    final lastWarehouseFromId = widget.allowedWarehouseFrom?.id ?? -1;
+    bool canMove = warehouseId == lastWarehouseFromId;
+
+    final qty = s.qtyOnHand ?? 0;
+
+    // English: Basic "card item" UI, tappable
+    return InkWell(
+      borderRadius: BorderRadius.circular(12),
+      onTap: !canMove ? null : () async {
+        // English: Open next step using bottom sheet flow
+        await _goToNextPage(ref, widget.movementAndLines);
+      },
+      child: Container(
+        width: widget.width,
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: canMove ? Colors.green[100] : Colors.grey[100],
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.grey[300]!),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // English: Header row
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    warehouseName,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                      color: Colors.black87,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Container(
+                  padding:
+                  const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: canMove ? Colors.purple[50] : Colors.grey[50],
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: canMove ? Colors.purple[200]! : Colors.grey[300]!),
+                  ),
+                  child: Text(
+                    Memory.numberFormatter0Digit.format(qty),
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: canMove ? Colors.purple : Colors.black,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+
+            // English: Locator
+            Text(
+              '${Messages.LOCATOR_TO}: $locator',
+              style: const TextStyle(fontSize: 14),
+            ),
+
+            const SizedBox(height: 8),
+
+            // English: Small hint
+            Text(
+              widget.movementAndLines.canChangeLocatorForEachLine
+                  ? Messages.SELECT_LOCATOR_TO
+                  : Messages.CONTINUE,
+              style: TextStyle(
+                fontSize: 13,
+                color: Colors.grey[700],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }
-
-

@@ -1,7 +1,5 @@
-import 'package:awesome_dialog/awesome_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:monalisa_app_001/features/products/presentation/screens/search/product_result_with_photo_card.dart';
 import 'package:simple_barcode_scanner/simple_barcode_scanner.dart';
 
 import '../../../../shared/data/memory.dart';
@@ -14,425 +12,353 @@ import '../../providers/product_provider_common.dart';
 import '../../providers/product_search_provider.dart';
 import '../../providers/product_update_upc_provider.dart';
 import '../../providers/products_update_notifier.dart';
+import '../search/product_result_with_photo_card.dart';
 
+// English: Base state with unified bottom sheets + helpers
+import '../../../common/common_consumer_state.dart';
 
 class UpdateProductUpcScreen extends ConsumerStatefulWidget {
-  int countScannedCamera =0;
-  late ProductsUpdateNotifier productsNotifier ;
-  final int actionTypeInt = Memory.ACTION_UPDATE_UPC ;
+  int countScannedCamera = 0;
+  late ProductsUpdateNotifier productsNotifier;
+  final int actionTypeInt = Memory.ACTION_UPDATE_UPC;
 
   UpdateProductUpcScreen({super.key});
 
   @override
-  ConsumerState<ConsumerStatefulWidget> createState() => UpdateProductUpcScreenState();
-
-
+  ConsumerState<ConsumerStatefulWidget> createState() =>
+      UpdateProductUpcScreenState();
 }
 
-class UpdateProductUpcScreenState extends ConsumerState<UpdateProductUpcScreen> {
-   late IdempiereProduct product;
-   late var newUPCProvider ;
-   late AsyncValue updateAsync;
-   late var dataToUpdateUPC;
-   AwesomeDialog? dialog;
-   final hinTextUpdateUPC = Messages.UPDATE_UPC;
-   @override
-  initState(){
-     super.initState();
-   }
-   @override
-  void dispose() {
-    // TODO: implement dispose
-    super.dispose();
-    dialog?.dismiss();
-  }
+class UpdateProductUpcScreenState
+    extends CommonConsumerState<UpdateProductUpcScreen> {
+
+  late IdempiereProduct product;
+  late var newUPCProvider;
+  late AsyncValue updateAsync;
+  late var dataToUpdateUPC;
+
+  final hinTextUpdateUPC = Messages.UPDATE_UPC;
+
   @override
-  Widget build(BuildContext context){
+  void initState() {
+    super.initState();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     dataToUpdateUPC = ref.watch(dataToUpdateUPCProvider.notifier);
     product = ref.watch(productForUpcUpdateProvider);
     updateAsync = ref.watch(updateProductUPCProvider);
-    widget.productsNotifier = ref.watch(productUpdateStateNotifierProvider.notifier);
+    widget.productsNotifier =
+        ref.watch(productUpdateStateNotifierProvider.notifier);
+
     final double bodyHeight = MediaQuery.of(context).size.height - 100;
     final isScanning = ref.watch(isScanningProvider);
-    newUPCProvider = ref.watch(newUPCToUpdateProvider);
-    widget.countScannedCamera = ref.watch(scannedCodeTimesProvider.notifier).state;
 
-    Color foreGroundProgressBar = Colors.amber[600]!;
+    newUPCProvider = ref.watch(newUPCToUpdateProvider);
+    widget.countScannedCamera =
+        ref.watch(scannedCodeTimesProvider.notifier).state;
+
     final showScan = ref.watch(showScanFixedButtonProvider(widget.actionTypeInt));
+
     return Scaffold(
       appBar: AppBar(
         title: Text(Messages.PRODUCT),
-          leading:IconButton(
-            icon: const Icon(Icons.arrow_back),
-            onPressed: () => {
-              FocusScope.of(context).unfocus(),
-              dialog?.dismiss(),
-              Navigator.of(context).pop()
-             },
-          ),
-          actions: [
-          if(showScan) ScanButtonByActionFixedShort(
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () {
+            // English: Keep back behavior simple and safe
+            unfocus();
+            Navigator.of(context).pop();
+          },
+        ),
+        actions: [
+          if (showScan)
+            ScanButtonByActionFixedShort(
               actionTypeInt: widget.actionTypeInt,
-              onOk: widget.productsNotifier.handleInputString,),
-            IconButton(
-              icon: const Icon(Icons.keyboard,color: Colors.purple),
-              onPressed: () => {
-              openInputDialogWithAction(ref: ref, history: false,
               onOk: widget.productsNotifier.handleInputString,
-              actionScan:  widget.actionTypeInt)
-              },
             ),
-
-           /* usePhoneCamera.state ? IconButton(
-              icon: const Icon(Icons.barcode_reader),
-              onPressed: () => { usePhoneCamera.state = false},
-            ) :  IconButton(
-            icon: const Icon(Icons.camera),
-            onPressed: () => { usePhoneCamera.state = true},),*/
+          IconButton(
+            icon: const Icon(Icons.keyboard, color: Colors.purple),
+            onPressed: () {
+              openInputDialogWithAction(
+                ref: ref,
+                history: false,
+                onOk: widget.productsNotifier.handleInputString,
+                actionScan: widget.actionTypeInt,
+              );
+            },
+          ),
         ],
-
       ),
-
       body: SizedBox(
         height: bodyHeight,
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
-          spacing: 5,
           children: [
-              isScanning
-              ? LinearProgressIndicator(
-            backgroundColor: Colors.cyan,
-            color: foreGroundProgressBar,
-            minHeight: 36,
-          )
-              : getSearchBar(context),
+            isScanning
+                ? LinearProgressIndicator(
+              backgroundColor: Colors.cyan,
+              color: Colors.amber[600],
+              minHeight: 36,
+            )
+                : _getSearchBar(),
 
-          Expanded(
-            child: dataToUpdateUPC.state.length==2 ? updateAsync.when(
-              data: (product) {
-                WidgetsBinding.instance.addPostFrameCallback((_) async {
-                  ref.read(isScanningProvider.notifier).state = false;
-                });
-                return getProductDetailCard(productsNotifier: widget.productsNotifier,
-                    product: product) ;
+            Expanded(
+              child: dataToUpdateUPC.state.length == 2
+                  ? updateAsync.when(
+                data: (product) {
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    stopScanning();
+                  });
 
-              },error: (error, stackTrace) => Text('Error: $error'),
-              loading: () => LinearProgressIndicator(),
-            ) :
-            _getUpdateUPCCard(context, product),
-          ),
+                  // English: Optional success feedback
+                  // (If you already show success elsewhere, remove this)
+                  // showSuccessSheet(Messages.SUCCESS);
 
-
+                  return _getProductDetailCard(product: product);
+                },
+                error: (error, stackTrace) {
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    stopScanning();
+                  });
+                  return Center(child: Text('Error: $error'));
+                },
+                loading: () => const LinearProgressIndicator(),
+              )
+                  : _getUpdateUPCCard(product),
+            ),
           ],
         ),
       ),
     );
   }
 
-  Widget _buttonScanWithPhone(BuildContext context,WidgetRef ref) {
-    bool isScanning = ref.watch(isScanningProvider);
-    return TextButton(
+  // -------------------------
+  // UI widgets
+  // -------------------------
 
+  Widget _buttonScanWithPhone() {
+    final isScanning = ref.watch(isScanningProvider);
+
+    return TextButton(
       style: TextButton.styleFrom(
         backgroundColor: isScanning ? Colors.grey : Colors.cyan[200],
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(0),
-        ),
-
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(0)),
       ),
-      onPressed: isScanning ? null :  () async {
-        //ref.watch(isScanningProvider.notifier).state = true;
-
-        String? result= await SimpleBarcodeScanner.scanBarcode(
+      onPressed: isScanning
+          ? null
+          : () async {
+        // English: Open camera scanner and store the result
+        final result = await SimpleBarcodeScanner.scanBarcode(
           context,
           barcodeAppBar: BarcodeAppBar(
             appBarTitle: Messages.SCANNING,
             centerTitle: false,
             enableBackButton: true,
-            backButtonIcon: Icon(Icons.arrow_back_ios),
+            backButtonIcon: const Icon(Icons.arrow_back_ios),
           ),
           isShowFlashIcon: true,
           delayMillis: 300,
           cameraFace: CameraFace.back,
         );
-        if(result!=null){
-          ref.read(scanHandleNotifierProvider.notifier).addNewUPCCode(result);
-        }
 
+        if (result != null && result.isNotEmpty) {
+          ref
+              .read(scanHandleNotifierProvider.notifier)
+              .addNewUPCCode(result);
+        }
       },
       child: Text(Messages.OPEN_CAMERA),
     );
   }
 
+  Widget _getSearchBar() {
+    final usePhoneCamera = ref.watch(usePhoneCameraToScanProvider.notifier);
 
-  Widget getSearchBar(BuildContext context){
-    var isScanning = ref.watch(isScanningProvider);
-    var usePhoneCamera = ref.watch(usePhoneCameraToScanProvider.notifier);
-    return
-      SizedBox(
-        //width: double.infinity,
-        width: MediaQuery.of(context).size.width - 30,
-        height: 36,
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          spacing: 5,
-          children: [
-            IconButton(onPressed: null, icon: Icon(usePhoneCamera.state?
-            Icons.camera : Icons.barcode_reader, color: Colors.purple,)),
-            Expanded(
-              child: Text(
-                Messages.PLEASE_SCAN_NEW_UPC,
-                textAlign: TextAlign.center,
-              ),
-            ) ,
-
-          ],
-        ),
-      );
-
+    return SizedBox(
+      width: MediaQuery.of(context).size.width - 30,
+      height: 36,
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          IconButton(
+            onPressed: null,
+            icon: Icon(
+              usePhoneCamera.state ? Icons.camera : Icons.barcode_reader,
+              color: Colors.purple,
+            ),
+          ),
+          Expanded(
+            child: Text(
+              Messages.PLEASE_SCAN_NEW_UPC,
+              textAlign: TextAlign.center,
+              style: textStyleMediumBold,
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
-  Widget getProductDetailCard({required ProductsUpdateNotifier productsNotifier, required product}) {
+  Widget _getProductDetailCard({required IdempiereProduct product}) {
     return ProductResultWithPhotoCard(
       product: product,
       actionTypeInt: widget.actionTypeInt,
     );
-
-
   }
-   Widget _getUpdateUPCCard(BuildContext context, IdempiereProduct product) {
-     String att = product.mAttributeSetInstanceID?.identifier  ?? '';
-     if(att==''){
-       att = '${Messages.ATTRIBUET_INSTANCE}: ${product.mAttributeSetInstanceID?.identifier  ?? '--'}';
-     }
-     String imageUrl = product.imageURL ?? '' ;
-     bool testMode = true;
-     if(testMode){
-       imageUrl =Memory.IMAGE_HTTP_SAMPLE_1; // Example image URL
-       int countScannedCamera = ref.watch(scannedCodeTimesProvider.notifier).state;
-       if(countScannedCamera.isEven){
-         imageUrl = Memory.IMAGE_HTTP_SAMPLE_2;
-       } else {
-         imageUrl = Memory.IMAGE_HTTP_SAMPLE_1;
-       }
-     }
-     return SingleChildScrollView(
-       child: Container(
-         decoration: BoxDecoration(
-           color: Colors.white,
-           borderRadius: BorderRadius.circular(10),
-         ),
-         padding: const EdgeInsets.all(10),
-         child: Column(
-           crossAxisAlignment: CrossAxisAlignment.start,
-           spacing: 5,
-           children: [
 
-             Center(
-               child: SizedBox(
-                 width: Memory.SIZE_PRODUCT_IMAGE_WIDTH,
-                 height: Memory.SIZE_PRODUCT_IMAGE_HEIGHT,
-                 child: FadeInImage(
-                   placeholder: AssetImage(Memory.IMAGE_LOADING), // Placeholder for loading
-                   image:NetworkImage(imageUrl),
+  Widget _getUpdateUPCCard(IdempiereProduct product) {
+    var imageUrl = product.imageURL ?? '';
+    final bool testMode = true;
 
-                   fit: BoxFit.cover, // Adjust as needed
-                   imageErrorBuilder: (context, error, stackTrace) {
-                     return Image.asset(Memory.IMAGE_NO_IMAGE, fit: BoxFit.cover); // Display on error
-                   },
-                 ),
-               ),
-             ),
-             Text(
-               product.name ?? '${Messages.NAME}--',
-               style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-             ),
-             Text(
-               'SKU: ${product.sKU ?? 'SKU--'}',
-               style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-             ),
-             Text(
-               'M_SKU: ${product.mOLIConfigurableSKU ?? 'M_SKU--'}',
-               style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-             ),
-             Center(
-               child: Container(
-                 margin: EdgeInsets.symmetric(vertical: 10),
-                 child: Text( newUPCProvider=='' ? Messages.SCAN_UPC :
-                 newUPCProvider,
-                   style: const TextStyle(fontStyle: FontStyle.italic,
-                       fontSize: 22,
-                       fontWeight: FontWeight.bold,color: Colors.purple),
-                 ),),
-             ),
+    if (testMode) {
+      // English: Demo image rotation based on scan counter
+      imageUrl = Memory.IMAGE_HTTP_SAMPLE_1;
+      final countScannedCamera =
+          ref.watch(scannedCodeTimesProvider.notifier).state;
 
+      imageUrl = countScannedCamera.isEven
+          ? Memory.IMAGE_HTTP_SAMPLE_2
+          : Memory.IMAGE_HTTP_SAMPLE_1;
+    }
 
-             SizedBox(
-               width: double.infinity,
-               child: TextButton(
-                   style: TextButton.styleFrom(
-                     backgroundColor: isCanEditUPC() ? Colors.purple : Colors.grey[600],
-                     foregroundColor: Colors.white,
-                   ),
-                   onPressed: () async {
-                     if(!isCanEditUPC()){
-                       return;
-                     }
-                     dataToUpdateUPC = true ;
-                     String id = ref.read(productForUpcUpdateProvider.notifier).state.id!.toString();
-                     String newUPC = ref.read(newUPCToUpdateProvider.notifier).state;
+    return SingleChildScrollView(
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(10),
+        ),
+        padding: const EdgeInsets.all(10),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: SizedBox(
+                width: Memory.SIZE_PRODUCT_IMAGE_WIDTH,
+                height: Memory.SIZE_PRODUCT_IMAGE_HEIGHT,
+                child: FadeInImage(
+                  placeholder: AssetImage(Memory.IMAGE_LOADING),
+                  image: NetworkImage(imageUrl),
+                  fit: BoxFit.cover,
+                  imageErrorBuilder: (context, error, stackTrace) {
+                    return Image.asset(
+                      Memory.IMAGE_NO_IMAGE,
+                      fit: BoxFit.cover,
+                    );
+                  },
+                ),
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              product.name ?? '${Messages.NAME}--',
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            ),
+            Text(
+              'SKU: ${product.sKU ?? 'SKU--'}',
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            ),
+            Text(
+              'M_SKU: ${product.mOLIConfigurableSKU ?? 'M_SKU--'}',
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 10),
 
-                     if(id == '' || int.tryParse(id)==null || int.tryParse(id) == 0 || newUPC=='' ||
-                         int.tryParse(newUPC)==null || int.tryParse(newUPC) == 0)
-                     {
-                       await AwesomeDialog(
-                       context: context,
-                       animType: AnimType.scale,
-                       dialogType: DialogType.error,
-                       body: Center(child: Text(
-                         Messages.DATA_NOT_VALID,
-                         style: TextStyle(fontStyle: FontStyle.italic),
-                         ),),
-                       title: 'ID: $id ,UPC: $newUPC' ,
-                       desc:   'ID: $id ,UPC: $newUPC' ,
-                       autoHide: const Duration(seconds: 5),
-                       btnOkOnPress: () {},
-                       btnOkColor: Colors.amber,
-                       btnCancelText: Messages.CANCEL,
-                       btnOkText: Messages.OK,
-                       ).show();
-                       return;
-                     }
-                     List<String> updateData =[id,newUPC];
-                     //ref.watch(isScanningProvider.notifier).update((state) => true);
+            Center(
+              child: Container(
+                margin: const EdgeInsets.symmetric(vertical: 10),
+                child: Text(
+                  newUPCProvider == '' ? Messages.SCAN_UPC : newUPCProvider,
+                  style: const TextStyle(
+                    fontStyle: FontStyle.italic,
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.purple,
+                  ),
+                ),
+              ),
+            ),
 
-                     ref.read(dataToUpdateUPCProvider.notifier).update((state) => updateData);
-                   },
-                   child: Text(hinTextUpdateUPC)),
-             ),
+            SizedBox(
+              width: double.infinity,
+              child: TextButton(
+                style: TextButton.styleFrom(
+                  backgroundColor:
+                  isCanEditUPC() ? Colors.purple : Colors.grey[600],
+                  foregroundColor: Colors.white,
+                ),
+                onPressed: () async {
+                  if (!isCanEditUPC()) return;
 
-           ],
-         ),
-       ),
-     );
-   }
-   Future<void> showConfirmationDialog(BuildContext context) async {
-     TextEditingController controller = TextEditingController();
-     controller.text = ref.read(newUPCToUpdateProvider.notifier).state;
-     bool stateActual = ref.watch(usePhoneCameraToScanProvider.notifier).state;
-     ref.watch(usePhoneCameraToScanProvider.notifier).state = true;
-     FocusNode focusNode = FocusNode();
-     focusNode.requestFocus();
-     AwesomeDialog(
-         context: context,
-         headerAnimationLoop: false,
-         dialogType: DialogType.noHeader,
-         body: Padding(
-           padding: const EdgeInsets.symmetric(horizontal: 40),
-           child: Center(
-             child: Column(
-               spacing: 10,
-               children: [
-                 Text(Messages.FIND_PRODUCT_BY_UPC_SKU),
-                 TextField(
-                   controller: controller,
-                   style: const TextStyle(fontStyle: FontStyle.italic),
-                   keyboardType: TextInputType.text,
-                   focusNode: focusNode,
-                 ),
+                  final id = ref.read(productForUpcUpdateProvider).id?.toString() ?? '';
+                  final newUPC = ref.read(newUPCToUpdateProvider.notifier).state;
 
-               ],
-             ),
-           ),
-         ),
-         title: Messages.FIND_PRODUCT_BY_UPC_SKU,
-         desc: Messages.FIND_PRODUCT_BY_UPC_SKU,
-         btnCancelText: Messages.CANCEL,
-         btnOkText: Messages.OK,
-         btnOkOnPress: () {
-           ref.watch(usePhoneCameraToScanProvider.notifier).state = stateActual;
-           final result = controller.text;
-           if(result==''){
-             AwesomeDialog(
-               context: context,
-               animType: AnimType.scale,
-               dialogType: DialogType.error,
-               body: Center(child: Text(
-                 Messages.ERROR_UPC_EMPTY,
-                 style: TextStyle(fontStyle: FontStyle.italic),
-               ),), // correct here
-               title: Messages.ERROR_UPC_EMPTY,
-               desc:   '',
-               autoHide: const Duration(seconds: 3),
-               btnOkOnPress: () {},
-               btnOkColor: Colors.amber,
-               btnCancelText: Messages.CANCEL,
-               btnOkText: Messages.OK,
-             ).show();
-             return;
-           }
-           //widget.productsNotifier.setNewUPCCode(result);
-         },
-         btnCancelOnPress: (){
-           return ;
-         }
-     ).show();
-   }
-   bool isCanEditUPC() {
-     if(ref.read(productForUpcUpdateProvider).id==null || ref.read(productForUpcUpdateProvider).id==0){
-       return false ;
+                  // English: Validate inputs
+                  final idOk = id.isNotEmpty && int.tryParse(id) != null && int.parse(id) > 0;
+                  final upcOk = newUPC.isNotEmpty &&
+                      int.tryParse(newUPC) != null &&
+                      int.parse(newUPC) > 0;
 
-     }
-     if(ref.read(productForUpcUpdateProvider).uPC==null || ref.read(productForUpcUpdateProvider).uPC=='' ){
-       String aux = ref.read(newUPCToUpdateProvider.notifier).state;
-       if(aux==hinTextUpdateUPC || int.tryParse(aux)==null || int.tryParse(aux)==0 ){
-         return false;
-       }
+                  if (!idOk || !upcOk) {
+                    await showErrorSheet(
+                      '${Messages.DATA_NOT_VALID}\nID: $id, UPC: $newUPC',
+                    );
+                    return;
+                  }
 
-       return true;
-     }
-     return false;
+                  // English: Ask confirmation using unified bottom sheet
+                  final ok = await confirmAction(
+                    title: Messages.CONFIRM,
+                    message: 'ID: $id\nUPC: $newUPC',
+                  );
+                  if (!ok) return;
 
-   }
+                  // English: Trigger update flow
+                  final updateData = <String>[id, newUPC];
+                  ref.read(dataToUpdateUPCProvider.notifier).update((_) => updateData);
 
-  /*Future<void> showResultMessage(product) async {
-      String title = product.id<=0 ? Messages.ERROR_UPDATE_PRODUCT_UPC : Messages.UPDATE_UPC_WITH_SUCCESS;
-      String subtitle = product.id<=0 ? 'name: ${product.name ?? ''} , UPC: ${product.uPC ??''}' :
-      'SKU: ${product.sKU ?? ''} , UPC: ${product.uPC ??''}' ;
-      String title2 =  'ID: ${product.sKU ?? ''} ,UPC: ${product.uPC ?? ''}';
-      String subtitle2 =  '${product.name ??''}' ;
+                  // English: Mark scanning (optional UX)
+                  startScanning();
+                },
+                child: Text(hinTextUpdateUPC),
+              ),
+            ),
 
-      dialog = await AwesomeDialog(
-        context: context,
-        animType: AnimType.scale,
-        dialogType: product.id<=0 ? DialogType.error :  DialogType.success,
-        body: Center(child: ListTile(
-          title: Text(title,
-                style: TextStyle(fontStyle: FontStyle.italic),),
-          subtitle: Text(subtitle) ,
+            const SizedBox(height: 10),
 
-        ),),
-        title: title2,
-        desc:  subtitle2,
-        autoHide: const Duration(seconds: 5),
-        btnOkOnPress: () {
-          ref.read(dataToUpdateUPCProvider.notifier).state = [];
-          DataUtils.removeIdempiereProduct();
-          dialog?.dismiss();
-          context.go(AppRouter.PAGE_HOME);
-        },
-        btnOkColor: Colors.amber,
-        btnCancelText:Messages.FIND_OTHER,
-        btnOkText:  Messages.FINISHED ,
-        btnCancelOnPress: (){
-          ref.read(dataToUpdateUPCProvider.notifier).state = [];
-          if(product.id>0) {
-            DataUtils.saveIdempiereProduct(product);
-          }
-          dialog?.dismiss();
-          context.go(AppRouter.PAGE_PRODUCT_SEARCH_UPDATE_UPC);
-        }
-        ).show();
-  }*/
+            // English: Optional: Provide camera scan button in this card
+            _buttonScanWithPhone(),
+          ],
+        ),
+      ),
+    );
+  }
 
+  // -------------------------
+  // Business rules
+  // -------------------------
+
+  bool isCanEditUPC() {
+    final p = ref.read(productForUpcUpdateProvider);
+
+    if (p.id == null || p.id == 0) return false;
+
+    // English: If product has no UPC yet, allow updating when new UPC is valid
+    if (p.uPC == null || p.uPC!.isEmpty) {
+      final aux = ref.read(newUPCToUpdateProvider.notifier).state;
+      if (aux == hinTextUpdateUPC) return false;
+      if (int.tryParse(aux) == null) return false;
+      if (int.parse(aux) == 0) return false;
+      return true;
+    }
+
+    return false;
+  }
+
+  @override
+  Future<void> handleInputString({required WidgetRef ref, required String inputData, required int actionScan}) {
+    // TODO: implement handleInputString
+    throw UnimplementedError();
+  }
 }

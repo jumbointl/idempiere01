@@ -14,18 +14,18 @@ import 'package:monalisa_app_001/features/auth/presentation/providers/auth_provi
 import 'package:monalisa_app_001/features/home/presentation/screens/home_screen.dart';
 import 'package:monalisa_app_001/features/m_inout/presentation/screens/m_in_out_barcode_list_screen.dart';
 import 'package:monalisa_app_001/features/m_inout/presentation/screens/m_in_out_screen.dart';
-import 'package:monalisa_app_001/features/products/domain/idempiere/put_away_movement.dart';
 import 'package:monalisa_app_001/features/products/domain/idempiere/sales_order_and_lines.dart';
 import 'package:monalisa_app_001/features/products/presentation/screens/movement/edit_new/movement_barcode_list_screen.dart';
 import 'package:monalisa_app_001/features/products/presentation/screens/movement/list/movement_list_screen.dart';
-import 'package:monalisa_app_001/features/products/presentation/screens/movement/printer/movement_print_screen.dart';
-import 'package:monalisa_app_001/features/products/presentation/screens/movement/printer/printer_setup_screen.dart';
 import 'package:monalisa_app_001/features/products/presentation/screens/store_on_hand/memory_products.dart';
 import 'package:monalisa_app_001/features/products/presentation/screens/movement/edit_new/product_store_on_hand_screen_for_line.dart';
 import 'package:monalisa_app_001/features/products/presentation/screens/store_on_hand/unsorted_storage_on__hand_read_only_screen.dart';
 import 'package:monalisa_app_001/features/sales_order/screen/sales_order_barcode_list_screen.dart';
 import '../../features/auth/presentation/screens/auth_data_screen.dart';
 import '../../features/m_inout/domain/entities/m_in_out.dart';
+import '../../features/printer/movement_print_screen.dart';
+import '../../features/printer/printer_setup_screen.dart';
+import '../../features/printer/web_template/screen/create_zpl_template_page.dart';
 import '../../features/products/domain/idempiere/movement_and_lines.dart';
 import '../../features/products/presentation/providers/common_provider.dart';
 import '../../features/products/presentation/providers/locator_provider.dart';
@@ -35,7 +35,6 @@ import '../../features/products/presentation/screens/movement/edit_new/movement_
 import '../../features/products/presentation/screens/movement/edit_new/movement_confirm_screen.dart';
 import '../../features/products/presentation/screens/movement/edit_new/new_movement_edit_screen.dart';
 import '../../features/products/presentation/screens/movement/edit_new/movement_lines_create_screen.dart';
-import '../../features/products/presentation/screens/movement/create/movements_create_screen.dart';
 import '../../features/products/presentation/screens/movement/edit_new/unsorted_storage_on__hand_select_locator_screen.dart';
 import '../../features/products/presentation/screens/movement/pos/movement_pos_page.dart';
 import '../../features/products/presentation/screens/movement/provider/products_home_provider.dart';
@@ -77,7 +76,7 @@ class AppRouter {
   static const String PAGE_SEARCH_LOCATOR_TO_FOR_LINE = '/product/movement/createMovementLine/searchLocatorTo';
   static const String PAGE_CREATE_MOVEMENT_LINE = '/create_movement_line';
   static const String PAGE_MOVEMENTS_CONFIRM_SCREEN = '/movement_confirm_screen';
-  static const String PAGE_CREATE_PUT_AWAY_MOVEMENT='/movement_create_put_away';
+  //static const String PAGE_CREATE_PUT_AWAY_MOVEMENT='/movement_create_put_away';
   static const String PAGE_PDF_MOVEMENT_AND_LINE='/pdf_movement_and_line';
 
   static const String PAGE_PRODUCT_STORE_ON_HAND_FOR_LINE = '/store_on_hand_for_line';
@@ -102,11 +101,14 @@ class AppRouter {
   static String PAGE_M_IN_OUT_BARCODE_LIST='/m_in_out_barcode_list';
   static String PAGE_SALES_ORDER_BARCODE_LIST='/sales_order_barcode_list';
 
+  static String PAGE_CREATE_ZPL_TEMPLATE='/zpl_create';
+
 
 
 }
 
-final int transitionTimeMilliseconds = 1000;
+final int transitionTimeMilliseconds = 500;
+final int transitionTimeMilliseconds2 = 500;
 
 final goRouterProvider = Provider((ref) {
 
@@ -210,24 +212,11 @@ final goRouterProvider = Provider((ref) {
             // Use a FutureBuilder to show a loading indicator for 2 seconds
             return CustomTransitionPage(
               key: state.pageKey,
-              child: FutureBuilder(
-                future: Future.delayed(Duration(milliseconds: transitionTimeMilliseconds)),
-                builder: (context, snapshot) {
-
-
-                  if (snapshot.connectionState == ConnectionState.done) {
-                    return SalesOrderListScreen();
-                  }
-                  return const Scaffold(
-                    backgroundColor: Colors.white,
-                    body: Center(child: CircularProgressIndicator()),
-                  );
-                },
-              ),
+              child: SalesOrderListScreen(),
               transitionDuration: Duration(microseconds: transitionTimeMilliseconds),
               transitionsBuilder: (context, animation, secondaryAnimation, child) {
                 // left to right : transition begin = Offset(1.0, 0.0), right to left : begin = Offset(-1.0, 0.0)
-                const begin = Offset(1.0, 0.0);
+                const begin = Offset(1.0, 1.0);
                 const end = Offset.zero;
                 final tween = Tween(begin: begin, end: end).chain(CurveTween(curve: Curves.easeInOut));
                 return SlideTransition(position: animation.drive(tween), child: child);
@@ -287,52 +276,50 @@ final goRouterProvider = Provider((ref) {
         path: '${AppRouter.PAGE_PRODUCT_STORE_ON_HAND}/:productId',
         pageBuilder: (context, state) {
           final productId = state.pathParameters['productId'] ?? '';
-          final hasPrivilege = RolesApp.canCreateMovementInSameOrganization || RolesApp.canSearchProductStock;
+          final hasPrivilege =
+              RolesApp.canCreateMovementInSameOrganization ||
+                  RolesApp.canSearchProductStock;
 
-          if (hasPrivilege) {
-            // Use a FutureBuilder to show a loading indicator for 2 seconds
-            return CustomTransitionPage(
-              key: state.pageKey,
-              child: FutureBuilder(
-                future: Future.delayed(Duration(milliseconds: transitionTimeMilliseconds)),
-                builder: (context, snapshot) {
-
-
-                  if (snapshot.connectionState == ConnectionState.done) {
-                    return ProductStoreOnHandScreen(productId: productId);
-                  }
-
-
-                  Future.microtask(() async {
-                    int userWarehouse = ref.read(authProvider).selectedWarehouse?.id ?? 0;
-                    ref.read(allowedWarehouseToProvider.notifier).update((state) => 0);
-                    ref.read(excludedWarehouseToProvider.notifier).update((state) => userWarehouse);
-                    ref.read(homeScreenTitleProvider.notifier).state = Messages.NEW_MOVEMENT;
-                    ref.read(productsHomeCurrentIndexProvider.notifier)
-                        .update((state) => Memory.PAGE_INDEX_STORE_ON_HAND);
-                    ref.read(actionScanProvider.notifier)
-                        .update((state) => Memory.ACTION_FIND_BY_UPC_SKU_FOR_STORE_ON_HAND);
-                    ref.read(isDialogShowedProvider.notifier).update((state) => false);
-                  });
-                  return const Scaffold(
-                    backgroundColor: Colors.white,
-                    body: Center(child: CircularProgressIndicator()),
-                  );
-                },
-              ),
-              transitionDuration: Duration(microseconds: transitionTimeMilliseconds),
-              transitionsBuilder: (context, animation, secondaryAnimation, child) {
-                const begin = Offset(-1.0, 0.0);
-                const end = Offset.zero;
-                final tween = Tween(begin: begin, end: end).chain(CurveTween(curve: Curves.easeInOut));
-                return SlideTransition(position: animation.drive(tween), child: child);
-              },
-            );
-          } else {
+          if (!hasPrivilege) {
             return const NoTransitionPage(child: HomeScreen());
           }
+
+          // English: One-time side effects before entering the screen
+          Future.microtask(() {
+            final userWarehouse =
+                ref.read(authProvider).selectedWarehouse?.id ?? 0;
+
+            ref.read(allowedWarehouseToProvider.notifier).state = 0;
+            ref.read(excludedWarehouseToProvider.notifier).state = userWarehouse;
+            ref.read(homeScreenTitleProvider.notifier).state =
+                Messages.NEW_MOVEMENT;
+            ref.read(productsHomeCurrentIndexProvider.notifier).state =
+                Memory.PAGE_INDEX_STORE_ON_HAND;
+            ref.read(actionScanProvider.notifier).state =
+                Memory.ACTION_FIND_BY_UPC_SKU_FOR_STORE_ON_HAND;
+            ref.read(isDialogShowedProvider.notifier).state = false;
+          });
+
+          return CustomTransitionPage(
+            key: state.pageKey,
+            child: ProductStoreOnHandScreen(productId: productId),
+            transitionDuration:
+            Duration(milliseconds: transitionTimeMilliseconds2),
+            transitionsBuilder:
+                (context, animation, secondaryAnimation, child) {
+              const begin = Offset(-1.0, 1.0);
+              const end = Offset.zero;
+              final tween = Tween(begin: begin, end: end)
+                  .chain(CurveTween(curve: Curves.easeInOut));
+              return SlideTransition(
+                position: animation.drive(tween),
+                child: child,
+              );
+            },
+          );
         },
       ),
+
       GoRoute(
         path: '${AppRouter.PAGE_PRODUCT_STORE_ON_HAND}/:productId/:movementInSameWarehouse',
         pageBuilder: (context, state) {
@@ -340,42 +327,33 @@ final goRouterProvider = Provider((ref) {
           final hasPrivilege = RolesApp.canCreateMovementInSameOrganization || RolesApp.canSearchProductStock;
 
           if (hasPrivilege) {
+            Future.microtask(() async {
+              int userWarehouse = ref.read(authProvider).selectedWarehouse?.id ?? 0;
+              ref.read(allowedWarehouseToProvider.notifier).update((state) => userWarehouse);
+              ref.read(excludedWarehouseToProvider.notifier).update((state) => 0);
+              ref.read(homeScreenTitleProvider.notifier).state = Messages.NEW_MOVEMENT;
+              ref.read(productsHomeCurrentIndexProvider.notifier)
+                  .update((state) => Memory.PAGE_INDEX_STORE_ON_HAND);
+              ref.read(actionScanProvider.notifier)
+                  .update((state) => Memory.ACTION_FIND_BY_UPC_SKU_FOR_STORE_ON_HAND);
+              ref.read(isDialogShowedProvider.notifier).update((state) => false);
+            });
             // Use a FutureBuilder to show a loading indicator for 2 seconds
             return CustomTransitionPage(
               key: state.pageKey,
-              child: FutureBuilder(
-                future: Future.delayed(Duration(milliseconds: transitionTimeMilliseconds)),
-                builder: (context, snapshot) {
-
-
-                  if (snapshot.connectionState == ConnectionState.done) {
-                    return ProductStoreOnHandScreen(productId: productId,);
-                  }
-
-
-                  Future.microtask(() async {
-                    int userWarehouse = ref.read(authProvider).selectedWarehouse?.id ?? 0;
-                    ref.read(allowedWarehouseToProvider.notifier).update((state) => userWarehouse);
-                    ref.read(excludedWarehouseToProvider.notifier).update((state) => 0);
-                    ref.read(homeScreenTitleProvider.notifier).state = Messages.NEW_MOVEMENT;
-                    ref.read(productsHomeCurrentIndexProvider.notifier)
-                        .update((state) => Memory.PAGE_INDEX_STORE_ON_HAND);
-                    ref.read(actionScanProvider.notifier)
-                        .update((state) => Memory.ACTION_FIND_BY_UPC_SKU_FOR_STORE_ON_HAND);
-                    ref.read(isDialogShowedProvider.notifier).update((state) => false);
-                  });
-                  return const Scaffold(
-                    backgroundColor: Colors.white,
-                    body: Center(child: CircularProgressIndicator()),
-                  );
-                },
-              ),
-              transitionDuration: Duration(microseconds: transitionTimeMilliseconds),
-              transitionsBuilder: (context, animation, secondaryAnimation, child) {
-                const begin = Offset(-1.0, 0.0);
+              child: ProductStoreOnHandScreen(productId: productId),
+              transitionDuration:
+              Duration(milliseconds: transitionTimeMilliseconds2),
+              transitionsBuilder:
+                  (context, animation, secondaryAnimation, child) {
+                const begin = Offset(1.0, 1.0);
                 const end = Offset.zero;
-                final tween = Tween(begin: begin, end: end).chain(CurveTween(curve: Curves.easeInOut));
-                return SlideTransition(position: animation.drive(tween), child: child);
+                final tween = Tween(begin: begin, end: end)
+                    .chain(CurveTween(curve: Curves.easeInOut));
+                return SlideTransition(
+                  position: animation.drive(tween),
+                  child: child,
+                );
               },
             );
           } else {
@@ -384,6 +362,57 @@ final goRouterProvider = Provider((ref) {
         },
       ),
 
+      GoRoute(
+        path: '${AppRouter.PAGE_PRODUCT_STORE_ON_HAND}/:productId/:movementInSameWarehouse',
+        pageBuilder: (context, state) {
+          final productId = state.pathParameters['productId'] ?? '';
+          final movementInSameWarehouse =
+              state.pathParameters['movementInSameWarehouse'] ?? '0';
+
+          final hasPrivilege =
+              RolesApp.canCreateMovementInSameOrganization ||
+                  RolesApp.canSearchProductStock;
+
+          if (!hasPrivilege) {
+            return const NoTransitionPage(child: HomeScreen());
+          }
+
+          Future.microtask(() {
+
+
+            // English: Configure warehouse filters based on route param
+            /*final sameWarehouse = movementInSameWarehouse == '1';
+            ref.read(allowedWarehouseToProvider.notifier).state =
+            sameWarehouse ? userWarehouse : userWarehouse;
+            ref.read(excludedWarehouseToProvider.notifier).state =
+            sameWarehouse ? 0 : 0;*/
+            final userWarehouse = ref.read(authProvider).selectedWarehouse?.id ?? 0;
+            ref.read(allowedWarehouseToProvider.notifier).update((state) => userWarehouse);
+            ref.read(excludedWarehouseToProvider.notifier).update((state) => 0);
+            ref.read(homeScreenTitleProvider.notifier).state = Messages.NEW_MOVEMENT;
+            ref.read(productsHomeCurrentIndexProvider.notifier).state =
+                Memory.PAGE_INDEX_STORE_ON_HAND;
+            ref.read(actionScanProvider.notifier).state =
+                Memory.ACTION_FIND_BY_UPC_SKU_FOR_STORE_ON_HAND;
+            ref.read(isDialogShowedProvider.notifier).state = false;
+          });
+
+          return CustomTransitionPage(
+            key: state.pageKey,
+            child: ProductStoreOnHandScreen(productId: productId),
+            transitionDuration: Duration(milliseconds: transitionTimeMilliseconds2),
+            transitionsBuilder: (context, animation, secondaryAnimation, child) {
+              // English: Slide from right to left
+              const begin = Offset(1.0, 0.0);
+              const end = Offset.zero;
+              final tween =
+              Tween(begin: begin, end: end).chain(CurveTween(curve: Curves.easeInOut));
+
+              return SlideTransition(position: animation.drive(tween), child: child);
+            },
+          );
+        },
+      ),
       GoRoute(
           path: '${AppRouter.PAGE_PRODUCT_STORE_ON_HAND_FOR_LINE}/:productUPC',
           builder: (context, state){
@@ -404,6 +433,7 @@ final goRouterProvider = Provider((ref) {
               movementAndLines.nextProductIdUPC = productUPC;
               String argument = jsonEncode(movementAndLines.toJson());
               print('productUPC: $productUPC');
+
               return ProductStoreOnHandScreenForLine(
                   productId: productUPC,
                   movementAndLines: state.extra as MovementAndLines,
@@ -416,6 +446,9 @@ final goRouterProvider = Provider((ref) {
 
 
       ),
+
+
+
       GoRoute(
           path: AppRouter.PAGE_PDF_MOVEMENT_AND_LINE,
           builder: (context, state){
@@ -518,30 +551,24 @@ final goRouterProvider = Provider((ref) {
         path: '${AppRouter.PAGE_MOVEMENTS_LIST}/:movementDateFilter',
         pageBuilder: (context, state) {
           if (RolesApp.canSearchMovement || RolesApp.canEditMovement) {
+            String movementDateFilter = state.pathParameters['movementDateFilter'] ??
+                MovementListScreen.COMMAND_DO_NOTHING;
 
             return CustomTransitionPage(
               key: state.pageKey,
-              child: FutureBuilder(
-                future: Future.delayed(Duration(milliseconds: transitionTimeMilliseconds)),
-                builder: (context, snapshot) {
-                  if (snapshot.connectionState == ConnectionState.done) {
-                    String movementDateFilter = state.pathParameters['movementDateFilter'] ??
-                        MovementListScreen.COMMAND_DO_NOTHING;
-                    return MovementListScreen(movementDateFilter: movementDateFilter);
-                  }
-                  return const Scaffold(
-                    body: Center(child: CircularProgressIndicator()),
-                  );
-                },
-              ),
-              transitionDuration:Duration(microseconds: transitionTimeMilliseconds),
+              child: MovementListScreen(movementDateFilter: movementDateFilter),
+              transitionDuration: Duration(milliseconds: transitionTimeMilliseconds2),
               transitionsBuilder: (context, animation, secondaryAnimation, child) {
-                const begin = Offset(-1.0, 0.0);
+                // English: Slide from right to left
+                const begin = Offset(1.0, 1.0);
                 const end = Offset.zero;
-                final tween = Tween(begin: begin, end: end).chain(CurveTween(curve: Curves.easeInOut));
+                final tween =
+                Tween(begin: begin, end: end).chain(CurveTween(curve: Curves.easeInOut));
+
                 return SlideTransition(position: animation.drive(tween), child: child);
               },
             );
+
           } else {
             return const NoTransitionPage(child: HomeScreen());
           }
@@ -570,27 +597,21 @@ final goRouterProvider = Provider((ref) {
             });
             return CustomTransitionPage(
               key: state.pageKey,
-              child: FutureBuilder(
-                future: Future.delayed(Duration(milliseconds: transitionTimeMilliseconds)),
-                builder: (context, snapshot) {
-                  if (snapshot.connectionState == ConnectionState.done) {
-                    return NewMovementEditScreen(
-                        fromPage: fromPage,
-                        movementId: movementId);
-                  }
-                  return const Scaffold(
-                    body: Center(child: CircularProgressIndicator()),
-                  );
-                },
-              ),
-              transitionDuration:Duration(microseconds: transitionTimeMilliseconds),
+              child: NewMovementEditScreen(
+                  fromPage: fromPage,
+                  movementId: movementId),
+              transitionDuration: Duration(milliseconds: transitionTimeMilliseconds2),
               transitionsBuilder: (context, animation, secondaryAnimation, child) {
-                const begin = Offset(-1.0, 0.0);
+                // English: Slide from right to left
+                const begin = Offset(1.0, 1.0);
                 const end = Offset.zero;
-                final tween = Tween(begin: begin, end: end).chain(CurveTween(curve: Curves.easeInOut));
+                final tween =
+                Tween(begin: begin, end: end).chain(CurveTween(curve: Curves.easeInOut));
+
                 return SlideTransition(position: animation.drive(tween), child: child);
               },
             );
+
           } else {
             return const NoTransitionPage(child: HomeScreen());
           }
@@ -619,24 +640,17 @@ final goRouterProvider = Provider((ref) {
             });
             return CustomTransitionPage(
               key: state.pageKey,
-              child: FutureBuilder(
-                future: Future.delayed(Duration(milliseconds: transitionTimeMilliseconds)),
-                builder: (context, snapshot) {
-                  if (snapshot.connectionState == ConnectionState.done) {
-                    return NewMovementEditScreen(
-                        fromPage: fromPage,
-                        movementId: movementId);
-                  }
-                  return const Scaffold(
-                    body: Center(child: CircularProgressIndicator()),
-                  );
-                },
-              ),
-              transitionDuration:Duration(microseconds: transitionTimeMilliseconds),
+              child: NewMovementEditScreen(
+                  fromPage: fromPage,
+                  movementId: movementId),
+              transitionDuration: Duration(milliseconds: transitionTimeMilliseconds2),
               transitionsBuilder: (context, animation, secondaryAnimation, child) {
-                const begin = Offset(-1.0, 0.0);
+                // English: Slide from right to left
+                const begin = Offset(1.0, 1.0);
                 const end = Offset.zero;
-                final tween = Tween(begin: begin, end: end).chain(CurveTween(curve: Curves.easeInOut));
+                final tween =
+                Tween(begin: begin, end: end).chain(CurveTween(curve: Curves.easeInOut));
+
                 return SlideTransition(position: animation.drive(tween), child: child);
               },
             );
@@ -666,27 +680,21 @@ final goRouterProvider = Provider((ref) {
             });
             return CustomTransitionPage(
               key: state.pageKey,
-              child: FutureBuilder(
-                future: Future.delayed(Duration(milliseconds: transitionTimeMilliseconds)),
-                builder: (context, snapshot) {
-                  if (snapshot.connectionState == ConnectionState.done) {
-                    return NewMovementEditScreen(
-                        fromPage: fromPage,
-                        movementId: movementId);
-                  }
-                  return const Scaffold(
-                    body: Center(child: CircularProgressIndicator()),
-                  );
-                },
-              ),
-              transitionDuration:Duration(microseconds: transitionTimeMilliseconds),
+              child: NewMovementEditScreen(
+                  fromPage: fromPage,
+                  movementId: movementId),
+              transitionDuration: Duration(milliseconds: transitionTimeMilliseconds2),
               transitionsBuilder: (context, animation, secondaryAnimation, child) {
-                const begin = Offset(-1.0, 0.0);
+                // English: Slide from right to left
+                const begin = Offset(1.0, 1.0);
                 const end = Offset.zero;
-                final tween = Tween(begin: begin, end: end).chain(CurveTween(curve: Curves.easeInOut));
+                final tween =
+                Tween(begin: begin, end: end).chain(CurveTween(curve: Curves.easeInOut));
+
                 return SlideTransition(position: animation.drive(tween), child: child);
               },
             );
+
           } else {
             return const NoTransitionPage(child: HomeScreen());
           }
@@ -715,27 +723,21 @@ final goRouterProvider = Provider((ref) {
             });
             return CustomTransitionPage(
               key: state.pageKey,
-              child: FutureBuilder(
-                future: Future.delayed(Duration(milliseconds: transitionTimeMilliseconds)),
-                builder: (context, snapshot) {
-                  if (snapshot.connectionState == ConnectionState.done) {
-                    return NewMovementEditScreen(
-                        fromPage: fromPage,
-                        movementId: movementId);
-                  }
-                  return const Scaffold(
-                    body: Center(child: CircularProgressIndicator()),
-                  );
-                },
-              ),
-              transitionDuration:Duration(microseconds: transitionTimeMilliseconds),
+              child: NewMovementEditScreen(
+                  fromPage: fromPage,
+                  movementId: movementId),
+              transitionDuration: Duration(milliseconds: transitionTimeMilliseconds2),
               transitionsBuilder: (context, animation, secondaryAnimation, child) {
-                const begin = Offset(-1.0, 0.0);
+                // English: Slide from right to left
+                const begin = Offset(1.0, 1.0);
                 const end = Offset.zero;
-                final tween = Tween(begin: begin, end: end).chain(CurveTween(curve: Curves.easeInOut));
+                final tween =
+                Tween(begin: begin, end: end).chain(CurveTween(curve: Curves.easeInOut));
+
                 return SlideTransition(position: animation.drive(tween), child: child);
               },
             );
+
           } else {
             return const NoTransitionPage(child: HomeScreen());
           }
@@ -760,16 +762,16 @@ final goRouterProvider = Provider((ref) {
         }
       ),
 
-      GoRoute(
+      /*GoRoute(
           path: AppRouter.PAGE_CREATE_PUT_AWAY_MOVEMENT,
           builder: (context, state) {
             if(RolesApp.canCreateMovementInSameOrganization || RolesApp.canCreateDeliveryNote) {
-              return MovementsCreateScreen(
+              return MovementCreateScreen(
                 putAwayMovement: state.extra as PutAwayMovement,
               );
             } else { return const HomeScreen();}
           }
-      ),
+      ),*/
 
       GoRoute(
         path: AppRouter.PAGE_SEARCH_LOCATOR_FROM,
@@ -791,7 +793,12 @@ final goRouterProvider = Provider((ref) {
         builder: (context, state) => RolesApp.hasStockPrivilege ?
         SearchLocatorScreen( searchLocatorFrom: false,forCreateLine: true) : const HomeScreen(),
       ),
-
+      GoRoute(
+        path: AppRouter.PAGE_CREATE_ZPL_TEMPLATE,
+        builder: (context, state) {
+          return const CreateZplTemplatePage();
+        },
+      ),
       GoRoute(
         path: AppRouter.PAGE_PRODUCT_SEARCH,
         builder: (context, state){

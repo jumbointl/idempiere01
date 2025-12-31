@@ -6,8 +6,8 @@ import '../../../shared/data/messages.dart';
 import '../providers/product_provider_common.dart';
 import '../providers/store_on_hand_provider.dart';
 class NoRecordsCard extends ConsumerStatefulWidget {
-  final double width ;
-  const NoRecordsCard({required this.width,super.key});
+  double? width ;
+  NoRecordsCard({this.width,super.key});
 
 
   @override

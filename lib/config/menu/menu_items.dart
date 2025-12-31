@@ -68,6 +68,12 @@ var appHomeOptionCol1Items = <MenuItem>[
     link: AppRouter.PAGE_PRODUCT_SEARCH,
     icon: Icons.search,
   ),
+  MenuItem(
+    title: 'ZPL Template',
+    subTitle: '',
+    link: AppRouter.PAGE_CREATE_ZPL_TEMPLATE,
+    icon: Icons.file_copy,
+  ),
 ];
 
 var appHomeOptionCol2Items = <MenuItem>[

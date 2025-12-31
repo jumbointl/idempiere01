@@ -1,10 +1,8 @@
 // Clase de estado abstracta para lógica común
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:monalisa_app_001/features/products/common/scan_button_by_action_fixed_short.dart';
 
-import '../../../config/router/app_router.dart';
 import '../../../config/theme/app_theme.dart';
 import '../../shared/data/memory.dart';
 import '../domain/idempiere/response_async_value.dart';
@@ -34,10 +32,12 @@ abstract class AsyncValueConsumerState<T extends ConsumerStatefulWidget>
   @override
   void initState() {
     super.initState();
+    setDefaultValuesOnInitState(context,ref);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       executeAfterShown();
     });
   }
+
   @override
   void dispose() {
     scrollController.dispose();
@@ -78,7 +78,7 @@ abstract class AsyncValueConsumerState<T extends ConsumerStatefulWidget>
 
               final position = scrollController.position;
               final bool isAtBottom =
-                  (position.maxScrollExtent - position.pixels) < 50;
+                  (position.maxScrollExtent - position.pixels) <200;
 
               // Si estoy abajo → muestro flecha hacia arriba
               return Icon(isAtBottom ? Icons.arrow_upward : Icons.arrow_downward);*/
@@ -89,7 +89,7 @@ abstract class AsyncValueConsumerState<T extends ConsumerStatefulWidget>
   }
   @override
   Widget build(BuildContext context){
-    initialSetting(context,ref);
+    initialSettingAtBuild(context,ref);
     final showFab = ref.watch(allowScrollFabProvider);
     return AppInitializerOverlay(
       child: Scaffold(
@@ -162,13 +162,13 @@ abstract class AsyncValueConsumerState<T extends ConsumerStatefulWidget>
   }
 
   void popScopeAction(BuildContext context, WidgetRef ref) async {
-    context.go(AppRouter.PAGE_HOME);
+    goHome();
   }
 
   BottomAppBar? getBottomAppBar(BuildContext context, WidgetRef ref) {
     return null ;
   }
-  void initialSetting(BuildContext context, WidgetRef ref);
+  void initialSettingAtBuild(BuildContext context, WidgetRef ref);
 
   bool get showLeading => false;
   Widget? get leadingIcon {
@@ -204,7 +204,7 @@ abstract class AsyncValueConsumerState<T extends ConsumerStatefulWidget>
   }
 
 
-  Future<void> setDefaultValues(BuildContext context, WidgetRef ref);
+  Future<void> setDefaultValuesOnInitState(BuildContext context, WidgetRef ref);
 
   Widget? getAppBarTitle(BuildContext context, WidgetRef ref) {return null;}
 
@@ -242,6 +242,8 @@ abstract class AsyncValueConsumerState<T extends ConsumerStatefulWidget>
   Widget asyncValueErrorHandle(WidgetRef ref, {required ResponseAsyncValue result});
   void afterAsyncValueAction(WidgetRef ref, {required ResponseAsyncValue result}) ;
   Widget asyncValueSuccessPanel(WidgetRef ref, {required ResponseAsyncValue result}) ;
+
+
 
 }
 

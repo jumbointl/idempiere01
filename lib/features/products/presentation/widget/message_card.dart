@@ -31,6 +31,7 @@ class NoDataCardState extends ConsumerState<MessageCard> {
     Color color = Colors.grey[200]!;
     Color textColor = Colors.purple;
     IconData icon = Icons.warning;
+
     return Container(
       decoration: BoxDecoration(
         color: color,

@@ -132,7 +132,7 @@ class Memory {
 
   static String URL_CUPS_SERVER ='http://192.168.188.108:3100/print';
 
-  static String VERSIONS='1.01.068';
+  static String VERSIONS='1.01.071';
 
   static String getUrlCupsServerWithPrinter({required String ip,
     required String port,required String printerName}){
@@ -209,32 +209,36 @@ class Memory {
 
   static const int IDEMPIERE_DEFAULT_PAGE_SIZE = 100;
 
+  static String printerFileFtpServerUserName='u210531651.monalisaapp';
+
+  static String printerFileFtpServerPassword='Monalisapy.1972';
+
+  static String printerFileFtpServer='ftp.sc-demo.masverdecde.com';
+
+  static int printerFileFtpServerPort = 21;
+
+  static const String FTP_SERVER_ZPL_TEMPLATES_DIR='zpl_template';
+
+  static int MAX_ZPL_TEXT_LENGTH = 46;
+
   static int? get IDEMPIERE_DOC_TYPE_MATERIAL_MOVEMENT => materialMovement.id;
   static int? get IDEMPIERE_DOC_TYPE_MATERIAL_MOVEMENT_WITH_CONFIRM => materialMovementWithConfirm.id;
   static int? get IDEMPIERE_DOC_TYPE_ELECTRONIC_DELIVERY_NOTE => electronicDeliveryNote.id;
 
+  static IdempiereDocumentType? getDocumentTypeById(int documentId) {
+    switch(documentId){
+      case MATERIAL_MOVEMENT_ID:
+        return materialMovement;
+      case MATERIAL_MOVEMENT_WITH_CONFIRM_ID:
+        return materialMovementWithConfirm;
+      case MM_ELECTRONIC_DELIVERY_NOTE_ID:
+        return electronicDeliveryNote;
+      default:
+        return null;
 
+    }
+  }
 
-  /*static IdempiereDocumentType? getMovementDocumentType({
-    required IdempiereWarehouse? warehouseFrom, required IdempiereWarehouse? warehouseTo}){
-    if(warehouseFrom ==null || warehouseFrom.id == null ||
-        warehouseTo== null || warehouseTo.id == null){
-      return null;
-    }
-    if(warehouseFrom.aDOrgID == null || warehouseTo.aDOrgID!.id == null
-        || warehouseTo.aDOrgID == null  || warehouseTo.aDOrgID!.id == null){
-      return null;
-    }
-    if(warehouseFrom.id == warehouseTo.id){
-      return Memory.materialMovement;
-    }
-
-    if(warehouseFrom.aDOrgID!.id == warehouseTo.aDOrgID!.id){
-      return Memory.materialMovementWithConfirm;
-    }
-    return Memory.electronicDeliveryNote;
-
-  }*/
 
 
 }

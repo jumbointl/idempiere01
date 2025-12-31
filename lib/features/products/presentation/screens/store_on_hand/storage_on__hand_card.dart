@@ -48,7 +48,7 @@ class StorageOnHandCardState extends ConsumerState<StorageOnHandCard> {
   Widget build(BuildContext context) {
     readStockOnly = widget.readStockOnly;
     isScanning = ref.watch(isScanningProvider.notifier);
-
+    String a = Messages.FIND_PRODUCT_BY_UPC_SKU;
     allowedLocatorId = widget.locatorFilter?.id ?? -1;
     final warehouse = ref.read(authProvider).selectedWarehouse;
     int warehouseID = warehouse?.id ?? 0;
@@ -152,7 +152,7 @@ class StorageOnHandCardState extends ConsumerState<StorageOnHandCard> {
       ref.invalidate(scannedLocatorToProvider);
       ref.invalidate(selectedLocatorToProvider);
 
-      Future.delayed(Duration(microseconds: 100),(){
+      await Future.delayed(Duration(microseconds: 100),(){
         ref.read(actionScanProvider.notifier).state = Memory.ACTION_GET_LOCATOR_TO_VALUE;
       });
       print('------------------action ${ref.read(actionScanProvider.notifier).state}');
@@ -164,7 +164,7 @@ class StorageOnHandCardState extends ConsumerState<StorageOnHandCard> {
               '${AppRouter.PAGE_UNSORTED_STORAGE_ON_HAND_READ_ONLY}/$productUPC',
               extra: widget.notifier);
         } else {
-          ref.context.go(
+          ref.context.push(
               '${AppRouter.PAGE_UNSORTED_STORAGE_ON_HAND}/$productUPC',
               extra: widget.notifier);
         }

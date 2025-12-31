@@ -20,7 +20,6 @@ final scannedCodeForSearchByUPCOrSKUProvider = StateProvider.autoDispose<String?
 });
 final findProductByUPCOrSKUProvider = FutureProvider.autoDispose<IdempiereProduct>((ref) async {
   final String? scannedCode = ref.watch(scannedCodeForSearchByUPCOrSKUProvider)?.toUpperCase();
-  print('-----------------------------------search addBarcodeByUPCOrSKUForSearch $scannedCode');
   if(scannedCode==null || scannedCode=='') return IdempiereProduct(id:0);
   int? aux = int.tryParse(scannedCode);
   String searchField ='upc';
@@ -68,3 +67,4 @@ final findProductByUPCOrSKUProvider = FutureProvider.autoDispose<IdempiereProduc
   }
 
 });
+

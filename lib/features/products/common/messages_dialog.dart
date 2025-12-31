@@ -25,16 +25,16 @@ void showErrorMessage(BuildContext context, WidgetRef ref, String message) {
     desc:   '',
     autoHide: const Duration(seconds: 3),
     btnOkOnPress: () {},
-    btnOkColor: Colors.amber,
+    btnOkColor: Colors.red,
     btnCancelText: Messages.CANCEL,
     btnOkText: Messages.OK,
   ).show();
   return;
 }
 
-void showSuccessMessage(BuildContext context, WidgetRef ref, String message) {
+Future<void> showSuccessMessage(BuildContext context, WidgetRef ref, String message) async {
   if (!context.mounted) {
-    Future.delayed(const Duration(seconds: 1));
+    await Future.delayed(const Duration(seconds: 1));
     if(!context.mounted) return;
   }
   AwesomeDialog(
@@ -52,73 +52,12 @@ void showSuccessMessage(BuildContext context, WidgetRef ref, String message) {
     desc:   '',
     autoHide: const Duration(seconds: 3),
     btnOkOnPress: () {},
-    btnOkColor: Colors.amber,
+    btnOkColor: Colors.green,
     btnCancelText: Messages.CANCEL,
     btnOkText: Messages.OK,
   ).show();
   return;
 }
-/*Future<void> showSuccessMessageThenGoTo({
-  required WidgetRef ref,
-  required String message,
-  required String goToPage,
-}) async {
-  final BuildContext context = ref.context;
-
-  if (!context.mounted) return;
-
-  // Esperamos a que el bottom sheet se cierre
-  await showModalBottomSheet(
-    context: context,
-    isDismissible: false,
-    enableDrag: false,
-    backgroundColor: Colors.white,
-    shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-    ),
-    builder: (sheetContext) {
-      return FractionallySizedBox(
-        heightFactor: 0.5,
-        widthFactor: 1,
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(Icons.check_circle, size: 40, color: Colors.green),
-            const SizedBox(height: 10),
-            Text(
-              message,
-              style: const TextStyle(
-                fontStyle: FontStyle.italic,
-                fontSize: 18,
-              ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 20),
-
-            // ---- BOTÓN OK ----
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.green,
-                foregroundColor: Colors.white,
-              ),
-              onPressed: () {
-                Navigator.of(sheetContext).pop(); // Cerrar bottom sheet
-              },
-              child: const Text("OK"),
-            ),
-          ],
-        ),
-      );
-    },
-  );
-
-  // Cuando el sheet ya se cerró, recién ahí navegamos
-  if (!context.mounted) return;
-  context.go(goToPage);
-}*/
-
-
-
 
 Future<void> showSuccessMessageThenGoTo({required WidgetRef ref,required String message,required String goToPage})  async{
   BuildContext context = ref.context ;
@@ -153,7 +92,7 @@ Future<void> showSuccessMessageThenGoTo({required WidgetRef ref,required String 
   return;
 }
 
-void showWarningMessage(BuildContext context, WidgetRef ref, String message) {
+Future<void> showWarningMessage(BuildContext context, WidgetRef ref, String message) async {
   if (!context.mounted) {
     Future.delayed(const Duration(seconds: 1));
     if(!context.mounted) return;
@@ -179,7 +118,7 @@ void showWarningMessage(BuildContext context, WidgetRef ref, String message) {
   ).show();
   return;
 }
-void showAutoCloseErrorDialog(BuildContext context, WidgetRef ref, String message,int seconds) {
+Future<void> showAutoCloseErrorDialog(BuildContext context, WidgetRef ref, String message,int seconds) async {
   while (!context.mounted) {
     Future.delayed(const Duration(milliseconds: 500));
 

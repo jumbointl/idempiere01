@@ -10,7 +10,6 @@ import 'package:monalisa_app_001/features/products/domain/idempiere/idempiere_do
 import 'package:monalisa_app_001/features/products/domain/idempiere/idempiere_movement.dart';
 import 'package:monalisa_app_001/features/products/domain/idempiere/idempiere_warehouse.dart';
 import 'package:monalisa_app_001/features/products/presentation/screens/movement/edit_new/custom_app_bar.dart';
-import 'package:monalisa_app_001/features/products/presentation/screens/movement/provider/products_home_provider.dart';
 import 'package:monalisa_app_001/features/products/presentation/screens/movement/provider/new_movement_provider.dart';
 import 'package:monalisa_app_001/features/products/presentation/widget/no_data_card.dart';
 
@@ -355,14 +354,13 @@ class MovementListScreenState extends AsyncValueConsumerSimpleState<MovementList
 
 
   @override
-  void initialSetting(BuildContext context, WidgetRef ref) {
+  void initialSettingOnBuild(BuildContext context, WidgetRef ref) {
 
     ref.invalidate(persistentLocatorToProvider);
-    isScanning = ref.watch(isScanningProvider);
-    isDialogShowed = ref.watch(isDialogShowedProvider);
-    inputString = ref.watch(inputStringProvider);
-    pageIndexProdiver = ref.watch(productsHomeCurrentIndexProvider);
-    actionScan = ref.watch(actionScanProvider);
+    //isScanning = ref.watch(isScanningProvider);
+    //isDialogShowed = ref.watch(isDialogShowedProvider);
+    //inputString = ref.watch(inputStringProvider);
+    //actionScan = ref.watch(actionScanProvider);
 
   }
 
@@ -685,7 +683,7 @@ class MovementListScreenState extends AsyncValueConsumerSimpleState<MovementList
 
 
   @override
-  Future<void> setDefaultValues(BuildContext context, WidgetRef ref) async {
+  Future<void> setDefaultValuesOnInitState(BuildContext context, WidgetRef ref) async {
   }
 
 

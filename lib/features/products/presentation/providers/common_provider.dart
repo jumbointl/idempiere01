@@ -9,11 +9,12 @@ import 'package:monalisa_app_001/features/products/presentation/providers/produc
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../m_inout/presentation/providers/m_in_out_providers.dart';
+import '../../../printer/models/mo_printer.dart';
 import '../../../shared/data/memory.dart';
 import '../../../shared/data/messages.dart';
 import '../../domain/idempiere/idempiere_locator.dart';
 import '../../domain/idempiere/movement_and_lines.dart';
-import '../screens/movement/printer/mo_printer.dart';
+import '../../domain/idempiere/response_async_value.dart';
 import '../screens/movement/provider/new_movement_provider.dart';
 import 'locator_provider.dart';
 
@@ -166,8 +167,63 @@ final useScreenKeyboardProvider = StateProvider<bool>((ref) {
   return false;
 });
 
-
 final movementColorProvider =
+Provider.family<Color, IdempiereLocator?>((ref, locatorFrom) {
+  final asyncResult = ref.watch(findLocatorToProvider); // AsyncValue<ResponseAsyncValue>
+  final selectedLocatorTo = ref.watch(selectedLocatorToProvider);
+
+  // English: Default color while loading / invalid state
+  final Color defaultColor = Colors.grey.shade200;
+
+  return asyncResult.when(
+    loading: () => defaultColor,
+    error: (_, __) => defaultColor,
+    data: (ResponseAsyncValue r) {
+      // English: Resolve locatorTo with priority:
+      // 1) user-selected locatorTo (if not initial)
+      // 2) auto locator from async result (if success && data != null)
+      // 3) fallback: initial (no valid locator)
+      IdempiereLocator locatorToResolved;
+
+      if (selectedLocatorTo.id != Memory.INITIAL_STATE_ID) {
+        locatorToResolved = selectedLocatorTo;
+      } else {
+        // English: Only use auto data if provider succeeded and returned a locator
+        final dynamic auto = (r.success == true) ? r.data : null;
+        if (auto is IdempiereLocator) {
+          locatorToResolved = auto;
+        } else {
+          // English: Not found / error => no locatorTo to compare
+          locatorToResolved =
+              IdempiereLocator(id: Memory.INITIAL_STATE_ID, value: Messages.FIND);
+        }
+      }
+
+      final warehouseFrom = locatorFrom?.mWarehouseID;
+      final warehouseTo = locatorToResolved.mWarehouseID;
+
+      final warehouseID = warehouseFrom?.id ?? 0;
+      final warehouseToID = warehouseTo?.id ?? 0;
+      final org = locatorFrom?.aDOrgID?.id ?? 0;
+      final orgTo = locatorToResolved.aDOrgID?.id ?? 0;
+
+      // English: If we don't have both sides resolved, keep neutral
+      if (warehouseID <= 0 || warehouseToID <= 0 || org <= 0 || orgTo <= 0) {
+        return defaultColor;
+      } else if (warehouseID == warehouseToID) {
+        return Colors.green.shade200;
+      } else if (org == orgTo) {
+        return Colors.cyan.shade200;
+      } else if (orgTo > 0) {
+        return Colors.amber.shade200;
+      }
+
+      return Colors.white;
+    },
+  );
+});
+
+/*final movementColorProvider =
 Provider.family<Color, IdempiereLocator?>((ref, locatorFrom) {
   final asyncLocatorTo = ref.watch(findLocatorToProvider);
   final selectedLocatorTo = ref.watch(selectedLocatorToProvider);
@@ -212,7 +268,7 @@ Provider.family<Color, IdempiereLocator?>((ref, locatorFrom) {
       return Colors.white;
     },
   );
-});
+});*/
 
 /*final movementColorProvider =
 Provider.family<Color, IdempiereLocator?>((ref, locatorFrom) {

@@ -86,7 +86,6 @@ final findMovementByIdOrDocumentNOProvider = FutureProvider.autoDispose<Idempier
     MemoryProducts.movementAndLines.clearData();
     ref.read(movementIdForMovementLineSearchProvider.notifier).state = null;
     return IdempiereMovement(name: Messages.ERROR, id: Memory.ERROR_ID, identifier: scannedCode);
-    throw Exception(e.toString());
   }
 
 });

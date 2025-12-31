@@ -10,6 +10,8 @@ import 'package:monalisa_app_001/features/products/domain/idempiere/movement_and
 
 import '../../../../../../config/router/app_router.dart';
 import '../../../../../../config/theme/app_theme.dart';
+import '../../../../../printer/zpl/new/models/zpl_template.dart';
+import '../../../../../printer/zpl/new/provider/template_zpl_provider.dart';
 import '../../../../../shared/data/memory.dart';
 import '../../../../../shared/data/messages.dart';
 import '../../../../common/widget/show_delete_confirmation_sheet.dart';
@@ -205,7 +207,7 @@ class MovementHeaderCardWithLocatorState extends ConsumerState<NewMovementCardWi
                       ref.read(productsHomeCurrentIndexProvider.notifier).state =
                           Memory.PAGE_INDEX_MOVEMENT_PRINTER_SETUP;
                       ref.read(actionScanProvider.notifier).state = Memory.ACTION_FIND_MOVEMENT_BY_ID;
-
+                      ref.read(selectedZplTemplateModeProvider.notifier).state = ZplTemplateMode.movement;
                       GoRouterHelper(ref.context).go(AppRouter.PAGE_MOVEMENT_PRINTER_SETUP,
                           extra: widget.movementAndLines);
 

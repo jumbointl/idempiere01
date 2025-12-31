@@ -7,13 +7,13 @@ import 'package:monalisa_app_001/features/m_inout/domain/entities/line.dart';
 import 'package:monalisa_app_001/features/m_inout/domain/entities/m_in_out.dart';
 import 'package:monalisa_app_001/features/m_inout/domain/entities/m_in_out_confirm.dart';
 import 'package:monalisa_app_001/features/m_inout/domain/repositories/m_in_out_repositiry.dart';
+import 'package:monalisa_app_001/features/m_inout/presentation/providers/with_loading_m_in_out.dart';
 import 'package:monalisa_app_001/features/products/common/messages_dialog.dart';
 import 'package:monalisa_app_001/features/products/common/number_input_panel.dart';
 import '../../../../config/constants/roles_app.dart';
 import '../../../../config/theme/app_theme.dart';
 import '../../../products/common/number_sum_panel.dart';
 import '../../../products/common/selections_dialog.dart';
-import '../../../products/common/widget/with_loading.dart';
 import '../../../shared/data/messages.dart';
 import '../../../shared/presentation/widgets/custom_filled_button.dart';
 import '../../domain/entities/barcode.dart';
@@ -179,7 +179,7 @@ class MInOutNotifier extends StateNotifier<MInOutStatus> {
       debugPrint('[loadMInOutAndLine] route=CONFIRM');
 
       try {
-        final mInOut = await withLoading(
+        final mInOut = await withLoadingMInOut(
           context: context,
           tag: 'CONFIRM getMInOutAndLine',
           action: () => mInOutNotifier.getMInOutAndLine(ref),
@@ -195,7 +195,7 @@ class MInOutNotifier extends StateNotifier<MInOutStatus> {
           return;
         }
         if(!context.mounted) return;
-        final confirmList = await withLoading(
+        final confirmList = await withLoadingMInOut(
           context: context,
           tag: 'CONFIRM getMInOutConfirmList',
           action: () => mInOutNotifier.getMInOutConfirmList(mInOut.id!, ref),
@@ -353,7 +353,7 @@ class MInOutNotifier extends StateNotifier<MInOutStatus> {
   }) async {
     // Fetch movement with loading
     try {
-      final mInOut = await withLoading(
+      final mInOut = await withLoadingMInOut(
         context: context,
         tag: 'MOVE_CONFIRM getMovementAndLine',
         action: () => notifier.getMovementAndLine(ref),
@@ -362,7 +362,7 @@ class MInOutNotifier extends StateNotifier<MInOutStatus> {
       if (mInOut == null || mInOut.id == null) return;
       if (!context.mounted) return;
       if(context.mounted) {
-        final confirmList = await withLoading(
+        final confirmList = await withLoadingMInOut(
           context: context,
           tag: 'MOVE_CONFIRM getMovementConfirmList',
           action: () => notifier.getMovementConfirmList(mInOut.id!, ref),

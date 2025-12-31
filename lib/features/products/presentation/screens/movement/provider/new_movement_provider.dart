@@ -617,93 +617,6 @@ FutureProvider.autoDispose<ResponseAsyncValue>((ref) async {
   }
 });
 
-
-/*final findMovementNotCompletedByDateProvider = FutureProvider.autoDispose<ResponseAsyncValue>((ref) async {
-  final MovementAndLines? movement = ref.watch(movementNotCompletedToFindByDateProvider);
-  print('----------------------------------findMovementNotCompletedByDateProvider');
-  ResponseAsyncValue responseAsyncValue = ResponseAsyncValue();
-  if(movement== null || movement.filterMovementDateStartAt == null) return responseAsyncValue;
-
-  responseAsyncValue.isInitiated = true;
-  String docStatus = movement.filterDocumentStatus?.id ?? 'DR' ;
-  String endDate = '';
-  if(movement.filterMovementDateEndAt !=null){
-    endDate = 'AND MovementDate le ${movement.filterMovementDateEndAt!} ';
-  }
-
-  String date = movement.filterMovementDateStartAt!;
-
-  String idempiereModelName ='m_movement';
-  Dio dio = await DioClient.create();
-  try {
-    String url =  "/api/v1/models/$idempiereModelName";
-    int warehouse = Memory.sqlUsersData.mWarehouseID?.id ?? -1;
-    if(movement.filterWarehouseFrom ==null && movement.filterWarehouseTo == null){
-      url = "/api/v1/models/$idempiereModelName?\$filter=DocStatus eq '$docStatus' AND MovementDate ge '$date' ${endDate}AND (M_WarehouseTo_ID eq $warehouse OR M_Warehouse_ID eq $warehouse)&\$orderby=MovementDate desc";
-    } else if(movement.filterWarehouseFrom !=null && movement.filterWarehouseTo  != null){
-      int warehouse = movement.filterWarehouseFrom!.id!;
-      int warehouseTo = movement.filterWarehouseTo !.id!;
-      url = "/api/v1/models/$idempiereModelName?\$filter=DocStatus eq '$docStatus' AND MovementDate ge '$date' ${endDate}AND M_WarehouseTo_ID eq $warehouseTo AND M_Warehouse_ID eq $warehouse&\$orderby=MovementDate desc";
-    } else if(movement.filterWarehouseFrom ==null){
-      //int warehouseTo = movement.filterWarehouseTo !.id!;
-      //url = "/api/v1/models/$idempiereModelName?\$filter=DocStatus eq '$docStatus' AND MovementDate ge '$date' AND M_WarehouseTo_ID eq $warehouseTo&\$orderby=MovementDate desc";
-      int warehouse = movement.filterWarehouseTo !.id!;
-      int warehouseTo = movement.filterWarehouseTo !.id!;
-      url = "/api/v1/models/$idempiereModelName?\$filter=DocStatus eq '$docStatus' AND MovementDate ge '$date' ${endDate}AND M_WarehouseTo_ID eq $warehouseTo AND M_Warehouse_ID neq $warehouse&\$orderby=MovementDate desc";
-    } else {
-      //int warehouse = movement.mWarehouseID!.id!;
-      //url = "/api/v1/models/$idempiereModelName?\$filter=DocStatus eq '$docStatus' AND MovementDate ge '$date' AND M_Warehouse_ID eq $warehouse&\$orderby=MovementDate desc";
-      int warehouse = movement.filterWarehouseFrom!.id!;
-      int warehouseTo = movement.filterWarehouseFrom!.id!;
-      url = "/api/v1/models/$idempiereModelName?\$filter=DocStatus eq '$docStatus' AND MovementDate ge '$date' ${endDate}AND M_WarehouseTo_ID neq $warehouseTo AND M_Warehouse_ID eq $warehouse&\$orderby=MovementDate desc";
-    }
-    int skip = 0 ;
-    url='$url&\$top=100&\$skip=$skip';
-    print(url);
-    url = url.replaceAll(' ', '%20');
-    print(url);
-    final response = await dio.get(url);
-
-    if (response.statusCode == 200) {
-      responseAsyncValue.success = true;
-      final responseApi =
-      ResponseApi<IdempiereMovement>.fromJson(response.data, IdempiereMovement.fromJson);
-
-
-      int totalRecords = responseApi.rowCount ?? 0; //registros totales que debe ser extraidos
-      int totalPages = responseApi.pageCount ?? 0; // veces a ejecutar  para todos los registros
-      int recordsSize = responseApi.recordsSize ?? 100; // default = 100 (catidad de registro maximo enviado por cada consulta)
-      int skipRecords = responseApi.skipRecords ?? 0; // inicio de posicion de registros a extraer
-
-      late List<IdempiereMovement> m;
-      if (responseApi.records != null && responseApi.records!.isNotEmpty) {
-        m = responseApi.records!;
-      } else {
-        m = [IdempiereMovement(name: Messages.NO_DATA_FOUND, id: Memory.NOT_FOUND_ID)];
-      }
-      responseAsyncValue.data = m;
-      return responseAsyncValue;
-
-
-    } else {
-      responseAsyncValue.success = true;
-      List<IdempiereMovement>  m = [IdempiereMovement(name: Messages.ERROR, id: response.statusCode)];
-      responseAsyncValue.data = m;
-      return responseAsyncValue;
-    }
-
-  } on DioException {
-    responseAsyncValue.success = false;
-    responseAsyncValue.message = '${Messages.ERROR} DioException';
-    return  responseAsyncValue;
-
-  } catch (e) {
-    responseAsyncValue.success = false;
-    responseAsyncValue.message = Messages.ERROR +e.toString();
-    return  responseAsyncValue;
-  }
-
-});*/
 final movementIdForConfirmProvider = StateProvider.autoDispose<int?>((ref) {
   return null;
 });
@@ -777,8 +690,6 @@ final cancelMovementProvider = FutureProvider.autoDispose<MovementAndLines?>((re
       print('${Messages.ERROR }${response.statusCode} : ${response.statusMessage}');
       return MovementAndLines(id: Memory.ERROR_ID,
           name: '${Messages.ERROR }${response.statusCode} : ${response.statusMessage}' );
-      throw Exception(
-          'Error al obtener la lista de $url: ${response.statusCode}');
     }
 
 

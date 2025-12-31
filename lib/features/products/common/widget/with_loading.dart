@@ -1,39 +1,40 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/src/core.dart';
+import 'package:go_router/go_router.dart';
+import 'package:monalisa_app_001/features/products/presentation/providers/common_provider.dart';
 
 /// Runs an async action while showing a blocking loading dialog.
 /// The dialog is always closed with `maybePop()` when possible.
 ///
 /// Usage:
 ///   final result = await withLoading(context: context, action: () async => ...);
-Future<T?> withLoading<T>({
-  required BuildContext context,
+Future<T?> withLoadingOld<T>({
+  //required BuildContext context,
   required Future<T> Function() action,
   String tag = '',
   bool barrierDismissible = false,
+  required WidgetRef ref,
 }) async {
-  _showScreenLoading(
-    context,
-    barrierDismissible: barrierDismissible,
-  );
+  ref.read(initializingProvider.notifier).state = true;
 
   try {
     final result = await action();
-
-    if (context.mounted) {
-      await Navigator.of(context).maybePop();
+    debugPrint('[withLoading] RESULT $result');
+    // English comment: "Close the loading dialog"
+    if (ref.context.mounted && ref.context.canPop()) {
+      Navigator.of(ref.context).pop();
+      //nav.pop();
     }
+    ref.read(initializingProvider.notifier).state = false;
     return result;
   } catch (e) {
     debugPrint('[withLoading] ERROR $tag: $e');
 
-    if (context.mounted) {
-      await Navigator.of(context).maybePop();
-    }
+    ref.read(initializingProvider.notifier).state = false;
     rethrow;
   }
 }
 
-/// Simple blocking loading dialog.
 void _showScreenLoading(
     BuildContext context, {
       bool barrierDismissible = false,
@@ -41,13 +42,14 @@ void _showScreenLoading(
   showDialog(
     context: context,
     barrierDismissible: barrierDismissible,
-    builder: (_) {
-      return const Center(
-        child: CircularProgressIndicator(),
-      );
-    },
+    useRootNavigator: true, // ✅ critical
+    builder: (_) => const Center(
+      child: CircularProgressIndicator(),
+    ),
   );
 }
+
+
 
 /*
 3) Recomendación importante (para evitar un bug clásico)

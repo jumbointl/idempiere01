@@ -372,7 +372,7 @@ class MovementListScreenNewState extends AsyncValueConsumerState<MovementListScr
 
 
   @override
-  void initialSetting(BuildContext context, WidgetRef ref) {
+  void initialSettingAtBuild(BuildContext context, WidgetRef ref) {
 
     ref.invalidate(persistentLocatorToProvider);
     isScanning = ref.watch(isScanningProvider);
@@ -497,7 +497,7 @@ class MovementListScreenNewState extends AsyncValueConsumerState<MovementListScr
 
 
   @override
-  Future<void> setDefaultValues(BuildContext context, WidgetRef ref) async {
+  Future<void> setDefaultValuesOnInitState(BuildContext context, WidgetRef ref) async {
   }
 
 
@@ -506,11 +506,11 @@ class MovementListScreenNewState extends AsyncValueConsumerState<MovementListScr
 
   void actionAfterAsyncValueShow(WidgetRef ref, ResponseAsyncValue response) {
     if(!response.success){
-      showResultBottomSheetMessages(ref: ref, title: Messages.ERROR,
+      showResultBottomSheetMessages(title: Messages.ERROR,
           message: response.message ?? Messages.ERROR,
           success: response.success, onOk: ()async{
 
-        },) ;
+        }, ref: ref,) ;
     }
   }
 

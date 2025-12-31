@@ -421,7 +421,10 @@ Future<void> showCreateShipmentConfirmModalBottomSheet({
                     'Document No: $documentNo',
                     style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                   ),
-
+                  Text(
+                    'ID: $mInOutId',
+                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
                   const SizedBox(height: 12),
 
                   Expanded(

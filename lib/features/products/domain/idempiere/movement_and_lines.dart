@@ -6,9 +6,9 @@ import 'package:monalisa_app_001/features/products/domain/idempiere/idempiere_wa
 import 'package:monalisa_app_001/features/products/domain/sql/sql_data_movement_line.dart';
 import 'package:monalisa_app_001/features/products/presentation/screens/store_on_hand/memory_products.dart';
 
+import '../../../printer/zpl/new/models/category_agg.dart';
 import '../../../shared/data/memory.dart';
-import '../../presentation/screens/movement/printer/zpl/label_utils.dart';
-import '../../presentation/screens/movement/printer/zpl/new/template_zpl_models.dart';
+import '../../common/utils/common_string_utils.dart';
 import '../sql/sql_users_data.dart';
 import 'idempiere_business_partner_location.dart';
 import 'idempiere_document_status.dart';
@@ -463,10 +463,10 @@ class MovementAndLines extends IdempiereMovement {
     final Map<String, CategoryAgg> map = {};
 
     for (final r in lines) {
-      final String categoryName = safe(
+      final String categoryName = zplSafe(
         r.mProductID?.mProductCategoryID?.identifier ?? 'category null',
       );
-      final String categoryId = safe(
+      final String categoryId = zplSafe(
         r.mProductID?.mProductCategoryID?.id?.toString() ?? 'category id null',
       );
 

@@ -1,6 +1,191 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+
+import 'package:monalisa_app_001/features/products/domain/idempiere/movement_and_lines.dart';
+import 'package:monalisa_app_001/features/products/domain/idempiere/put_away_movement.dart';
+import 'package:monalisa_app_001/features/products/presentation/screens/movement/provider/new_movement_provider.dart';
+import 'package:monalisa_app_001/features/products/presentation/providers/products_scan_notifier.dart';
+
+import '../../../../../../config/router/app_router.dart';
+import '../../../../../shared/data/memory.dart';
+import '../../../../../shared/data/messages.dart';
+import '../../../providers/data_create_screen.dart';
+import '../../../providers/product_provider_common.dart';
+import '../../store_on_hand/memory_products.dart';
+import '../widget/movement_line_create_result_screen.dart';
+import 'no_data_created_put_away_movement_card.dart';
+
+class MovementCreateScreen extends DataCreateScreen {
+  final PutAwayMovement putAwayMovement;
+
+  const MovementCreateScreen({
+    super.key,
+    required this.putAwayMovement,
+    super.closeMode,
+  });
+
+  @override
+  ConsumerState<MovementCreateScreen> createState() =>
+      _MovementCreateScreenState();
+}
+
+class _MovementCreateScreenState
+    extends DataCreateScreenState<MovementCreateScreen> {
+  late final ProductsScanNotifier productsNotifier;
+
+  bool startCreateLocal = false;
+  String? productUPC;
+
+  @override
+  void initState() {
+    super.initState();
+
+    productsNotifier = ref.read(scanHandleNotifierProvider.notifier);
+    productUPC = widget.putAwayMovement.movementLineToCreate?.uPC ?? '-1';
+
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      // English: Start creation only once
+      if (!mounted) return;
+      if (startCreateLocal) return;
+
+      startCreateLocal = true;
+      widget.putAwayMovement.startCreate = true;
+
+      productsNotifier.createPutAwayMovement(ref, widget.putAwayMovement);
+    });
+  }
+
+  @override
+  String get title => '${Messages.MOVEMENT} : ${Messages.CREATE}';
+
+  @override
+  Widget buildBody(BuildContext context, WidgetRef ref) {
+    final async = ref.watch(newPutAwayMovementProvider);
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 10),
+      child: async.when(
+        loading: () => const LinearProgressIndicator(minHeight: 36),
+        error: (e, _) => Text('Error: $e'),
+        data: (result) {
+          // English: No movement created yet
+          if (result == null || result.id == null || result.id! <= 0) {
+            if (widget.putAwayMovement.startCreate == true) {
+              return NoDataPutAwayCreatedCard(
+                width: MediaQuery.of(context).size.width,
+              );
+            }
+            // English: Display data that is going to be created
+            return _dataToCreateCard(context);
+          }
+
+          final MovementAndLines data = result;
+
+          // English: Small post-processing once data is ready
+          WidgetsBinding.instance.addPostFrameCallback((_) async {
+            ref.read(isDialogShowedProvider.notifier).state = false;
+            ref.read(isScanningProvider.notifier).state = false;
+
+            // Optional delay behavior kept from your original flow
+            await Future.delayed(
+              Duration(seconds: MemoryProducts.delayOnSwitchPageInSeconds),
+            );
+
+            if (!mounted) return;
+
+            if (data.allCreated) {
+
+              ref.read(actionScanProvider.notifier).state =
+                  Memory.ACTION_FIND_BY_UPC_SKU_FOR_STORE_ON_HAND;
+
+              if(context.mounted) {
+                context.go(
+                '${AppRouter.PAGE_PRODUCT_STORE_ON_HAND_FOR_LINE}/-1',
+                extra: data,
+              );
+              }
+            } else if(data.onlyMovementCreated){
+              ref.read(actionScanProvider.notifier).state =
+                  Memory.ACTION_FIND_MOVEMENT_BY_ID;
+              if(context.mounted) {
+                context.go(
+                  '${AppRouter.PAGE_MOVEMENTS_EDIT}/${data.id ?? -1}'
+
+                );
+              }
+            }
+
+          });
+
+          // English: Render the result using the dedicated screen widget
+          return MovementLineCreateResultScreen(
+            movementAndLines: data,
+            closeMode: widget.closeMode,
+            // English: this one can decide close behavior too
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _dataToCreateCard(BuildContext context) {
+    final qty = widget.putAwayMovement.movementLineToCreate?.movementQty ?? 0;
+    final from = widget.putAwayMovement.movementLineToCreate?.mLocatorID?.value ??
+        widget.putAwayMovement.movementLineToCreate?.mLocatorID?.identifier ??
+        '--';
+    final to =
+        widget.putAwayMovement.movementLineToCreate?.mLocatorToID?.value ??
+            widget.putAwayMovement.movementLineToCreate?.mLocatorToID?.identifier ??
+            '--';
+    final product =
+        widget.putAwayMovement.movementLineToCreate?.mProductID?.identifier ??
+            '--';
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          spacing: 10,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              Messages.PLEASE_WAIT,
+              style: const TextStyle(fontWeight: FontWeight.bold),
+            ),
+            Text('${Messages.PRODUCT}: $product'),
+            Text('${Messages.LOCATOR_FROM}: $from'),
+            Text('${Messages.LOCATOR_TO}: $to'),
+            Text('${Messages.QUANTITY}: ${Memory.numberFormatter0Digit.format(qty)}'),
+          ],
+        ),
+      ),
+    );
+  }
+
+  @override
+  void onClose(BuildContext context, WidgetRef ref) {
+    // English: Reset common flags
+    ref.read(isScanningProvider.notifier).state = false;
+    ref.read(isDialogShowedProvider.notifier).state = false;
+
+    if (widget.closeMode == DataCreateCloseMode.closeOnly) {
+      Navigator.pop(context);
+      return;
+    }
+
+    // English: Custom close behavior (page navigation)
+    context.go('${AppRouter.PAGE_PRODUCT_STORE_ON_HAND}/$productUPC');
+  }
+}
+
+
+
+
+/*
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:monalisa_app_001/config/config.dart';
 import 'package:monalisa_app_001/features/products/domain/idempiere/movement_and_lines.dart';
 import 'package:monalisa_app_001/features/products/domain/idempiere/put_away_movement.dart';
@@ -16,6 +201,7 @@ import '../../../../../shared/data/memory.dart';
 import '../../../../../shared/data/messages.dart';
 import '../../../providers/product_provider_common.dart';
 import '../../../providers/products_scan_notifier.dart';
+import '../../../providers/store_on_hand_for_put_away_movement.dart';
 import '../../store_on_hand/memory_products.dart';
 import 'movement_line_card_for_create.dart';
 import 'no_data_created_put_away_movement_card.dart';
@@ -144,6 +330,7 @@ class MovementsCreateScreenState extends ConsumerState<MovementsCreateScreen> {
 
                  if (context.mounted) {
                    ref.invalidate(pageFromProvider);
+                   ref.invalidate(productStoreOnHandCacheProvider);
                    context.go('${AppRouter.PAGE_PRODUCT_STORE_ON_HAND_FOR_LINE}/-1',
                    extra: data,);
 
@@ -293,4 +480,4 @@ class MovementsCreateScreenState extends ConsumerState<MovementsCreateScreen> {
     context.go('${AppRouter.PAGE_PRODUCT_STORE_ON_HAND}/$productUPC');
   }
 
-}
+}*/

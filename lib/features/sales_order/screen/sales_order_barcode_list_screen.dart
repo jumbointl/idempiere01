@@ -129,10 +129,10 @@ class _SalesOrderBarcodeListScreenState
   double getWidth() => MediaQuery.of(context).size.width - 30;
 
   @override
-  void initialSetting(BuildContext context, WidgetRef ref) {}
+  void initialSettingAtBuild(BuildContext context, WidgetRef ref) {}
 
   @override
-  Future<void> setDefaultValues(BuildContext context, WidgetRef ref) async {}
+  Future<void> setDefaultValuesOnInitState(BuildContext context, WidgetRef ref) async {}
 
   @override
   Future<void> handleInputString({

@@ -57,6 +57,7 @@ dependencies:
   share_plus: ^12.0.1
   path_provider: ^2.1.5
   path: any
+  ftpconnect: ^2.0.10
 dev_dependencies:
   flutter_test:
     sdk: flutter

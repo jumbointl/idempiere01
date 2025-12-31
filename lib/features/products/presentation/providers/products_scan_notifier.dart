@@ -184,71 +184,6 @@ class ProductsScanNotifier  extends StateNotifier<List<IdempiereProduct>> implem
     }
     ref.read(putAwayMovementCreateProvider.notifier).update((state) => movement);
   }
-  void prepareToCreatePutawayMovement(WidgetRef ref,PutAwayMovement putAwayMovement){
-    int check = putAwayMovement.canCreatePutAwayMovement();
-    print('----------------------------------ERROR = $check');
-    /*int docType = ref.read(allowedMovementDocumentTypeProvider);
-    if(docType==Memory.MM_ELECTRONIC_DELIVERY_NOTE_ID){
-      print('FORCE TO MM_ELECTRONIC_DELIVERY_NOTE_ID $docType')  ;
-      putAwayMovement.movementToCreate!.cDocTypeID = Memory.electronicDeliveryNote;
-    }*/
-
-    switch (check) {
-      case PutAwayMovement.ERROR_START_CREATE:
-        showErrorMessage(ref.context, ref, Messages.ERROR_START_CREATE);
-        return;
-      case PutAwayMovement.ERROR_LOCATOR_TO:
-        showErrorMessage(ref.context, ref, Messages.ERROR_LOCATOR_TO);
-        return;
-      case PutAwayMovement.ERROR_LOCATOR_FROM:
-        showErrorMessage(ref.context, ref, Messages.ERROR_LOCATOR_FROM);
-        return;
-      case PutAwayMovement.ERROR_SAME_LOCATOR:
-        showErrorMessage(ref.context, ref, Messages.ERROR_SAME_LOCATOR);
-        return;
-      case PutAwayMovement.ERROR_QUANTITY:
-        showErrorMessage(ref.context, ref, Messages.ERROR_QUANTITY);
-        return;
-      case PutAwayMovement.ERROR_WAREHOUSE_FROM:
-        showErrorMessage(ref.context, ref, Messages.ERROR_WAREHOUSE_FROM);
-        return;
-      case PutAwayMovement.ERROR_WAREHOUSE_TO:
-        showErrorMessage(ref.context, ref, Messages.ERROR_WAREHOUSE_TO);
-        return;
-      case PutAwayMovement.ERROR_ORG_WAREHOUSE_FROM:
-        showErrorMessage(ref.context, ref, Messages.ERROR_ORG_WAREHOUSE_FROM);
-        return;
-      case PutAwayMovement.ERROR_ORG_WAREHOUSE_TO:
-        showErrorMessage(ref.context, ref, Messages.ERROR_ORG_WAREHOUSE_TO);
-        return;
-      case PutAwayMovement.ERROR_DOCUMENT_TYPE:
-        showErrorMessage(ref.context, ref, Messages.ERROR_DOCUMENT_TYPE);
-        return;
-      case PutAwayMovement.ERROR_PRODUCT:
-        showErrorMessage(ref.context, ref, Messages.ERROR_PRODUCT);
-        return;
-      case PutAwayMovement.ERROR_MOVEMENT:
-        showErrorMessage(ref.context, ref, Messages.ERROR_MOVEMENT);
-        return;
-      case PutAwayMovement.ERROR_MOVEMENT_LINE:
-        showErrorMessage(ref.context, ref, Messages.ERROR_MOVEMENT_LINE);
-        return;
-      case PutAwayMovement.SUCCESS:
-        GoRouter.of(ref.context).go(AppRouter.PAGE_CREATE_PUT_AWAY_MOVEMENT,
-            extra: putAwayMovement);
-        break;
-      case PutAwayMovement.ERROR_MOVEMENT_NULL:
-        showErrorMessage(ref.context, ref, Messages.ERROR_MOVEMENT_NULL);
-        return;
-      default:
-        showErrorMessage(ref.context, ref, '${Messages.ERROR} : $check');
-        return;
-
-    }
-
-
-
-  }
 
   @override
   Future<void> handleInputString({required WidgetRef ref, required String inputData, required int actionScan}) async {
@@ -307,10 +242,6 @@ class ProductsScanNotifier  extends StateNotifier<List<IdempiereProduct>> implem
     }
   }
 
-  @override
-  void addQuantityText(BuildContext context, WidgetRef ref, TextEditingController quantityController, int i) {
-    // TODO: implement addQuantityText
-  }
 
 
 }

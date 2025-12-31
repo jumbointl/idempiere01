@@ -8,6 +8,7 @@ import 'package:monalisa_app_001/features/products/common/messages_dialog.dart';
 import 'package:monalisa_app_001/features/products/domain/idempiere/movement_and_lines.dart';
 import 'package:monalisa_app_001/features/products/domain/sql/sql_data_movement_line.dart';
 import 'package:monalisa_app_001/features/products/presentation/providers/movement_provider_old.dart';
+import 'package:monalisa_app_001/features/products/presentation/providers/store_on_hand_for_put_away_movement.dart';
 import 'package:monalisa_app_001/features/products/presentation/screens/movement/edit_new/movement_card_without_controller.dart';
 import 'package:monalisa_app_001/features/products/presentation/screens/movement/create/movement_line_card_without_controller.dart';
 
@@ -19,9 +20,9 @@ import '../../../providers/common_provider.dart';
 import '../../../providers/movement_provider_for_line.dart';
 import '../../../providers/product_provider_common.dart';
 import '../../../providers/products_scan_notifier.dart';
+import '../../../providers/store_on_hand_provider.dart';
 import '../../store_on_hand/memory_products.dart';
 import '../create/movement_line_card_for_create.dart';
-import '../provider/products_home_provider.dart';
 
 
 class MovementLinesCreateScreen extends ConsumerStatefulWidget {
@@ -163,6 +164,8 @@ class MovementLinesCreateScreenState extends ConsumerState<MovementLinesCreateSc
               movementAndLines.movementLines!.add(data);
               if (context.mounted) {
                 ref.invalidate(pageFromProvider);
+                ref.invalidate(productStoreOnHandCacheProvider);
+                ref.invalidate(scannedCodeForStoredOnHandProvider);
                 context.go(
                   '${AppRouter.PAGE_PRODUCT_STORE_ON_HAND_FOR_LINE}/-1',
                   extra: movementAndLines,);
@@ -210,6 +213,7 @@ class MovementLinesCreateScreenState extends ConsumerState<MovementLinesCreateSc
                   onPressed: () async {
                     if (context.mounted) {
                       if(context.mounted){
+                        ref.invalidate(productStoreOnHandCacheProvider);
                         context.go('${AppRouter.PAGE_MOVEMENTS_EDIT}/$id/-1');
                       }
                     }
@@ -256,7 +260,7 @@ class MovementLinesCreateScreenState extends ConsumerState<MovementLinesCreateSc
   }
   void popScopeAction(BuildContext context, WidgetRef ref) {
 
-    // Restaurar configuración de navegación del Home
+    /*// Restaurar configuración de navegación del Home
     ref.read(productsHomeCurrentIndexProvider.notifier).state =
         Memory.PAGE_INDEX_MOVEMENTE_EDIT_SCREEN;
 
@@ -264,6 +268,7 @@ class MovementLinesCreateScreenState extends ConsumerState<MovementLinesCreateSc
         Memory.ACTION_FIND_MOVEMENT_BY_ID;
     int movementId = movementAndLines.id ?? -1;
     // Redirigir
-    context.go('${AppRouter.PAGE_MOVEMENTS_EDIT}/$movementId/1');
+    context.go('${AppRouter.PAGE_MOVEMENTS_EDIT}/$movementId/1');*/
+    Navigator.of(context).pop();
   }
 }

@@ -159,11 +159,11 @@ class _MovementBarcodeListScreenState
   }
 
   @override
-  void initialSetting(BuildContext context, WidgetRef ref) {
+  void initialSettingAtBuild(BuildContext context, WidgetRef ref) {
   }
 
   @override
-  Future<void> setDefaultValues(BuildContext context, WidgetRef ref) async {
+  Future<void> setDefaultValuesOnInitState(BuildContext context, WidgetRef ref) async {
     print('setDefaultValues');
   }
 

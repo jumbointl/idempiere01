@@ -55,7 +55,7 @@ class NewMovementEditScreenState extends MovementAndLinesConsumerState<NewMoveme
   Future<void> executeAfterShown() async {
 
 
-    await setDefaultValues(context, ref);
+
 
     if( widget.movementId != null &&  widget.movementId!.isNotEmpty && widget.movementId != '-1'){
       while(!context.mounted){
@@ -65,6 +65,7 @@ class NewMovementEditScreenState extends MovementAndLinesConsumerState<NewMoveme
       final productsNotifier = ref.read(scanStateNotifierForLineProvider.notifier);
       productsNotifier.addBarcodeToSearchMovementNew(widget.movementId!);
     }
+    ref.read(isScanningProvider.notifier).update((state) => false);
 
 
 
@@ -242,9 +243,8 @@ class NewMovementEditScreenState extends MovementAndLinesConsumerState<NewMoveme
 
 
   @override
-  Future<void> setDefaultValues(BuildContext context, WidgetRef ref) async {
+  Future<void> setDefaultValuesOnInitState(BuildContext context, WidgetRef ref) async {
 
-    ref.read(isScanningProvider.notifier).update((state) => false);
 
   }
 

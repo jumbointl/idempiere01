@@ -18,7 +18,6 @@ class ResponseAsyncValue {
     isInitiated = json['is_initiated'] ?? false;
   }
 
-
   Map<String, dynamic> toJson() {
     final Map<String, dynamic> dataInJsonIn = {};
     dataInJsonIn['success'] = success;

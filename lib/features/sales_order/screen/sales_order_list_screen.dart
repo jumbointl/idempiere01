@@ -652,12 +652,12 @@ class _SalesOrderListScreenState
   }
 
   @override
-  void initialSetting(BuildContext context, WidgetRef ref) {
+  void initialSettingAtBuild(BuildContext context, WidgetRef ref) {
     // TODO: implement initialSetting
   }
 
   @override
-  Future<void> setDefaultValues(BuildContext context, WidgetRef ref) async {
+  Future<void> setDefaultValuesOnInitState(BuildContext context, WidgetRef ref) async {
   }
 
   List<SalesOrderAndLines> filteredOrders(List<SalesOrderAndLines> orders, String pag) {

@@ -204,7 +204,7 @@ abstract class MovementAndLinesConsumerState<T extends ConsumerStatefulWidget>
 
   }
   @override
-  void initialSetting(BuildContext context, WidgetRef ref) {
+  void initialSettingAtBuild(BuildContext context, WidgetRef ref) {
     fromPage = ref.read(pageFromProvider).toString();
     ref.invalidate(persistentLocatorToProvider);
     isScanning = ref.watch(isScanningProvider);

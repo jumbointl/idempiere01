@@ -145,12 +145,12 @@ class _MInOutBarcodeListScreenState
   }
 
   @override
-  void initialSetting(BuildContext context, WidgetRef ref) {
+  void initialSettingAtBuild(BuildContext context, WidgetRef ref) {
     // TODO: implement initialSetting
   }
 
   @override
-  Future<void> setDefaultValues(BuildContext context, WidgetRef ref) {
+  Future<void> setDefaultValuesOnInitState(BuildContext context, WidgetRef ref) {
     // TODO: implement setDefaultValues
     throw UnimplementedError();
   }
