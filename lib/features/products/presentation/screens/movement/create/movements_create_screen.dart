@@ -1,3 +1,5 @@
+
+/*
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -178,29 +180,34 @@ class _MovementCreateScreenState
     context.go('${AppRouter.PAGE_PRODUCT_STORE_ON_HAND}/$productUPC');
   }
 }
+*/
 
 
 
 
-/*
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:monalisa_app_001/config/config.dart';
+import 'package:monalisa_app_001/features/products/common/input_dialog.dart';
 import 'package:monalisa_app_001/features/products/domain/idempiere/movement_and_lines.dart';
 import 'package:monalisa_app_001/features/products/domain/idempiere/put_away_movement.dart';
 import 'package:monalisa_app_001/features/products/presentation/providers/common_provider.dart';
+import 'package:monalisa_app_001/features/products/presentation/screens/movement/common/store_on_hand_navigation.dart';
 import 'package:monalisa_app_001/features/products/presentation/screens/movement/edit_new/movement_card_without_controller.dart';
 import 'package:monalisa_app_001/features/products/presentation/screens/movement/create/movement_line_card_without_controller.dart';
-import 'package:monalisa_app_001/features/products/presentation/screens/movement/provider/products_home_provider.dart';
 import 'package:monalisa_app_001/features/products/presentation/screens/movement/provider/new_movement_provider.dart';
 
 import '../../../../domain/idempiere/idempiere_movement.dart';
 import '../../../../domain/idempiere/idempiere_movement_line.dart';
 import '../../../../../shared/data/memory.dart';
 import '../../../../../shared/data/messages.dart';
+import '../../../providers/actions/create_movement_and_lines_action.dart';
 import '../../../providers/product_provider_common.dart';
 import '../../../providers/products_scan_notifier.dart';
+import '../../../providers/store_on_hand/action_notifier.dart';
 import '../../../providers/store_on_hand_for_put_away_movement.dart';
 import '../../store_on_hand/memory_products.dart';
 import 'movement_line_card_for_create.dart';
@@ -229,14 +236,15 @@ class MovementsCreateScreenState extends ConsumerState<MovementsCreateScreen> {
   String? productUPC;
   @override
   void initState() {
-    productsNotifier = ref.read(scanHandleNotifierProvider.notifier);
+    productsNotifier = ref.read(scanHandleProvider.notifier);
     productUPC = widget.putAwayMovement?.movementLineToCreate?.uPC ?? '-1' ;
     WidgetsBinding.instance.addPostFrameCallback((_) async {
 
       if(widget.putAwayMovement!=null && mounted && !startCreate){
         startCreate = true;
         widget.putAwayMovement!.startCreate = true;
-        productsNotifier.createPutAwayMovement(ref,widget.putAwayMovement!);
+        final act =ref.read(createMovementAndLinesActionProvider);
+        await act.setAndFire(widget.putAwayMovement!);
       }
     });
     super.initState();
@@ -324,16 +332,29 @@ class MovementsCreateScreenState extends ConsumerState<MovementsCreateScreen> {
                await Future.delayed(Duration(seconds: MemoryProducts.delayOnSwitchPageInSeconds));
                if(data.allCreated){
                  ref.read(actionScanProvider.notifier).update((state) => Memory.ACTION_FIND_BY_UPC_SKU_FOR_STORE_ON_HAND);
-                 ref.read(productsHomeCurrentIndexProvider.notifier).update((state) =>
-                 Memory.PAGE_INDEX_STORE_ON_HAND);
-                 Future.delayed(Duration.zero);
-
                  if (context.mounted) {
                    ref.invalidate(pageFromProvider);
                    ref.invalidate(productStoreOnHandCacheProvider);
                    context.go('${AppRouter.PAGE_PRODUCT_STORE_ON_HAND_FOR_LINE}/-1',
                    extra: data,);
 
+                 }
+               } else if(data.onlyMovementCreated){
+                 bool? retry = await openBottomSheetConfirmationDialog(
+                     ref: ref,
+                     title: Messages.MOVEMENT_LINE_NOT_CREATED,
+                     message: '${Messages.RETRY}?');
+                 if(retry==true) {
+                   MovementAndLines m = data;
+                   m.movementLineToCreate = data.movementLineToCreate;
+                   String argument = jsonEncode(m.toJson());
+                   if (context.mounted) {
+                     await openMovementLinesCreateBottomSheet(
+                         context: context, ref: ref,
+                         movementAndLines: m,
+                         argument: argument
+                     );
+                   }
                  }
                }
              });
@@ -374,8 +395,6 @@ class MovementsCreateScreenState extends ConsumerState<MovementsCreateScreen> {
                                  ),
                                  onPressed: () async {
                                    ref.read(actionScanProvider.notifier).update((state) => Memory.ACTION_FIND_MOVEMENT_BY_ID);
-                                   ref.read(productsHomeCurrentIndexProvider.notifier).update((state) =>
-                                   Memory.PAGE_INDEX_MOVEMENTE_EDIT_SCREEN);
                                    ref.read(isDialogShowedProvider.notifier).update((state) =>false);
                                    MemoryProducts.movementAndLines.clearData();
                                    if(context.mounted){
@@ -393,8 +412,6 @@ class MovementsCreateScreenState extends ConsumerState<MovementsCreateScreen> {
                                  ),
                                  onPressed: () async {
                                    ref.read(actionScanProvider.notifier).update((state) => Memory.ACTION_FIND_BY_UPC_SKU_FOR_STORE_ON_HAND);
-                                   ref.read(productsHomeCurrentIndexProvider.notifier).update((state) =>
-                                   Memory.PAGE_INDEX_STORE_ON_HAND);
 
                                    ref.read(isDialogShowedProvider.notifier).update((state) =>false);
                                    if(context.mounted){
@@ -474,10 +491,8 @@ class MovementsCreateScreenState extends ConsumerState<MovementsCreateScreen> {
   void popScopeAction(BuildContext context, WidgetRef ref) {
     ref.read(isScanningProvider.notifier).update((state) => false);
     ref.read(quantityToMoveProvider.notifier).update((state) => 0);
-    ref.read(productsHomeCurrentIndexProvider.notifier).update((state) => Memory.PAGE_INDEX_STORE_ON_HAND);
     ref.read(actionScanProvider.notifier).state = Memory.ACTION_FIND_BY_UPC_SKU_FOR_STORE_ON_HAND;
-    print('${AppRouter.PAGE_PRODUCT_STORE_ON_HAND}/$productUPC');
     context.go('${AppRouter.PAGE_PRODUCT_STORE_ON_HAND}/$productUPC');
   }
 
-}*/
+}

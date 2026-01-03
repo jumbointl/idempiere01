@@ -15,7 +15,6 @@ import 'package:monalisa_app_001/features/products/domain/idempiere/idempiere_wa
 import 'package:monalisa_app_001/features/products/domain/idempiere/movement_and_lines.dart';
 import 'package:monalisa_app_001/features/products/domain/idempiere/response_async_value.dart';
 import 'package:monalisa_app_001/features/products/presentation/screens/movement/edit_new/custom_app_bar.dart';
-import 'package:monalisa_app_001/features/products/presentation/screens/movement/provider/products_home_provider.dart';
 import 'package:monalisa_app_001/features/products/presentation/screens/movement/provider/new_movement_provider.dart';
 
 import '../../../../../auth/domain/entities/warehouse.dart';
@@ -26,7 +25,6 @@ import '../../../../common/time_utils.dart';
 import '../../../../common/widget/date_range_filter_row_panel.dart';
 import '../../../../common/widget/show_document_type_filter_sheet.dart';
 import '../../../providers/common_provider.dart';
-import '../../../providers/persitent_provider.dart';
 import '../../../providers/product_provider_common.dart';
 import '../movement_no_data_card.dart';
 
@@ -374,11 +372,9 @@ class MovementListScreenNewState extends AsyncValueConsumerState<MovementListScr
   @override
   void initialSettingAtBuild(BuildContext context, WidgetRef ref) {
 
-    ref.invalidate(persistentLocatorToProvider);
     isScanning = ref.watch(isScanningProvider);
     isDialogShowed = ref.watch(isDialogShowedProvider);
     inputString = ref.watch(inputStringProvider);
-    pageIndexProdiver = ref.watch(productsHomeCurrentIndexProvider);
     actionScan = ref.watch(actionScanProvider);
 
   }

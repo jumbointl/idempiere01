@@ -20,7 +20,6 @@ class NewMovementLineCard extends ConsumerStatefulWidget {
   bool? showLocators = false;
   final bool canEdit;
 
-  var productsNotifier;
   NewMovementLineCard( {required this.width, required this.movementLine, super.key,
     required this.index, required this.totalLength, this.showLocators, required this.canEdit});
 
@@ -100,18 +99,15 @@ class NewMovementLineCardState extends ConsumerState<NewMovementLineCard> {
                 ref.read(deleteRequestProvider.notifier).state = null;
                 ref.read(editingMovementLineProvider(_lineId).notifier).state = false;
                 if (deleted != true) {
-                  print('deleteMovementLineProvider error');
                   if (!mounted) return;
                   showErrorMessage(context, ref, Messages.ERROR_LINE_NOT_DELETED);
                   return;
                 }else{
-                  print('deleteMovementLineProvider success');
                   late String route;
                   final id = widget.movementLine.mMovementID?.id ?? 1;
                   final counter = ref.read(movementLineDeletedCounterProvider);
                   route = '${AppRouter.PAGE_MOVEMENT_REPAINT}${counter%2}/$id';
                   ref.read(movementLineDeletedCounterProvider.notifier).state++;
-                  print('route: $route');
                   WidgetsBinding.instance.addPostFrameCallback((_) {
                     if (!mounted) return;
                     GoRouter.of(context).go(route); // mejor que context.go en estos casos
@@ -130,7 +126,6 @@ class NewMovementLineCardState extends ConsumerState<NewMovementLineCard> {
                 ref.read(editingMovementLineProvider(_lineId).notifier).state = false;
                 if (!mounted) return;
                 showErrorMessage(context, ref, Messages.ERROR_LINE_NOT_DELETED);
-                debugPrint('DELETE Dio error: ${e.toString()}');
               },
             );
           },
@@ -194,9 +189,7 @@ class NewMovementLineCardState extends ConsumerState<NewMovementLineCard> {
                   if (idx >= 0) {
                     lines[idx].movementQty = result;
                     m.movementLines = lines;
-                    ref
-                        .read(movementAndLinesProvider.notifier)
-                        .state = m;
+                    ref.read(movementAndLinesProvider.notifier).state = m;
                   }
                 }
               },
@@ -246,14 +239,8 @@ class NewMovementLineCardState extends ConsumerState<NewMovementLineCard> {
 
     isScanning = ref.watch(editingMovementLineProvider(_lineId));
     quantityToMove = ref.watch(movementLineQuantityToMoveProvider(_lineId));
-   /* String categoryName = widget.movementLine.mProductID?.mProductCategoryID?.identifier ?? 'category null';
-    String categoryId = widget.movementLine.mProductID?.mProductCategoryID?.id?.toString() ?? 'category id null';
-    print('categoryName $categoryId : $categoryName');*/
 
 
-
-    widget.productsNotifier =
-        ref.watch(scanStateNotifierForLineProvider.notifier);
     String quantity = Memory.numberFormatter0Digit.format(
         widget.movementLine.movementQty ?? 0);
     Color backGroundColor = Colors.cyan[800]!;
@@ -341,18 +328,13 @@ class NewMovementLineCardState extends ConsumerState<NewMovementLineCard> {
                                 //ref.refresh(deleteMovementLineProvider(req));
                               }
                             } else {
-                              print('edit quantity $aux');
                               ref
                                   .read(quantityOfLineToEditProvider.notifier)
                                   .state = [lineId, aux];
-                              print('edit quantity ${ref.read(quantityOfLineToEditProvider)}');
                               ref
                                   .read(updateMovementLineIdProvider.notifier)
                                   .state = lineId;
-                              print('edit quantity ${ref.read(updateMovementLineIdProvider)}');
 
-                              //ref.refresh(editQuantityToMoveProvider(lineId));
-                              //print('edit quantity ${ref.read(editQuantityToMoveProvider(lineId))}');
                             }
                           } else {
                             String message = '${Messages

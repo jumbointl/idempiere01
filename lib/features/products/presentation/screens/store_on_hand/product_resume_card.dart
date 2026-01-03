@@ -6,6 +6,8 @@ import '../../../../../config/theme/app_theme.dart';
 import '../../../../auth/domain/entities/warehouse.dart';
 import '../../../../auth/presentation/providers/auth_provider.dart';
 import '../../../../shared/data/memory.dart';
+import '../../providers/actions/find_store_on_hand_by_upc_sku_action_provider.dart';
+import '../../providers/store_on_hand_for_put_away_movement.dart';
 import '../../providers/store_on_hand_provider.dart';
 import '../../widget/no_data_card.dart';
 
@@ -29,7 +31,7 @@ class ProductResumeCardState extends ConsumerState<ProductResumeCard> {
     }
 
     bool searchFiledByMOLIConfigurableSKU = ref.watch(searchByMOLIConfigurableSKUProvider);
-    String scannedCode = ref.watch(scannedCodeForStoredOnHandProvider) ?? '';
+    String scannedCode = ref.watch(scannedCodeForPutAwayMovementProvider) ?? '';
     String searchText = '(UPC)';
     if(searchFiledByMOLIConfigurableSKU){
       searchText = '(M_SKU)';

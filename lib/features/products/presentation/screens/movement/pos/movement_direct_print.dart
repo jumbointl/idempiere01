@@ -17,6 +17,8 @@ Future<void> printReceiptWithQr(WidgetRef ref,String ip, int port,MovementAndLin
   if(ip.isEmpty || port==0) {
     return;
   }
+
+
   print('PRINTING POS');
   // 1. Cargar el perfil de la impresora
   final profile = await CapabilityProfile.load();

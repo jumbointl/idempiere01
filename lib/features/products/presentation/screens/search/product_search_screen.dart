@@ -3,11 +3,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:monalisa_app_001/features/products/presentation/screens/search/product_detail_with_photo_card.dart';
-import 'package:monalisa_app_001/features/products/presentation/screens/search/update_product_upc_screen.dart';
+import 'package:monalisa_app_001/features/products/presentation/providers/actions/product_search_actions.dart';
 import 'package:monalisa_app_001/features/products/presentation/screens/search/update_product_upc_view.dart';
 
 import '../../../../../config/router/app_router.dart';
-import '../../../../shared/common/scanner.dart';
+import '../../../common/barcode_utils.dart';
 import '../../../common/common_consumer_with_tab_bar_state.dart';
 import '../../../common/input_dialog.dart';
 import '../../../common/scan_button_by_action_fixed_short.dart';
@@ -16,18 +16,14 @@ import '../../../../shared/data/memory.dart';
 import '../../../../shared/data/messages.dart';
 
 import '../../providers/common_provider.dart';
-import '../movement/provider/products_home_provider.dart';
 import '../../providers/product_provider_common.dart';
 import '../../providers/product_search_provider.dart';
-import '../../providers/products_scan_notifier.dart';
 import '../../widget/no_data_card.dart';
 
 
-class ProductSearchScreen extends ConsumerStatefulWidget implements Scanner {
+class ProductSearchScreen extends ConsumerStatefulWidget  {
   int countScannedCamera = 0;
-  late ProductsScanNotifier productsNotifier;
 
-  final int actionTypeInt = Memory.ACTION_FIND_BY_UPC_SKU;
   final int actionScanType = Memory.ACTION_FIND_BY_UPC_SKU;
   late int pageIndex = Memory.PAGE_INDEX_SEARCH;
 
@@ -37,15 +33,9 @@ class ProductSearchScreen extends ConsumerStatefulWidget implements Scanner {
   ConsumerState<ConsumerStatefulWidget> createState() =>
       _ProductSearchScreenState();
 
-  @override
-  void inputFromScanner(String scannedData) {
-    // handled by notifier
-  }
 
-  @override
-  void scanButtonPressed(BuildContext context, WidgetRef ref) {
-    ref.read(usePhoneCameraToScanProvider.notifier).update((state) => !state);
-  }
+
+
 }
 
 class _ProductSearchScreenState
@@ -57,7 +47,15 @@ class _ProductSearchScreenState
   EdgeInsets get tabPadding => const EdgeInsets.symmetric(horizontal: 8, vertical: 6);
   @override
   bool get tabSafeArea => true;
+  @override
+  void initState() {
+    // TODO: implement initState
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(actionScanProvider.notifier).update((state) => Memory.ACTION_FIND_BY_UPC_SKU);
+    });
 
+  }
 
   @override
   List<Widget> buildTabs() => [
@@ -68,13 +66,13 @@ class _ProductSearchScreenState
   @override
   List<Widget> buildAppBarActions() {
     final showScan = ref.watch(showScanFixedButtonProvider(widget.actionScanType));
-    widget.productsNotifier = ref.watch(scanHandleNotifierProvider.notifier);
+     final productsNotifier = ref.read(scanHandleProvider.notifier);
 
     return [
       if (showScan)
         ScanButtonByActionFixedShort(
           actionTypeInt: widget.actionScanType,
-          onOk: widget.productsNotifier.handleInputString,
+          onOk: handleInputString,
         ),
       IconButton(
         icon: const Icon(Icons.keyboard, color: Colors.purple),
@@ -82,7 +80,7 @@ class _ProductSearchScreenState
           openInputDialogWithAction(
             ref: ref,
             history: false,
-            onOk: widget.productsNotifier.handleInputString,
+            onOk: handleInputString,
             actionScan: widget.actionScanType,
           );
         },
@@ -106,7 +104,6 @@ class _ProductSearchScreenState
   @override
   Widget build(BuildContext context) {
     // English: Keep original behavior for home index tracking
-    widget.pageIndex = ref.read(productsHomeCurrentIndexProvider.notifier).state;
 
     return GestureDetector(
       onTap: unfocus,
@@ -121,7 +118,7 @@ class _ProductSearchScreenState
     final double bodyHeight = MediaQuery.of(context).size.height - 200;
 
     widget.countScannedCamera =
-        ref.watch(scannedCodeTimesProvider.notifier).state;
+        ref.watch(scannedCodeTimesProvider);
 
     final imageUrl = widget.countScannedCamera.isEven
         ? Memory.IMAGE_HTTP_SAMPLE_2
@@ -148,7 +145,7 @@ class _ProductSearchScreenState
                 return (product.id != null && product.id! > 0)
                     ? ProductDetailWithPhotoCard(
                   product: product.copyWith(imageURL: imageUrl, uPC: null),
-                  actionTypeInt: widget.actionTypeInt,
+                  actionTypeInt: widget.actionScanType,
                 )
                     : NoDataCard();
               },
@@ -172,13 +169,8 @@ class _ProductSearchScreenState
                       title: Messages.CONFIRM,
                       message: Messages.UPDATE_UPC,
                     );
-                    if (!ok) return;
-
-                    Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (_) => UpdateProductUpcScreen(),
-                      ),
-                    );
+                    if (!ok || !context.mounted) return;
+                    if(context.mounted)context.push(AppRouter.PAGE_UPDATE_PRODUCT_UPC);
                   },
                   child: Text(Messages.UPDATE_UPC),
                 ),
@@ -197,10 +189,21 @@ class _ProductSearchScreenState
 
     return false;
   }
-
+  String normalizeUPC(String value) {
+    if (value.length == 12) {
+      final aux = '0$value';
+      if (isValidEAN13(aux)) return aux;
+    }
+    return value;
+  }
   @override
-  Future<void> handleInputString({required WidgetRef ref, required String inputData, required int actionScan}) {
-    // TODO: implement handleInputString
-    throw UnimplementedError();
+  Future<void> handleInputString({required WidgetRef ref, required String inputData, required int actionScan}) async {
+
+    await ref.read(searchByUpcOrSkuActionProvider).handleInputString(
+      ref: ref,
+      inputData: inputData,
+      actionScan: Memory.ACTION_FIND_BY_UPC_SKU_FOR_STORE_ON_HAND, // o el que uses
+    );
+
   }
 }

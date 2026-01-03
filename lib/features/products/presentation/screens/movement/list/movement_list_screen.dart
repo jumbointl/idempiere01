@@ -22,7 +22,6 @@ import '../../../../common/widget/date_range_filter_row_panel.dart';
 import '../../../../domain/idempiere/movement_and_lines.dart';
 import '../../../../domain/idempiere/response_async_value.dart';
 import '../../../providers/common_provider.dart';
-import '../../../providers/persitent_provider.dart';
 import '../../../providers/product_provider_common.dart';
 import '../movement_no_data_card.dart';
 
@@ -204,6 +203,7 @@ class MovementListScreenState extends AsyncValueConsumerSimpleState<MovementList
             String docStatus = movement.docStatus?.id ?? '';
 
             if(movement.docStatus?.id == 'DR'){
+              ref.invalidate(movementAndLinesProvider);
               context.go('${AppRouter.PAGE_MOVEMENTS_EDIT}/$movementId/1');
               /*String documentNo = movement.documentNo ?? '-1';
               if(RolesApp.cantConfirmMovement){
@@ -355,12 +355,6 @@ class MovementListScreenState extends AsyncValueConsumerSimpleState<MovementList
 
   @override
   void initialSettingOnBuild(BuildContext context, WidgetRef ref) {
-
-    ref.invalidate(persistentLocatorToProvider);
-    //isScanning = ref.watch(isScanningProvider);
-    //isDialogShowed = ref.watch(isDialogShowedProvider);
-    //inputString = ref.watch(inputStringProvider);
-    //actionScan = ref.watch(actionScanProvider);
 
   }
 

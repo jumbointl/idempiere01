@@ -28,7 +28,7 @@ class UpdateProductUpcViewState
 
   @override
   Widget build(BuildContext context) {
-    widget.productsNotifier = ref.watch(scanHandleNotifierProvider.notifier);
+    widget.productsNotifier = ref.watch(scanHandleProvider.notifier);
 
     final double width = MediaQuery.of(context).size.width - 30;
     final double bodyHeight = MediaQuery.of(context).size.height - 200;

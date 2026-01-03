@@ -4,7 +4,6 @@ import 'package:monalisa_app_001/features/products/presentation/screens/locator/
 import 'package:monalisa_app_001/features/products/presentation/screens/locator/search_locator_by_warehouse_body.dart';
 
 import '../../../../../config/theme/app_theme.dart';
-import '../movement/provider/products_home_provider.dart';
 import '../../../../shared/data/memory.dart';
 import '../../../../shared/data/messages.dart';
 import '../../providers/product_provider_common.dart';
@@ -13,10 +12,9 @@ import '../../providers/product_provider_common.dart';
 class SearchLocatorScreen extends ConsumerStatefulWidget {
   String? title;
   final bool searchLocatorFrom;
-  final bool forCreateLine;
 
   SearchLocatorScreen( {required this.searchLocatorFrom,
-    required this.forCreateLine,this.title, super.key});
+    this.title, super.key});
 
   @override
   ConsumerState<ConsumerStatefulWidget> createState() => SearchLocatorScreenState();
@@ -54,7 +52,6 @@ class SearchLocatorScreenState extends ConsumerState<SearchLocatorScreen> {
               } else {
                 ref.read(actionScanProvider.notifier).update((state) =>Memory.ACTION_GET_LOCATOR_TO_VALUE);
               }
-              ref.read(productsHomeCurrentIndexProvider.notifier).state = Memory.pageFromIndex;
               Navigator.pop(context);
 
             },
@@ -86,22 +83,19 @@ class SearchLocatorScreenState extends ConsumerState<SearchLocatorScreen> {
 
         ),
         body: PopScope(
+          canPop: false,
           onPopInvokedWithResult: (bool didPop, Object? result) async {
             if (didPop) {
 
               return;
             }
-            ref.read(productsHomeCurrentIndexProvider.notifier).state = Memory.pageFromIndex;
             Navigator.pop(context);
           },
           child: TabBarView(
             children: [
               SearchLocatorByWarehouseBody(
-                forCreateLine: widget.forCreateLine,
                 searchLocatorFrom: widget.searchLocatorFrom),
-              //Center(child: Text(Messages.NOT_IMPLEMENTED)),
               SearchLocatorByLocatorBody(
-                forCreateLine: widget.forCreateLine,
                 searchLocatorFrom: widget.searchLocatorFrom,
                 ),
 

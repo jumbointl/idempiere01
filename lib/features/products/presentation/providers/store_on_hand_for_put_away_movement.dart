@@ -1,34 +1,16 @@
 
 
-import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
 import 'package:monalisa_app_001/features/products/domain/idempiere/response_async_value.dart';
-import 'package:monalisa_app_001/features/products/presentation/providers/product_provider_common.dart';
-import 'package:monalisa_app_001/features/products/presentation/providers/store_on_hand_provider.dart';
+import 'package:monalisa_app_001/features/products/presentation/providers/store_on_hand/find_product_store_on_hand_provider_refactor.dart';
 
-import '../../../../config/http/dio_client.dart';
-import '../../../auth/presentation/providers/auth_provider.dart';
-import '../../../shared/data/memory.dart';
-import '../../../shared/data/messages.dart';
-import '../../../shared/domain/entities/response_api.dart';
-import '../../common/utils/common_string_utils.dart';
-import '../../domain/idempiere/idempiere_product.dart';
-import '../../domain/idempiere/idempiere_storage_on_hande.dart';
 import '../../domain/idempiere/product_with_stock.dart';
 
 
-final fireFindProductForPutAwayMovementProvider = StateProvider.autoDispose<int>((ref) {
-  return 0;
-});
 
-final scannedCodeForPutAwayMovementProvider = StateProvider.autoDispose<String?>((ref) {
-  return null;
-});
 
-final productIdForPutAwayMovementProvider = StateProvider.autoDispose<int?>((ref) {
-  return null;
-});
+
 final putAwayOnHandProgressProvider =
 StateProvider.autoDispose<double>((ref) => 0.0);
 
@@ -37,13 +19,22 @@ StateProvider<ProductWithStock?>((ref) => null);
 
 
 
+
+/*
 final findProductForPutAwayMovementProvider =
 FutureProvider.autoDispose<ResponseAsyncValue>((ref) async {
-  final String? scannedCode =
-  ref.watch(scannedCodeForPutAwayMovementProvider)?.toUpperCase();
+  final int count = ref.watch(fireSearchForStoredOnHandCounterProvider);
 
-  // English: Reset progress for each new request
-  ref.read(putAwayOnHandProgressProvider.notifier).state = 0.0;
+  if (count == 0) {
+    return ResponseAsyncValue(
+      isInitiated: false,
+      success: false,
+      data: null,
+      message: null,
+    );
+  }
+  final String? scannedCode =
+  ref.read(scannedCodeForPutAwayMovementProvider)?.toUpperCase();
 
   // English: Initial / waiting state (not initiated)
   if (scannedCode == null || scannedCode.isEmpty) {
@@ -54,7 +45,8 @@ FutureProvider.autoDispose<ResponseAsyncValue>((ref) async {
       message: null,
     );
   }
-
+  // English: Reset progress for each new request
+  ref.read(putAwayOnHandProgressProvider.notifier).state = 0.0;
   final int userWarehouseId = ref.read(authProvider).selectedWarehouse?.id ?? 0;
   final String userWarehouseName =
       ref.read(authProvider).selectedWarehouse?.name ?? '';
@@ -298,6 +290,7 @@ FutureProvider.autoDispose<ResponseAsyncValue>((ref) async {
     }
   }
 });
+ */
 
 
 

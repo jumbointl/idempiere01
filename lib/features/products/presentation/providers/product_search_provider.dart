@@ -15,11 +15,17 @@ final productForUpcUpdateProvider = StateProvider.autoDispose<IdempiereProduct>(
   return IdempiereProduct(id:0);
 });
 
-final scannedCodeForSearchByUPCOrSKUProvider = StateProvider.autoDispose<String?>((ref) {
+final fireSearchByUPCOrSKUProvider = StateProvider<int>((ref) {
+  return 0;
+});
+
+final scannedCodeForSearchByUPCOrSKUProvider = StateProvider<String?>((ref) {
   return '';
 });
 final findProductByUPCOrSKUProvider = FutureProvider.autoDispose<IdempiereProduct>((ref) async {
-  final String? scannedCode = ref.watch(scannedCodeForSearchByUPCOrSKUProvider)?.toUpperCase();
+  final int counter = ref.watch(fireSearchByUPCOrSKUProvider);
+  if(counter==0) return IdempiereProduct(id:0);
+  final String? scannedCode = ref.read(scannedCodeForSearchByUPCOrSKUProvider)?.toUpperCase();
   if(scannedCode==null || scannedCode=='') return IdempiereProduct(id:0);
   int? aux = int.tryParse(scannedCode);
   String searchField ='upc';
@@ -32,22 +38,18 @@ final findProductByUPCOrSKUProvider = FutureProvider.autoDispose<IdempiereProduc
     String url =
         "/api/v1/models/m_product?\$filter=$searchField eq '$scannedCode'";
     url = url.replaceAll(' ', '%20');
-    print(url);
     final response = await dio.get(url);
-    print(response.statusCode);
     if (response.statusCode == 200) {
       final responseApi =
       ResponseApi<IdempiereProduct>.fromJson(response.data, IdempiereProduct.fromJson);
 
       if (responseApi.records != null && responseApi.records!.isNotEmpty) {
         final productsList = responseApi.records!;
-        print(responseApi.records![0].toJson());
         if(productsList.length==1){
           ref.read(productIdProvider.notifier).state = productsList[0].id ?? 0;
         } else {
           ref.read(productIdProvider.notifier).state = productsList[0].id ?? 0;
         }
-        print(ref.read(productIdProvider.notifier).state);
 
         return productsList[0];
 

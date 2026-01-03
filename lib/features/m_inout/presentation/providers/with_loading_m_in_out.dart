@@ -22,14 +22,12 @@ Future<T?> withLoadingMInOut<T>({
 
   try {
     final result = await action();
-    debugPrint('[withLoading] RESULT $result');
     // English comment: "Close the loading dialog"
     if (nav.canPop()) {
       nav.pop();
     }
     return result;
   } catch (e) {
-    debugPrint('[withLoading] ERROR $tag: $e');
     if (nav.canPop()) {
       nav.pop();
     }

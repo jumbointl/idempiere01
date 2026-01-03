@@ -156,7 +156,6 @@ Future<void> generateAndShareVisualPreviewPdf({
   int dpmm = 8,
   String sizeInInches = '3.94x5.91', // 100x150mm
 }) async {
-  debugPrint('generateAndShareVisualPreviewPdf');
   try {
     // 1) Resolve DF if empty
     var t = template;
@@ -185,7 +184,6 @@ Future<void> generateAndShareVisualPreviewPdf({
     if (renderPages.isEmpty) {
       throw Exception('No ZPL pages built');
     }
-    debugPrint('generateAndShareVisualPreviewPdf ${renderPages.length} paginas');
 
     // 4) Generate PNGs);
     final progress = await showCancelableProgressDialog(
@@ -201,16 +199,12 @@ Future<void> generateAndShareVisualPreviewPdf({
         if (progress.isCancelled()) {
           break;// 👈 sale sin error
         }
-        debugPrint('generateAndShareVisualPreviewPdf pagina $i');
-        debugPrint(renderPages[i]);
         progress.update(i + 1);
-        debugPrint('generateAndShareVisualPreviewPdf png $i start');
         final png = await zplToPngLabelary(
           zpl: renderPages[i],
           dpmm: dpmm,
           sizeInInches: sizeInInches,
         );
-        debugPrint('generateAndShareVisualPreviewPdf png $i end');
         await Future.delayed(const Duration(milliseconds: 500));
         pngPages.add(png);
         await Future.delayed(const Duration(milliseconds: 1000));
@@ -219,11 +213,9 @@ Future<void> generateAndShareVisualPreviewPdf({
       progress.close();
     }
 
-    debugPrint('generateAndShareVisualPreviewPdf pagina ${pngPages.length}');
     // 5) Build multipage PDF
     final pdfBytes = await buildMultiPagePdfFromPngs(pngPages);
     await Future.delayed(const Duration(milliseconds: 500));
-    debugPrint('generateAndShareVisualPreviewPdf pagina build ${pngPages.length}');
     // 6) Ask user: VIEW or SHARE
     if(context.mounted) {
       await showPdfViewOrShareDialog(

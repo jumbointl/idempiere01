@@ -1,19 +1,19 @@
 
 
-import 'package:awesome_dialog/awesome_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:monalisa_app_001/features/products/domain/idempiere/idempiere_locator.dart';
 import 'package:monalisa_app_001/features/products/presentation/screens/store_on_hand/memory_products.dart';
+import 'package:monalisa_app_001/features/products/presentation/screens/store_on_hand/unsorte_storage_on_hand_provider.dart';
 
-import '../../../../../config/router/app_router.dart';
 import '../../../../../config/theme/app_theme.dart';
 import '../../../../auth/presentation/providers/auth_provider.dart';
 import '../../../../shared/data/memory.dart';
 import '../../../../shared/data/messages.dart';
+import '../../../common/messages_dialog.dart';
 import '../../../domain/idempiere/idempiere_storage_on_hande.dart';
 import '../../../domain/idempiere/idempiere_warehouse.dart';
+import '../../providers/actions/find_locator_to_action_provider.dart';
 import '../../providers/locator_provider.dart';
 import '../../providers/product_provider_common.dart';
 import '../../providers/products_scan_notifier.dart';
@@ -82,8 +82,7 @@ class StorageOnHandCardState extends ConsumerState<StorageOnHandCard> {
           showErrorMessage(context, ref, Messages.ERROR_CANNOT_MOVE_STORAGE);
           return;
         }
-        ref.read(isDialogShowedProvider.notifier).update((state)=>true);
-        ref.read(isScanningFromDialogProvider.notifier).update((state)=>false);
+
         _selectLocatorDialog(ref);
 
       },
@@ -145,62 +144,33 @@ class StorageOnHandCardState extends ConsumerState<StorageOnHandCard> {
     MemoryProducts.storage = widget.storage;
     MemoryProducts.width = widget.width;
 
-
+    ref.read(isDialogShowedProvider.notifier).update((state)=>true);
+    ref.read(isScanningFromDialogProvider.notifier).update((state)=>false);
     if(widget.storage.mLocatorID != null){
       ref.read(selectedLocatorFromProvider.notifier).update((state) => widget.storage.mLocatorID!);
       ref.read(isDialogShowedProvider.notifier).update((state)=>false);
       ref.invalidate(scannedLocatorToProvider);
       ref.invalidate(selectedLocatorToProvider);
 
-      await Future.delayed(Duration(microseconds: 100),(){
-        ref.read(actionScanProvider.notifier).state = Memory.ACTION_GET_LOCATOR_TO_VALUE;
-      });
-      print('------------------action ${ref.read(actionScanProvider.notifier).state}');
       String productUPC = widget.storage.mProductID?.identifier ?? '-1';
       productUPC = productUPC.split('_').first;
-      if(ref.context.mounted) {
-        if(readStockOnly){
-          ref.context.push(
-              '${AppRouter.PAGE_UNSORTED_STORAGE_ON_HAND_READ_ONLY}/$productUPC',
-              extra: widget.notifier);
-        } else {
-          ref.context.push(
-              '${AppRouter.PAGE_UNSORTED_STORAGE_ON_HAND}/$productUPC',
-              extra: widget.notifier);
-        }
-
+      if (ref.context.mounted) {
+        //context.push('${AppRouter.PAGE_UNSORTED_STORAGE_ON_HAND}/$productUPC');
+        await showUnsortedStorageSheet(
+          context: ref.context,
+          ref: ref,
+          productUPC: productUPC,
+          readStockOnly: readStockOnly,
+          notifier: widget.notifier,
+        );
       }
+
     } else {
-      showErrorMessage(context, ref, Messages.ERROR_LOCATOR_FROM);
+      await showErrorMessage(context, ref, Messages.ERROR_LOCATOR_FROM);
       return;
     }
 
   }
-  void showErrorMessage(BuildContext context, WidgetRef ref, String message) {
-    if (!context.mounted) {
-      Future.delayed(const Duration(milliseconds: 500));
-      if(!context.mounted) return;
-    }
-    AwesomeDialog(
-      context: context,
-      animType: AnimType.scale,
-      dialogType: DialogType.error,
-      body: Center(child: Column(
-        children: [
-          Text(message,
-            style: TextStyle(fontStyle: FontStyle.italic),
-          ),
-        ],
-      ),),
-      title:  message,
-      desc:   '',
-      autoHide: const Duration(seconds: 3),
-      btnOkOnPress: () {},
-      btnOkColor: Colors.amber,
-      btnCancelText: Messages.CANCEL,
-      btnOkText: Messages.OK,
-    ).show();
-    return;
-  }
+
 
 }

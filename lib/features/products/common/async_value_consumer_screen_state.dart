@@ -7,7 +7,7 @@ import '../../../config/theme/app_theme.dart';
 import '../../shared/data/memory.dart';
 import '../domain/idempiere/response_async_value.dart';
 import '../presentation/providers/common_provider.dart';
-import 'app_initializer_overlay.dart';
+import 'widget/app_initializer_overlay.dart';
 import 'common_consumer_state.dart';
 import 'input_dialog.dart';
 
@@ -18,7 +18,6 @@ abstract class AsyncValueConsumerState<T extends ConsumerStatefulWidget>
   AsyncValue<ResponseAsyncValue> get mainDataAsync ;
   late var isDialogShowed;
   late var inputString;
-  late var pageIndexProdiver;
   late var actionScan;
   late ScrollController scrollController = ScrollController();
   double goToPosition =0.0;

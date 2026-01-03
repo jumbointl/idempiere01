@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:get_storage/get_storage.dart';
+import 'package:monalisa_app_001/features/products/presentation/widget/response_async_value_messages_card.dart';
 
 import '../../../config/theme/app_theme.dart';
 import '../../auth/domain/entities/warehouse.dart';
@@ -14,14 +15,13 @@ import '../domain/idempiere/idempiere_movement_confirm.dart';
 import '../domain/idempiere/idempiere_movement_line.dart';
 import '../domain/idempiere/movement_and_lines.dart';
 import '../domain/idempiere/response_async_value.dart';
+import '../domain/idempiere/response_async_value_ui_model.dart';
 import '../presentation/providers/common_provider.dart';
-import '../presentation/providers/persitent_provider.dart';
 import '../presentation/providers/product_provider_common.dart';
 import '../presentation/screens/movement/edit_new/new_movement_card_with_locator.dart';
 import '../presentation/screens/movement/edit_new/new_movement_line_card.dart';
 import '../presentation/screens/movement/movement_no_data_card.dart';
 import '../presentation/screens/movement/provider/new_movement_provider.dart';
-import '../presentation/screens/movement/provider/products_home_provider.dart';
 import 'async_value_consumer_screen_state.dart';
 
 abstract class MovementAndLinesConsumerState<T extends ConsumerStatefulWidget>
@@ -40,7 +40,7 @@ abstract class MovementAndLinesConsumerState<T extends ConsumerStatefulWidget>
   late String fromPage;
 
 
-  Future<MovementAndLines> getSavedMovementAndLines () async {
+  /*Future<MovementAndLines> getSavedMovementAndLines () async {
     var movementAndLines = await GetStorage().read(Memory.KEY_MOVEMENT_AND_LINES);
     if(movementAndLines != null){
       if(movementAndLines is MovementAndLines) return movementAndLines;
@@ -60,7 +60,7 @@ abstract class MovementAndLinesConsumerState<T extends ConsumerStatefulWidget>
   }
   void removeMovementAndLines(){
     GetStorage().remove(Memory.KEY_MOVEMENT_AND_LINES);
-  }
+  }*/
   Color? getColorByMovementAndLines(MovementAndLines? data){
     if(data==null ||!data.hasMovement) return Colors.white;
     if(data.canComplete) return Colors.cyan[200];
@@ -71,8 +71,13 @@ abstract class MovementAndLinesConsumerState<T extends ConsumerStatefulWidget>
   //handlling Error, no data, no record fond, initialState
   @override
   Widget asyncValueErrorHandle(WidgetRef ref, {required ResponseAsyncValue result}) {
-
-    return   MovementNoDataCard(response: result,);
+    final uiModel = mapResponseAsyncValueToUi(
+      result: result,
+      title: Messages.MOVEMENT,
+      subtitle: Messages.FIND_MOVEMENT_BY_ID_OR_DOCUMENT_NO,
+    );
+    return   ResponseAsyncValueMessagesCardAnimated(
+      ui: uiModel,);
 
   }
 
@@ -104,11 +109,7 @@ abstract class MovementAndLinesConsumerState<T extends ConsumerStatefulWidget>
       return   asyncValueErrorHandle(ref, result: result,);
       //return   MovementNoDataCard(response: result,);
     }
-    MovementAndLines movementAndLines = this.movementAndLines ;
-    if(!movementAndLines.hasMovement) {
-      movementAndLines = result.data!;
-    } else {
-    }
+    movementAndLines = result.data;
 
     setWidgetMovementId(movementAndLines.id?.toString() ?? '-1');
     movementId = movementAndLines.id!;
@@ -206,16 +207,11 @@ abstract class MovementAndLinesConsumerState<T extends ConsumerStatefulWidget>
   @override
   void initialSettingAtBuild(BuildContext context, WidgetRef ref) {
     fromPage = ref.read(pageFromProvider).toString();
-    ref.invalidate(persistentLocatorToProvider);
     isScanning = ref.watch(isScanningProvider);
     isDialogShowed = ref.watch(isDialogShowedProvider);
-
     inputString = ref.watch(inputStringProvider);
-    pageIndexProdiver = ref.watch(productsHomeCurrentIndexProvider);
     actionScan = ref.read(actionScanProvider);
     movementAndLines = ref.watch(movementAndLinesProvider);
-
-
 
   }
 

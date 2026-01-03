@@ -1,16 +1,14 @@
 import 'package:awesome_dialog/awesome_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:monalisa_app_001/features/products/presentation/providers/store_on_hand/action_notifier.dart';
 
 import '../../../../../config/theme/app_theme.dart';
-import '../../providers/locator_provider_for_Line.dart';
-import '../../providers/product_provider_common.dart';
-import '../movement/provider/products_home_provider.dart';
 import '../../../../shared/data/memory.dart';
+import '../../providers/product_provider_common.dart';
 import '../../../../shared/data/messages.dart';
 import '../../../domain/idempiere/idempiere_locator.dart';
 import '../../providers/locator_provider.dart';
-import '../store_on_hand/memory_products.dart';
 class LocatorCard extends ConsumerStatefulWidget {
 
 
@@ -22,10 +20,8 @@ class LocatorCard extends ConsumerStatefulWidget {
   String? title;
   double? width;
   final bool searchLocatorFrom;
-  final bool forCreateLine;
 
   LocatorCard({required this.searchLocatorFrom,
-    required this.forCreateLine,
     required this.data,this.selected, this.title, super.key,
     required this.index, this.width});
 
@@ -60,25 +56,14 @@ class LocatorCardState extends ConsumerState<LocatorCard> {
           }
 
           if(widget.searchLocatorFrom){
-            if(widget.forCreateLine){
-              ref.read(scannedLocatorFromForLineProvider.notifier).update((state) => widget.data.value ?? '');
-            } else {
-              ref.read(scannedLocatorFromProvider.notifier).update((state) => widget.data.value ?? '');
-            }
+            //To do not implement
           } else {
-            if(widget.forCreateLine){
-              //ref.read(selectedLocatorToProvider.notifier).state = widget.data;
-              ref.read(scannedLocatorToForLineProvider.notifier).update((state) => widget.data.value ?? '');
-            } else {
-              //ref.read(selectedLocatorToProvider.notifier).state = widget.data;
-              ref.read(scannedLocatorToProvider.notifier).update((state) => widget.data.value ?? '');
-            }
+            ref.read(findLocatorToActionProvider).handleInputString(
+                ref: ref, inputData: widget.data.value ?? '', actionScan: Memory.ACTION_GET_LOCATOR_TO_VALUE);
 
           }
 
 
-          ref.read(usePhoneCameraToScanForLineProvider.notifier).state = MemoryProducts.lastUsePhoneCameraState ;
-          ref.read(productsHomeCurrentIndexProvider.notifier).state = Memory.pageFromIndex;
           ref.read(isDialogShowedProvider.notifier).state = false ;
           Future.delayed(const Duration(microseconds: 100));
 

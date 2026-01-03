@@ -1,9 +1,9 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:get_storage/get_storage.dart';
 import 'package:go_router/go_router.dart';
 import 'package:monalisa_app_001/features/products/domain/idempiere/movement_and_lines.dart';
-import 'package:monalisa_app_001/features/products/presentation/screens/movement/provider/products_home_provider.dart';
 import 'package:monalisa_app_001/features/products/presentation/screens/movement/provider/new_movement_provider.dart';
 import 'package:monalisa_app_001/features/products/presentation/screens/store_on_hand/memory_products.dart';
 
@@ -13,8 +13,10 @@ import '../../../../../shared/data/memory.dart';
 import '../../../../../shared/data/messages.dart';
 import '../../../../common/movement_and_lines_consumer_state.dart';
 import '../../../../domain/idempiere/response_async_value.dart';
+import '../../../providers/actions/find_movement_by_id_action_provider.dart';
 import '../../../providers/common_provider.dart';
 import '../../../providers/product_provider_common.dart';
+import '../../../providers/store_on_hand/action_notifier.dart';
 
 
 class NewMovementEditScreen extends ConsumerStatefulWidget {
@@ -25,7 +27,8 @@ class NewMovementEditScreen extends ConsumerStatefulWidget {
   final int pageIndex = Memory.PAGE_INDEX_MOVEMENTE_EDIT_SCREEN;
   String? movementId;
   bool isMovementSearchedShowed = false;
-  final String fromPage;
+  String fromPage;
+
 
 
   static const String WAIT_FOR_SCAN_MOVEMENT='-1';
@@ -55,17 +58,26 @@ class NewMovementEditScreenState extends MovementAndLinesConsumerState<NewMoveme
   Future<void> executeAfterShown() async {
 
 
+    ref.invalidate(allowedMovementDocumentTypeProvider);
+    MemoryProducts.movementAndLines.clearData();
+    GetStorage().remove(Memory.KEY_MOVEMENT_AND_LINES);
+    ref.read(actionScanProvider.notifier).update(
+            (state) => Memory.ACTION_FIND_MOVEMENT_BY_ID);
 
-
-    if( widget.movementId != null &&  widget.movementId!.isNotEmpty && widget.movementId != '-1'){
-      while(!context.mounted){
-        Future.delayed(Duration(milliseconds: 100), () {});
-      }
-      print('search ${widget.movementId}');
-      final productsNotifier = ref.read(scanStateNotifierForLineProvider.notifier);
-      productsNotifier.addBarcodeToSearchMovementNew(widget.movementId!);
-    }
+    ref.invalidate(newScannedMovementIdForSearchProvider);
     ref.read(isScanningProvider.notifier).update((state) => false);
+
+
+    if( widget.movementId != null &&  widget.movementId!.isNotEmpty
+                              && widget.movementId != '-1'){
+
+      handleInputString(
+          ref: ref,
+          inputData: widget.movementId!,
+          actionScan: actionScanTypeInt
+          );
+    }
+
 
 
 
@@ -83,7 +95,11 @@ class NewMovementEditScreenState extends MovementAndLinesConsumerState<NewMoveme
   }
 
   @override
-  AsyncValue<ResponseAsyncValue> get mainDataAsync => ref.watch(newFindMovementByIdOrDocumentNOProvider);
+  AsyncValue<ResponseAsyncValue> get mainDataAsync {
+    final notifier = ref.read(findMovementByIdActionProvider);
+    return ref.watch(notifier.responseAsyncValueProvider);
+    //return ref.watch(newFindMovementByIdOrDocumentNOProvider);
+  }
 
   @override
   int get qtyOfDataToAllowScroll => 2;
@@ -97,14 +113,13 @@ class NewMovementEditScreenState extends MovementAndLinesConsumerState<NewMoveme
   Future<void> handleInputString({required WidgetRef ref,required  String inputData,required int actionScan}) async {
     asyncResultHandled = false;
 
-    if(inputData.isEmpty){
-      return;
-    }
-    final productsNotifier = ref.read(scanStateNotifierForLineProvider.notifier);
+    debugPrint('handleInputString $inputData');
+    ref.invalidate(movementAndLinesProvider);
+    await Future.delayed(Duration(milliseconds: 100));
+    final productsNotifier = ref.read(findMovementByIdActionProvider);
     productsNotifier.handleInputString(ref: ref, inputData: inputData,
         actionScan: widget.actionTypeInt);
 
-    //ref.read(inputStringProvider.notifier).update((state) => inputData);
   }
 
 
@@ -124,14 +139,7 @@ class NewMovementEditScreenState extends MovementAndLinesConsumerState<NewMoveme
             MemoryProducts.movementAndLines.nextProductIdUPC ='-1';
             MovementAndLines movementAndLines = MovementAndLines();
             movementAndLines.cloneMovementAndLines(MemoryProducts.movementAndLines);
-            ref.read(productsHomeCurrentIndexProvider.notifier).state = Memory.PAGE_INDEX_STORE_ON_HAND;
-            ref.read(productsHomeCurrentIndexProvider.notifier).state = Memory.PAGE_INDEX_STORE_ON_HAND;
             ref.read(actionScanProvider.notifier).state = Memory.ACTION_FIND_BY_UPC_SKU_FOR_STORE_ON_HAND;
-
-            await saveMovementAndLines(movementAndLines);
-
-            print('page index $pageIndexProdiver');
-            print('action scan $actionScan');
             String route = '${AppRouter.PAGE_PRODUCT_STORE_ON_HAND_FOR_LINE}/-1';
 
             if(context.mounted) {
@@ -252,7 +260,6 @@ class NewMovementEditScreenState extends MovementAndLinesConsumerState<NewMoveme
   void popScopeAction(BuildContext context, WidgetRef ref) async {
     ref.invalidate(newScannedMovementIdForSearchProvider);
     int pageFrom = ref.read(pageFromProvider);
-    print('page from $pageFrom');
     if(pageFrom <=0){
       context.go(AppRouter.PAGE_HOME);
     } else {

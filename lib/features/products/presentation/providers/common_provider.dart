@@ -16,6 +16,7 @@ import '../../domain/idempiere/idempiere_locator.dart';
 import '../../domain/idempiere/movement_and_lines.dart';
 import '../../domain/idempiere/response_async_value.dart';
 import '../screens/movement/provider/new_movement_provider.dart';
+import 'actions/find_locator_to_action_provider.dart';
 import 'locator_provider.dart';
 
 final sharedPreferencesProvider = Provider<SharedPreferences>(
@@ -53,21 +54,7 @@ final inputStringProvider = StateProvider.autoDispose<String>((ref) {
   return '';
 });
 
-// Un StateProvider para almacenar el texto del TextField
-final textProvider = StateProvider<String>((ref) => '');
 
-// Un StateProvider para el resultado de la acción
-final resultProvider = StateProvider<String>((ref) => 'Esperando...');
-
-final scannerFocusNodeProvider = Provider<FocusNode>((ref) {
-  final focusNode = FocusNode();
-  // Limpia el FocusNode cuando el proveedor ya no se use
-  ref.onDispose(focusNode.dispose);
-  return focusNode;
-});
-final textControllerProvider = StateProvider<TextEditingController>((ref) {
-  return TextEditingController();
-});
 
 final lastPrinterProvider = StateProvider<MOPrinter?>((ref) {
   return null;
@@ -84,9 +71,6 @@ final isPrintingProvider = StateProvider.autoDispose<bool>((ref) {
 final initializingProvider = StateProvider<bool>((ref) => false);
 /// 'ALL', 'IN', 'OUT', 'SWAP'
 final inOutFilterProvider = StateProvider<String>((ref) => 'ALL');
-
-
-
 
 final colorMovementDocumentTypeProvider = StateProvider.autoDispose<Color?>((ref) {
   return null;
@@ -107,23 +91,14 @@ final canShowCreateLineBottomBarProvider = Provider.autoDispose<bool>((ref) {
 
   final hasQuantity = qty > 0;
   final hasLocatorTo = locatorTo.id != null && locatorTo.id! > 0;
-  // ✅ Solo mostramos el bottomBar si:
-  // - hay cantidad > 0
-  // - hay locatorTo válido
-  print('--------------canShowUnsortedBottomBa: $hasLocatorTo');
   bool result = hasQuantity && hasLocatorTo && !isDialogShowed && !isScanning;
-  print('---------------result: $result');
-
   return result;
   //return hasQuantity;
 });
 
 final showScanFixedButtonProvider = Provider.family<bool, int>((ref, int actionScanTypeInt) {
-  //final isDialogShowed = ref.watch(isDialogShowedProvider);
-  //final isScanning = ref.watch(isScanningProvider);
   final currentAction = ref.watch(actionScanProvider);
   final result = currentAction == actionScanTypeInt;
-  print('showScanFixedButtonProvider: $result');
   return result;
 });
 
@@ -222,81 +197,6 @@ Provider.family<Color, IdempiereLocator?>((ref, locatorFrom) {
     },
   );
 });
-
-/*final movementColorProvider =
-Provider.family<Color, IdempiereLocator?>((ref, locatorFrom) {
-  final asyncLocatorTo = ref.watch(findLocatorToProvider);
-  final selectedLocatorTo = ref.watch(selectedLocatorToProvider);
-
-  // Valor por defecto mientras carga / error
-  Color defaultColor = Colors.grey.shade200;
-
-  return asyncLocatorTo.when(
-    loading: () {
-      // mientras busca el locatorTo sugerido → gris clarito
-      return defaultColor;
-    },
-    error: (error, stack) {
-      // en error también algo neutro
-      return defaultColor;
-    },
-    data: (autoLocatorTo) {
-      // MISMA lógica que en getLocatorTo:
-      final IdempiereLocator locatorTo =
-      selectedLocatorTo.id != Memory.INITIAL_STATE_ID
-          ? selectedLocatorTo
-          : autoLocatorTo;
-
-      final warehouseFrom = locatorFrom?.mWarehouseID;
-      final warehouseTo   = locatorTo.mWarehouseID;
-
-      final warehouseID   = warehouseFrom?.id ?? 0;
-      final warehouseToID = warehouseTo?.id ?? 0;
-      final org           = locatorFrom?.aDOrgID?.id ?? 0;
-      final orgTo         = locatorTo.aDOrgID?.id ?? 0;
-
-      if (warehouseID <= 0 || warehouseToID <= 0 || org <= 0 || orgTo <= 0) {
-        return Colors.grey.shade200;
-      } else if (warehouseID == warehouseToID) {
-        return Colors.green.shade200;
-      } else if (org == orgTo) {
-        return Colors.cyan.shade200;
-      } else if (orgTo > 0) {
-        return Colors.amber.shade200;
-      }
-
-      return Colors.white;
-    },
-  );
-});*/
-
-/*final movementColorProvider =
-Provider.family<Color, IdempiereLocator?>((ref, locatorFrom) {
-  final locatorTo = ref.watch(selectedLocatorToProvider);
-
-  // locatorFrom é fixo — veio do widget
-  final warehouseFrom = locatorFrom?.mWarehouseID;
-  final warehouseTo   = locatorTo.mWarehouseID;
-
-  final warehouseID   = warehouseFrom?.id ?? 0;
-  final warehouseToID = warehouseTo?.id ?? 0;
-  final org           = locatorFrom?.aDOrgID?.id ?? 0;
-  final orgTo         = locatorTo.aDOrgID?.id ?? 0;
-
-  Color color = Colors.white;
-
-  if (warehouseID <= 0 || warehouseToID <= 0 || org <= 0 || orgTo <= 0) {
-    color = Colors.grey.shade200;
-  } else if (warehouseID == warehouseToID) {
-    color = Colors.green.shade200;
-  } else if (org == orgTo) {
-    color = Colors.cyan.shade200;
-  } else if (orgTo > 0) {
-    color = Colors.amber.shade200;
-  }
-
-  return color;
-});*/
 
 final movementCreateScreenTitleProvider = StateProvider<String>((ref) {
   final documentType = ref.watch(allowedMovementDocumentTypeProvider);

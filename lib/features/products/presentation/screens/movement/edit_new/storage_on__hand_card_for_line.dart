@@ -6,20 +6,18 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:monalisa_app_001/features/products/domain/idempiere/movement_and_lines.dart';
 import 'package:monalisa_app_001/features/products/presentation/screens/movement/edit_new/unsorted_storage_on__hand_screen_for_line.dart';
 import 'package:monalisa_app_001/features/products/presentation/screens/movement/edit_new/unsorted_storage_on__hand_select_locator_screen.dart';
-import 'package:monalisa_app_001/features/products/presentation/screens/movement/provider/products_home_provider.dart';
 import 'package:monalisa_app_001/features/products/presentation/screens/store_on_hand/memory_products.dart';
 
 import '../../../../../shared/data/memory.dart';
 import '../../../../../shared/data/messages.dart';
 import '../../../../domain/idempiere/idempiere_storage_on_hande.dart';
+import '../../../providers/actions/find_locator_to_action_provider.dart';
 import '../../../providers/locator_provider.dart';
 import '../../../providers/product_provider_common.dart';
-import '../../../providers/products_scan_notifier_for_line.dart';
 import '../provider/new_movement_provider.dart';
 
 
 class StorageOnHandCardForLine extends ConsumerStatefulWidget {
-  final ProductsScanNotifierForLine productsNotifier;
   final IdempiereStorageOnHande storage;
 
   final int index;
@@ -36,7 +34,6 @@ class StorageOnHandCardForLine extends ConsumerStatefulWidget {
   final dynamic allowedWarehouseFrom;
 
   const StorageOnHandCardForLine(
-      this.productsNotifier,
       this.storage,
       this.index,
       this.listLength, {
@@ -78,8 +75,6 @@ class _StorageOnHandCardForLineState
     ref.read(actionScanProvider.notifier).update(
           (_) => Memory.ACTION_GET_LOCATOR_TO_VALUE,
     );
-    ref.read(productsHomeCurrentIndexProvider.notifier).state =
-        Memory.PAGE_INDEX_UNSORTED_STORAGE_ON_HAND;
 
     // English: Build argument (you were using nextProductIdUPC)
     final String argument = movementAndLines.nextProductIdUPC ?? '-1';
@@ -92,10 +87,11 @@ class _StorageOnHandCardForLineState
     // English: Decide which sheet to open
     if (movementAndLines.canChangeLocatorForEachLine) {
       // English: Invalidate locator selection if not copying last locator
+      ref.invalidate(scannedLocatorToProvider);
       final copyLastLocatorTo = ref.read(copyLastLocatorToProvider);
       if (!copyLastLocatorTo) {
         ref.invalidate(selectedLocatorToProvider);
-        ref.invalidate(scannedLocatorToProvider);
+
       }
 
       await _showSelectLocatorSheet(
@@ -133,9 +129,6 @@ class _StorageOnHandCardForLineState
         ref.invalidate(selectedLocatorToProvider);
       }
 
-      ref.read(productsHomeCurrentIndexProvider.notifier).update(
-            (_) => Memory.PAGE_INDEX_UNSORTED_STORAGE_ON_HAND,
-      );
       ref.read(actionScanProvider.notifier).update(
             (_) => Memory.ACTION_GET_LOCATOR_TO_VALUE,
       );
@@ -150,7 +143,7 @@ class _StorageOnHandCardForLineState
         borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
       ),
       builder: (_) => FractionallySizedBox(
-        heightFactor: 0.95,
+        heightFactor: Memory.FRACTIONNALLY_SIZE_SHEET_HEIGHT,
         child: UnsortedStorageOnHandSelectLocatorScreen(
           argument: movementJson, // you were using jsonEncode(movement.toJson())
           movementAndLines: movementAndLines,
@@ -173,9 +166,6 @@ class _StorageOnHandCardForLineState
     final String upc = MemoryProducts.storage.mProductID?.uPC ?? '-1';
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      ref.read(productsHomeCurrentIndexProvider.notifier).update(
-            (_) => Memory.PAGE_INDEX_UNSORTED_STORAGE_ON_HAND,
-      );
       ref.read(actionScanProvider.notifier).update(
             (_) => Memory.ACTION_GET_LOCATOR_TO_VALUE,
       );
@@ -190,7 +180,7 @@ class _StorageOnHandCardForLineState
         borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
       ),
       builder: (_) => FractionallySizedBox(
-        heightFactor: 0.95,
+        heightFactor: Memory.FRACTIONNALLY_SIZE_SHEET_HEIGHT,
         child: UnsortedStorageOnHandScreenForLine(
           argument: movementJson,
           movementAndLines: movementAndLines,

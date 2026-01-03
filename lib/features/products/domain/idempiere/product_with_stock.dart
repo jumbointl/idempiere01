@@ -611,6 +611,7 @@ class ProductWithStock extends IdempiereProduct {
   bool get isSearched => searched ?? false;
   bool get hasProduct => id != null && id! > 0;
   bool get hasListStorageOnHande => listStorageOnHande != null && listStorageOnHande!.isNotEmpty;
+  bool get hasSortedStorageOnHande => sortedStorageOnHande != null && sortedStorageOnHande!.isNotEmpty;
 
 
 }

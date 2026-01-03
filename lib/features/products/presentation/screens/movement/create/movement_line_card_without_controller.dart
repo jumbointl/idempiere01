@@ -25,7 +25,6 @@ class _MovementLineCardWithoutControllerState extends ConsumerState<MovementLine
       fontWeight: FontWeight.bold);
   @override
   Widget build(BuildContext context) {
-    print('-------------------------MMovementLineCardWithoutController');
     String id = widget.movementLine.id?.toString() ?? '';
     String quantity = '${Messages.QUANTITY} : ${Memory.numberFormatter0Digit.format(widget.movementLine.movementQty ?? 0)}';
     String name = widget.movementLine.productName ?? '';

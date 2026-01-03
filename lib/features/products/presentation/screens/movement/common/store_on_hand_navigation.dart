@@ -16,8 +16,7 @@ import '../../../providers/product_provider_common.dart';
 // Screens
 import '../../store_on_hand/memory_products.dart';
 import '../provider/new_movement_provider.dart';
-import '../provider/products_home_provider.dart';
-import 'movement_lines_create_screen.dart';
+import '../edit_new/movement_lines_create_screen.dart';
 
 /// English: Centralized navigation helper for Store On Hand flows.
 class StoreOnHandNavigation {
@@ -107,10 +106,6 @@ class StoreOnHandNavigation {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.invalidate(allowedMovementDocumentTypeProvider);
 
-      ref.read(productsHomeCurrentIndexProvider.notifier).update(
-            (_) => Memory.PAGE_INDEX_STORE_ON_HAND,
-      );
-
       ref.read(actionScanProvider.notifier).update(
             (_) => Memory.ACTION_FIND_BY_UPC_SKU_FOR_STORE_ON_HAND,
       );
@@ -127,9 +122,6 @@ class StoreOnHandNavigation {
         ref.invalidate(selectedLocatorToProvider);
       }
 
-      ref.read(productsHomeCurrentIndexProvider.notifier).update(
-            (_) => Memory.PAGE_INDEX_UNSORTED_STORAGE_ON_HAND,
-      );
 
       ref.read(actionScanProvider.notifier).update(
             (_) => Memory.ACTION_GET_LOCATOR_TO_VALUE,
@@ -209,6 +201,7 @@ Future<void> openMovementLinesCreateBottomSheet({
     },
   );
 }
+
 
 
 

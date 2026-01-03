@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get_storage/get_storage.dart';
-import 'package:monalisa_app_001/features/products/common/app_initializer_overlay.dart';
+import 'package:monalisa_app_001/features/products/common/widget/app_initializer_overlay.dart';
 import '../../../../shared/data/memory.dart';
 import '../models/zpl_template.dart';
 import '../models/zpl_template_store.dart';

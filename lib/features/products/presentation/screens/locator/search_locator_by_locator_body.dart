@@ -5,15 +5,13 @@ import 'package:monalisa_app_001/features/products/presentation/providers/locato
 import '../../../../shared/data/memory.dart';
 import '../../../../shared/data/messages.dart';
 import '../../providers/product_provider_common.dart';
-import 'input_string_dialog.dart';
+import 'to_re_write/input_string_dialog.dart';
 import 'locator_card.dart';
 
 
 class SearchLocatorByLocatorBody extends ConsumerStatefulWidget {
   final bool searchLocatorFrom;
-  final bool forCreateLine;
   const SearchLocatorByLocatorBody( {
-    required this.forCreateLine,
     required this.searchLocatorFrom, super.key });
 
   @override
@@ -55,7 +53,6 @@ class SearchLocatorByLocatorBodyState extends ConsumerState<SearchLocatorByLocat
                     itemBuilder: (context, index) =>Center(
                       child: Center(
                         child: LocatorCard(
-                            forCreateLine: widget.forCreateLine,
                             searchLocatorFrom: widget.searchLocatorFrom,
                             data: locators[index],width: width,
                             index: index),

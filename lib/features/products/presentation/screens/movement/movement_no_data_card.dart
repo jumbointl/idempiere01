@@ -4,7 +4,9 @@ import 'package:monalisa_app_001/features/products/domain/idempiere/response_asy
 
 import '../../../../../config/theme/app_theme.dart';
 import '../../../../shared/data/messages.dart';
+import '../../providers/actions/find_store_on_hand_by_upc_sku_action_provider.dart';
 import '../../providers/product_provider_common.dart';
+import '../../providers/store_on_hand_for_put_away_movement.dart';
 import '../../providers/store_on_hand_provider.dart';
 class MovementNoDataCard extends ConsumerStatefulWidget {
   Color? backgroundColor;
@@ -31,7 +33,7 @@ class MovementNoDataCardState extends ConsumerState<MovementNoDataCard> {
 
     widget.backgroundColor ??= Colors.cyan[200];
     int count = ref.watch(scannedCodeTimesProvider.notifier).state;
-    String scannedCode = ref.watch(scannedCodeForStoredOnHandProvider) ?? Messages.EMPTY;
+    String scannedCode = ref.watch(scannedCodeForPutAwayMovementProvider) ?? Messages.EMPTY;
     bool searchFiledByMOLIConfigurableSKU = ref.watch(searchByMOLIConfigurableSKUProvider.notifier).state;
     String searchText = 'UPC: $scannedCode';
     if(searchFiledByMOLIConfigurableSKU){
@@ -63,7 +65,6 @@ class MovementNoDataCardState extends ConsumerState<MovementNoDataCard> {
         responseAsyncValue.success ? Colors.green : Colors.red;
     return Container(
       width: MediaQuery.of(context).size.width-30,
-      height: 130,
       decoration: BoxDecoration(
         color: color,
         borderRadius: BorderRadius.circular(10),
@@ -72,7 +73,6 @@ class MovementNoDataCardState extends ConsumerState<MovementNoDataCard> {
       child:  hideText ?  IconButton(onPressed: ()=>{}, icon: Image.asset(image, width: 60, height: 60,))
             : SizedBox(
               width: MediaQuery.of(context).size.width-30,
-              height: 120,
               child: Column(
                       spacing: 5,
                       children: [

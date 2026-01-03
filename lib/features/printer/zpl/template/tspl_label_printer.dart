@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:math';
 
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:monalisa_app_001/features/products/common/messages_dialog.dart';
 import 'package:monalisa_app_001/features/products/domain/idempiere/idempiere_movement_line.dart';
@@ -271,7 +272,7 @@ Future<void> printLabelMovementByCategoryTspl100x150NoLogo({
     await socket.close();
     if(ref.context.mounted)showSuccessMessage(ref.context, ref, Messages.LABEL_PRINTED);
   } catch(e){
-    print('Error: $e');
+    debugPrint('Error: $e');
     socket?.close();
     if(ref.context.mounted)showErrorMessage(ref.context, ref, "${Messages.ERROR}: ${e.toString()}");
   }

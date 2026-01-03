@@ -7,6 +7,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_net_printer/flutter_net_printer.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
+import 'package:monalisa_app_001/features/printer/pos/pos_adjustment_storage.dart';
+import 'package:monalisa_app_001/features/printer/pos/pos_adjustment_values.dart';
+import 'package:monalisa_app_001/features/printer/pos/print_receipt_with_qr_bematech.dart';
 import 'package:monalisa_app_001/features/printer/printer_utils.dart';
 import 'package:monalisa_app_001/features/printer/zpl/old/zpl_label_printer_100x150.dart';
 import 'package:monalisa_app_001/features/products/common/messages_dialog.dart';
@@ -209,7 +212,13 @@ class PrinterScanNotifier extends StateNotifier<PrinterState>  {
           return;
         }
         int port = int.tryParse(state.portController.text) ?? 9100;
-        printReceiptWithQr(ref,state.ipController.text, port, movementAndLines);
+        //printReceiptWithQr(ref,state.ipController.text, port, movementAndLines);
+        await printReceiptWithQrWithBematech(
+          ref,
+          state.ipController.text,
+          port,
+          movementAndLines,
+        );
       } else if(state.typeController.text.startsWith('ZPL') ||
               state.typeController.text.startsWith('LABEL') ){
         print('----------------------------ZPL');
@@ -576,6 +585,7 @@ class PrinterScanNotifier extends StateNotifier<PrinterState>  {
     await socket.flush();
     await socket.close();
   }
+
 
 }
 

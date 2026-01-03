@@ -57,10 +57,6 @@ void showDeleteConfirmationSheet({
                     ),
                     onConfirmation: () {
                       onConfirm(context: context, ref: ref);
-                      /*print('MovementCancelScreenState card') ;
-                      GoRouterHelper(context).go(
-                          AppRouter.PAGE_MOVEMENTS_CANCEL_SCREEN,
-                          extra: widget.movementAndLines);*/
                     },
                   ),
                 ),

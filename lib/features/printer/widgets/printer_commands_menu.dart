@@ -1,23 +1,28 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:material_symbols_icons/symbols.dart';
 
 
 enum _PrinterCommandAction {
   configFtpAccount,
   createZplTemplate,
   useZplTemplate,
+  configurePos,
 }
 
 class PrinterCommandsMenu extends ConsumerWidget {
   final Future<void> Function() onConfigFtpAccount;
   final Future<void> Function() onLoadZplTemplate;
   final Future<void> Function() onUseZplTemplate;
+  final Future<void> Function() onConfigurePos;
+
 
   const PrinterCommandsMenu({
     super.key,
     required this.onConfigFtpAccount,
     required this.onLoadZplTemplate,
     required this.onUseZplTemplate,
+    required this.onConfigurePos,
   });
 
   @override
@@ -36,6 +41,9 @@ class PrinterCommandsMenu extends ConsumerWidget {
             break;
           case _PrinterCommandAction.useZplTemplate:
             await onUseZplTemplate();
+            break;
+            case _PrinterCommandAction.configurePos:
+            await onConfigurePos();
             break;
         }
       },
@@ -59,6 +67,13 @@ class PrinterCommandsMenu extends ConsumerWidget {
           child: ListTile(
             leading: Icon(Icons.playlist_play),
             title: Text('Usar template ZPL'),
+          ),
+        ),
+        PopupMenuItem(
+          value: _PrinterCommandAction.configurePos,
+          child: const ListTile(
+            leading: Icon(Symbols.point_of_sale_rounded),
+            title: Text('Configurar POS'),
           ),
         ),
       ],

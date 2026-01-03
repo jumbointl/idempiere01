@@ -4,7 +4,7 @@ import 'package:monalisa_app_001/features/products/common/scan_button_by_action_
 
 import '../domain/idempiere/response_async_value.dart';
 import '../presentation/providers/common_provider.dart';
-import 'app_initializer_overlay.dart';
+import 'widget/app_initializer_overlay.dart';
 import 'common_consumer_state.dart';
 import 'input_dialog.dart';
 
@@ -170,9 +170,13 @@ abstract class AsyncValueConsumerSimpleState<T extends ConsumerStatefulWidget>
         bottomNavigationBar: getBottomAppBar(context, ref),
         body: SafeArea(
           child: PopScope(
-            canPop: false,
-            onPopInvokedWithResult: (_, __) =>
-                popScopeAction(context, ref),
+            canPop: true, // ✅ deja que el sistema haga pop si hay stack
+            onPopInvokedWithResult: (didPop, result) {
+              // English: If the route already popped, do nothing.
+              if (didPop) return;
+
+              popScopeAction(context, ref);
+            },
             child: scrollMainDataCard
                 ? SingleChildScrollView(
               controller: scrollController,

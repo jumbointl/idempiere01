@@ -3,7 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../../../config/theme/app_theme.dart';
 import '../../../../../shared/data/messages.dart';
+import '../../../providers/actions/find_store_on_hand_by_upc_sku_action_provider.dart';
 import '../../../providers/product_provider_common.dart';
+import '../../../providers/store_on_hand_for_put_away_movement.dart';
 import '../../../providers/store_on_hand_provider.dart';
 import '../../store_on_hand/memory_products.dart';
 class NoStorageOnHandRecordsCard extends ConsumerStatefulWidget {
@@ -22,7 +24,7 @@ class NoStorageOnHandRecordsCardState extends ConsumerState<NoStorageOnHandRecor
   Widget build(BuildContext context) {
     int count = ref.watch(scannedCodeTimesProvider.notifier).state;
     String locatorName = MemoryProducts.movementAndLines.lastLocatorFrom?.value ?? '';
-    String scannedCode = ref.watch(scannedCodeForStoredOnHandProvider) ?? Messages.EMPTY;
+    String scannedCode = ref.watch(scannedCodeForPutAwayMovementProvider) ?? Messages.EMPTY;
     bool searchFiledByMOLIConfigurableSKU = ref.watch(searchByMOLIConfigurableSKUProvider.notifier).state;
     String searchText = '${Messages.NOT_DATA_OF_SAME_LOCATOR_AVAILABLE}: UPC:';
     if(searchFiledByMOLIConfigurableSKU){

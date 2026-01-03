@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:monalisa_app_001/config/config.dart';
 import 'package:monalisa_app_001/features/printer/web_template/screen/show_ftp_configuration.dart';
-import '../../../products/common/app_initializer_overlay.dart';
+import '../../../products/common/widget/app_initializer_overlay.dart';
 import '../../../products/common/messages_dialog.dart';
 import '../../../products/domain/models/zpl_printing_template.dart';
 import '../../../products/presentation/providers/common_provider.dart';

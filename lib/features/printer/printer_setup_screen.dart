@@ -7,6 +7,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:get_storage/get_storage.dart';
 import 'package:go_router/go_router.dart';
 import 'package:monalisa_app_001/config/config.dart';
+import 'package:monalisa_app_001/features/printer/pos/pos_adjustment_selector_sheet.dart';
+import 'package:monalisa_app_001/features/printer/pos/pos_adjustment_values.dart';
 import 'package:monalisa_app_001/features/printer/printer_utils.dart';
 import 'package:monalisa_app_001/features/printer/web_template/screen/show_ftp_configuration.dart';
 import 'package:monalisa_app_001/features/printer/web_template/screen/show_search_zpl_template_sheet.dart';
@@ -19,7 +21,7 @@ import 'package:monalisa_app_001/features/printer/zpl/new/screen/template_zpl_on
 import 'package:monalisa_app_001/features/printer/zpl/new/screen/template_zpl_preview_screen.dart';
 import 'package:monalisa_app_001/features/printer/zpl/old/zpl_print_profile_providers.dart';
 import 'package:monalisa_app_001/features/printer/zpl/template/tspl_label_printer.dart';
-import 'package:monalisa_app_001/features/products/common/app_initializer_overlay.dart';
+import 'package:monalisa_app_001/features/products/common/widget/app_initializer_overlay.dart';
 import 'package:pdf/pdf.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:printing/printing.dart';
@@ -34,7 +36,6 @@ import '../products/domain/idempiere/movement_and_lines.dart';
 import '../products/presentation/providers/common_provider.dart';
 import '../products/presentation/providers/product_provider_common.dart';
 import '../products/presentation/screens/movement/provider/new_movement_provider.dart';
-import '../products/presentation/screens/movement/provider/products_home_provider.dart';
 import '../shared/data/memory.dart';
 import '../shared/data/messages.dart';
 import 'cups_printer.dart';
@@ -44,7 +45,7 @@ import 'printer_scan_notifier.dart';
 
 class PrinterSetupScreen extends ConsumerStatefulWidget {
   final String argument;
-  MovementAndLines movementAndLines;
+  final MovementAndLines movementAndLines;
 
   PrinterSetupScreen({
     super.key,
@@ -92,7 +93,6 @@ class PrinterSetupScreen extends ConsumerStatefulWidget {
         // Cuando se presiona Enter, procesamos los datos acumulados
         if (scannedData.isNotEmpty) {
           Future.delayed(const Duration(milliseconds: 100), () {
-            print('Escaneado: $scannedData');
             ref.read(printerScanProvider.notifier).updateFromScan(scannedData, ref);
             // Limpiar los datos escaneados para el próximo escaneo
             scannedData = '';
@@ -130,7 +130,6 @@ class PrinterSetupScreen extends ConsumerStatefulWidget {
         if (result != null) {
           Future.delayed(const Duration(milliseconds: 100), () {
           });
-          print('Escaneado: $result');
           ref.read(printerScanProvider.notifier).updateFromScan(result,ref);
         } else {
           if(ref.context.mounted) showWarningMessage(ref.context, ref, Messages.ERROR_SCAN);
@@ -170,16 +169,14 @@ class PrinterSetupScreen extends ConsumerStatefulWidget {
   void initState() {
     // TODO: implement initState
     super.initState();
-
+    movementAndLines = widget.movementAndLines;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       //_focusNode.requestFocus();
-      Future.delayed(Duration(milliseconds: 50), () {
-        movementAndLines = ref.read(movementAndLinesProvider.notifier).state ;
-        print('movementAndLines: ${movementAndLines.documentNo ?? '--null'}');
-        if(!widget.movementAndLines.hasMovement){
-          widget.movementAndLines = movementAndLines;
 
-        }
+      Future.delayed(Duration(milliseconds: 50), () {
+
+
+
         final storedValue = loadAlwaysUseLastTemplate();
         ref.read(alwaysUseLastTemplateProvider.notifier).state = storedValue;
       });
@@ -190,7 +187,7 @@ class PrinterSetupScreen extends ConsumerStatefulWidget {
   Widget build(BuildContext context) {
 
 
-    movementAndLines = MovementAndLines.fromJson(jsonDecode(widget.argument));
+
 
     isPrinting = ref.watch(isPrintingProvider.notifier);
     actionScan = ref.watch(actionScanProvider.notifier);
@@ -266,7 +263,31 @@ class PrinterSetupScreen extends ConsumerStatefulWidget {
               },
               onUseZplTemplate: () async {
                  onUseZplTemplate(context,ref);
-              },
+              }, onConfigurePos: () async {
+                String p = ref.read(printerScanProvider).portController.text ;
+                int port = int.tryParse(p) ?? 9100;
+
+                debugPrint('printReceiptWithQrWithBematech');
+                ref.read(isDialogShowedProvider.notifier).state = true ;
+                ref.read(enableScannerKeyboardProvider.notifier).state = false ;
+                final actual = ref.read(actionScanProvider);
+                ref.read(actionScanProvider.notifier).state = Memory.ACTION_NO_SCAN_ACTION ;
+
+
+                final PosAdjustmentValues? adj = await showPosAdjustmentSelectorSheet(
+                  context: ref.context,
+                  ref: ref,
+                  ip: ref.read(printerScanProvider).ipController.text,
+                  port: port,
+                  alwaysOpen: true,
+                );
+
+                ref.read(enableScannerKeyboardProvider.notifier).state = true ;
+                ref.read(actionScanProvider.notifier).state = actual ;
+                ref.read(isDialogShowedProvider.notifier).state = false ;
+                if (adj == null) return;
+
+            },
 
 
             ),
@@ -354,7 +375,6 @@ class PrinterSetupScreen extends ConsumerStatefulWidget {
       }
 
       String qrData = '$ip:$port:$type:$name:END';
-      print('QR Data: $qrData');
       ref.read(printerScanProvider.notifier).updateFromScan(qrData, ref);
     });
   }
@@ -400,9 +420,6 @@ class PrinterSetupScreen extends ConsumerStatefulWidget {
 
 
   void popScopeAction(BuildContext context, WidgetRef ref) async {
-    print('popScopeAction----------------------------');
-    ref.read(productsHomeCurrentIndexProvider.notifier).state =
-        Memory.PAGE_INDEX_MOVEMENTE_EDIT_SCREEN;
     actionScan.state = Memory.ACTION_FIND_MOVEMENT_BY_ID;
     context.go('${AppRouter.PAGE_MOVEMENTS_EDIT}/$movementId/1');
   }
@@ -1018,14 +1035,12 @@ class PrinterSetupScreen extends ConsumerStatefulWidget {
     if (serverIp.isNotEmpty)   qrData = '$qrData:$serverIp';
     if (serverPort.isNotEmpty) qrData = '$qrData:$serverPort';
 
-    print('QR Data: $qrData');
     ref.read(printerScanProvider.notifier).updateFromScan(qrData, ref);
   }
   bool isDfOk(ZplTemplate t) => t.zplTemplateDf.trim().isNotEmpty;
   Future<void> _onZplPreviewPressed(BuildContext context, WidgetRef ref) async {
     final printerState = ref.read(printerScanProvider);
     final type = printerState.typeController.text.trim().toUpperCase();
-    debugPrint('type: $type start with LABEL ?');
     // English comment: "Preview only for LABEL printers"
     if (!type.startsWith('LABEL')) {
       showWarningMessage(context, ref, Messages.ONLY_FOR_LABEL_PRINTER);

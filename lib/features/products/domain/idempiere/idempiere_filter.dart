@@ -66,7 +66,6 @@ class IdempiereFilter extends ObjectWithNameAndId{
 
     }
     filter = filter.replaceAll('  ', ' ');
-    print('-------------------------------------$filter');
 
     return filter;
   }

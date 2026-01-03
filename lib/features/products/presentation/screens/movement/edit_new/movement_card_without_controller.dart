@@ -32,7 +32,6 @@ class MovementCardWithoutControllerState extends ConsumerState<MovementCardWitho
 
   @override
   Widget build(BuildContext context) {
-    print('-------------------------MovementCardWithoutControllerState');
     String titleLeft='';
     String titleRight='';
     String subtitleLeft='';

@@ -20,10 +20,11 @@ final dataToUpdateUPCProvider = StateProvider.autoDispose<List<String>>((ref) {
   return [];
 });
 
-final productUpdateStateNotifierProvider = StateNotifierProvider.autoDispose<ProductsUpdateNotifier, List<IdempiereProduct>>((ref) {
+final productsUpdateNotifierProvider =
+StateNotifierProvider.autoDispose<ProductsUpdateNotifier, void>((ref) {
   return ProductsUpdateNotifier(ref);
-
 });
+
 
 
 

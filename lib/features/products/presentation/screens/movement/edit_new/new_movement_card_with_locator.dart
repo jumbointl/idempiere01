@@ -16,7 +16,7 @@ import '../../../../../shared/data/memory.dart';
 import '../../../../../shared/data/messages.dart';
 import '../../../../common/widget/show_delete_confirmation_sheet.dart';
 import '../../../providers/product_provider_common.dart';
-import '../provider/products_home_provider.dart';
+import '../provider/new_movement_provider.dart';
 
 class NewMovementCardWithLocator extends ConsumerStatefulWidget {
   Color bgColor;
@@ -98,7 +98,6 @@ class MovementHeaderCardWithLocatorState extends ConsumerState<NewMovementCardWi
             context: context,
             ref: ref,
             onConfirm: ({required BuildContext context, required WidgetRef ref}) async {
-              print('MovementCancelScreenState card') ;
               GoRouterHelper(context).go(
                   AppRouter.PAGE_MOVEMENTS_CANCEL_SCREEN,
                   extra: widget.movementAndLines);
@@ -204,10 +203,9 @@ class MovementHeaderCardWithLocatorState extends ConsumerState<NewMovementCardWi
                       backgroundColor: Colors.green, // Changed to transparent for IconButton
                     ),
                     onPressed: () {
-                      ref.read(productsHomeCurrentIndexProvider.notifier).state =
-                          Memory.PAGE_INDEX_MOVEMENT_PRINTER_SETUP;
                       ref.read(actionScanProvider.notifier).state = Memory.ACTION_FIND_MOVEMENT_BY_ID;
                       ref.read(selectedZplTemplateModeProvider.notifier).state = ZplTemplateMode.movement;
+                      ref.read(movementAndLinesProvider.notifier).state = widget.movementAndLines;
                       GoRouterHelper(ref.context).go(AppRouter.PAGE_MOVEMENT_PRINTER_SETUP,
                           extra: widget.movementAndLines);
 

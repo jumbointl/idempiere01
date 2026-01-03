@@ -5,7 +5,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../shared/data/messages.dart';
 
-void showErrorMessage(BuildContext context, WidgetRef ref, String message) {
+Future<void> showErrorMessage(BuildContext context, WidgetRef ref, String message) async {
   if (!context.mounted) {
     Future.delayed(const Duration(seconds: 1));
     if(!context.mounted) return;

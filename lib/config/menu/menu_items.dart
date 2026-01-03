@@ -136,7 +136,7 @@ final appHomeOptionCol3Items = <MenuItem>[
     MenuItem(
       title: ' PutAway',
       subTitle: '',
-      link: '${AppRouter.PAGE_PRODUCT_STORE_ON_HAND}/-1/movementInSameWarehouse',
+      link: '${AppRouter.PAGE_PRODUCT_STORE_ON_HAND}/${ProductStoreOnHandScreen.MOVEMENT_IN_SAME_WAREHOUSE}',
       icon: Icons.arrow_forward,
     ),
   if (RolesApp.canCreateMovementInSameOrganization)

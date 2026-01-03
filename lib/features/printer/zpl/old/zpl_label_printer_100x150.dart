@@ -184,12 +184,10 @@ Future<void> printZplDirectOrConfigure(
      }
      chosen = result;
   }
-  print('chosen: ${chosen.templateFileName}');
   // Debe tener Reference
   final referenceTxt = chosen.zplReferenceTxt.trim();
 
   if (referenceTxt.isNotEmpty) {
-    print(referenceTxt);
     final missing = validateMissingTokens(
         template: chosen, referenceTxt: referenceTxt);
     if (missing.isEmpty) {

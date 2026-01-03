@@ -84,52 +84,7 @@ class SqlDataMovement extends IdempiereMovement implements SqlData {
         data['C_DocType_ID'] = cDocTypeID!.toJsonForIdempiereSqlUse();
       }
 
-      /*
-      data['id'] = id;
-      data['uid'] = uid;
-      if (aDClientID != null) {
-        data['AD_Client_ID'] = aDClientID!.toJsonForIdempiereSqlUse();
-      }
 
-      if (updatedBy != null) {
-        data['UpdatedBy'] = updatedBy!.toJsonForIdempiereSqlUse();
-      }
-      if (createdBy != null) {
-        data['CreatedBy'] = createdBy!.toJsonForIdempiereSqlUse();
-      }
-      data['Updated'] = updated;
-      data['DocumentNo'] = documentNo;
-      data['Processed'] = processed;
-      data['Processing'] = processing;
-      data['IsInTransit'] = isInTransit;
-      if (docStatus != null) {
-        data['DocStatus'] = docStatus!.toJsonForIdempiereSqlUse();
-      }
-
-      data['Created'] = created;
-      data['ApprovalAmt'] = approvalAmt;
-      data['IsApproved'] = isApproved;
-      data['ProcessedOn'] = processedOn;
-      if (mPriceListID != null) {
-        data['M_PriceList_ID'] = mPriceListID!.toJsonForIdempiereSqlUse();
-      }
-
-      data['propertyLabel'] = propertyLabel;
-      data['identifier'] = identifier;
-      data['image'] = image;
-      data['category'] = category;
-      data['name'] = name;
-      data['active'] = active;
-
-      if (mOLIFsPaused != null) {
-        data['MOLI_FsPaused'] = mOLIFsPaused!.toJsonForIdempiereSqlUse();
-      }
-      data['MOLI_FsMessage'] = mOLIFsMessage;
-      data['MOLI_FiscalDocumentNo'] = mOLIFiscalDocumentNo;
-      data['ChargeAmt'] = chargeAmt;
-      data['FreightAmt'] = freightAmt;*/
-
-      print(data);
       return data;
   }
 

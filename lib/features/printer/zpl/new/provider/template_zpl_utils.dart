@@ -257,7 +257,7 @@ Future<bool?> printReferenceBySocket({
       );
       return printed ;
     } catch(e){
-      print('Error al enviar zpl: $e');
+      debugPrint('Error al enviar zpl: $e');
       //throw Exception('Error al enviar zpl: $e');
     }
     return null;
@@ -479,7 +479,6 @@ ZplTemplate resolveDfFromLocalDownloadedTemplates({
   for (final t in all) {
     final fileName = (t.templateFileName).toUpperCase();
     final wanted = searchName.toUpperCase();
-    print(wanted);
 
     // English comment: "Only consider templates that are the 'to printer' variant"
     final hasPrinterSuffix =
@@ -494,7 +493,6 @@ ZplTemplate resolveDfFromLocalDownloadedTemplates({
       final newWanted = '$wanted.ZPL';
       // English comment: "Return a copy of the selected template but with DF filled"
       if(candidateDf.contains(newWanted)){
-        debugPrint('[FOUND]');
         return result.copyWith(zplTemplateDf: candidateDf);
       }
     }

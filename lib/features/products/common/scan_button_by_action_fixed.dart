@@ -81,7 +81,6 @@ class ScanButtonByActionFixedState extends ConsumerState<ScanButtonByActionFixed
       }
 
     });
-    print(' --fixed widget.actionTypeInt: ${widget.actionTypeInt}');
 
     return KeyboardListener(
       focusNode: _focusNode,

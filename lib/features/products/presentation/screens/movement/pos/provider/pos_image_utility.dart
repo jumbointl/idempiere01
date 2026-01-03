@@ -83,6 +83,10 @@ Future<Uint8List> combineQrAndBarcode(String qrData, String barcodeData) async {
 
 }
 
+
+
+
+
 Future<Uint8List> combineLogoAndQrCode({required String logo, required String qrData}) async {
   // --- 1. Cargar y decodificar el Logo ---
   final ByteData logoBytes = await rootBundle.load('assets/images/monalisa_logo_movement.jpg');

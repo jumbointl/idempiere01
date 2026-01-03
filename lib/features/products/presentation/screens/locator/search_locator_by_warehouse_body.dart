@@ -5,7 +5,7 @@ import 'package:monalisa_app_001/features/products/presentation/providers/locato
 import '../../../../shared/data/memory.dart';
 import '../../../../shared/data/messages.dart';
 import '../../providers/product_provider_common.dart';
-import 'input_string_dialog.dart';
+import 'to_re_write/input_string_dialog.dart';
 import 'locator_card.dart';
 
 
@@ -13,10 +13,8 @@ class SearchLocatorByWarehouseBody extends ConsumerStatefulWidget {
   // send result to state provider to display selection
   String? title;
   final bool searchLocatorFrom;
-  final bool forCreateLine;
   SearchLocatorByWarehouseBody( {
     required this.searchLocatorFrom,
-    required this.forCreateLine,
     this.title,
     super.key});
 
@@ -67,7 +65,6 @@ class SearchLocatorByWarehouseBodyState extends ConsumerState<SearchLocatorByWar
                     itemBuilder: (context, index) =>Center(
                       child: Center(
                         child: LocatorCard(
-                            forCreateLine: widget.forCreateLine,
                             searchLocatorFrom: widget.searchLocatorFrom,
                             data: locators[index],width: width,
                             index: index),

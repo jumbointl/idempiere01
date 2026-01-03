@@ -2,6 +2,7 @@
 import 'package:awesome_dialog/awesome_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:monalisa_app_001/features/products/presentation/providers/products_providers.dart';
 
 import '../../../../../../config/theme/app_theme.dart';
@@ -10,7 +11,6 @@ import '../../../../shared/data/memory.dart';
 import '../../../../shared/data/messages.dart';
 import '../../../domain/idempiere/idempiere_storage_on_hande.dart';
 import '../../../domain/idempiere/idempiere_warehouse.dart';
-import '../movement/provider/products_home_provider.dart';
 class UnsortedStorageOnHandReadOnlyScreen extends ConsumerStatefulWidget{
 
   final IdempiereStorageOnHande storage;
@@ -260,9 +260,8 @@ class UnsortedStorageOnHandReadOnlyScreenState extends ConsumerState<UnsortedSto
 
   void popScopeAction(BuildContext context, WidgetRef ref) {
     FocusScope.of(context).unfocus();
-    ref.read(productsHomeCurrentIndexProvider.notifier).update((state) => Memory.PAGE_INDEX_STORE_ON_HAND);
     ref.read(actionScanProvider.notifier).state = Memory.ACTION_FIND_BY_UPC_SKU_FOR_STORE_ON_HAND;
-    Navigator.pop(context);
+    context.pop();
   
 
   }

@@ -111,7 +111,6 @@ class ScanButtonByActionFixedShortState
 
           result = result?.trim();
           if (result != null && result.isNotEmpty) {
-            print('result scan: $result');
             widget.onOk(ref: ref,  inputData: result,actionScan: widget.actionTypeInt);
 
           } else {

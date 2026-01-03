@@ -490,8 +490,6 @@ void actionForSelectedItems(
     List<mInOutJobs> selectedJobs,
     ) {
   // TODO: implementar tu lógica real
-  debugPrint('Selected items: ${selectedItems.length}');
-  debugPrint('Selected jobs: ${selectedJobs.map((e) => e.label).toList()}');
   String message = Messages.NOT_IMPLEMENTED_YET ;
   showWarningMessage(ref.context, ref, message);
 

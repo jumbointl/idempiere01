@@ -25,7 +25,104 @@ class PaginationMeta {
 /// - baseUrl: la parte fija hasta "...?$filter=...".
 /// - filterSuffix: cualquier extra que quieras agregar (ej: fechas) ya con %20 si corresponde.
 /// - parser: fromJson del modelo (ej: MInOut.fromJson)
+
 Future<List<T>> fetchAllPages<T>({
+  required Dio dio,
+  required String baseUrl,
+  required String filterSuffix, // English: filter with spaces, human-readable
+  required String orderByColumn,
+  required T Function(Map<String, dynamic>) parser,
+  PaginationMeta? outMeta,
+  void Function(int fetched, int totalRecords, int totalPages)? onProgress,
+}) async {
+  final List<T> all = [];
+
+  final int recordsSize = Memory.IDEMPIERE_DEFAULT_PAGE_SIZE;
+  int skip = 0;
+
+  int totalRecords = 0;
+  int totalPages = 0;
+
+  // English: Emit initial progress
+  onProgress?.call(0, totalRecords, totalPages);
+
+  while (true) {
+    // English: Encode only the filter for easier debugging
+    final String encodedFilter =
+    filterSuffix.replaceAll(' ', '%20');
+    baseUrl = baseUrl.replaceAll(' ', '%20');
+
+    // English: Build URL step by step for readability
+    final String url =
+        "$baseUrl"
+        "$encodedFilter"
+        "&\$orderby=$orderByColumn"
+        "&\$top=$recordsSize"
+        "&\$skip=$skip";
+
+    if (skip == 0) {
+      print(url);
+    } else {
+      print('→ page skip=$skip');
+    }
+
+    final response = await dio.get(url);
+    if (response.statusCode != 200) {
+      throw Exception("Error HTTP ${response.statusCode} en paginación");
+    }
+
+    final responseApi = ResponseApi<T>.fromJson(response.data, parser);
+
+    // English: Capture server totals when available
+    totalRecords = responseApi.rowCount ?? totalRecords;
+    totalPages = responseApi.pageCount ?? totalPages;
+
+    final records = responseApi.records ?? <T>[];
+    if (records.isEmpty) {
+      break;
+    }
+
+    all.addAll(records);
+
+    // English: Advance skip by actual fetched items
+    skip += records.length;
+
+    // English: Update meta continuously (useful for progress & debugging)
+    if (outMeta != null) {
+      outMeta.totalRecords = totalRecords;
+      outMeta.totalPages = totalPages;
+      outMeta.skipRecords = skip; // English: current offset for next request
+    }
+
+    // English: Emit progress after each page
+    onProgress?.call(all.length, totalRecords, totalPages);
+
+    // English: Stop when server reports totals and we reached them
+    if (totalRecords > 0 && skip >= totalRecords) {
+      break;
+    }
+
+    // English: Fallback stop when server doesn't report totals
+    if (responseApi.rowCount == null && records.length < recordsSize) {
+      break;
+    }
+  }
+
+  // English: Final meta update
+  if (outMeta != null) {
+    outMeta.totalRecords = totalRecords;
+    outMeta.totalPages = totalPages;
+    outMeta.skipRecords = skip;
+  }
+
+  // English: Final progress emit
+  onProgress?.call(all.length, totalRecords, totalPages);
+
+  return all;
+}
+
+
+/*Future<List<T>> fetchAllPages<T>({
   required Dio dio,
   required String baseUrl,
   required String filterSuffix,
@@ -88,7 +185,7 @@ Future<List<T>> fetchAllPages<T>({
     outMeta.skipRecords = skipRecords;
   }
   return all;
-}
+}*/
 
 
 String buildMovementDateFilterSuffix(DateTimeRange<DateTime> dates) {

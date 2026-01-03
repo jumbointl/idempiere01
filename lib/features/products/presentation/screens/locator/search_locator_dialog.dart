@@ -2,13 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:monalisa_app_001/features/products/presentation/screens/locator/search_locator_by_locator_body.dart';
 import 'package:monalisa_app_001/features/products/presentation/screens/locator/search_locator_by_warehouse_body.dart';
-import 'package:monalisa_app_001/features/products/presentation/screens/store_on_hand/memory_products.dart';
 
 import '../../../../../config/theme/app_theme.dart';
 import '../../../../shared/data/memory.dart';
 import '../../../../shared/data/messages.dart';
 import '../../providers/product_provider_common.dart';
-import '../movement/provider/products_home_provider.dart';
 
 class SearchLocatorDialog extends ConsumerStatefulWidget {
   String? title;
@@ -79,9 +77,7 @@ class SearchLocatorDialogState extends ConsumerState<SearchLocatorDialog> {
         body: PopScope(
           canPop: false,
           onPopInvokedWithResult: (bool didPop, Object? result) async {
-
             if (didPop) {
-
               return;
             }
             popScopeAction(context, ref);
@@ -90,11 +86,9 @@ class SearchLocatorDialogState extends ConsumerState<SearchLocatorDialog> {
           child: TabBarView(
               children: [
                 SearchLocatorByWarehouseBody(
-                    forCreateLine: widget.forCreateLine,
                     searchLocatorFrom: widget.searchLocatorFrom),
                 //Center(child: Text(Messages.NOT_IMPLEMENTED)),
                 SearchLocatorByLocatorBody(
-                  forCreateLine: widget.forCreateLine,
                   searchLocatorFrom: widget.searchLocatorFrom,
                 ),
 
@@ -114,8 +108,6 @@ class SearchLocatorDialogState extends ConsumerState<SearchLocatorDialog> {
       ref.read(actionScanProvider.notifier).update((state) =>Memory.ACTION_GET_LOCATOR_TO_VALUE);
     }
 
-    ref.read(usePhoneCameraToScanForLineProvider.notifier).state = MemoryProducts.lastUsePhoneCameraState ;
-    ref.read(productsHomeCurrentIndexProvider.notifier).state = Memory.PAGE_INDEX_UNSORTED_STORAGE_ON_HAND;
     Navigator.pop(context);
   }
 

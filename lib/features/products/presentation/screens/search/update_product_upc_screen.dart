@@ -11,18 +11,15 @@ import '../../providers/common_provider.dart';
 import '../../providers/product_provider_common.dart';
 import '../../providers/product_search_provider.dart';
 import '../../providers/product_update_upc_provider.dart';
-import '../../providers/products_update_notifier.dart';
 import '../search/product_result_with_photo_card.dart';
 
 // English: Base state with unified bottom sheets + helpers
 import '../../../common/common_consumer_state.dart';
 
 class UpdateProductUpcScreen extends ConsumerStatefulWidget {
-  int countScannedCamera = 0;
-  late ProductsUpdateNotifier productsNotifier;
   final int actionTypeInt = Memory.ACTION_UPDATE_UPC;
 
-  UpdateProductUpcScreen({super.key});
+  const UpdateProductUpcScreen({super.key});
 
   @override
   ConsumerState<ConsumerStatefulWidget> createState() =>
@@ -49,15 +46,12 @@ class UpdateProductUpcScreenState
     dataToUpdateUPC = ref.watch(dataToUpdateUPCProvider.notifier);
     product = ref.watch(productForUpcUpdateProvider);
     updateAsync = ref.watch(updateProductUPCProvider);
-    widget.productsNotifier =
-        ref.watch(productUpdateStateNotifierProvider.notifier);
 
     final double bodyHeight = MediaQuery.of(context).size.height - 100;
     final isScanning = ref.watch(isScanningProvider);
 
     newUPCProvider = ref.watch(newUPCToUpdateProvider);
-    widget.countScannedCamera =
-        ref.watch(scannedCodeTimesProvider.notifier).state;
+
 
     final showScan = ref.watch(showScanFixedButtonProvider(widget.actionTypeInt));
 
@@ -76,7 +70,7 @@ class UpdateProductUpcScreenState
           if (showScan)
             ScanButtonByActionFixedShort(
               actionTypeInt: widget.actionTypeInt,
-              onOk: widget.productsNotifier.handleInputString,
+              onOk: ref.read(productsUpdateNotifierProvider.notifier).handleInputString,
             ),
           IconButton(
             icon: const Icon(Icons.keyboard, color: Colors.purple),
@@ -84,7 +78,7 @@ class UpdateProductUpcScreenState
               openInputDialogWithAction(
                 ref: ref,
                 history: false,
-                onOk: widget.productsNotifier.handleInputString,
+                onOk: ref.read(productsUpdateNotifierProvider.notifier).handleInputString,
                 actionScan: widget.actionTypeInt,
               );
             },
@@ -165,7 +159,7 @@ class UpdateProductUpcScreenState
 
         if (result != null && result.isNotEmpty) {
           ref
-              .read(scanHandleNotifierProvider.notifier)
+              .read(scanHandleProvider.notifier)
               .addNewUPCCode(result);
         }
       },
@@ -174,7 +168,6 @@ class UpdateProductUpcScreenState
   }
 
   Widget _getSearchBar() {
-    final usePhoneCamera = ref.watch(usePhoneCameraToScanProvider.notifier);
 
     return SizedBox(
       width: MediaQuery.of(context).size.width - 30,
@@ -182,13 +175,6 @@ class UpdateProductUpcScreenState
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          IconButton(
-            onPressed: null,
-            icon: Icon(
-              usePhoneCamera.state ? Icons.camera : Icons.barcode_reader,
-              color: Colors.purple,
-            ),
-          ),
           Expanded(
             child: Text(
               Messages.PLEASE_SCAN_NEW_UPC,

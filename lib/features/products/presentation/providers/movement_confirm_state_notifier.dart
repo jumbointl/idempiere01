@@ -15,11 +15,9 @@ class MovementConfirmStateNotifier  extends StateNotifier<List<IdempiereProduct>
   final Ref ref;
 
   void confirmMovement(int? id) {
-    print('MovementConfirmStateNotifier confirmMovement $id');
     ref.read(movementIdForConfirmProvider.notifier).update((state) => id ?? -1);
   }
   void cancelMovement(int? id) {
-    print('MovementCancelStateNotifier cancelMovement $id');
     ref.read(movementIdForCancelProvider.notifier).update((state) => id ?? -1);
   }
 

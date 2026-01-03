@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../presentation/providers/common_provider.dart';
+import '../../presentation/providers/common_provider.dart';
 
 class AppInitializerOverlay extends ConsumerWidget {
   final Widget child;

@@ -1,7 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:flutter/cupertino.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
 import 'package:ftpconnect/ftpconnect.dart';
@@ -54,17 +53,14 @@ FutureProvider.autoDispose<List<ZplTemplate>>((ref) async {
 
       // English comment: "List JSON files in this mode directory"
       final items = await ftp.listDirectoryContent();
-      debugPrint('FTP connected dir $dirName files: ${items.length}');
       final jsonFiles = items
           .where((e) => e.type == FTPEntryType.file)
           .map((e) => (e.name ?? '').toString())
           .where((name) =>
       name.toLowerCase().endsWith('.json')) // ✅ SOLO fill_data
           .toList();
-      debugPrint('FTP connected dir $dirName files: ${jsonFiles.length}');
       for (final fileName in jsonFiles) {
         final localFile = File('${tmpDir.path}/${dirName}__$fileName');
-        debugPrint('FTP downloadFile $fileName');
         final ok = await ftp.downloadFile(fileName, localFile);
         if (!ok) continue;
 

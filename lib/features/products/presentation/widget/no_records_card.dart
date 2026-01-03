@@ -3,7 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../config/theme/app_theme.dart';
 import '../../../shared/data/messages.dart';
+import '../providers/actions/find_store_on_hand_by_upc_sku_action_provider.dart';
 import '../providers/product_provider_common.dart';
+import '../providers/store_on_hand_for_put_away_movement.dart';
 import '../providers/store_on_hand_provider.dart';
 class NoRecordsCard extends ConsumerStatefulWidget {
   double? width ;
@@ -20,7 +22,7 @@ class NoRecordlCardState extends ConsumerState<NoRecordsCard> {
   Widget build(BuildContext context) {
     int count = ref.watch(scannedCodeTimesProvider.notifier).state;
 
-    String scannedCode = ref.watch(scannedCodeForStoredOnHandProvider) ?? Messages.EMPTY;
+    String scannedCode = ref.watch(scannedCodeForPutAwayMovementProvider) ?? Messages.EMPTY;
     bool searchFiledByMOLIConfigurableSKU = ref.watch(searchByMOLIConfigurableSKUProvider.notifier).state;
     String searchText = '${Messages.NO_RECORDS_FOUND}: UPC: $scannedCode';
     if(searchFiledByMOLIConfigurableSKU){
