@@ -5,8 +5,6 @@ import 'package:monalisa_app_001/features/products/presentation/providers/produc
 import '../../../../shared/data/memory.dart';
 import '../../../common/barcode_utils.dart';
 import '../../../common/input_data_processor.dart';
-import '../actions/find_locator_to_action_provider.dart';
-import '../locator_provider.dart';
 
 abstract class AppActionNotifier<T>
     extends StateNotifier<T>

@@ -14,6 +14,7 @@ import 'package:monalisa_app_001/features/products/domain/idempiere/idempiere_mo
 import 'package:monalisa_app_001/features/products/domain/idempiere/idempiere_warehouse.dart';
 import 'package:monalisa_app_001/features/products/domain/idempiere/movement_and_lines.dart';
 import 'package:monalisa_app_001/features/products/domain/idempiere/response_async_value.dart';
+import 'package:monalisa_app_001/features/products/presentation/providers/common/code_and_fire_action_notifier.dart';
 import 'package:monalisa_app_001/features/products/presentation/screens/movement/edit_new/custom_app_bar.dart';
 import 'package:monalisa_app_001/features/products/presentation/screens/movement/provider/new_movement_provider.dart';
 
@@ -526,6 +527,10 @@ class MovementListScreenNewState extends AsyncValueConsumerState<MovementListScr
     // TODO: implement asyncValueSuccessPanel
     throw UnimplementedError();
   }
+
+  @override
+  // TODO: implement mainNotifier
+  CodeAndFireActionNotifier get mainNotifier => throw UnimplementedError();
 
 
 

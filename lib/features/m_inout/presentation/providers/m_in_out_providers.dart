@@ -182,10 +182,15 @@ class MInOutNotifier extends StateNotifier<MInOutStatus> {
         final mInOut = await withLoadingMInOut(
           context: context,
           tag: 'CONFIRM getMInOutAndLine',
-          action: () => mInOutNotifier.getMInOutAndLine(ref),
+          action: () async {
+            mInOutNotifier.getMInOutAndLine(ref);
+            },
         );
 
         if (mInOut == null || mInOut.id == null) {
+          state = state.copyWith(
+              isLoading: false
+          );
           if (!context.mounted) return;
           showErrorMessage(
             context,
@@ -589,6 +594,7 @@ class MInOutNotifier extends StateNotifier<MInOutStatus> {
   }
 
   Future<void> getMovementList(WidgetRef ref) async {
+    debugPrint('getMovementList');
     state = state.copyWith(isLoadingMInOutList: true, errorMessage: '');
     try {
       final mInOutResponse = await mInOutRepository.getMovementList(ref);
@@ -610,9 +616,11 @@ class MInOutNotifier extends StateNotifier<MInOutStatus> {
   }
 
   Future<List<MInOutConfirm>> getMovementConfirmList(
+
     int movementId,
     WidgetRef ref,
   ) async {
+    debugPrint('getMovementConfirmList');
     try {
       final mInOutConfirmResponse = await mInOutRepository
           .getMovementConfirmList(movementId, ref);
@@ -735,6 +743,7 @@ class MInOutNotifier extends StateNotifier<MInOutStatus> {
   }
 
   Future<MInOut> getMovementAndLine(WidgetRef ref) async {
+    debugPrint('getMovementAndLine');
     if (state.doc.trim().isEmpty) {
       state = state.copyWith(
         errorMessage: 'Por favor ingrese un número de documento válido',

@@ -1,5 +1,4 @@
 // print_receipt_with_qr_bematech.dart
-import 'dart:typed_data';
 import 'dart:ui' as ui;
 
 import 'package:barcode_image/barcode_image.dart' as img_barcode;
@@ -11,15 +10,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image/image.dart' as img;
 import 'package:monalisa_app_001/features/printer/pos/pos_logo_and_qr_with_aligment.dart';
 import 'package:monalisa_app_001/features/printer/pos/pos_text_utils.dart';
+import 'package:monalisa_app_001/features/printer/pos/printer_action_notifier.dart';
 import 'package:qr_flutter/qr_flutter.dart';
-
-// ✅ Ajustá estos imports a tu proyecto real
-// import '../../shared/data/memory.dart';
-// import '../../shared/data/messages.dart';
-// import '../../products/common/messages_dialog.dart';
-// import '../../products/domain/idempiere/movement_and_lines.dart';
-// import '../../products/domain/idempiere/idempiere_movement_confirm.dart';
-// import '../../products/domain/idempiere/idempiere_movement_line.dart';
 
 import '../../products/common/messages_dialog.dart';
 import '../../products/domain/idempiere/idempiere_movement_line.dart';
@@ -29,6 +21,7 @@ import '../../products/presentation/providers/product_provider_common.dart';
 import '../../products/presentation/screens/movement/pos/movement_direct_print.dart';
 import '../../shared/data/memory.dart';
 import '../../shared/data/messages.dart';
+import 'PosTicket.dart';
 import 'bematech_escpos.dart';
 import 'pos_adjustment_selector_sheet.dart';
 import 'pos_adjustment_values.dart';
@@ -72,20 +65,86 @@ Future<void> printReceiptWithQrWithBematech(
   debugPrint('Model ${adj.machineModel}');
   debugPrint('Model ${adj.charactersPerLineAdjustment}');
   debugPrint('Model ${adj.charSet}');
-  final int cols = 48 + adj.charactersPerLineAdjustment; // ej -6 => 42
-  if(!adj.machineModel.toLowerCase().startsWith('bematech')){
-    debugPrint('printReceiptWithQr');
-    printReceiptWithQr(ref, ip, port, movementAndLines);
-    return;
-  }
-  debugPrint('printReceiptWithQrWithBematech');
+  final int cols =
+      BematechEscPos.baseCols(adj.paperSize) +
+          adj.charactersPerLineAdjustment;
+
 
 
   final profile = await CapabilityProfile.load();
-  final generator = Generator(PaperSize.mm80, profile);
+  final generator = Generator(adj.paperSize, profile);
+  ///Code Page 0 CP437
+  // Code Page 1 CP932
+  // Code Page 2 CP850
+  // Code Page 3 CP860
+  // Code Page 4 CP863
+  // Code Page 5 CP865
+  // Code Page 6 Unknown
+  // Code Page 7 Unknown
+  // Code Page 8 Unknown
+  // Code Page 11 CP851
+  // Code Page 12 CP853
+  // Code Page 13 CP857
+  // Code Page 14 CP737
+  // Code Page 15 ISO_8859-7
+  // Code Page 16 CP1252
+  // Code Page 17 CP866
+  // Code Page 18 CP852
+  // Code Page 19 CP858
+  // Code Page 20 Unknown
+  // Code Page 21 CP874
+  // Code Page 22 Unknown
+  // Code Page 23 Unknown
+  // Code Page 24 Unknown
+  // Code Page 25 Unknown
+  // Code Page 26 Unknown
+  // Code Page 30 TCVN-3-1
+  // Code Page 31 TCVN-3-2
+  // Code Page 32 CP720
+  // Code Page 33 CP775
+  // Code Page 34 CP855
+  // Code Page 35 CP861
+  // Code Page 36 CP862
+  // Code Page 37 CP864
+  // Code Page 38 CP869
+  // Code Page 39 ISO_8859-2
+  // Code Page 40 ISO_8859-15
+  // Code Page 41 CP1098
+  // Code Page 42 CP774
+  // Code Page 43 CP772
+  // Code Page 44 CP1125
+  // Code Page 45 CP1250
+  // Code Page 46 CP1251
+  // Code Page 47 CP1253
+  // Code Page 48 CP1254
+  // Code Page 49 CP1255
+  // Code Page 50 CP1256
+  // Code Page 51 CP1257
+  // Code Page 52 CP1258
+  // Code Page 53 RK1048---------- HEADER ----------
+  ///
 
   List<int> bytes = [];
   bytes += generator.reset();
+ String codePage ='CP1252';
+ switch (adj.charSet) {
+   case PosCharSet.cp850:
+     codePage = 'CP850';
+     break;
+   case PosCharSet.cp1252:
+     codePage = 'CP1252';
+     break;
+   case PosCharSet.cp858:
+     codePage = 'CP858';
+     break;
+   default:
+     codePage = 'CP1252';
+     break;
+ }
+
+
+
+  bytes += generator.setGlobalCodeTable(codePage);
 
   // ✅ Bematech: set CP850 (ESC t 2) si perfil dice cp850
   bytes += BematechEscPos.applyCharSet(adj);
@@ -102,11 +161,23 @@ Future<void> printReceiptWithQrWithBematech(
   final String logo = movementAndLines.movementIcon;
   final int imageWidth = BematechEscPos.imageWidthDots(adj);
 
+  final barData = '{B$qrData';
+  final barcodeDocNo = Barcode.code128(barData.split(""));
+
+  bytes += generator.barcode(
+    barcodeDocNo,
+    width: 1,
+    height: 40,
+    font: BarcodeFont.fontB,
+    textPos: BarcodeText.below,
+  );
+
+  bytes += generator.feed(1);
   // ---------- DOCUMENT BARCODE (HEADER) ----------
   final Uint8List barcodeHeaderBytes = await combineBarcodeOnly(
     barcodeData: qrData,
     totalWidth: imageWidth,
-    barcodeWidthBase : imageWidth-60,
+    barcodeWidthBase : imageWidth-20,
   );
 
   final img.Image? barcodeHeaderImage =
@@ -164,11 +235,25 @@ Future<void> printReceiptWithQrWithBematech(
     ),
   ]);
 
-  bytes += generator.text(company);
-  bytes += generator.text(address);
+  addTextByMode(
+    bytes: bytes,
+    gen: generator,
+    adj: adj,
+    text: company,
+  );
+
+  addTextByMode(
+    bytes: bytes,
+    gen: generator,
+    adj: adj,
+    text: address,
+  );
+
+  print('description test hr 1 $cols');
   if (description.isNotEmpty) bytes += generator.text(description);
   bytes += generator.feed(1);
-  bytes += hrCustom(generator, cols);
+  //addHrSafeNormal(bytes: bytes, gen: generator, adj: adj, cols: cols);
+  bytes += generator.hr(ch: '-',len: cols);
 
   // ---------- TABLA TITULOS ----------
   bytes += generator.row([
@@ -183,13 +268,15 @@ Future<void> printReceiptWithQrWithBematech(
     PosColumn(text: 'LINEA/NOMBRE DE PRODUCTO', width: 7, styles: const PosStyles(align: PosAlign.left)),
     PosColumn(text: '', width: 5),
   ]);
-  bytes += hrCustom(generator, cols);
+  //addHrSafeNormal(bytes: bytes, gen: generator, adj: adj, cols: cols);
+  bytes += generator.hr(ch: '-',len: cols);
 
   // ---------- DETALLE ----------
   final List<IdempiereMovementLine> rows = movementAndLines.movementLines ?? [];
   double totalItems = 0;
 
-  for (final line in rows) {
+  for (int i = 0; i < rows.length; i++) {
+    final line = rows[i];
     final double quantity = line.movementQty ?? 0;
     totalItems += quantity;
 
@@ -221,20 +308,33 @@ Future<void> printReceiptWithQrWithBematech(
         styles: const PosStyles(align: PosAlign.right, bold: true, height: PosTextSize.size2, width: PosTextSize.size2),
       ),
     ]);
-    bytes += hrCustom(generator, cols);
+    //addHrSafeNormal(bytes: bytes, gen: generator, adj: adj, cols: cols);
+    if(i<rows.length-1) {
+      bytes += generator.hr(ch: '-',len: cols);
+    } else {
+      bytes += generator.hr(ch: '=',len: cols,linesAfter: 1);
+    }
+  }
+  int totalColWidth = 6;
+  if(adj.paperSize!=PaperSize.mm80){
+    totalColWidth = 7;
+  }
+  PosTextSize totalFontWidth = PosTextSize.size2;
+  if(adj.paperSize==PaperSize.mm58) {
+    totalFontWidth = PosTextSize.size1;
   }
 
   final String totalItemsString = Memory.numberFormatter0Digit.format(totalItems);
   bytes += generator.row([
     PosColumn(
       text: 'ITEMS TOTAL',
-      width: 6,
-      styles: const PosStyles(align: PosAlign.left, height: PosTextSize.size2, width: PosTextSize.size2),
+      width: totalColWidth,
+      styles: PosStyles(align: PosAlign.left, height: PosTextSize.size2, width: totalFontWidth),
     ),
     PosColumn(
       text: totalItemsString,
-      width: 6,
-      styles: const PosStyles(align: PosAlign.right, bold: true, height: PosTextSize.size2, width: PosTextSize.size2),
+      width: 12-totalColWidth,
+      styles: PosStyles(align: PosAlign.right, bold: true, height: PosTextSize.size2, width: totalFontWidth),
     ),
   ]);
 
@@ -265,6 +365,8 @@ Future<void> printReceiptWithQrWithBematech(
         // Code128 (Bematech suele ok)
         barcodeData = '{B$barcodeData';
         final barcode = Barcode.code128(barcodeData.split(""));
+
+
         bytes += generator.barcode(
           barcode,
           width: 1,
@@ -289,7 +391,12 @@ Future<void> printReceiptWithQrWithBematech(
 }
 
 Future<void> printPosTicket(WidgetRef ref, String ip, int port, List<int> ticket) async {
-  final printer = PrinterNetworkManager(ip, port: port);
+  PosTicket ticketPrint = PosTicket( ip: ip, port: port, ticket: ticket);
+
+  final act =ref.read(printTicketBySocketActionProvider);
+  await act.setAndFire(ticketPrint);
+
+  /*final printer = PrinterNetworkManager(ip, port: port);
   final connect = await printer.connect();
 
   if (connect == PosPrintResult.success) {
@@ -303,6 +410,20 @@ Future<void> printPosTicket(WidgetRef ref, String ip, int port, List<int> ticket
     if (ref.context.mounted) {
       showErrorMessage(ref.context, ref, Messages.ERROR_TIMEOUT);
     }
+  }*/
+}
+
+Future<bool> printPosTicketNoRef(String ip, int port, List<int> ticket) async {
+  final printer = PrinterNetworkManager(ip, port: port);
+  final connect = await printer.connect();
+
+  if (connect == PosPrintResult.success) {
+    await printer.printTicket(ticket);
+    await Future.delayed(const Duration(seconds: 1));
+    printer.disconnect();
+    return true;
+  } else {
+    return false;
   }
 }
 

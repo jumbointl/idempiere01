@@ -1,6 +1,7 @@
 import 'package:awesome_dialog/awesome_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:monalisa_app_001/features/products/presentation/providers/locator_provider.dart';
 import 'package:monalisa_app_001/features/products/presentation/providers/store_on_hand/action_notifier.dart';
 
 import '../../../../../config/theme/app_theme.dart';
@@ -8,7 +9,6 @@ import '../../../../shared/data/memory.dart';
 import '../../providers/product_provider_common.dart';
 import '../../../../shared/data/messages.dart';
 import '../../../domain/idempiere/idempiere_locator.dart';
-import '../../providers/locator_provider.dart';
 class LocatorCard extends ConsumerStatefulWidget {
 
 
@@ -58,8 +58,10 @@ class LocatorCardState extends ConsumerState<LocatorCard> {
           if(widget.searchLocatorFrom){
             //To do not implement
           } else {
+            ref.invalidate(selectedLocatorToProvider);
             ref.read(findLocatorToActionProvider).handleInputString(
-                ref: ref, inputData: widget.data.value ?? '', actionScan: Memory.ACTION_GET_LOCATOR_TO_VALUE);
+                ref: ref, inputData: widget.data.value ?? '',
+                actionScan: Memory.ACTION_GET_LOCATOR_TO_VALUE);
 
           }
 

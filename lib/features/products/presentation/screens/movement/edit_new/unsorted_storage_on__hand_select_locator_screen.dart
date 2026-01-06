@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:monalisa_app_001/features/products/common/input_data_processor.dart';
 import 'package:monalisa_app_001/features/products/domain/idempiere/movement_and_lines.dart';
+import 'package:monalisa_app_001/features/products/presentation/providers/common/code_and_fire_action_notifier.dart';
 import 'package:monalisa_app_001/features/products/presentation/providers/products_providers.dart';
 import 'package:monalisa_app_001/features/products/presentation/screens/movement/common/store_on_hand_navigation.dart';
 import 'package:slide_to_confirm/slide_to_confirm.dart';
@@ -93,8 +94,8 @@ class UnsortedStorageOnHandScreenSelectLocatorState
 
   @override
   AsyncValue<ResponseAsyncValue> get mainDataAsync {
-    final notifier = ref.read(findLocatorToActionProvider);
-    return ref.watch(notifier.responseAsyncValueProvider);
+
+    return ref.watch(mainNotifier.responseAsyncValueProvider);
   }
 
   @override
@@ -772,6 +773,10 @@ class UnsortedStorageOnHandScreenSelectLocatorState
       ),
     );
   }
+
+  @override
+  // TODO: implement mainNotifier
+  CodeAndFireActionNotifier get mainNotifier => ref.read(findLocatorToActionProvider);
 
 
 /*Widget _copyLastLocatorToCard(WidgetRef ref) {

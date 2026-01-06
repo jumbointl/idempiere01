@@ -298,7 +298,7 @@ Future<bool?> openBottomSheetConfirmationDialog(
       return Consumer(
         builder: (context, ref, child) {
           return FractionallySizedBox(
-            heightFactor: 0.9,
+            heightFactor: 0.8,
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 20),
               child: Center(

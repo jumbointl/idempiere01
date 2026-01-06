@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:monalisa_app_001/features/products/domain/idempiere/response_async_value.dart';
+import 'package:monalisa_app_001/features/products/presentation/providers/common/code_and_fire_action_notifier.dart';
 
 import '../../../../common/barcode_list_screen.dart';
 import '../../../../domain/models/barcode_models.dart';
@@ -165,6 +166,10 @@ class _MovementBarcodeListScreenState
   @override
   Future<void> setDefaultValuesOnInitState(BuildContext context, WidgetRef ref) async {
   }
+
+  @override
+  // TODO: implement mainNotifier
+  CodeAndFireActionNotifier get mainNotifier => throw UnimplementedError();
 
 
 

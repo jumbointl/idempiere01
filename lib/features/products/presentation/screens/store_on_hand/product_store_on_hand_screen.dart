@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:monalisa_app_001/features/products/domain/idempiere/idempiere_storage_on_hande.dart';
+import 'package:monalisa_app_001/features/products/presentation/providers/common/code_and_fire_action_notifier.dart';
 import 'package:monalisa_app_001/features/products/presentation/widget/no_records_card.dart';
 
 import '../../../../../config/router/app_router.dart';
@@ -78,8 +79,8 @@ class _ProductStoreOnHandScreenState
         ),
       );
     }
-    final notifier = ref.read(actionFindStoreOnHandByUpcSkuProvider);
-    return  ref.watch(notifier.responseAsyncValueProvider);
+
+    return  ref.watch(mainNotifier.responseAsyncValueProvider);
   }
   @override
   Color? getAppBarBackgroundColor(BuildContext context, WidgetRef ref) {
@@ -271,7 +272,7 @@ class _ProductStoreOnHandScreenState
     if(inputData.isEmpty) return ;
     ref.invalidate(productStoreOnHandCacheProvider);
     await Future.delayed(const Duration(milliseconds: 100));
-    ref.read(actionFindStoreOnHandByUpcSkuProvider).handleInputString(
+    mainNotifier.handleInputString(
         ref: ref,
         inputData: inputData,
         actionScan: actionScan,
@@ -289,6 +290,10 @@ class _ProductStoreOnHandScreenState
 
 
   }
+
+  @override
+  // TODO: implement mainNotifier
+  CodeAndFireActionNotifier get mainNotifier => ref.read(actionFindStoreOnHandByUpcSkuProvider);
 }
 
 

@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:monalisa_app_001/features/products/domain/idempiere/sales_order_and_lines.dart';
 import 'package:monalisa_app_001/features/products/domain/idempiere/response_async_value.dart';
+import 'package:monalisa_app_001/features/products/presentation/providers/common/code_and_fire_action_notifier.dart';
 import 'package:monalisa_app_001/features/shared/data/messages.dart';
 
 import '../../products/common/barcode_list_screen.dart';
@@ -162,6 +163,10 @@ class _SalesOrderBarcodeListScreenState
       }) {
     return const SizedBox.shrink();
   }
+
+  @override
+  // TODO: implement mainNotifier
+  CodeAndFireActionNotifier get mainNotifier => throw UnimplementedError();
 
 
 

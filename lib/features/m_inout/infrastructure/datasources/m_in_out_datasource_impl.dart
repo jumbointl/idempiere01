@@ -1,5 +1,6 @@
 
 import 'package:dio/dio.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter/src/material/date.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
@@ -116,6 +117,7 @@ class MInOutDataSourceImpl implements MInOutDataSource {
 
   @override
   Future<List<MInOut>> getMovementList(WidgetRef ref) async {
+    debugPrint('getMovementList');
     await _dioInitialized;
     final int warehouseID = ref.read(authProvider).selectedWarehouse!.id;
     final mInOutState = ref.watch(mInOutProvider);
@@ -123,7 +125,7 @@ class MInOutDataSourceImpl implements MInOutDataSource {
     try {
       final String url =
           "/api/v1/models/m_movement?\$filter=(M_Warehouse_ID%20eq%20$warehouseID%20OR%20M_Warehouse_ID%20eq%20null)%20AND%20(DocStatus%20eq%20'DR'%20OR%20DocStatus%20eq%20'IP')";
-
+      print(url);
       final response = await dio.get(url);
 
       if (response.statusCode == 200) {
@@ -159,6 +161,7 @@ class MInOutDataSourceImpl implements MInOutDataSource {
     try {
       final String url =
           "/api/v1/models/m_inout?\$filter=DocumentNo%20eq%20'${mInOutDoc.toString()}'%20AND%20IsSOTrx%20eq%20${mInOutState.isSOTrx}%20AND%20M_Warehouse_ID%20eq%20$warehouseID";
+      print(url);
       final response = await dio.get(url);
 
       if (response.statusCode == 200) {
@@ -326,7 +329,8 @@ class MInOutDataSourceImpl implements MInOutDataSource {
     final int warehouseID = ref.read(authProvider).selectedWarehouse!.id;
     try {
       final String url =
-          "/api/v1/models/m_movement?\$filter=DocumentNo%20eq%20'${movementDoc.toString()}'%20AND%20(M_Warehouse_ID%20eq%20$warehouseID%20OR%20M_Warehouse_ID%20eq%20null)";
+          "/api/v1/models/m_movement?\$filter=DocumentNo%20eq%20'${movementDoc.toString()}'%20AND%20(M_Warehouse_ID%20eq%20$warehouseID"
+          "%20OR%20M_Warehouse_ID%20eq%20null%20OR%20M_WarehouseTo_ID%20eq%20$warehouseID)";
       print(url);
       final response = await dio.get(url);
 

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:awesome_dialog/awesome_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -58,6 +60,50 @@ Future<void> showSuccessMessage(BuildContext context, WidgetRef ref, String mess
   ).show();
   return;
 }
+
+
+
+Future<bool?> showConfirmationDialog(
+    BuildContext context,
+    WidgetRef ref,
+    String message,
+    ) {
+  final completer = Completer<bool?>();
+
+  AwesomeDialog(
+    context: context,
+    animType: AnimType.scale,
+    dialogType: DialogType.question,
+    dismissOnTouchOutside: true,
+    dismissOnBackKeyPress: true,
+    body: Center(
+      child: Padding(
+        padding: const EdgeInsets.all(8.0),
+        child: Text(
+          message,
+          style: const TextStyle(fontStyle: FontStyle.italic),
+          textAlign: TextAlign.center,
+        ),
+      ),
+    ),
+    btnOkOnPress: () {
+      if (!completer.isCompleted) completer.complete(true);
+    },
+    btnCancelOnPress: () {
+      if (!completer.isCompleted) completer.complete(false);
+    },
+    onDismissCallback: (_) {
+      // Si cerró tocando afuera o con back, devolvemos null
+      if (!completer.isCompleted) completer.complete(null);
+    },
+    btnOkColor: Colors.green,
+    btnCancelText: Messages.CANCEL,
+    btnOkText: Messages.OK,
+  ).show();
+
+  return completer.future;
+}
+
 
 Future<void> showSuccessMessageThenGoTo({required WidgetRef ref,required String message,required String goToPage})  async{
   BuildContext context = ref.context ;

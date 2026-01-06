@@ -46,11 +46,9 @@ class MInOutScreenState extends ConsumerState<MInOutScreen> {
       if(documentNo.isNotEmpty && documentNo !='-1'){
         print('----documentNo: $documentNo');
         mInOutNotifier.onDocChange(documentNo);
-        await mInOutNotifier.loadMInOutAndLine(context, ref);
-        //String message = Messages.PASTE_THE_DOCUMENT_NUMBER_IN_THE_FIELD_THEN_SEARCH ;
-        //showWarningMessage(context, ref, message);
+      } else {
+        await mInOutNotifier.loadDataList(ref);
       }
-      await mInOutNotifier.loadDataList(ref);
     });
   }
 

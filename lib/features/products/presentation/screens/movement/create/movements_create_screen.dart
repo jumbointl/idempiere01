@@ -204,7 +204,6 @@ import '../../../../domain/idempiere/idempiere_movement.dart';
 import '../../../../domain/idempiere/idempiere_movement_line.dart';
 import '../../../../../shared/data/memory.dart';
 import '../../../../../shared/data/messages.dart';
-import '../../../providers/actions/create_movement_and_lines_action.dart';
 import '../../../providers/product_provider_common.dart';
 import '../../../providers/products_scan_notifier.dart';
 import '../../../providers/store_on_hand/action_notifier.dart';

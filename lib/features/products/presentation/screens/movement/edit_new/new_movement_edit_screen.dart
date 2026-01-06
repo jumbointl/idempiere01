@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:get_storage/get_storage.dart';
 import 'package:go_router/go_router.dart';
 import 'package:monalisa_app_001/features/products/domain/idempiere/movement_and_lines.dart';
+import 'package:monalisa_app_001/features/products/presentation/providers/common/code_and_fire_action_notifier.dart';
 import 'package:monalisa_app_001/features/products/presentation/screens/movement/provider/new_movement_provider.dart';
 import 'package:monalisa_app_001/features/products/presentation/screens/store_on_hand/memory_products.dart';
 
@@ -60,14 +61,13 @@ class NewMovementEditScreenState extends MovementAndLinesConsumerState<NewMoveme
 
     ref.invalidate(allowedMovementDocumentTypeProvider);
     MemoryProducts.movementAndLines.clearData();
-    GetStorage().remove(Memory.KEY_MOVEMENT_AND_LINES);
     ref.read(actionScanProvider.notifier).update(
             (state) => Memory.ACTION_FIND_MOVEMENT_BY_ID);
 
     ref.invalidate(newScannedMovementIdForSearchProvider);
     ref.read(isScanningProvider.notifier).update((state) => false);
 
-
+    await Future.delayed(Duration(milliseconds: 100));
     if( widget.movementId != null &&  widget.movementId!.isNotEmpty
                               && widget.movementId != '-1'){
 
@@ -116,8 +116,7 @@ class NewMovementEditScreenState extends MovementAndLinesConsumerState<NewMoveme
     debugPrint('handleInputString $inputData');
     ref.invalidate(movementAndLinesProvider);
     await Future.delayed(Duration(milliseconds: 100));
-    final productsNotifier = ref.read(findMovementByIdActionProvider);
-    productsNotifier.handleInputString(ref: ref, inputData: inputData,
+    mainNotifier.handleInputString(ref: ref, inputData: inputData,
         actionScan: widget.actionTypeInt);
 
   }
@@ -274,6 +273,10 @@ class NewMovementEditScreenState extends MovementAndLinesConsumerState<NewMoveme
   void setWidgetMovementId(String id) {
     widget.movementId = id;
   }
+
+  @override
+  // TODO: implement mainNotifier
+  CodeAndFireActionNotifier get mainNotifier =>  ref.read(findMovementByIdActionProvider);
 
 
 

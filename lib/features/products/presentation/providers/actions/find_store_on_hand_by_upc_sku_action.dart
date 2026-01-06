@@ -17,7 +17,7 @@ class FindStoreOnHandByUpcSkuAction extends CodeAndFireActionNotifier {
     saveLastSearch: true,
     enableScanningFlag: true,
     trimAndUppercase: true,
-    enableNormalizeUpc: true,
+    enableNormalizeUpc: false,
     extraSetting: (ref, value) {
       ref.invalidate(productStoreOnHandCacheProvider);
       ref.read(searchByMOLIConfigurableSKUProvider.notifier).state = false;

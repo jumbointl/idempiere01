@@ -52,11 +52,14 @@ class SearchLocatorDialogState extends ConsumerState<SearchLocatorDialog> {
             preferredSize: Size.fromHeight(36),
             child: Row(
               children: [
+
                 TabBar(
                   tabs: [
                     Tab(text: '${Messages.BY} ${Messages.WAREHOUSE}'),
-                    Tab(text:'${Messages.BY} ${Messages.LOCATOR}'),
+                    Tab(text:'${Messages.BY} ${Messages.LOCATOR}',),
                   ],
+                  labelColor: Colors.purple,
+                  unselectedLabelColor: Colors.grey,
                   isScrollable: true,
                   indicatorWeight: 4,
                   indicatorColor: themeColorPrimary,

@@ -9,6 +9,10 @@ import 'package:go_router/go_router.dart';
 import 'package:monalisa_app_001/config/config.dart';
 import 'package:monalisa_app_001/features/printer/pos/pos_adjustment_selector_sheet.dart';
 import 'package:monalisa_app_001/features/printer/pos/pos_adjustment_values.dart';
+import 'package:monalisa_app_001/features/printer/pos/print_ticket_by_socket_action_provider.dart';
+import 'package:monalisa_app_001/features/printer/pos/printer_action_notifier.dart';
+import 'package:monalisa_app_001/features/printer/pos/show_printer_raw_9100_diagnostic_dialog.dart';
+import 'package:monalisa_app_001/features/printer/pos/show_socket_timeout_selector_dialog.dart';
 import 'package:monalisa_app_001/features/printer/printer_utils.dart';
 import 'package:monalisa_app_001/features/printer/web_template/screen/show_ftp_configuration.dart';
 import 'package:monalisa_app_001/features/printer/web_template/screen/show_search_zpl_template_sheet.dart';
@@ -35,7 +39,6 @@ import '../products/common/widget_utils.dart';
 import '../products/domain/idempiere/movement_and_lines.dart';
 import '../products/presentation/providers/common_provider.dart';
 import '../products/presentation/providers/product_provider_common.dart';
-import '../products/presentation/screens/movement/provider/new_movement_provider.dart';
 import '../shared/data/memory.dart';
 import '../shared/data/messages.dart';
 import 'cups_printer.dart';
@@ -47,7 +50,7 @@ class PrinterSetupScreen extends ConsumerStatefulWidget {
   final String argument;
   final MovementAndLines movementAndLines;
 
-  PrinterSetupScreen({
+  const PrinterSetupScreen({
     super.key,
     required this.movementAndLines,
     required this.argument,
@@ -288,6 +291,39 @@ class PrinterSetupScreen extends ConsumerStatefulWidget {
                 if (adj == null) return;
 
             },
+              onConfigureSocketTimeout: () async {
+                ref.read(isDialogShowedProvider.notifier).state = true;
+                ref.read(enableScannerKeyboardProvider.notifier).state = false;
+
+                await showSocketTimeoutSelectorDialog(
+                  context: context,
+                  ref: ref,
+                );
+
+                ref.read(enableScannerKeyboardProvider.notifier).state = true;
+                ref.read(isDialogShowedProvider.notifier).state = false;
+              },
+              onDiagnoseRaw9100: () async {
+                // Reusar tu patrón para bloquear scanner mientras hay dialog
+                ref.read(isDialogShowedProvider.notifier).state = true;
+                ref.read(enableScannerKeyboardProvider.notifier).state = false;
+
+                // Conseguir IP/port actuales (adaptalo a tu modelo/provider real)
+                final ip = ref.read(printerScanProvider).ipController.text;
+                String portString = ref.read(printerScanProvider).portController.text;
+
+                final port = int.tryParse(portString) ?? 9100;                // o selectedPrinter.port
+
+                await showPrinterRaw9100DiagnosticDialog(
+                  context: context,
+                  ref: ref,
+                  ip: ip,
+                  port: port,
+                );
+
+                ref.read(enableScannerKeyboardProvider.notifier).state = true;
+                ref.read(isDialogShowedProvider.notifier).state = false;
+              },
 
 
             ),
@@ -605,6 +641,8 @@ class PrinterSetupScreen extends ConsumerStatefulWidget {
   }
 
   Widget _buildSetupTab(BuildContext context) {
+    final printerNotifier = ref.watch(printTicketBySocketActionProvider);
+    final async = ref.watch(sendCommandBySocketProvider);
     final printerState = ref.watch(printerScanProvider);
     final savedPrinters  = ref.watch(savedPrintersProvider); // 👈
     return AppInitializerOverlay(
@@ -754,6 +792,33 @@ class PrinterSetupScreen extends ConsumerStatefulWidget {
 
                       ),
                     ],
+                  ),
+
+                  async.when(
+                    data: (data) {
+                        if(!data.isInitiated){
+                          return ListTile(
+                              title: Text(Messages.WAIT_FOR_PRINT));
+                        }
+
+                        if(data.data == true){
+                          return ListTile(
+                              leading: Icon(Icons.check_circle, color: Colors.green),
+                              trailing: Icon(Icons.check_circle, color: Colors.green),
+                              title: Text(Messages.PRINTED_SUCCESSFULLY));
+                        } else {
+                          return ListTile(
+                              leading: Icon(Icons.error, color: Colors.red),
+                              trailing: Icon(Icons.error, color: Colors.red),
+                              title: Text('${Messages.PRINT_FAILED} : ${data.message ?? 'null'}'));
+                        }
+                    },
+                    error: (error, stackTrace) {
+                        return Text('${Messages.ERROR} $stackTrace ',overflow: TextOverflow.ellipsis,);
+                    },
+                    loading: () {
+                       return LinearProgressIndicator(minHeight: 36,);
+                    },
                   ),
 
                   Row(

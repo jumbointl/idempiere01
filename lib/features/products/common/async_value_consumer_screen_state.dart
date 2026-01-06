@@ -6,6 +6,7 @@ import 'package:monalisa_app_001/features/products/common/scan_button_by_action_
 import '../../../config/theme/app_theme.dart';
 import '../../shared/data/memory.dart';
 import '../domain/idempiere/response_async_value.dart';
+import '../presentation/providers/common/code_and_fire_action_notifier.dart';
 import '../presentation/providers/common_provider.dart';
 import 'widget/app_initializer_overlay.dart';
 import 'common_consumer_state.dart';
@@ -13,7 +14,7 @@ import 'input_dialog.dart';
 
 abstract class AsyncValueConsumerState<T extends ConsumerStatefulWidget>
     extends CommonConsumerState<T>  {
-
+  CodeAndFireActionNotifier get mainNotifier ;
   late var isScanning ;
   AsyncValue<ResponseAsyncValue> get mainDataAsync ;
   late var isDialogShowed;

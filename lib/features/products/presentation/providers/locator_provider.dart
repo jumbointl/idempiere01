@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
 import 'package:monalisa_app_001/features/products/presentation/providers/product_provider_common.dart';
@@ -11,8 +12,6 @@ import '../../../shared/domain/entities/response_api.dart';
 import '../../../shared/infrastructure/errors/custom_error.dart';
 import '../../domain/idempiere/idempiere_locator.dart';
 import '../../domain/idempiere/idempiere_warehouse.dart';
-import '../../domain/idempiere/response_async_value.dart';
-import 'common_provider.dart';
 
 final persistentLocatorToProvider = StateProvider<IdempiereLocator>((ref) {
   return IdempiereLocator(id:Memory.INITIAL_STATE_ID,value: Messages.FIND);
@@ -114,12 +113,14 @@ final findLocatorsListProvider = FutureProvider.autoDispose<List<IdempiereLocato
 
   String searchField ='Value';
   String idempiereModelName ='m_locator';
-
+  debugPrint('findLocatorsListProvider $scannedCode');
   Dio dio = await DioClient.create();
   try {
     String url =
         "/api/v1/models/$idempiereModelName?\$filter=contains($searchField,'$scannedCode')";
     url = url.replaceAll(' ', '%20');
+    debugPrint(url);
+    print(url);
     final response = await dio.get(url);
     ref.read(isDialogShowedProvider.notifier).update((state) => false);
 

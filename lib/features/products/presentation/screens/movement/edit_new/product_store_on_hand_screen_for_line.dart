@@ -13,6 +13,7 @@ import 'package:monalisa_app_001/features/products/domain/idempiere/movement_and
 import 'package:monalisa_app_001/features/products/domain/idempiere/idempiere_storage_on_hande.dart';
 import 'package:monalisa_app_001/features/products/domain/idempiere/response_async_value.dart';
 import 'package:monalisa_app_001/features/products/domain/idempiere/response_async_value_ui_model.dart';
+import 'package:monalisa_app_001/features/products/presentation/providers/common/code_and_fire_action_notifier.dart';
 import 'package:monalisa_app_001/features/products/presentation/providers/store_on_hand/action_notifier.dart';
 
 // Providers
@@ -30,7 +31,6 @@ import '../../../../../../config/router/app_router.dart';
 import '../../../../../shared/data/memory.dart';
 import '../../../../../shared/data/messages.dart';
 import '../../../../domain/idempiere/product_with_stock.dart';
-import '../../../providers/actions/find_store_on_hand_by_upc_sku_action_provider.dart';
 import '../../../providers/common_provider.dart';
 import '../../../providers/product_provider_common.dart';
 import '../../../providers/store_on_hand_for_put_away_movement.dart';
@@ -108,8 +108,8 @@ class ProductStoreOnHandScreenForLineState
         ),
       );
     }
-    final notifier = ref.read(actionFindStoreOnHandByUpcSkuProvider);
-    return  ref.watch(notifier.responseAsyncValueProvider);
+
+    return  ref.watch(mainNotifier.responseAsyncValueProvider);
   }
 
   @override
@@ -332,12 +332,13 @@ class ProductStoreOnHandScreenForLineState
   @override
   void popScopeAction(BuildContext context, WidgetRef ref) {
 
-    ref.read(actionScanProvider.notifier).state =
-        Memory.ACTION_FIND_MOVEMENT_BY_ID;
-    ref.invalidate(productStoreOnHandCacheProvider);
+
     // English: Defer navigation to avoid Router rebuild during build phase
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!context.mounted) return;
+      ref.read(actionScanProvider.notifier).state =
+          Memory.ACTION_FIND_MOVEMENT_BY_ID;
+      ref.invalidate(productStoreOnHandCacheProvider);
       final counter = ref.read(movementLineDeletedCounterProvider);
       final route = '${AppRouter.PAGE_MOVEMENT_REPAINT}${counter%2}/$movementId';
       ref.read(movementLineDeletedCounterProvider.notifier).state++;
@@ -367,6 +368,9 @@ class ProductStoreOnHandScreenForLineState
   double getWidth() {
     return MediaQuery.of(context).size.width;
   }
+
+  @override
+  CodeAndFireActionNotifier get mainNotifier => ref.read(actionFindStoreOnHandByUpcSkuProvider);
 }
 
 

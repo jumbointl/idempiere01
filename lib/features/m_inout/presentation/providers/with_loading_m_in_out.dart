@@ -14,7 +14,6 @@ Future<T?> withLoadingMInOut<T>({
 }) async {
   // English comment: "Always use rootNavigator to avoid bottomSheet navigator mismatch"
   final nav = Navigator.of(context, rootNavigator: true);
-  //ref.read(initializingProvider.notifier).state = true;
   _showScreenLoading(
     context,
     barrierDismissible: barrierDismissible,

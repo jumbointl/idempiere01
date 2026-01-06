@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:monalisa_app_001/config/config.dart';
 import 'package:monalisa_app_001/features/products/common/messages_dialog.dart';
+import 'package:monalisa_app_001/features/products/presentation/providers/common/code_and_fire_action_notifier.dart';
 import 'package:monalisa_app_001/features/sales_order/screen/sales_order_barcode_list_screen.dart';
 import 'package:monalisa_app_001/features/sales_order/screen/sales_order_no_data_card.dart';
 
@@ -938,6 +939,10 @@ class _SalesOrderListScreenState
       },
     );
   }
+
+  @override
+  // TODO: implement mainNotifier
+  CodeAndFireActionNotifier get mainNotifier => throw UnimplementedError();
 
 }
 

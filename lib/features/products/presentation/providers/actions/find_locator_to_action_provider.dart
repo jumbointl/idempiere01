@@ -61,6 +61,11 @@ final findLocatorToProvider = FutureProvider<ResponseAsyncValue>((ref) async {
 
   // English: Build "not found" message following requested rules
   String notFoundMessage() {
+    print('notFoundMessage ');
+    print('excludedLocatorId $excludedLocatorId');
+    print('allowedWarehouseId $allowedWarehouseId');
+    print('excludedWarehouseId $excludedWarehouseId');
+
     if (allowedWarehouseId > 0) {
       return '${Messages.NOT_FOUND}\n'
           '${Messages.FILETRED_BY_WAREHOUSE_TO}\n'
@@ -99,9 +104,9 @@ final findLocatorToProvider = FutureProvider<ResponseAsyncValue>((ref) async {
         url = '$url AND AD_Org_ID eq $allowedOrganizationId';
       }
     }
-
+    print(url);
     url = url.replaceAll(' ', '%20');
-
+    print(url);
     final response = await dio.get(url);
 
     if (response.statusCode == 200) {
@@ -117,11 +122,9 @@ final findLocatorToProvider = FutureProvider<ResponseAsyncValue>((ref) async {
         final IdempiereLocator locator = responseApi.records!.first;
 
         // English: Keep your delayed side effects
-        Future.delayed(const Duration(seconds: 1), () {
-          ref.read(selectedLocatorToProvider.notifier).state = locator;
-          ref.read(isScanningProvider.notifier).state = false;
-          ref.read(isScanningLocatorToProvider.notifier).state = false;
-        });
+        ref.read(selectedLocatorToProvider.notifier).state = locator;
+        ref.read(isScanningProvider.notifier).state = false;
+        ref.read(isScanningLocatorToProvider.notifier).state = false;
 
         result.success = true;
         result.data = locator;

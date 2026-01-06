@@ -12,7 +12,6 @@ import '../../../../../shared/data/messages.dart';
 import '../../../../../shared/domain/entities/response_api.dart';
 import '../../../../domain/idempiere/delete_request.dart';
 import '../../../../domain/idempiere/idempiere_movement.dart';
-import '../../../../domain/idempiere/idempiere_movement_confirm.dart';
 import '../../../../domain/idempiere/idempiere_movement_line.dart';
 import '../../../../domain/idempiere/movement_and_lines.dart';
 import '../../../../domain/sql/common_sql_data.dart';
@@ -432,9 +431,12 @@ final confirmMovementProvider = FutureProvider.autoDispose<MovementAndLines?>((r
   try {
     SqlDataMovement movement = SqlDataMovement(id:id);
     Memory.sqlUsersData.copyToSqlData(movement);
+    print(movement.getUpdateDocStatusJson(CommonSqlData.DOC_COMPLETE_STATUS));
 
     String url =movement.getUpdateUrl();
+    print(url);
     final response = await dio.put(url, data: movement.getUpdateDocStatusJson(CommonSqlData.DOC_COMPLETE_STATUS));
+    print(response);
 
     if (response.statusCode == 200) {
       movement =  SqlDataMovement.fromJson(response.data);

@@ -7,14 +7,15 @@ import '../product_provider_common.dart';
 import 'find_locator_to_action_provider.dart';
 
 class FindLocatorToAction extends CodeAndFireActionNotifier {
-  FindLocatorToAction({required Ref ref})
+  FindLocatorToAction({required super.ref})
       : super(
-    ref: ref,
     scannedCodeProvider: scannedLocatorToProvider,
     fireCounterProvider: fireFindLocatorProvider, // no dispara búsqueda
     saveLastSearch: false,
     enableScanningFlag: false,
     trimAndUppercase: true,
+    enableNormalizeUpc: false,
+
     extraSetting: (ref, value) {
       ref.read(isScanningFromDialogProvider.notifier).state = true;
       ref.read(isScanningLocatorToProvider.notifier).state = true;
