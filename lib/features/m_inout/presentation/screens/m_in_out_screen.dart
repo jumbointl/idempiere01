@@ -10,7 +10,9 @@ import 'package:monalisa_app_001/features/m_inout/presentation/widgets/barcode_l
 import 'package:intl/intl.dart';
 import '../../../products/common/selections_dialog.dart';
 import '../../../products/presentation/providers/common_provider.dart';
+import '../../../shared/data/messages.dart';
 import '../../domain/entities/barcode.dart';
+import '../providers/line_provider.dart';
 import '../providers/m_in_out_providers.dart';
 import '../widgets/enter_barcode_button.dart';
 
@@ -282,9 +284,9 @@ class _MInOutViewState extends ConsumerState<_MInOutView> {
 
   @override
   Widget build(BuildContext context) {
-    //final mInOutState = widget.mInOutState;
     final stateNow = ref.watch(mInOutProvider);
     final mInOutNotifier = ref.read(mInOutProvider.notifier);
+
     return SafeArea(
       child: !stateNow.viewMInOut
           ? Column(
@@ -347,12 +349,70 @@ class _MInOutViewState extends ConsumerState<_MInOutView> {
     );
   }
 
+  Widget _buildMInOutHeader(BuildContext context, WidgetRef ref, MInOutStatus stateNow) {
+    final m = stateNow.mInOut;
+
+    // Fuente de verdad: allLines
+    final all = m?.allLines ?? const <Line>[];
+    final int totalLines = all.length;
+
+    // En confirm, lines suele ser subset (ej. confirmId != null)
+    final int uiLines = m?.lines.length ?? 0;
+
+    // Si querés mostrar "filtradas por productId != null" en modo normal:
+    final int productOkLines =
+        all.where((l) => l.mProductId?.id != null).length;
+
+    final repeatedLines = ref.watch(repeatedLinesProvider.select((l) => l.length));
+    final lineWithProductIdNull =
+    ref.watch(nullProductIdLinesProvider.select((l) => l.length));
+
+    debugPrint(
+      '_buildMInOutHeader m.lines=$uiLines m.allLines=$totalLines productOk=$productOkLines '
+          'rep=$repeatedLines err=$lineWithProductIdNull type=${stateNow.mInOutType}',
+    );
 
 
+    // Mensaje principal de líneas:
+    // - En moveConfirm (y confirm flows): mostrar "Confirmadas en esta pantalla / Total"
+    // - En otros: mostrar "Con productId ok / Total" (estable, no cambia por subsets)
+    late final String lineMsg;
+    final isConfirmFlow =
+        stateNow.mInOutType == MInOutType.shipmentConfirm ||
+            stateNow.mInOutType == MInOutType.receiptConfirm ||
+            stateNow.mInOutType == MInOutType.pickConfirm ||
+            stateNow.mInOutType == MInOutType.qaConfirm ||
+            stateNow.mInOutType == MInOutType.moveConfirm;
+    final noConfirmCount = ref.watch(lineWithoutConfirmIdProvider.select((l) => l.length));
 
-  Widget _buildMInOutHeader(BuildContext context, WidgetRef ref,MInOutStatus stateNow) {
-  //  final mInOutState = widget.mInOutState;
-    final mInOutNotifier = widget.mInOutNotifier;
+    String badge = '';
+    if (repeatedLines > 0) badge = 'R : $repeatedLines';
+    if (lineWithProductIdNull > 0) badge = '$badge E : $lineWithProductIdNull'.trim();
+    if (isConfirmFlow && noConfirmCount > 0) badge = '$badge NC : $noConfirmCount'.trim();
+
+    final hasIssues =
+        repeatedLines > 0 ||
+            lineWithProductIdNull > 0 ||
+            (isConfirmFlow && noConfirmCount > 0);
+
+
+    if (isConfirmFlow) {
+      // uiLines puede ser 106, totalLines 142
+      lineMsg = '${Messages.LINES} : $uiLines/$totalLines ${badge}'.trim();
+    } else {
+      // estable (no depende de m.lines)
+      if (productOkLines == totalLines) {
+        lineMsg = '${Messages.LINES} : $totalLines $badge'.trim();
+      } else {
+        lineMsg = '${Messages.LINES} : $productOkLines/$totalLines $badge'.trim();
+      }
+    }
+
+    final movementText = m?.movementDate != null
+        ? '${DateFormat('dd/MM/yyyy').format(m!.movementDate!)}   $lineMsg'
+        : lineMsg;
+
+    String confirmText =  stateNow.mInOutConfirm?.documentNo ?? '';
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 4),
@@ -362,63 +422,254 @@ class _MInOutViewState extends ConsumerState<_MInOutView> {
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(themeBorderRadius),
-              color: ref.watch(mInOutHeaderColorProvider(stateNow)),
+              color: getMInOutHeaderColor(stateNow),
             ),
             child: Row(
               children: [
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
-                  children: const [
-                    Text(
+                  children: [
+                    const Text(
                       'Document No.: ',
                       style: TextStyle(
                         fontSize: themeFontSizeSmall,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
-                    Text(
-                      'Confirm No.: ',
-                      style: TextStyle(
-                        fontSize: themeFontSizeSmall,
-                        fontWeight: FontWeight.bold,
+                    if (isConfirmFlow)
+                      const Text(
+                        'Confirm No.: ',
+                        style: TextStyle(
+                          fontSize: themeFontSizeSmall,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
-                    ),
-                    Text(
+                    const Text(
                       'Date: ',
                       style: TextStyle(
                         fontSize: themeFontSizeSmall,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
-                    Text(
+                    const Text(
                       'Order: ',
                       style: TextStyle(
                         fontSize: themeFontSizeSmall,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
-                    Text(
+                    const Text(
                       'O. Date: ',
                       style: TextStyle(
                         fontSize: themeFontSizeSmall,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
-                    Text(
+                    const Text(
                       'Org.: ',
                       style: TextStyle(
                         fontSize: themeFontSizeSmall,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
-                    Text(
+                    const Text(
                       'Whs.: ',
                       style: TextStyle(
                         fontSize: themeFontSizeSmall,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
+                    const Text(
+                      'BP: ',
+                      style: TextStyle(
+                        fontSize: themeFontSizeSmall,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(width: 10),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
                     Text(
+                      m?.documentNo ?? '',
+                      style: const TextStyle(fontSize: themeFontSizeSmall),
+                    ),
+                    if (isConfirmFlow)
+                      Text(
+                        confirmText,
+                        style: const TextStyle(fontSize: themeFontSizeSmall),
+                      ),
+
+                    // Clickable si hay issues (repeated o errors)
+                    hasIssues
+                        ? TextButton(
+                      style: TextButton.styleFrom(
+                        padding: EdgeInsets.zero,
+                        minimumSize: Size.zero,
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        visualDensity: VisualDensity.compact,
+                        alignment: Alignment.centerLeft,
+                      ),
+                      onPressed: () => showRepeatedLinesSheet(context, ref),
+                      child: Text(
+                        movementText,
+                        style: const TextStyle(
+                          fontSize: themeFontSizeSmall,
+                          decoration: TextDecoration.underline,
+                        ),
+                      ),
+                    )
+                        : Text(
+                      movementText,
+                      style: const TextStyle(fontSize: themeFontSizeSmall),
+                    ),
+
+                    Text(
+                      m?.cOrderId.identifier ?? '',
+                      style: const TextStyle(fontSize: themeFontSizeSmall),
+                    ),
+                    Text(
+                      m?.dateOrdered != null
+                          ? DateFormat('dd/MM/yyyy').format(m!.dateOrdered!)
+                          : '',
+                      style: const TextStyle(fontSize: themeFontSizeSmall),
+                    ),
+                    Text(
+                      m?.adOrgId.identifier ?? '',
+                      style: const TextStyle(fontSize: themeFontSizeSmall),
+                    ),
+                    Text(
+                      m?.mWarehouseId.identifier ?? '',
+                      style: const TextStyle(fontSize: themeFontSizeSmall),
+                    ),
+                    Text(
+                      m?.cBPartnerId.identifier ?? '',
+                      style: const TextStyle(fontSize: themeFontSizeSmall),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          Positioned(
+            right: 0,
+            top: 0,
+            child: IconButton(
+              icon: const Icon(Icons.clear, size: 20),
+              onPressed: stateNow.scanBarcodeListTotal.isNotEmpty
+                  ? () => _showConfirmclearMInOutData(
+                context,
+                mInOutNotifier,
+                stateNow,
+                ref,
+              )
+                  : () async {
+                mInOutNotifier.clearMInOutData();
+                await mInOutNotifier.loadDataList(ref);
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+
+
+ /* Widget _buildMInOutHeader(BuildContext context, WidgetRef ref,MInOutStatus stateNow) {
+
+    int totalLines = stateNow.mInOut?.allLines.length ?? 0;
+    int filteredLines = stateNow.mInOut?.lines.length ?? 0;
+    final repeatedLines = ref.watch(repeatedLinesProvider.select((l) => l.length));
+    final lineWithProductIdNull = ref.watch(nullProductIdLinesProvider.select((l) => l.length));
+    debugPrint('_buildMInOutHeader END OK state.lines=${stateNow.mInOut?.lines.length} state.allLines=${stateNow.mInOut?.allLines.length}');
+    String repeated = 'R : $repeatedLines' ;
+    if(repeatedLines==0){
+      repeated = '';
+    }
+    if(lineWithProductIdNull>0){
+      repeated = '$repeated E : $lineWithProductIdNull'.trim();
+    }
+    String lineMsg = '${Messages.LINES} : $filteredLines/$totalLines  $repeated'.trim();
+    if(filteredLines==totalLines){
+      lineMsg = '${Messages.LINES} : $totalLines  $repeated'.trim();
+    }
+    final movementText = stateNow.mInOut?.movementDate != null
+        ? '${DateFormat('dd/MM/yyyy').format(stateNow.mInOut!.movementDate!)}   $lineMsg'
+        : lineMsg;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 4),
+      child: Stack(
+        children: [
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(themeBorderRadius),
+              color: getMInOutHeaderColor(stateNow),
+            ),
+            child: Row(
+              children: [
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Document No.: ',
+                      style: TextStyle(
+                        fontSize: themeFontSizeSmall,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    if (stateNow.mInOutType == MInOutType.shipmentConfirm ||
+                        stateNow.mInOutType == MInOutType.receiptConfirm ||
+                        stateNow.mInOutType == MInOutType.pickConfirm ||
+                        stateNow.mInOutType == MInOutType.qaConfirm ||
+                        stateNow.mInOutType == MInOutType.moveConfirm)
+                    const Text(
+                      'Confirm No.: ',
+                      style: TextStyle(
+                        fontSize: themeFontSizeSmall,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const Text(
+                      'Date: ',
+                      style: TextStyle(
+                        fontSize: themeFontSizeSmall,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const Text(
+                      'Order: ',
+                      style: TextStyle(
+                        fontSize: themeFontSizeSmall,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const Text(
+                      'O. Date: ',
+                      style: TextStyle(
+                        fontSize: themeFontSizeSmall,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const Text(
+                      'Org.: ',
+                      style: TextStyle(
+                        fontSize: themeFontSizeSmall,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const Text(
+                      'Whs.: ',
+                      style: TextStyle(
+                        fontSize: themeFontSizeSmall,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const Text(
                       'BP: ',
                       style: TextStyle(
                         fontSize: themeFontSizeSmall,
@@ -438,18 +689,34 @@ class _MInOutViewState extends ConsumerState<_MInOutView> {
                     if (stateNow.mInOutType == MInOutType.shipmentConfirm ||
                         stateNow.mInOutType == MInOutType.receiptConfirm ||
                         stateNow.mInOutType == MInOutType.pickConfirm ||
-                        stateNow.mInOutType == MInOutType.qaConfirm)
+                        stateNow.mInOutType == MInOutType.qaConfirm ||
+                        stateNow.mInOutType == MInOutType.moveConfirm)
                       Text(
                         stateNow.mInOutConfirm?.documentNo ?? '',
                         style:
                         const TextStyle(fontSize: themeFontSizeSmall),
                       ),
-                    Text(
-                      stateNow.mInOut?.movementDate != null
-                          ? DateFormat('dd/MM/yyyy').format(
-                        stateNow.mInOut!.movementDate!,
-                      )
-                          : '',
+
+
+
+                    (repeatedLines > 0)? TextButton(
+                      style: TextButton.styleFrom(
+                        padding: EdgeInsets.zero,
+                        minimumSize: Size.zero,
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        visualDensity: VisualDensity.compact,
+                        alignment: Alignment.centerLeft,
+                      ),
+                      onPressed: () => showRepeatedLinesSheet(context, ref),
+                      child: Text(
+                        movementText,
+                        style: const TextStyle(
+                          fontSize: themeFontSizeSmall,
+                          decoration: TextDecoration.underline,
+                        ),
+                      ),
+                    )
+                        :Text(movementText,
                       style: const TextStyle(fontSize: themeFontSizeSmall),
                     ),
                     Text(
@@ -458,9 +725,7 @@ class _MInOutViewState extends ConsumerState<_MInOutView> {
                     ),
                     Text(
                       stateNow.mInOut?.dateOrdered != null
-                          ? DateFormat('dd/MM/yyyy').format(
-                        stateNow.mInOut!.dateOrdered!,
-                      )
+                          ? DateFormat('dd/MM/yyyy').format(stateNow.mInOut!.dateOrdered!)
                           : '',
                       style: const TextStyle(fontSize: themeFontSizeSmall),
                     ),
@@ -502,7 +767,7 @@ class _MInOutViewState extends ConsumerState<_MInOutView> {
         ],
       ),
     );
-  }
+  }*/
 
   Future<void> _showResetManualLine(BuildContext context, Line line) {
     return showDialog(

@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
 
+import '../../../../shared/data/memory.dart';
 import '../../../domain/idempiere/response_async_value.dart';
 import '../store_on_hand/find_product_store_on_hand_provider_refactor.dart';
 import '../store_on_hand_for_put_away_movement.dart';
@@ -23,7 +24,6 @@ FutureProvider.autoDispose<ResponseAsyncValue>((ref) async {
   if (code == null || code.isEmpty) {
     return ResponseAsyncValue(isInitiated: false, success: false, data: null);
   }
-
   return findProductWithStorageOnHand(
     ref: ref,
     scannedCode: code,

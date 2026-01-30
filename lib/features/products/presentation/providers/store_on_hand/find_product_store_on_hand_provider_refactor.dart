@@ -25,7 +25,7 @@ Future<ResponseAsyncValue> findProductWithStorageOnHand({
     success: false,
     data: null,
   );
-
+  Memory.lastSearch = scannedCode;
   final dio = await DioClient.create();
   ref.read(progressProvider.notifier).state = 0.0;
 

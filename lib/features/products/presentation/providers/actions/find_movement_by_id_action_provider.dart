@@ -10,6 +10,7 @@ import '../../../domain/idempiere/idempiere_movement.dart';
 import '../../../domain/idempiere/idempiere_movement_confirm.dart';
 import '../../../domain/idempiere/idempiere_movement_line.dart';
 import '../../../domain/idempiere/response_async_value.dart';
+import '../../../domain/models/idempiere_query_page_utils.dart';
 import '../../screens/movement/provider/new_movement_provider.dart';
 import '../../screens/store_on_hand/memory_products.dart';
 
@@ -38,6 +39,7 @@ final newFindMovementByIdOrDocumentNOProvider = FutureProvider.autoDispose<Respo
     responseAsyncValue.data = MemoryProducts.movementAndLines;
     return responseAsyncValue;
   }
+  Memory.lastSearchMovement = scannedCode;
   responseAsyncValue.isInitiated = true;
   String idempiereModelName ='m_movement';
   Dio dio = await DioClient.create();
@@ -67,8 +69,37 @@ final newFindMovementByIdOrDocumentNOProvider = FutureProvider.autoDispose<Respo
           MemoryProducts.movementAndLines.cloneMovement(m);
           final String searchField ='M_Movement_ID';
           String idempiereModelName ='m_movementline';
-          Dio dio = await DioClient.create();
-          String url =
+
+          final meta = PaginationMeta();
+          final dataList = await fetchAllPages<IdempiereMovementLine>(
+            dio: dio,
+            baseUrl: "/api/v1/models/$idempiereModelName?\$expand=M_Product_ID",
+            filterSuffix:
+            "&\$filter=$searchField eq ${m.id!}",
+            orderByColumn: "Line",
+            parser: (json) => IdempiereMovementLine.fromJson(json),
+            outMeta: meta,
+
+          );
+
+          MemoryProducts.movementAndLines.movementLines = dataList;
+
+
+          idempiereModelName ='m_movementconfirm';
+          //url = "/api/v1/models/$idempiereModelName?\$filter=$searchField eq ${m.id!}&\$orderby=Line";
+          final meta2 = PaginationMeta();
+          final dataList2 = await fetchAllPages<IdempiereMovementConfirm>(
+            dio: dio,
+            baseUrl: "/api/v1/models/$idempiereModelName",
+            filterSuffix:
+            "?\$filter=$searchField eq ${m.id!}",
+            orderByColumn: "Line",
+            parser: (json) => IdempiereMovementConfirm.fromJson(json),
+            outMeta: meta2,
+
+          );
+          MemoryProducts.movementAndLines.movementConfirms = dataList2;
+          /*String url =
               "/api/v1/models/$idempiereModelName?\$expand=M_Product_ID&\$filter=$searchField eq ${m.id!}&\$orderby=Line";
           url = url.replaceAll(' ', '%20');
           final response = await dio.get(url);
@@ -101,6 +132,8 @@ final newFindMovementByIdOrDocumentNOProvider = FutureProvider.autoDispose<Respo
               MemoryProducts.movementAndLines.movementConfirms  = [];
             }
           }
+
+           */
 
         }
 

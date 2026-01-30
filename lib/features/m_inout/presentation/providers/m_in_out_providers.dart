@@ -19,6 +19,7 @@ import '../../../shared/presentation/widgets/custom_filled_button.dart';
 import '../../domain/entities/barcode.dart';
 import '../../domain/entities/line_confirm.dart';
 import '../../infrastructure/repositories/m_in_out_repository_impl.dart';
+import 'line_provider.dart';
 import 'm_in_ot_utils.dart';
 
 int quantityOfMovementAndScannedToAllowInputScannedQuantity = 3;
@@ -179,14 +180,19 @@ class MInOutNotifier extends StateNotifier<MInOutStatus> {
       debugPrint('[loadMInOutAndLine] route=CONFIRM');
 
       try {
-        final mInOut = await withLoadingMInOut(
+        final result = await withLoadingMInOut(
           context: context,
           tag: 'CONFIRM getMInOutAndLine',
           action: () async {
-            mInOutNotifier.getMInOutAndLine(ref);
-            },
+            final mInOut = await mInOutNotifier.getMInOutAndLine(ref);
+            if(mInOut.id == null) return (mInOut,const<MInOutConfirm>[]);
+            final list = await mInOutNotifier.getMInOutConfirmList(mInOut.id!, ref);
+            return (mInOut,list);
+          },
         );
-
+        final mInOut = result?.$1 ;
+        final confirmList = result?.$2 ?? const <MInOutConfirm>[];
+        debugPrint('[loadMInOutAndLine] mInOut ${mInOut?.toJson() ?? 'null'}');
         if (mInOut == null || mInOut.id == null) {
           state = state.copyWith(
               isLoading: false
@@ -199,13 +205,6 @@ class MInOutNotifier extends StateNotifier<MInOutStatus> {
           );
           return;
         }
-        if(!context.mounted) return;
-        final confirmList = await withLoadingMInOut(
-          context: context,
-          tag: 'CONFIRM getMInOutConfirmList',
-          action: () => mInOutNotifier.getMInOutConfirmList(mInOut.id!, ref),
-        );
-
         if (!context.mounted) return;
         await _handleConfirmFlow(
           context: context,
@@ -214,7 +213,7 @@ class MInOutNotifier extends StateNotifier<MInOutStatus> {
           stateNow: stateNow,
           doc: doc,
           mInOut: mInOut,
-          confirmList: confirmList ?? const [],
+          confirmList: confirmList,
         );
       } catch (e) {
         // Error already logged by _withLoading
@@ -509,6 +508,7 @@ class MInOutNotifier extends StateNotifier<MInOutStatus> {
   }
 
   Future<void> getMInOutList(WidgetRef ref) async {
+    debugPrint('getMInOutList');
     state = state.copyWith(isLoadingMInOutList: true, errorMessage: '');
     try {
       final mInOutResponse = await mInOutRepository.getMInOutList(ref);
@@ -666,7 +666,8 @@ class MInOutNotifier extends StateNotifier<MInOutStatus> {
           .where((line) => line.mProductId?.id != null)
           .toList();
       if (state.mInOutType == MInOutType.shipment ||
-          state.mInOutType == MInOutType.receipt) {
+          state.mInOutType == MInOutType.shipmentConfirm
+          || state.mInOutType == MInOutType.receipt) {
         for (int i = 0; i < filteredLines.length; i++) {
           filteredLines[i] = filteredLines[i].copyWith(
             targetQty: filteredLines[i].movementQty,
@@ -677,7 +678,8 @@ class MInOutNotifier extends StateNotifier<MInOutStatus> {
       state = state.copyWith(
         viewMInOut:
             state.mInOutType == MInOutType.receipt ||
-            state.mInOutType == MInOutType.shipment,
+                state.mInOutType == MInOutType.receiptConfirm ||
+            state.mInOutType == MInOutType.shipment ,
         mInOut: mInOutResponse.copyWith(lines: filteredLines),
         isLoading: false,
       );
@@ -743,6 +745,8 @@ class MInOutNotifier extends StateNotifier<MInOutStatus> {
   }
 
   Future<MInOut> getMovementAndLine(WidgetRef ref) async {
+    final req = DateTime.now().microsecondsSinceEpoch;
+    debugPrint('[$req] START getMovementAndLine doc=${state.doc} type=${state.mInOutType}');
     debugPrint('getMovementAndLine');
     if (state.doc.trim().isEmpty) {
       state = state.copyWith(
@@ -760,9 +764,30 @@ class MInOutNotifier extends StateNotifier<MInOutStatus> {
 
     try {
       final mInOutResponse = await mInOutRepository.getMovement(state.doc, ref);
-      final filteredLines = mInOutResponse.lines
+      debugPrint('[$req] AFTER await getMovement lines=${mInOutResponse.lines.length}');
+      final total = mInOutResponse.lines.length;
+      final nullProd = mInOutResponse.lines.where((l) => l.mProductId?.id == null).length;
+      final withProd = total - nullProd;
+
+      debugPrint('[getMovementAndLine] doc=${state.doc} total=$total withProd=$withProd nullProd=$nullProd');
+
+      // (Opcional) imprime cuáles son las líneas “sin productId”
+      final bad = mInOutResponse.lines
+          .where((l) => l.mProductId?.id == null)
+          .map((l) => 'id=${l.id} line=${l.line} upc=${(l.upc ?? '').trim()}')
+          .toList();
+
+      debugPrint('[getMovementAndLine] null productId lines: ${bad.length}');
+      for (final s in bad.take(20)) {
+        debugPrint('  - $s');
+      }
+
+
+      var filteredLines = mInOutResponse.lines
           .where((line) => line.mProductId?.id != null)
           .toList();
+      debugPrint('[$req] FILTER total=$total nullProd=$nullProd filtered=${filteredLines.length}');
+
       if (state.mInOutType == MInOutType.move) {
         for (int i = 0; i < filteredLines.length; i++) {
           filteredLines[i] = filteredLines[i].copyWith(
@@ -771,11 +796,14 @@ class MInOutNotifier extends StateNotifier<MInOutStatus> {
           );
         }
       }
+
+      debugPrint('[$req] BEFORE setState filtered=${filteredLines.length} all=${mInOutResponse.lines.length}');
       state = state.copyWith(
-        viewMInOut: state.mInOutType == MInOutType.move,
-        mInOut: mInOutResponse.copyWith(lines: filteredLines),
+        viewMInOut: state.mInOutType == MInOutType.move || state.mInOutType == MInOutType.moveConfirm,
+        mInOut: mInOutResponse.copyWith(lines: filteredLines,allLines: mInOutResponse.lines),
         isLoading: false,
       );
+      debugPrint('[$req] END OK state.lines=${state.mInOut?.lines.length} state.allLines=${state.mInOut?.allLines.length}');
       return mInOutResponse;
     } catch (e) {
       state = state.copyWith(
@@ -786,8 +814,81 @@ class MInOutNotifier extends StateNotifier<MInOutStatus> {
       throw Exception(e.toString().replaceAll('Exception: ', ''));
     }
   }
-
   Future<MInOutConfirm> getMovementConfirmAndLine(
+      int movementConfirmId,
+      WidgetRef ref,
+      ) async {
+    debugPrint('getMovementConfirmAndLine $movementConfirmId');
+
+    state = state.copyWith(isLoading: true, viewMInOut: true, errorMessage: '');
+
+    try {
+      final mInOutConfirmResponse = await mInOutRepository.getMovementConfirm(
+        movementConfirmId,
+        ref,
+      );
+
+      final current = state.mInOut;
+      if (current == null) {
+        throw Exception('mInOut is null');
+      }
+
+      // Fuente de verdad: SIEMPRE allLines
+      final baseAllLines = current.allLines;
+
+      // Index para evitar O(n^2)
+      final confirmByMovementLineId = <String, LineConfirm>{};
+      for (final c in mInOutConfirmResponse.linesConfirm) {
+        final key = c.mMovementLineId?.id?.toString();
+        if (key != null) confirmByMovementLineId[key] = c;
+      }
+
+      // Actualiza TODAS las líneas (allLines)
+      final updatedAll = baseAllLines.map((line) {
+        final key = line.id?.toString();
+        final matching = (key == null) ? null : confirmByMovementLineId[key];
+
+        return line.copyWith(
+          confirmId: (matching?.id != null && (matching!.id! > 0)) ? matching.id : null,
+          targetQty: matching?.targetQty,
+          confirmedQty: matching?.confirmedQty,
+          scrappedQty: matching?.scrappedQty,
+        );
+      }).toList();
+
+      // Lista operativa para pantalla confirm: solo las que tienen confirmId
+      final confirmLines = updatedAll.where((l) => l.confirmId != null).toList();
+
+      state = state.copyWith(
+        mInOutConfirm: mInOutConfirmResponse,
+        mInOut: current.copyWith(
+          allLines: updatedAll,      // ✅ siempre completa y actualizada
+          lines: confirmLines,       // ✅ subset para UI de confirm
+        ),
+        isLoading: false,
+      );
+
+      debugPrint(
+        'mInOutConfirmResponse line confirm ${mInOutConfirmResponse.id} '
+            'linesConfirm=${mInOutConfirmResponse.linesConfirm.length} '
+            'state.lines=${state.mInOut?.lines.length} state.allLines=${state.mInOut?.allLines.length}',
+      );
+// Actualiza provider de "sin confirmId"
+      updateLinesWithoutConfirmId(ref, updatedAll);
+
+      return mInOutConfirmResponse;
+    } catch (e) {
+      state = state.copyWith(
+        errorMessage: e.toString().replaceAll('Exception: ', ''),
+        isLoading: false,
+        viewMInOut: false,
+      );
+      throw Exception(e.toString());
+    }
+  }
+
+
+  /* Future<MInOutConfirm> getMovementConfirmAndLine(
 
     int movementConfirmId,
     WidgetRef ref,
@@ -824,9 +925,10 @@ class MInOutNotifier extends StateNotifier<MInOutStatus> {
 
       state = state.copyWith(
         mInOutConfirm: mInOutConfirmResponse,
-        mInOut: state.mInOut!.copyWith(lines: filteredLines),
+        mInOut: state.mInOut!.copyWith(lines: filteredLines,allLines: state.mInOut!.lines),
         isLoading: false,
       );
+      print('mInOutConfirmResponse ${mInOutConfirmResponse.id} ${mInOutConfirmResponse.linesConfirm.length}');
       return mInOutConfirmResponse;
     } catch (e) {
       state = state.copyWith(
@@ -836,7 +938,7 @@ class MInOutNotifier extends StateNotifier<MInOutStatus> {
       );
       throw Exception(e.toString());
     }
-  }
+  }*/
 
   void clearMInOutData() {
     print('>>>clearMInOutData');
@@ -1915,6 +2017,7 @@ class MInOutStatus {
 // import 'tu_path/minout_status.dart'; // donde esté MInOutStatus + MInOutType
 
 /// Provider que devuelve el color de fondo del header según el estado del MInOut
+/*
 final mInOutHeaderColorProvider = Provider.family<Color, MInOutStatus>((
   ref,
   mInOutState,
@@ -1980,3 +2083,42 @@ final mInOutHeaderColorProvider = Provider.family<Color, MInOutStatus>((
 
   return themeBackgroundColorLight;
 });
+*/
+Color getMInOutHeaderColor(MInOutStatus mInOutState) {
+  final docStatusId = mInOutState.mInOut?.docStatus.id?.toString();
+  final confirmStatusId = mInOutState.mInOutConfirm?.docStatus.id?.toString();
+
+  if (mInOutState.mInOutType == MInOutType.move) {
+    if (docStatusId == 'DR') return themeColorWarningLight;
+    if (docStatusId == 'IP') return Colors.cyan.shade200;
+    if (docStatusId == 'CO') return themeColorSuccessfulLight;
+    return Colors.grey.shade200;
+  }
+
+  if (mInOutState.mInOutType == MInOutType.moveConfirm) {
+    if (confirmStatusId == 'DR') return themeColorWarningLight;
+    if (confirmStatusId == 'IP') return Colors.cyan.shade200;
+    if (confirmStatusId == 'CO') return themeColorSuccessfulLight;
+    return Colors.grey.shade200;
+  }
+
+  final type = mInOutState.mInOutType;
+
+  final esInOutNormal =
+      type == MInOutType.shipment ||
+          type == MInOutType.receipt ||
+          type == MInOutType.move ||
+          type == MInOutType.moveConfirm;
+
+  if (!esInOutNormal) {
+    // usar docStatus del confirm
+    if (confirmStatusId == 'IP') return themeColorWarningLight;
+    if (confirmStatusId == 'CO') return themeColorSuccessfulLight;
+  } else {
+    // usar docStatus del mInOut principal
+    if (docStatusId == 'IP') return themeColorWarningLight;
+    if (docStatusId == 'CO') return themeColorSuccessfulLight;
+  }
+
+  return themeBackgroundColorLight;
+}

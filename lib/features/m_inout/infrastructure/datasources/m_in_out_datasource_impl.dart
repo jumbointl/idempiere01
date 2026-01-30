@@ -25,6 +25,7 @@ import '../../../shared/domain/entities/model_set_doc_action_request.dart';
 import '../../../shared/shared.dart';
 import '../../domain/entities/line.dart';
 import '../../domain/entities/m_in_out_confirm.dart';
+import '../../presentation/providers/line_provider.dart';
 import '../../presentation/providers/m_in_out_providers.dart';
 
 class MInOutDataSourceImpl implements MInOutDataSource {
@@ -155,6 +156,7 @@ class MInOutDataSourceImpl implements MInOutDataSource {
     String mInOutDoc,
     WidgetRef ref,
   ) async {
+    print('getMInOut');
     await _dioInitialized;
     final mInOutState = ref.watch(mInOutProvider);
     final int warehouseID = ref.read(authProvider).selectedWarehouse!.id;
@@ -162,18 +164,20 @@ class MInOutDataSourceImpl implements MInOutDataSource {
       final String url =
           "/api/v1/models/m_inout?\$filter=DocumentNo%20eq%20'${mInOutDoc.toString()}'%20AND%20IsSOTrx%20eq%20${mInOutState.isSOTrx}%20AND%20M_Warehouse_ID%20eq%20$warehouseID";
       print(url);
+
+      print(url.replaceAll('%20', ' '));
       final response = await dio.get(url);
 
       if (response.statusCode == 200) {
         final responseApi =
             ResponseApi<MInOut>.fromJson(response.data, MInOut.fromJson);
-
+        print(responseApi.records);
         if (responseApi.records != null && responseApi.records!.isNotEmpty) {
           final mInOut = responseApi.records!.first;
-
+          print('mInOutgetMInOut-----${mInOut.id ?? 'NULL'}');
           final lines = await getLinesMInOut(mInOut.id!, ref);
           mInOut.lines = lines;
-
+          print('mInOutgetMInOut--lines ${lines.isNotEmpty ? mInOut.lines.length :'empty' }');
           return mInOut;
         } else {
           throw Exception(
@@ -340,9 +344,10 @@ class MInOutDataSourceImpl implements MInOutDataSource {
 
         if (responseApi.records != null && responseApi.records!.isNotEmpty) {
           final mInOut = responseApi.records!.first;
-          print('mInOutgetMovement-----${mInOut.toJson()}');
           final lines = await getLinesMovement(mInOut.id!, ref);
+          await Future.delayed(Duration(microseconds: 500));
           mInOut.lines = lines;
+          print('mInOutgetMInOut--lines ${lines.isNotEmpty ? mInOut.lines.length :'empty' }');
 
           return mInOut;
         } else {
@@ -375,7 +380,8 @@ class MInOutDataSourceImpl implements MInOutDataSource {
     try {
       while (hasMoreRecords) {
         final String url =
-            "/api/v1/models/m_movementline?\$filter=M_Movement_ID%20eq%20$movementId&\$skip=$skip";
+            "/api/v1/models/m_movementline?\$filter=M_Movement_ID%20eq%20$movementId&\$orderby=line&\$skip=$skip";
+        print(url);
         final response = await dio.get(url);
 
         if (response.statusCode != 200) {
@@ -395,8 +401,15 @@ class MInOutDataSourceImpl implements MInOutDataSource {
 
         allLines.addAll(responseApi.records!);
         skip += responseApi.records!.length;
+        print('Total records: ${responseApi.rowCount} extracted records: $skip');
         hasMoreRecords = responseApi.rowCount! > skip;
+        print('hasMoreRecords: $hasMoreRecords');
+        await Future.delayed(Duration(microseconds: 200));
       }
+
+      updateRepeatedLines(ref, allLines);
+      await Future.delayed(Duration(microseconds: 200));
+      print('allLines length: ${allLines.length}');
 
       return allLines;
     } on DioException catch (e) {
@@ -449,6 +462,7 @@ class MInOutDataSourceImpl implements MInOutDataSource {
     try {
       final String url =
           "/api/v1/models/m_movementConfirm?\$filter=M_MovementConfirm_ID%20eq%20$movementConfirmId";
+
       final response = await dio.get(url);
 
       if (response.statusCode == 200) {
@@ -492,7 +506,8 @@ class MInOutDataSourceImpl implements MInOutDataSource {
     try {
       while (hasMoreRecords) {
         final String url =
-            "/api/v1/models/m_movementlineconfirm?\$filter=M_MovementConfirm_ID%20eq%20$movementConfirmId&\$skip=$skip";
+            "/api/v1/models/m_movementlineconfirm?\$filter=M_MovementConfirm_ID%20eq%20$movementConfirmId&\$orderby=M_MovementLine_ID&\$skip=$skip";
+        print(url);
         final response = await dio.get(url);
 
         if (response.statusCode != 200) {
@@ -514,7 +529,7 @@ class MInOutDataSourceImpl implements MInOutDataSource {
         skip += responseApi.records!.length;
         hasMoreRecords = responseApi.rowCount! > skip;
       }
-
+      debugPrint('confirm line allLines length: ${allLines.length}');
       return allLines;
     } on DioException catch (e) {
       final authDataNotifier = ref.read(authProvider.notifier);

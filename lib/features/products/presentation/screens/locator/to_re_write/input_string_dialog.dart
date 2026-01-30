@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
 import 'package:monalisa_app_001/features/products/common/input_dialog.dart';
+import 'package:monalisa_app_001/features/products/presentation/providers/locator_provider.dart';
 import 'package:monalisa_app_001/features/products/presentation/providers/product_provider_common.dart';
 
 import '../../../../common/input_data_processor.dart';
@@ -90,18 +91,13 @@ class InputStringDialogState extends ConsumerState<InputStringDialog> {
     TextEditingController controller = TextEditingController();
     // You would typically show a dialog here using showDialog or a similar method.
     // Example:
+    bool history = false ;
     if(widget.dialogType == Memory.TYPE_DIALOG_HISTOY){
-      String lastSearch = Memory.lastSearch;
-      if(lastSearch.isEmpty){
-        controller.text = Messages.NO_RECORDS_FOUND;
-      } else {
-        controller.text = lastSearch;
-      }
-
+      history = true;
     }
     final actionScan = ref.read(actionScanProvider);
     openInputDialogWithAction(ref: ref, history:
-    false,onOk: widget.handleInputString, actionScan:actionScan);
+    history,onOk: widget.handleInputString, actionScan:actionScan);
 
 
   }

@@ -14,6 +14,7 @@ class MInOut {
   DateTime? dateOrdered;
   AdEntityId docStatus;
   List<Line> lines;
+  List<Line> allLines;
 
   MInOut({
     this.id,
@@ -28,6 +29,7 @@ class MInOut {
     required this.dateOrdered,
     required this.docStatus,
     this.lines = const [],
+    this.allLines = const [],
   });
 
   factory MInOut.fromJson(Map<String, dynamic> json) => MInOut(
@@ -78,7 +80,7 @@ class MInOut {
     AdEntityId? cOrderId,
     DateTime? dateOrdered,
     AdEntityId? docStatus,
-    List<Line>? lines,
+    List<Line>? lines, List<Line>? allLines,
   }) {
     return MInOut(
       id: id ?? this.id,
@@ -93,6 +95,7 @@ class MInOut {
       dateOrdered: dateOrdered ?? this.dateOrdered,
       docStatus: docStatus ?? this.docStatus,
       lines: lines ?? this.lines,
+      allLines: allLines ?? this.allLines,
     );
   }
 

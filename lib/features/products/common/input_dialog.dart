@@ -55,12 +55,16 @@ Future<String?> openInputDialogWithResult(
   } else {
     controller.text = value;
   }
+  String lastSearch = Memory.lastSearch;
+  if (lastSearch == '-1') lastSearch = '';
 
   if (history) {
-    String lastSearch = Memory.lastSearch;
-    if (lastSearch == '-1') lastSearch = '';
+
     controller.text = lastSearch.isEmpty ? Messages.NO_RECORDS_FOUND : lastSearch;
+  } else {
+    controller.text = lastSearch;
   }
+
 
   if (numberOnly) {
     ref.read(useNumberKeyboardProvider.notifier).state = true;
@@ -396,6 +400,11 @@ Future<void> openInputDialogWithAction({
   required int actionScan,
   }) onOk,
 }) async {
+
+
+  String lastSearch = Memory.lastSearch;
+
+
   String title = Messages.INPUT_DATA;
 
   if (actionScan == Memory.ACTION_FIND_MOVEMENT_BY_ID) {
@@ -407,18 +416,16 @@ Future<void> openInputDialogWithAction({
   }
 
   final controller = TextEditingController();
-
+  lastSearch = Memory.lastSearch;
+  if (actionScan == Memory.ACTION_FIND_MOVEMENT_BY_ID) {
+    lastSearch = Memory.lastSearchMovement;
+  }
+  if (lastSearch == '-1') lastSearch = '';
   if (history) {
-    String lastSearch = Memory.lastSearch;
-
-    if (actionScan == Memory.ACTION_FIND_MOVEMENT_BY_ID) {
-      lastSearch = Memory.lastSearchMovement;
-    }
-
-    if (lastSearch == '-1') lastSearch = '';
-
     controller.text =
     lastSearch.isEmpty ? Messages.NO_RECORDS_FOUND : lastSearch;
+  } else {
+    controller.text = lastSearch;
   }
   ref.read(actionScanProvider.notifier).state = Memory.ACTION_NO_SCAN_ACTION;
   ref.read(isDialogShowedProvider.notifier).state = true;
@@ -447,12 +454,6 @@ Future<void> openInputDialogWithAction({
 
             ref.read(isDialogShowedProvider.notifier).state = false;
             ref.read(actionScanProvider.notifier).state = actionScan;
-
-            if (actionScan == Memory.ACTION_FIND_MOVEMENT_BY_ID) {
-              Memory.lastSearchMovement = text;
-            } else {
-              Memory.lastSearch = text;
-            }
 
             onOk(
               ref: ref,

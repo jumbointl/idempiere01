@@ -255,24 +255,14 @@ class UnsortedStorageOnHandScreenSelectLocatorState
           isCardsSelected = List<bool>.filled(storageList.length, false);
           isCardsSelected[index] = !isCardsSelected[index];
         });
+        unfocus();
 
-        // English: Ask quantity using the shared numeric input bottom sheet.
-        () async {
-          final result = await openInputDialogWithResult(
-            context,
-            ref,
-            false,
-            value: qtyOnHand.toInt().toString(),
-            title: Messages.QUANTITY_SHORT,
-            numberOnly: true,
-          );
-          final aux = double.tryParse(result ?? '') ?? 0;
-          if (aux > 0 && aux <= qtyOnHand) {
-            ref.read(quantityToMoveProvider.notifier).state = aux;
-          } else {
-            if (context.mounted) _showErrorMessage(Messages.ERROR_QUANTITY);
-          }
-        }();
+        getDoubleDialog(
+          ref: ref,
+          quantity: qtyOnHand,
+          targetProvider: quantityToMoveProvider,
+        );
+
       },
       child: Container(
         width: widget.width,

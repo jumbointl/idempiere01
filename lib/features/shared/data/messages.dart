@@ -1345,6 +1345,10 @@ class Messages{
 
   static String ERROR_WAIT_FOR_PRINT='ERROR ESPERANDO IMPRESION';
 
+  static String REPEATED ='REPETIDO';
+
+  static String ERROR_REPEATED ='ERROR REPETIDO';
+
 
 
 

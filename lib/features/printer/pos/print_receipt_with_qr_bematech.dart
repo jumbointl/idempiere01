@@ -1,4 +1,5 @@
 // print_receipt_with_qr_bematech.dart
+import 'dart:convert';
 import 'dart:ui' as ui;
 
 import 'package:barcode_image/barcode_image.dart' as img_barcode;
@@ -300,8 +301,9 @@ Future<void> printReceiptWithQrWithBematech(
       PosColumn(text: atr, width: 5, styles: const PosStyles(align: PosAlign.left)),
       PosColumn(text: '', width: 7),
     ]);
+    final String productSafe = sanitizeForPos(product);
     bytes += generator.row([
-      PosColumn(text: product, width: 7, styles: const PosStyles(align: PosAlign.left, bold: true)),
+      PosColumn(text: productSafe, width: 7, styles: const PosStyles(align: PosAlign.left, bold: true)),
       PosColumn(
         text: quantityStr,
         width: 5,
@@ -520,3 +522,55 @@ Future<Uint8List> combineLogoAndQrCode({
 
   return Uint8List.fromList(img.encodePng(merged));
 }
+
+
+String sanitizeForPos(String input) {
+  var s = input;
+
+  // 1) Reemplazos comunes “problemáticos” → equivalentes simples
+  const map = {
+    // guiones raros
+    '\u2010': '-', // hyphen
+    '\u2011': '-', // non-breaking hyphen
+    '\u2012': '-', // figure dash
+    '\u2013': '-', // en dash  ← TU CASO
+    '\u2014': '-', // em dash
+    '\u2212': '-', // minus sign
+
+    // comillas “inteligentes”
+    '\u2018': "'", // left single quote
+    '\u2019': "'", // right single quote
+    '\u201C': '"', // left double quote
+    '\u201D': '"', // right double quote
+
+    // puntos suspensivos
+    '\u2026': '...',
+
+    // espacio duro
+    '\u00A0': ' ',
+
+    // bullets
+    '\u2022': '*',
+  };
+
+  map.forEach((k, v) => s = s.replaceAll(k, v));
+
+  // 2) (Opcional) Normalizar algunos símbolos sueltos que también dan guerra
+  // Ej: º ª € dependiendo del encoder/tabla
+  // s = s.replaceAll('€', 'EUR');
+
+  // 3) Filtro final: eliminar cualquier cosa que aún no quepa en latin1
+  // (así nunca más te tira exception)
+  final sb = StringBuffer();
+  for (final r in s.runes) {
+    final ch = String.fromCharCode(r);
+    try {
+      latin1.encode(ch);
+      sb.write(ch);
+    } catch (_) {
+      sb.write('?'); // o '' para eliminar
+    }
+  }
+  return sb.toString();
+}
+

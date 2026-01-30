@@ -1,5 +1,6 @@
 
 import 'package:dio/dio.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
 import 'package:monalisa_app_001/features/products/domain/idempiere/idempiere_response_message.dart';
@@ -437,6 +438,8 @@ final confirmMovementProvider = FutureProvider.autoDispose<MovementAndLines?>((r
     print(url);
     final response = await dio.put(url, data: movement.getUpdateDocStatusJson(CommonSqlData.DOC_COMPLETE_STATUS));
     print(response);
+    print(response.statusCode);
+
 
     if (response.statusCode == 200) {
       movement =  SqlDataMovement.fromJson(response.data);
@@ -457,9 +460,22 @@ final confirmMovementProvider = FutureProvider.autoDispose<MovementAndLines?>((r
 
 
   } on DioException catch (e) {
+    debugPrint('DioException');
+
+    String title = e.response?.data['title'] ?? '';
+    int status = e.response?.data['status'] ?? '';
+    String detail = e.response?.data['detail'] ?? '';
+    String messages ='Title : $title\nStatus : $status\nDetail : $detail';
+    if(title=='' && detail==''){
+      messages = e.toString();
+    }
+
     return MovementAndLines(id: Memory.ERROR_ID,
-        name: '${Messages.ERROR } ${e.toString()}' );
+        name: '${Messages.ERROR } : $messages' );
   } catch (e) {
+    debugPrint('Exception');
+    debugPrint(e.toString());
+
     return MovementAndLines(id: Memory.ERROR_ID,
         name: '${Messages.ERROR } ${e.toString()}' );
   }
@@ -496,8 +512,17 @@ final cancelMovementProvider = FutureProvider.autoDispose<MovementAndLines?>((re
 
 
   } on DioException catch (e) {
+    debugPrint('DioException');
+
+    String title = e.response?.data['title'] ?? '';
+    int status = e.response?.data['status'] ?? '';
+    String detail = e.response?.data['detail'] ?? '';
+    String messages ='Title : $title\nStatus : $status\nDetail : $detail';
+    if(title=='' && detail==''){
+      messages = e.toString();
+    }
     return MovementAndLines(id: Memory.ERROR_ID,
-        name: '${Messages.ERROR } ${e.toString()}' );
+        name: '${Messages.ERROR } $messages' );
     //final authDataNotifier = ref.read(authProvider.notifier);
     //throw CustomErrorDioException(e, authDataNotifier);
   } catch (e) {

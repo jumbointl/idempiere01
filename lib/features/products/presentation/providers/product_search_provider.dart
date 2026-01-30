@@ -5,6 +5,7 @@ import 'package:monalisa_app_001/features/products/presentation/providers/produc
 
 import '../../../../config/http/dio_client.dart';
 import '../../../auth/presentation/providers/auth_provider.dart';
+import '../../../shared/data/memory.dart';
 import '../../../shared/data/messages.dart';
 import '../../../shared/domain/entities/response_api.dart';
 import '../../../shared/infrastructure/errors/custom_error.dart';
@@ -32,7 +33,7 @@ final findProductByUPCOrSKUProvider = FutureProvider.autoDispose<IdempiereProduc
   if(aux==null){
     searchField = 'sku';
   }
-
+  Memory.lastSearch = scannedCode;
   Dio dio = await DioClient.create();
   try {
     String url =

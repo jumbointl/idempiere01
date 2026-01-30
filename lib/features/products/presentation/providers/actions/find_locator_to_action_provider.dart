@@ -37,6 +37,7 @@ final findLocatorToProvider = FutureProvider<ResponseAsyncValue>((ref) async {
   if (scannedCode.isEmpty) {
     return result;
   }
+  Memory.lastSearch = scannedCode;
 
   result.isInitiated = true;
 
