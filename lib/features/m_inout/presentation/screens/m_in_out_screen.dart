@@ -130,10 +130,9 @@ class MInOutScreenState extends ConsumerState<MInOutScreen> {
                     print(' mInOutNotifier.setDocActionConfirm');
                     mInOutNotifier.setDocActionConfirm(ref);}
                       : () {
-                    //print(' mInOutNotifier._showConfirmMInOut');
-                    //_showConfirmMInOut(context);
+                    print(' mInOutNotifier._showConfirmMInOut');
+                    _showConfirmMInOut(context);
 
-                    reloadMInOut(context,ref);
 
                   }
                       : () {
@@ -141,8 +140,8 @@ class MInOutScreenState extends ConsumerState<MInOutScreen> {
                     _showWithoutRole(context);
                   },
                   icon: Icon(
-                    mInOutNotifier.isConfirmMInOut() ? Icons.check : Symbols.cloud_sync_rounded,
-                    color: Colors.purple,
+                    mInOutNotifier.isConfirmMInOut() ? Symbols.edit_arrow_up : Symbols.other_admission ,
+                    color: mInOutNotifier.isConfirmMInOut() ? Colors.purple :Colors.grey,
 
                   ),
                 ),
@@ -393,15 +392,6 @@ class _MInOutViewState extends ConsumerState<_MInOutView> {
     final lineWithProductIdNull =
     ref.watch(nullProductIdLinesProvider.select((l) => l.length));
 
-    debugPrint(
-      '_buildMInOutHeader m.lines=$uiLines m.allLines=$totalLines productOk=$productOkLines '
-          'rep=$repeatedLines err=$lineWithProductIdNull type=${stateNow.mInOutType}',
-    );
-    debugPrint(
-      '_buildMInOutHeader isSOTrx ${stateNow.isSOTrx} $uiLines',
-    );
-
-
     // Mensaje principal de líneas:
     // - En moveConfirm (y confirm flows): mostrar "Confirmadas en esta pantalla / Total"
     // - En otros: mostrar "Con productId ok / Total" (estable, no cambia por subsets)
@@ -446,7 +436,7 @@ class _MInOutViewState extends ConsumerState<_MInOutView> {
         : lineMsg;
 
     String confirmText =  stateNow.mInOutConfirm?.documentNo ?? '';
-    final canMerge = ref.watch(canMergeSavedProvider);
+
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 4),
@@ -540,29 +530,9 @@ class _MInOutViewState extends ConsumerState<_MInOutView> {
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Row(
-                      children: [
-                        Text(
-                          m?.documentNo ?? '',
-                          style: const TextStyle(fontSize: themeFontSizeSmall),
-                        ),
-                        SizedBox(width: 15),
-                        IconButton(
-                          onPressed:  () {
-                            //print(' mInOutNotifier._showConfirmMInOut');
-                            //_showConfirmMInOut(context);
-                            reloadMInOut(context, ref);
-
-
-                          },
-                          icon: Icon(
-                            Symbols.cloud_sync_rounded,
-                            color: Colors.purple,
-
-                          ),
-                        ),
-
-                      ],
+                    Text(
+                      m?.documentNo ?? '',
+                      style: const TextStyle(fontSize: themeFontSizeSmall),
                     ),
                     if (isConfirmFlow)
                       Text(
@@ -652,15 +622,29 @@ class _MInOutViewState extends ConsumerState<_MInOutView> {
           Positioned(
             right: 6,
             bottom: 4,
-            child: canMerge
-                ? Row(
+            child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Text(
-                  'Merge',
+                Text(
+                  Messages.RELOAD,
                   style: TextStyle(fontSize: themeFontSizeSmall),
                 ),
                 IconButton(
+                  onPressed:  () {
+                    //print(' mInOutNotifier._showConfirmMInOut');
+                    //_showConfirmMInOut(context);
+                    reloadMInOut(context, ref);
+
+
+                  },
+                  icon: Icon(
+                    Symbols.cloud_sync_rounded,
+                    color: Colors.purple,
+
+                  ),
+                ),
+
+                /*IconButton(
                   iconSize: 18,
                   visualDensity: VisualDensity.compact,
                   padding: EdgeInsets.zero,
@@ -670,10 +654,10 @@ class _MInOutViewState extends ConsumerState<_MInOutView> {
                     Symbols.arrow_and_edge_rounded,
                     color: Colors.purple,
                   ),
-                ),
+                ),*/
               ],
             )
-                : const SizedBox.shrink(),
+                ,
           ),
         ],
       ),
@@ -1673,7 +1657,7 @@ class _MInOutViewState extends ConsumerState<_MInOutView> {
 
 }
 
-void reloadMInOut(BuildContext context, WidgetRef ref) {
+Future<void> reloadMInOut(BuildContext context, WidgetRef ref) async {
   print(' mInOutNotifier.reload');
   final mInOutState = ref.read(mInOutProvider);
   if(mInOutState.doc.isEmpty){
@@ -1683,7 +1667,9 @@ void reloadMInOut(BuildContext context, WidgetRef ref) {
   }
   mInOutState.copyWith(isLoading: true);
   ref.read(savedConfirmIdProvider.notifier).state = mInOutState.mInOutConfirm?.id ?? 0;
-  ref.read(mInOutProvider.notifier).loadMInOutAndLine(context, ref);
+  await ref.read(mInOutProvider.notifier).loadMInOutAndLine(context, ref);
+  final canMerge = ref.watch(canMergeSavedProvider);
+  if(canMerge &&context.mounted)mergeMInOut(context, ref);
 }
 
 

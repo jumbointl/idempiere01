@@ -1353,6 +1353,8 @@ class Messages{
 
   static String ERROR_DOCUMENT_EMPTY='ERROR DOCUMENTO VACIO';
 
+  static String RELOAD='RE-LOAD';
+
 
 
 

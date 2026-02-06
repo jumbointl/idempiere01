@@ -29,6 +29,7 @@ import '../../../providers/common_provider.dart';
 import '../../../providers/locator_provider.dart';
 import '../../../providers/store_on_hand/action_notifier.dart';
 import '../../../widget/response_async_value_messages_card.dart';
+import '../../locator/search_locator_dialog.dart';
 import '../../store_on_hand/memory_products.dart';
 import '../provider/new_movement_provider.dart';
 import 'custom_app_bar.dart' hide fontSizeMedium;

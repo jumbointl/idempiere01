@@ -1328,10 +1328,6 @@ class MInOutNotifier extends StateNotifier<MInOutStatus> {
       if (state.rolCompleteOver) 'over',
       if (state.rolCompleteOver) 'manually-over',
     };
-
-
-
-
     return state.mInOut?.lines.every(
           (line) =>
       line.verifiedStatus != 'pending' &&
