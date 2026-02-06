@@ -71,6 +71,9 @@ class Line {
         upc: json["UPC"],
         sku: json["SKU"],
         productName: json["ProductName"],
+        verifiedStatus: json["VerifiedStatus"],
+        scanningQty: json["ScanningQty"],
+        manualQty: json["ManualQty"]
       );
 
   Line copyWith({
@@ -128,6 +131,10 @@ class Line {
         "UPC": upc,
         "SKU": sku,
         "ProductName": productName,
+
+        "ScanningQty": scanningQty,
+        "ManualQty": manualQty,
+        "VerifiedStatus":verifiedStatus,
   };
 
 }

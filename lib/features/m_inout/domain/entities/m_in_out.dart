@@ -66,6 +66,9 @@ class MInOut {
                 ? List<Line>.from(
                     json["m_movementline"].map((x) => Line.fromJson(x)))
                 : [],
+        allLines: json["all_lines"] != null
+        ? List<Line>.from(json["all_lines"].map((x) => Line.fromJson(x)))
+        : [],
       );
 
   MInOut copyWith({
@@ -112,6 +115,7 @@ class MInOut {
         "DateOrdered": dateOrdered?.toIso8601String(),
         "DocStatus": docStatus.toJson(),
         "m_inoutline": List<dynamic>.from(lines.map((x) => x.toJson())),
+        "all_lines": List<dynamic>.from(allLines.map((x) => x.toJson())),
 
 
   };

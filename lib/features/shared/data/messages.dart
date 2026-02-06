@@ -1349,6 +1349,10 @@ class Messages{
 
   static String ERROR_REPEATED ='ERROR REPETIDO';
 
+  static String DOCUMENT_EMPTY='DOCUMENTO VACIO';
+
+  static String ERROR_DOCUMENT_EMPTY='ERROR DOCUMENTO VACIO';
+
 
 
 

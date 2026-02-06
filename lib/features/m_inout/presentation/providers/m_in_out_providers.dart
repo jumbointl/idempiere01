@@ -1,7 +1,11 @@
 
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
+import 'package:flutter_addons/flutter_addons.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
+import 'package:get_storage/get_storage.dart';
 import 'package:intl/intl.dart';
 import 'package:monalisa_app_001/features/m_inout/domain/entities/line.dart';
 import 'package:monalisa_app_001/features/m_inout/domain/entities/m_in_out.dart';
@@ -14,6 +18,7 @@ import '../../../../config/constants/roles_app.dart';
 import '../../../../config/theme/app_theme.dart';
 import '../../../products/common/number_sum_panel.dart';
 import '../../../products/common/selections_dialog.dart';
+import '../../../shared/data/memory.dart';
 import '../../../shared/data/messages.dart';
 import '../../../shared/presentation/widgets/custom_filled_button.dart';
 import '../../domain/entities/barcode.dart';
@@ -22,15 +27,30 @@ import '../../infrastructure/repositories/m_in_out_repository_impl.dart';
 import 'line_provider.dart';
 import 'm_in_ot_utils.dart';
 
+const String KEY_SAVED_MINOUT_V1 = 'saved_m_inout_v1';
+const String KEY_SAVED_MINOUT_V1_TYPE = 'saved_m_inout_v1_type'; // opcional
+
+// Storage key base for saved list
+const String KEY_SAVED_MINOUT_LIST_V1_ = 'saved_m_inout_list_v1_';
+// Returns a storage key per type (e.g. saved_m_inout_list_v1_moveConfirm)
+String keySaveMInOutList(String typeName) {
+  return '$KEY_SAVED_MINOUT_LIST_V1_$typeName';
+}
+
+
 int quantityOfMovementAndScannedToAllowInputScannedQuantity = 3;
 const String KEY_QTY_ALLOW_INPUT =
     'qtyOfMovementAndScannedToAllowInputScannedQuantity';
 final adjustScannedQtyProvider = StateProvider<bool>((ref) => true);
 
 final mInOutProvider = StateNotifierProvider<MInOutNotifier, MInOutStatus>((
-  ref,
-) {
+    ref,
+    ) {
   return MInOutNotifier(mInOutRepository: MInOutRepositoryImpl());
+});
+
+final savedConfirmIdProvider = StateProvider<int>((ref) {
+  return 0;
 });
 
 class MInOutNotifier extends StateNotifier<MInOutStatus> {
@@ -38,18 +58,18 @@ class MInOutNotifier extends StateNotifier<MInOutStatus> {
   final ScrollController scanBarcodeListScrollController = ScrollController();
 
   MInOutNotifier({required this.mInOutRepository})
-    : super(
-        MInOutStatus(
-          mInOutList: [],
-          doc: '',
-          scanBarcodeListTotal: [],
-          scanBarcodeListUnique: [],
-          linesOver: [],
-          uniqueView: false,
-          viewMInOut: false,
-          isComplete: false,
-        ),
-      );
+      : super(
+    MInOutStatus(
+      mInOutList: [],
+      doc: '',
+      scanBarcodeListTotal: [],
+      scanBarcodeListUnique: [],
+      linesOver: [],
+      uniqueView: false,
+      viewMInOut: false,
+      isComplete: false,
+    ),
+  );
 
   void setParameters(String type) {
     if (type == 'shipment') {
@@ -164,6 +184,179 @@ class MInOutNotifier extends StateNotifier<MInOutStatus> {
       );
     }
   }
+  Future<bool> restoreFromPayload(
+      WidgetRef ref,
+      Map<String, dynamic> map, {
+        BuildContext? context,
+      }) async {
+    try {
+      if ((map['version'] ?? 0) != 1) return false;
+
+      final mInOutJson = map['mInOut'];
+      final mInOutConfirmJson = map['mInOutConfirm'];
+
+      final MInOut? restoredMInOut =
+      (mInOutJson is Map<String, dynamic>) ? MInOut.fromJson(mInOutJson) : null;
+
+      final MInOutConfirm? restoredConfirm =
+      (mInOutConfirmJson is Map<String, dynamic>) ? MInOutConfirm.fromJson(mInOutConfirmJson) : null;
+
+      List<Barcode> parseBarcodeList(dynamic v) {
+        if (v is! List) return <Barcode>[];
+        return v.whereType<Map<String, dynamic>>().map((e) => Barcode.fromJson(e)).toList();
+      }
+
+      final total = parseBarcodeList(map['scanBarcodeListTotal']);
+      final unique = parseBarcodeList(map['scanBarcodeListUnique']);
+      final over = parseBarcodeList(map['linesOver']);
+
+      final savedTypeName = (map['mInOutType'] ?? '').toString();
+      final savedType = MInOutType.values.firstWhere(
+            (e) => e.name == savedTypeName,
+        orElse: () => state.mInOutType,
+      );
+
+      state = state.copyWith(
+        doc: (map['doc'] ?? '').toString(),
+        mInOutType: savedType,
+        title: (map['title'] ?? state.title).toString(),
+        isSOTrx: map['isSOTrx'] as bool? ?? state.isSOTrx,
+        viewMInOut: map['viewMInOut'] as bool? ?? true,
+        uniqueView: map['uniqueView'] as bool? ?? state.uniqueView,
+        orderBy: (map['orderBy'] ?? state.orderBy).toString(),
+        manualQty: (map['manualQty'] as num?)?.toDouble() ?? state.manualQty,
+        scrappedQty: (map['scrappedQty'] as num?)?.toDouble() ?? state.scrappedQty,
+        editLocator: (map['editLocator'] ?? '').toString(),
+        isComplete: map['isComplete'] as bool? ?? false,
+
+        // roles
+        rolShowQty: map['rolShowQty'] as bool? ?? state.rolShowQty,
+        rolShowScrap: map['rolShowScrap'] as bool? ?? state.rolShowScrap,
+        rolManualQty: map['rolManualQty'] as bool? ?? state.rolManualQty,
+        rolManualScrap: map['rolManualScrap'] as bool? ?? state.rolManualScrap,
+        rolCompleteLow: map['rolCompleteLow'] as bool? ?? state.rolCompleteLow,
+        rolCompleteOver: map['rolCompleteOver'] as bool? ?? state.rolCompleteOver,
+        rolPrepare: map['rolPrepare'] as bool? ?? state.rolPrepare,
+        rolComplete: map['rolComplete'] as bool? ?? state.rolComplete,
+
+        // data
+        mInOut: restoredMInOut,
+        mInOutConfirm: restoredConfirm,
+        scanBarcodeListTotal: total,
+        scanBarcodeListUnique: unique,
+        linesOver: over,
+
+        errorMessage: '',
+        isLoading: false,
+        isLoadingMInOutList: false,
+      );
+
+      // Optional: recompute line status based on saved barcodes
+      if (context != null && context.mounted) {
+        updatedMInOutLineSilence('');
+      }
+
+      return true;
+    } catch (e) {
+      state = state.copyWith(errorMessage: 'Error al restaurar: $e');
+      return false;
+    }
+  }
+
+
+  /*Future<bool> restoreFromStorage(WidgetRef ref, {BuildContext? context}) async {
+    final box = GetStorage();
+    final raw = box.read(KEY_SAVED_MINOUT_V1);
+    if (raw == null || raw.toString().trim().isEmpty) return false;
+
+    try {
+      final Map<String, dynamic> map =
+      jsonDecode(raw is String ? raw : raw.toString()) as Map<String, dynamic>;
+
+      if ((map['version'] ?? 0) != 1) {
+        // versión desconocida
+        return false;
+      }
+
+      // Reconstrucción de entities
+      final mInOutJson = map['mInOut'];
+      final mInOutConfirmJson = map['mInOutConfirm'];
+
+      final MInOut? restoredMInOut =
+      (mInOutJson is Map<String, dynamic>) ? MInOut.fromJson(mInOutJson) : null;
+
+      final MInOutConfirm? restoredConfirm = (mInOutConfirmJson is Map<String, dynamic>)
+          ? MInOutConfirm.fromJson(mInOutConfirmJson)
+          : null;
+
+      List<Barcode> parseBarcodeList(dynamic v) {
+        if (v is! List) return <Barcode>[];
+        return v
+            .whereType<Map<String, dynamic>>()
+            .map((e) => Barcode.fromJson(e))
+            .toList();
+      }
+
+      final total = parseBarcodeList(map['scanBarcodeListTotal']);
+      final unique = parseBarcodeList(map['scanBarcodeListUnique']);
+      final over = parseBarcodeList(map['linesOver']);
+
+      // Tipo (por si querés setearlo también)
+      final savedTypeName = (map['mInOutType'] ?? '').toString();
+      final savedType = MInOutType.values.firstWhere(
+            (e) => e.name == savedTypeName,
+        orElse: () => state.mInOutType,
+      );
+
+      state = state.copyWith(
+        doc: (map['doc'] ?? '').toString(),
+        mInOutType: savedType,
+        title: (map['title'] ?? state.title).toString(),
+        isSOTrx: map['isSOTrx'] as bool? ?? state.isSOTrx,
+        viewMInOut: map['viewMInOut'] as bool? ?? true,
+        uniqueView: map['uniqueView'] as bool? ?? state.uniqueView,
+        orderBy: (map['orderBy'] ?? state.orderBy).toString(),
+        manualQty: (map['manualQty'] as num?)?.toDouble() ?? state.manualQty,
+        scrappedQty: (map['scrappedQty'] as num?)?.toDouble() ?? state.scrappedQty,
+        editLocator: (map['editLocator'] ?? '').toString(),
+        isComplete: map['isComplete'] as bool? ?? false,
+
+        // roles
+        rolShowQty: map['rolShowQty'] as bool? ?? state.rolShowQty,
+        rolShowScrap: map['rolShowScrap'] as bool? ?? state.rolShowScrap,
+        rolManualQty: map['rolManualQty'] as bool? ?? state.rolManualQty,
+        rolManualScrap: map['rolManualScrap'] as bool? ?? state.rolManualScrap,
+        rolCompleteLow: map['rolCompleteLow'] as bool? ?? state.rolCompleteLow,
+        rolCompleteOver: map['rolCompleteOver'] as bool? ?? state.rolCompleteOver,
+        rolPrepare: map['rolPrepare'] as bool? ?? state.rolPrepare,
+        rolComplete: map['rolComplete'] as bool? ?? state.rolComplete,
+
+        // data
+        mInOut: restoredMInOut,
+        mInOutConfirm: restoredConfirm,
+
+        scanBarcodeListTotal: total,
+        scanBarcodeListUnique: unique,
+        linesOver: over,
+
+        errorMessage: '',
+        isLoading: false,
+        isLoadingMInOutList: false,
+      );
+
+      // Opcional: recomputar estados de líneas basados en barcodes guardados
+      // (para que el status/colores queden consistentes).
+      // Esto usa tu lógica existente.
+      if (context != null && context.mounted) {
+        updatedMInOutLineSilence(''); // recalcula con scanBarcodeListUnique
+      }
+
+      return true;
+    } catch (e) {
+      state = state.copyWith(errorMessage: 'Error al restaurar: $e');
+      return false;
+    }
+  }*/
 
   Future<void> loadMInOutAndLine(BuildContext context, WidgetRef ref) async {
     final mInOutNotifier = ref.read(mInOutProvider.notifier);
@@ -178,22 +371,36 @@ class MInOutNotifier extends StateNotifier<MInOutStatus> {
     // ---------------- CONFIRM FLOWS ----------------
     if (_isConfirmType(stateNow.mInOutType)) {
       debugPrint('[loadMInOutAndLine] route=CONFIRM');
-
+      int savedConfirmId = ref.read(savedConfirmIdProvider) ;
       try {
-        final result = await withLoadingMInOut(
+        /*final result = await withLoadingMInOut(
           context: context,
           tag: 'CONFIRM getMInOutAndLine',
           action: () async {
             final mInOut = await mInOutNotifier.getMInOutAndLine(ref);
             if(mInOut.id == null) return (mInOut,const<MInOutConfirm>[]);
             final list = await mInOutNotifier.getMInOutConfirmList(mInOut.id!, ref);
+
+            if(savedConfirmId>0){
+              MInOutConfirm m = await mInOutNotifier.getMInOutConfirmAndLine(savedConfirmId, ref);
+              stateNow.copyWith(mInOutConfirm: m,mInOut: mInOut,isLoading: false);
+            }
             return (mInOut,list);
           },
         );
         final mInOut = result?.$1 ;
         final confirmList = result?.$2 ?? const <MInOutConfirm>[];
-        debugPrint('[loadMInOutAndLine] mInOut ${mInOut?.toJson() ?? 'null'}');
-        if (mInOut == null || mInOut.id == null) {
+        */
+        final mInOut = await mInOutNotifier.getMInOutAndLine(ref);
+        final confirmList = await mInOutNotifier.getMInOutConfirmList(mInOut.id!, ref);
+
+        if(savedConfirmId>0){
+          MInOutConfirm m = await mInOutNotifier.getMInOutConfirmAndLine(savedConfirmId, ref);
+          stateNow.copyWith(mInOutConfirm: m,mInOut: mInOut,isLoading: false);
+        }
+
+        debugPrint('[loadMInOutAndLine] mInOut ${mInOut.toJson()}');
+        if (mInOut.id == null) {
           state = state.copyWith(
               isLoading: false
           );
@@ -205,16 +412,21 @@ class MInOutNotifier extends StateNotifier<MInOutStatus> {
           );
           return;
         }
-        if (!context.mounted) return;
-        await _handleConfirmFlow(
-          context: context,
-          ref: ref,
-          notifier: mInOutNotifier,
-          stateNow: stateNow,
-          doc: doc,
-          mInOut: mInOut,
-          confirmList: confirmList,
-        );
+
+        if(savedConfirmId<=0) {
+            if (!context.mounted) return;
+            await _handleConfirmFlow(
+            context: context,
+            ref: ref,
+            notifier: mInOutNotifier,
+            stateNow: stateNow,
+            doc: doc,
+            mInOut: mInOut,
+            confirmList: confirmList,
+          );
+        }
+
+
       } catch (e) {
         // Error already logged by _withLoading
       }
@@ -225,14 +437,35 @@ class MInOutNotifier extends StateNotifier<MInOutStatus> {
     // ---------------- MOVE CONFIRM ----------------
     if (_isMoveConfirmType(stateNow.mInOutType)) {
       debugPrint('[loadMInOutAndLine] route=MOVE_CONFIRM');
+      int savedConfirmId = ref.read(savedConfirmIdProvider) ;
+      if(savedConfirmId>0){
+        /*await withLoadingMInOut(
+          context: context,
+          tag: 'MOVE_CONFIRM getMovementAndLine',
+          action: () async {
+            MInOut i = await mInOutNotifier.getMovementAndLine(ref) ;
+            MInOutConfirm c = await mInOutNotifier.getMovementConfirmAndLine(savedConfirmId, ref);
+            stateNow.copyWith(mInOutConfirm: c, mInOut: i,isLoading: false);
+            return i;
 
-      // Keep your existing handler, but now it can optionally use _withLoading too
-      await _handleMoveConfirmFlow(
-        context: context,
-        ref: ref,
-        notifier: mInOutNotifier,
-        stateNow: stateNow,
-      );
+          },
+        );*/
+        await mInOutNotifier.getMovementAndLine(ref) ;
+        await mInOutNotifier.getMovementConfirmAndLine(savedConfirmId, ref);
+        stateNow.copyWith(isLoading: false);
+
+      } else {
+
+        await _handleMoveConfirmFlow(
+          context: context,
+          ref: ref,
+          notifier: mInOutNotifier,
+          stateNow: stateNow,
+        );
+      }
+
+
+
 
       return;
     }
@@ -245,8 +478,9 @@ class MInOutNotifier extends StateNotifier<MInOutStatus> {
     }
 
     // ---------------- NORMAL IN/OUT ----------------
-    debugPrint('[loadMInOutAndLine] route=NORMAL');
-    await _handleNormalFlow(ref: ref, notifier: mInOutNotifier);
+    debugPrint('[loadMInOutAndLine] route=ONLY_MInOut');
+    await mInOutNotifier.getMInOutAndLine(ref);
+    //await _handleNormalFlow(ref: ref, notifier: mInOutNotifier);
   }
 
 
@@ -389,13 +623,16 @@ class MInOutNotifier extends StateNotifier<MInOutStatus> {
     }
   }
 
-  Future<void> _handleNormalFlow({
+  /*Future<void> _handleNormalFlow({
     required WidgetRef ref,
     required MInOutNotifier notifier,
   }) async {
     // Normal flow: just fetch MInOut + lines and let the state drive the UI
-    await notifier.getMInOutAndLine(ref);
-  }
+
+    MInOut mInOut = await notifier.getMInOutAndLine(ref);
+
+
+  }*/
 
 
   Future<void> _showSelectMInOutConfirm(
@@ -551,9 +788,9 @@ class MInOutNotifier extends StateNotifier<MInOutStatus> {
   }
 
   Future<List<MInOutConfirm>> getMInOutConfirmList(
-    int mInOutId,
-    WidgetRef ref,
-  ) async {
+      int mInOutId,
+      WidgetRef ref,
+      ) async {
     try {
       final mInOutConfirmResponse = await mInOutRepository.getMInOutConfirmList(
         mInOutId,
@@ -571,7 +808,7 @@ class MInOutNotifier extends StateNotifier<MInOutStatus> {
     }
   }
   Future<void> getMovementListByDateRange(
-           {required DateTimeRange dates,required String inOut, required WidgetRef ref}) async {
+      {required DateTimeRange dates,required String inOut, required WidgetRef ref}) async {
     state = state.copyWith(isLoadingMInOutList: true, errorMessage: '');
     try {
       final mInOutResponse = await mInOutRepository.getMovementListByDateRange(
@@ -617,9 +854,9 @@ class MInOutNotifier extends StateNotifier<MInOutStatus> {
 
   Future<List<MInOutConfirm>> getMovementConfirmList(
 
-    int movementId,
-    WidgetRef ref,
-  ) async {
+      int movementId,
+      WidgetRef ref,
+      ) async {
     debugPrint('getMovementConfirmList');
     try {
       final mInOutConfirmResponse = await mInOutRepository
@@ -677,10 +914,10 @@ class MInOutNotifier extends StateNotifier<MInOutStatus> {
       }
       state = state.copyWith(
         viewMInOut:
-            state.mInOutType == MInOutType.receipt ||
-                state.mInOutType == MInOutType.receiptConfirm ||
+        state.mInOutType == MInOutType.receipt ||
+            state.mInOutType == MInOutType.receiptConfirm ||
             state.mInOutType == MInOutType.shipment ,
-        mInOut: mInOutResponse.copyWith(lines: filteredLines),
+        mInOut: mInOutResponse.copyWith(lines: filteredLines,allLines: mInOutResponse.lines),
         isLoading: false,
       );
       return mInOutResponse;
@@ -697,9 +934,9 @@ class MInOutNotifier extends StateNotifier<MInOutStatus> {
   }
 
   Future<MInOutConfirm> getMInOutConfirmAndLine(
-    int mInOutConfirmId,
-    WidgetRef ref,
-  ) async {
+      int mInOutConfirmId,
+      WidgetRef ref,
+      ) async {
     state = state.copyWith(isLoading: true, viewMInOut: true, errorMessage: '');
     try {
       final mInOutConfirmResponse = await mInOutRepository.getMInOutConfirm(
@@ -711,9 +948,9 @@ class MInOutNotifier extends StateNotifier<MInOutStatus> {
         final matchingConfirmLine = mInOutConfirmResponse.linesConfirm
             .firstWhere(
               (confirmLine) =>
-                  confirmLine.mInOutLineId!.id.toString() == line.id.toString(),
-              orElse: () => LineConfirm(id: -1),
-            );
+          confirmLine.mInOutLineId!.id.toString() == line.id.toString(),
+          orElse: () => LineConfirm(id: -1),
+        );
         return line.copyWith(
           confirmId: matchingConfirmLine.id! > 0
               ? matchingConfirmLine.id
@@ -950,7 +1187,7 @@ class MInOutNotifier extends StateNotifier<MInOutStatus> {
         id: null,
         linesConfirm: null,
       ),
-      isSOTrx: false,
+      //isSOTrx: false,
       scanBarcodeListTotal: [],
       scanBarcodeListUnique: [],
       linesOver: [],
@@ -973,7 +1210,7 @@ class MInOutNotifier extends StateNotifier<MInOutStatus> {
     state = state.copyWith(scrappedQty: parsedValue.toDouble());
   }
 
-  void confirmManualLine(BuildContext context, Line line) {
+  void confirmManualLine(BuildContext context, WidgetRef ref,Line line) {
     line = line.copyWith(verifiedStatus: 'manually');
     final List<Line> updatedLines = state.mInOut!.lines;
     final int index = updatedLines.indexWhere((l) => l.id == line.id);
@@ -988,8 +1225,16 @@ class MInOutNotifier extends StateNotifier<MInOutStatus> {
       state = state.copyWith(
         mInOut: state.mInOut!.copyWith(lines: updatedLines),
       );
+      saveMInOutSilence();
       updatedMInOutLine('');
+    } else {
+      showWarningMessage(
+        context,
+        ref,
+        'Error al confirmar la línea ${line.line}\nManulQty:${state.manualQty} \nScrappedQty:${state.scrappedQty}',
+      );
     }
+
   }
 
   void resetManualLine(Line line) {
@@ -1005,6 +1250,7 @@ class MInOutNotifier extends StateNotifier<MInOutStatus> {
       state = state.copyWith(
         mInOut: state.mInOut!.copyWith(lines: updatedLines),
       );
+      saveMInOutSilence();
       updatedMInOutLine('');
     }
   }
@@ -1033,6 +1279,7 @@ class MInOutNotifier extends StateNotifier<MInOutStatus> {
       state = state.copyWith(
         mInOut: state.mInOut!.copyWith(lines: updatedLines),
       );
+      saveMInOutSilence();
       updatedMInOutLine('');
     } catch (e) {
       state = state.copyWith(
@@ -1064,15 +1311,13 @@ class MInOutNotifier extends StateNotifier<MInOutStatus> {
 
   bool isConfirmMInOut() {
     print(
-      'state.mInOut?.docStatus.id ${state.mInOut?.docStatus.id?.toString() ?? 'NULL'}',
+      'isConfirmMInOut',
     );
     if (((state.mInOutType == MInOutType.shipment ||
-                state.mInOutType == MInOutType.receipt) &&
-            state.mInOut?.docStatus.id.toString() == 'IP') ||
+        state.mInOutType == MInOutType.receipt) &&
+        state.mInOut?.docStatus.id.toString() == 'IP') ||
         state.mInOutType == MInOutType.move) {
-      print(
-        'state.mInOut?.docStatus.id ${state.mInOut?.docStatus.id?.toString() ?? 'NULL'}',
-      );
+
       return true;
     }
     final validStatuses = {
@@ -1084,11 +1329,14 @@ class MInOutNotifier extends StateNotifier<MInOutStatus> {
       if (state.rolCompleteOver) 'manually-over',
     };
 
+
+
+
     return state.mInOut?.lines.every(
           (line) =>
-              line.verifiedStatus != 'pending' &&
-              validStatuses.contains(line.verifiedStatus),
-        ) ??
+      line.verifiedStatus != 'pending' &&
+          validStatuses.contains(line.verifiedStatus),
+    ) ??
         false;
   }
 
@@ -1115,7 +1363,7 @@ class MInOutNotifier extends StateNotifier<MInOutStatus> {
           if (!update) {
             state = state.copyWith(
               errorMessage:
-                  'Error al actualizar la ubicación: ${line.mLocatorId!.identifier}',
+              'Error al actualizar la ubicación: ${line.mLocatorId!.identifier}',
               isLoading: false,
             );
             return;
@@ -1183,7 +1431,7 @@ class MInOutNotifier extends StateNotifier<MInOutStatus> {
           if (!update) {
             state = state.copyWith(
               errorMessage:
-                  'Error al actualizar la ubicación: ${line.mLocatorId!.identifier}',
+              'Error al actualizar la ubicación: ${line.mLocatorId!.identifier}',
               isLoading: false,
             );
             return;
@@ -1357,6 +1605,7 @@ class MInOutNotifier extends StateNotifier<MInOutStatus> {
       scanBarcodeListTotal: updatedTotalList,
       scanBarcodeListUnique: updatedUniqueList,
     );
+    saveMInOutSilence();
     updatedMInOutLine(barcode, context: context);
   }
 
@@ -1408,10 +1657,11 @@ class MInOutNotifier extends StateNotifier<MInOutStatus> {
   }
 
   Future<void> updatedMInOutLine(
-    String barcodeString, {
-    BuildContext? context,
-  }) async {
+      String barcodeString, {
+        BuildContext? context,
+      }) async {
     if (state.mInOut != null && state.viewMInOut) {
+      String documentNo = state.mInOut!.documentNo ?? '';
       List<Line> lines = state.mInOut!.lines;
       List<Barcode> linesOver = [];
       List<Line> linesWithSameUPC = [];
@@ -1425,6 +1675,7 @@ class MInOutNotifier extends StateNotifier<MInOutStatus> {
           break;
         }
       }
+
       bool showUpdateDialog = false;
       int qtyScanned = 0;
       int lineIndex = -1;
@@ -1452,28 +1703,45 @@ class MInOutNotifier extends StateNotifier<MInOutStatus> {
                         itemCount: linesWithSameUPC.length,
                         itemBuilder: (BuildContext context, int i) {
                           final currentLine = linesWithSameUPC[i];
+                          double requiredQty = currentLine.movementQty ?? 0;
+                          requiredQty -= currentLine.confirmedQty ?? 0;
+                          requiredQty -= currentLine.scrappedQty ?? 0;
+                          String requiredQtyString = Memory.numberFormatter0Digit.format(requiredQty);
+                          String movementQtyString = Memory.numberFormatter0Digit.format(currentLine.movementQty ?? 0);
+                          String confirmedQtyString = Memory.numberFormatter0Digit.format(currentLine.confirmedQty ?? 0);
+                          String scrappedQtyString = Memory.numberFormatter0Digit.format(currentLine.scrappedQty ?? 0);
+                          String manualQtyString = Memory.numberFormatter0Digit.format(currentLine.manualQty ?? 0);
+                          String scanningQtyString = Memory.numberFormatter0Digit.format(currentLine.scanningQty ?? 0);
+
+
+
+
 
                           return Card(
                             color: Colors.grey[200],
                             child: ListTile(
-                              title: Text('Línea: ${currentLine.line}'),
+                              title: Text('Doc No: $documentNo : Línea: ${currentLine.line}'),
                               subtitle: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
-                                    'Cant. Movement: ${currentLine.movementQty ?? 0}',
+                                    'Cant. Movement: $movementQtyString',
                                   ),
                                   Text(
-                                    'Cant. Manual: ${currentLine.manualQty ?? 0}',
+                                    'Cant. Manual: $manualQtyString',
                                   ),
                                   Text(
-                                    'Cant. Escaneada: ${currentLine.scanningQty ?? 0}',
+                                    'Cant. Escaneada: $scanningQtyString',
                                   ),
                                   Text(
-                                    'Cant. Confirmada: ${currentLine.confirmedQty ?? 0}',
+                                    'Cant. Confirmada: $confirmedQtyString',
                                   ),
                                   Text(
-                                    'Cant. Desecho: ${currentLine.scrappedQty ?? 0}',
+                                    'Cant. Desecho: $scrappedQtyString',
+                                  ),
+                                  Text(
+                                    'Cant. Requerido: $requiredQtyString',
+                                    style: TextStyle(color: Colors.purple),
                                   ),
                                 ],
                               ),
@@ -1498,7 +1766,7 @@ class MInOutNotifier extends StateNotifier<MInOutStatus> {
                   );
                 },
               ) ??
-              -1;
+                  -1;
           if (lineIndex >= 0) {
             showUpdateDialog = true;
           }
@@ -1636,7 +1904,7 @@ class MInOutNotifier extends StateNotifier<MInOutStatus> {
               );
               break;
             case DefaultActionWhenUPCIsScanned.ignore:
-              // No abrir nada, sólo registrar / loguear
+            // No abrir nada, sólo registrar / loguear
               break;
           }
         }
@@ -1685,10 +1953,11 @@ class MInOutNotifier extends StateNotifier<MInOutStatus> {
         mInOut: state.mInOut!.copyWith(lines: lines),
         linesOver: linesOver,
       );
+      saveMInOutSilence();
     }
   }
 
-  void updatedMInOutLineOld(String barcode) {
+  void updatedMInOutLineSilence(String barcode) {
     if (state.mInOut != null && state.viewMInOut) {
       List<Line> lines = state.mInOut!.lines;
       List<Barcode> linesOver = [];
@@ -1785,11 +2054,11 @@ class MInOutNotifier extends StateNotifier<MInOutStatus> {
   }
 
   Line _verifyLineStatusQty(
-    Line line,
-    double scanningQty,
-    double manualQty,
-    double scrappedQty,
-  ) {
+      Line line,
+      double scanningQty,
+      double manualQty,
+      double scrappedQty,
+      ) {
     String status = 'pending';
     double confirmedQty = 0;
     if (manualQty > 0) {
@@ -1873,6 +2142,239 @@ class MInOutNotifier extends StateNotifier<MInOutStatus> {
     }
 
   }
+
+  void saveMInOutSilence() {
+
+    final box = GetStorage();
+    final payload = buildSaveMInOutPayload(state);
+    if (payload == null) return;
+
+    // Use per-type list key
+    final key = keySaveMInOutList(state.mInOutType.name);
+    debugPrint('>>> saveMInOutSilence llamado: $key');
+
+    try {
+      // Read existing list
+      final list = readSavedPayloadList(box: box, key: key);
+
+      // De-duplicate by documentNo (keep latest only)
+      final newDoc = payloadDocumentNo(payload);
+      final filtered = list.where((p) => payloadDocumentNo(p) != newDoc).toList();
+
+      // Insert newest first
+      filtered.insert(0, payload);
+
+      // Keep only last 10
+      final trimmed = filtered.take(10).toList();
+
+      // Write back
+      _writeSavedPayloadList(box: box, key: key, list: trimmed);
+
+      // Optional: still store last type for debugging / legacy
+      box.write(KEY_SAVED_MINOUT_V1_TYPE, state.mInOutType.name);
+    } catch (_) {
+      // Keep silent
+    }
+  }
+
+
+  // -------------------------------
+  // Merge from local storage (logic)
+  // -------------------------------
+
+  // Parses a barcode list from JSON array.
+  List<Barcode> _parseBarcodeList(dynamic v) {
+    if (v is! List) return <Barcode>[];
+    return v
+        .whereType<Map<String, dynamic>>()
+        .map((e) => Barcode.fromJson(e))
+        .toList();
+  }
+
+  // Builds a map of saved lines by id for O(1) lookup.
+  Map<int, Line> _indexLinesById(List<Line> lines) {
+    final out = <int, Line>{};
+    for (final l in lines) {
+      final id = l.id;
+      if (id != null) out[id] = l;
+    }
+    return out;
+  }
+
+  // Copies only the requested fields from saved line into current line.
+  Line _mergeLineFields(Line current, Line saved) {
+    return current.copyWith(
+      verifiedStatus: saved.verifiedStatus,
+      confirmedQty: saved.confirmedQty,
+      scanningQty: saved.scanningQty,
+      scrappedQty: saved.scrappedQty,
+      manualQty: saved.manualQty,
+    );
+  }
+
+  /// Merges saved state (barcodes + selected line fields) into the current state.
+  ///
+  /// UI should call this and show [MergeMInOutResult.message].
+  MergeMInOutResult mergeFromStorage() {
+    final currentMInOut = state.mInOut;
+    final currentDocumentNo = (currentMInOut?.documentNo ?? '').trim();
+
+    if (currentMInOut == null || currentDocumentNo.isEmpty) {
+      return const MergeMInOutResult(ok: false, message: 'No hay datos para cargar.');
+    }
+
+    final box = GetStorage();
+    final key = keySaveMInOutList(state.mInOutType.name);
+
+    // Read saved list
+    final list = readSavedPayloadList(box: box, key: key);
+    if (list.isEmpty) {
+      return const MergeMInOutResult(ok: false, message: 'No hay un guardado local para fusionar.');
+    }
+
+    // Find saved payload by current documentNo
+    Map<String, dynamic>? map;
+    for (final p in list) {
+      if (payloadDocumentNo(p).trim() == currentDocumentNo) {
+        map = p;
+        break;
+      }
+    }
+
+    if (map == null) {
+      return MergeMInOutResult(
+        ok: false,
+        message: 'No existe guardado para el documento $currentDocumentNo.',
+      );
+    }
+
+    // --- Validate version ---
+    final version = (map['version'] ?? 0) as int;
+    if (version != 1) {
+      return MergeMInOutResult(
+        ok: false,
+        message: 'Guardado local incompatible (version=$version).',
+      );
+    }
+
+    // --- Validate type ---
+    final savedTypeName = (map['mInOutType'] ?? '').toString().trim();
+    final currentTypeName = state.mInOutType.name;
+    if (savedTypeName.isEmpty || savedTypeName != currentTypeName) {
+      return MergeMInOutResult(
+        ok: false,
+        message: 'El guardado corresponde a otro tipo.\nActual: $currentTypeName\nGuardado: $savedTypeName',
+      );
+    }
+
+    // --- Parse saved MInOut ---
+    MInOut? savedMInOut;
+    final savedMInOutJson = map['mInOut'];
+    if (savedMInOutJson is Map<String, dynamic>) {
+      try {
+        savedMInOut = MInOut.fromJson(savedMInOutJson);
+      } catch (_) {
+        return const MergeMInOutResult(ok: false, message: 'El guardado local está dañado (mInOut).');
+      }
+    }
+
+    final savedDocumentNo = (savedMInOut?.documentNo ?? '').trim();
+    if (savedDocumentNo.isEmpty || savedDocumentNo != currentDocumentNo) {
+      return MergeMInOutResult(
+        ok: false,
+        message: 'El guardado corresponde a otro documento.\nActual: $currentDocumentNo\nGuardado: $savedDocumentNo',
+      );
+    }
+
+    // --- Parse barcode lists ---
+    final savedTotal = _parseBarcodeList(map['scanBarcodeListTotal']);
+    final savedUnique = _parseBarcodeList(map['scanBarcodeListUnique']);
+    final savedOver = _parseBarcodeList(map['linesOver']);
+
+    // --- Merge line fields by id ---
+    final List<Line> savedLines = savedMInOut?.lines ?? const <Line>[] ;
+    final List<Line> allLines = savedMInOut?.allLines ?? const <Line>[] ;
+    final savedById = _indexLinesById(savedLines);
+
+    // Merge current lines
+    final List<Line> currentLines = currentMInOut.lines ;
+    int mergedCount = 0;
+
+    final mergedLines = currentLines.map((line) {
+      final id = line.id;
+      if (id == null) return line;
+
+      final saved = savedById[id];
+      if (saved == null) return line;
+
+      mergedCount++;
+      return _mergeLineFields(line, saved);
+    }).toList();
+
+    // --- Apply to state using copyWith ---
+    final updatedMInOut = currentMInOut.copyWith(
+      lines: mergedLines,
+      allLines: allLines,
+    );
+// --- Parse saved MInOutConfirm (copyWith approach) ---
+    MInOutConfirm? savedConfirm;
+    final savedConfirmJson = map['mInOutConfirm'];
+    if (savedConfirmJson is Map<String, dynamic>) {
+      try {
+        savedConfirm = MInOutConfirm.fromJson(savedConfirmJson);
+      } catch (_) {
+        return const MergeMInOutResult(
+          ok: false,
+          message: 'El guardado local está dañado (mInOutConfirm).',
+        );
+      }
+    }
+
+// --- Merge confirm into current confirm (copyWith) ---
+    final currentConfirm = state.mInOutConfirm;
+    MInOutConfirm? updatedConfirm;
+
+    if (currentConfirm != null && savedConfirm != null) {
+      updatedConfirm = _mergeMInOutConfirmCopyWith(
+        current: currentConfirm,
+        saved: savedConfirm,
+      );
+    } else {
+      updatedConfirm = currentConfirm; // keep current if missing either side
+    }
+
+    state = state.copyWith(
+      mInOut: updatedMInOut,
+      mInOutConfirm: updatedConfirm,
+      scanBarcodeListTotal: savedTotal,
+      scanBarcodeListUnique: savedUnique,
+      linesOver: savedOver,
+      errorMessage: '',
+    );
+
+    return MergeMInOutResult(
+      ok: true,
+      mergedLines: mergedCount,
+      message: 'Fusión completada ✅ (líneas actualizadas: $mergedCount)',
+    );
+  }
+
+
+
+
+}
+
+// Result object for merge operation (UI-friendly).
+class MergeMInOutResult {
+  final bool ok;
+  final String message;
+  final int mergedLines;
+
+  const MergeMInOutResult({
+    required this.ok,
+    required this.message,
+    this.mergedLines = 0,
+  });
 }
 
 enum MInOutType {
@@ -2009,6 +2511,8 @@ class MInOutStatus {
     rolPrepare: rolPrepare ?? this.rolPrepare,
     rolComplete: rolComplete ?? this.rolComplete,
   );
+
+
 }
 
 // import 'package:flutter/material.dart';
@@ -2121,4 +2625,234 @@ Color getMInOutHeaderColor(MInOutStatus mInOutState) {
   }
 
   return themeBackgroundColorLight;
+}
+MInOutType? parseMInOutTypeFromWidget(String type) {
+  switch (type.toLowerCase()) {
+    case 'shipment':
+      return MInOutType.shipment;
+    case 'shipmentconfirm':
+      return MInOutType.shipmentConfirm;
+    case 'receipt':
+      return MInOutType.receipt;
+    case 'receiptconfirm':
+      return MInOutType.receiptConfirm;
+    case 'pickconfirm':
+      return MInOutType.pickConfirm;
+    case 'qaconfirm':
+      return MInOutType.qaConfirm;
+    case 'move':
+      return MInOutType.move;
+    case 'moveconfirm':
+      return MInOutType.moveConfirm;
+    default:
+      return null;
+  }
+}
+
+Map<String, dynamic>? buildSaveMInOutPayload(MInOutStatus stateNow) {
+  final hasDoc = stateNow.doc.trim().isNotEmpty;
+  final hasLines = (stateNow.mInOut?.lines.isNotEmpty ?? false) ||
+      (stateNow.mInOut?.allLines.isNotEmpty ?? false);
+  final hasBarcodes = stateNow.scanBarcodeListTotal.isNotEmpty ||
+      stateNow.scanBarcodeListUnique.isNotEmpty;
+
+  if (!hasDoc && !hasLines && !hasBarcodes) return null;
+  return <String, dynamic>{
+    'version': 1,
+    'savedAt': DateTime.now().toIso8601String(),
+
+    // Estado básico
+    'doc': stateNow.doc,
+    'mInOutType': stateNow.mInOutType.name,
+    'title': stateNow.title,
+    'isSOTrx': stateNow.isSOTrx,
+    'viewMInOut': stateNow.viewMInOut,
+    'uniqueView': stateNow.uniqueView,
+    'orderBy': stateNow.orderBy,
+    'manualQty': stateNow.manualQty,
+    'scrappedQty': stateNow.scrappedQty,
+    'editLocator': stateNow.editLocator,
+    'isComplete': stateNow.isComplete,
+
+    // Roles
+    'rolShowQty': stateNow.rolShowQty,
+    'rolShowScrap': stateNow.rolShowScrap,
+    'rolManualQty': stateNow.rolManualQty,
+    'rolManualScrap': stateNow.rolManualScrap,
+    'rolCompleteLow': stateNow.rolCompleteLow,
+    'rolCompleteOver': stateNow.rolCompleteOver,
+    'rolPrepare': stateNow.rolPrepare,
+    'rolComplete': stateNow.rolComplete,
+
+    // Entities
+    'mInOut': stateNow.mInOut?.toJson(),
+    'mInOutConfirm': stateNow.mInOutConfirm?.toJson(),
+
+    // Barcodes / over
+    'scanBarcodeListTotal':
+    stateNow.scanBarcodeListTotal.map((b) => b.toJson()).toList(),
+    'scanBarcodeListUnique':
+    stateNow.scanBarcodeListUnique.map((b) => b.toJson()).toList(),
+    'linesOver': stateNow.linesOver.map((b) => b.toJson()).toList(),
+  };
+}
+
+// Builds a map of LineConfirm by mInOutLineId.id (String key).
+Map<String, LineConfirm> _indexConfirmByInOutLineId(
+    List<LineConfirm> lines,
+    ) {
+  final out = <String, LineConfirm>{};
+
+  for (final c in lines) {
+    final key = c.mInOutLineId?.id;
+    if (key != null && key.isNotEmpty) {
+      out[key] = c;
+    }
+  }
+  return out;
+}
+// Builds a map of LineConfirm by LineConfirm.id (int key).
+Map<int, LineConfirm> _indexConfirmByConfirmId(
+    List<LineConfirm> lines,
+    ) {
+  final out = <int, LineConfirm>{};
+
+  for (final c in lines) {
+    final key = c.id;
+    if (key != null) {
+      out[key] = c;
+    }
+  }
+  return out;
+}
+
+
+// Merges only requested qty fields into current LineConfirm using copyWith.
+LineConfirm _mergeLineConfirmFields(LineConfirm current, LineConfirm saved) {
+  return current.copyWith(
+    targetQty: saved.targetQty,
+    confirmedQty: saved.confirmedQty,
+    differenceQty: saved.differenceQty,
+    scrappedQty: saved.scrappedQty,
+  );
+}
+
+// Merges MInOutConfirm.linesConfirm using mInOutLineId.id as key (copyWith).
+MInOutConfirm _mergeMInOutConfirmCopyWith({
+  required MInOutConfirm current,
+  required MInOutConfirm saved,
+}) {
+  //final savedByLineId = _indexConfirmByInOutLineId(saved.linesConfirm);
+  final savedById =  _indexConfirmByConfirmId(saved.linesConfirm);
+
+  final mergedLines = current.linesConfirm.map((c) {
+    //final key = c.mInOutLineId?.id;
+    final key = c.id;
+    if (key == null) return c;
+
+    //final s = savedByLineId[key];
+    final s = savedById[key];
+    if (s == null) return c;
+
+    //return _mergeLineConfirmFields(c, s);
+    return c.copyWith(
+      targetQty: s.targetQty,
+      confirmedQty: s.confirmedQty,
+      differenceQty: s.differenceQty,
+      scrappedQty: s.scrappedQty,
+    );
+  }).toList();
+
+  return current.copyWith(linesConfirm: mergedLines);
+}
+
+
+
+// Validates if saved payload matches current documentNo + mInOutType.
+final canMergeSavedProvider = Provider<bool>((ref) {
+  final stateNow = ref.watch(mInOutProvider);
+  final currentM = stateNow.mInOut;
+
+  final currentDoc = (currentM?.documentNo ?? '').trim();
+  if (currentM == null || currentDoc.isEmpty) return false;
+
+  // Read saved list by current type
+  final key = keySaveMInOutList(stateNow.mInOutType.name);
+
+
+  final raw = GetStorage().read(key);
+  if (raw == null || raw.toString().trim().isEmpty) return false;
+
+  List list;
+  try {
+    final decoded = jsonDecode(raw is String ? raw : raw.toString());
+    if (decoded is! List) return false;
+    list = decoded;
+  } catch (_) {
+    return false;
+  }
+
+  // Find payload matching current documentNo
+  for (final item in list) {
+    if (item is! Map<String, dynamic>) continue;
+
+    // Version check
+    final version = (item['version'] ?? 0);
+    if (version != 1) continue;
+
+    // Type check
+    final savedTypeName = (item['mInOutType'] ?? '').toString().trim();
+    if (savedTypeName != stateNow.mInOutType.name) continue;
+
+    // DocumentNo check (best-effort)
+    final doc = payloadDocumentNo(item).trim();
+    if (doc == currentDoc) return true;
+  }
+
+  return false;
+});
+
+// Reads saved payload list from storage (per type).
+List<Map<String, dynamic>> readSavedPayloadList({
+  required GetStorage box,
+  required String key,
+}) {
+  final raw = box.read(key);
+  if (raw == null || raw.toString().trim().isEmpty) return <Map<String, dynamic>>[];
+
+  try {
+    final decoded = jsonDecode(raw is String ? raw : raw.toString());
+    if (decoded is List) {
+      return decoded.whereType<Map<String, dynamic>>().toList();
+    }
+  } catch (_) {
+    // Ignore invalid JSON
+  }
+  return <Map<String, dynamic>>[];
+}
+
+// Writes saved payload list to storage (per type).
+void _writeSavedPayloadList({
+  required GetStorage box,
+  required String key,
+  required List<Map<String, dynamic>> list,
+}) {
+  final jsonString = jsonEncode(list);
+  box.write(key, jsonString);
+}
+
+// Extracts a safe documentNo from a payload (best-effort).
+String payloadDocumentNo(Map<String, dynamic> payload) {
+  final m = payload['mInOut'];
+  if (m is Map<String, dynamic>) {
+    final doc = (m['documentNo'] ?? '').toString().trim();
+    if (doc.isNotEmpty) return doc;
+  }
+  // Fallback to 'doc' state field
+  return (payload['doc'] ?? '').toString().trim();
+}
+
+// Extracts savedAt from payload.
+String payloadSavedAt(Map<String, dynamic> payload) {
+  return (payload['savedAt'] ?? '').toString();
 }

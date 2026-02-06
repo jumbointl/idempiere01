@@ -125,7 +125,7 @@ class MInOutDataSourceImpl implements MInOutDataSource {
 
     try {
       final String url =
-          "/api/v1/models/m_movement?\$filter=(M_Warehouse_ID%20eq%20$warehouseID%20OR%20M_Warehouse_ID%20eq%20null)%20AND%20(DocStatus%20eq%20'DR'%20OR%20DocStatus%20eq%20'IP')";
+          "/api/v1/models/m_movement?\$filter=(M_Warehouse_ID%20eq%20$warehouseID%20OR%20M_Warehouse_ID%20eq%20null%20OR%20M_WarehouseTo_ID%20eq%20$warehouseID)%20AND%20(DocStatus%20eq%20'DR'%20OR%20DocStatus%20eq%20'IP')";
       print(url);
       final response = await dio.get(url);
 
@@ -171,7 +171,6 @@ class MInOutDataSourceImpl implements MInOutDataSource {
       if (response.statusCode == 200) {
         final responseApi =
             ResponseApi<MInOut>.fromJson(response.data, MInOut.fromJson);
-        print(responseApi.records);
         if (responseApi.records != null && responseApi.records!.isNotEmpty) {
           final mInOut = responseApi.records!.first;
           print('mInOutgetMInOut-----${mInOut.id ?? 'NULL'}');
@@ -209,9 +208,9 @@ class MInOutDataSourceImpl implements MInOutDataSource {
     try {
       while (hasMoreRecords) {
         final String url =
-            "/api/v1/models/m_inoutline?\$filter=M_InOut_ID%20eq%20$mInOutId&\$skip=$skip";
+            "/api/v1/models/m_inoutline?\$filter=M_InOut_ID%20eq%20$mInOutId&\$orderby=Line,M_InOutLine_ID&\$skip=$skip";
         final response = await dio.get(url);
-
+        print('getLinesMInOut $url');
         if (response.statusCode != 200) {
           throw Exception(
               'Error loading ${mInOutState.title} data: ${response.statusCode}');
@@ -342,8 +341,11 @@ class MInOutDataSourceImpl implements MInOutDataSource {
         final responseApi =
             ResponseApi<MInOut>.fromJson(response.data, MInOut.fromJson);
 
+
         if (responseApi.records != null && responseApi.records!.isNotEmpty) {
           final mInOut = responseApi.records!.first;
+
+          debugPrint('mInOutgetMInOut-----${mInOut.mWarehouseToId.identifier ?? 'NULL'}');
           final lines = await getLinesMovement(mInOut.id!, ref);
           await Future.delayed(Duration(microseconds: 500));
           mInOut.lines = lines;
@@ -462,7 +464,7 @@ class MInOutDataSourceImpl implements MInOutDataSource {
     try {
       final String url =
           "/api/v1/models/m_movementConfirm?\$filter=M_MovementConfirm_ID%20eq%20$movementConfirmId";
-
+      print(url);
       final response = await dio.get(url);
 
       if (response.statusCode == 200) {

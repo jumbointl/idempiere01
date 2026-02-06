@@ -1,9 +1,13 @@
 
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:get_storage/get_storage.dart';
+import 'package:material_symbols_icons/symbols.dart';
 import 'package:monalisa_app_001/config/config.dart';
 import 'package:monalisa_app_001/features/m_inout/domain/entities/m_in_out.dart';
+import 'package:monalisa_app_001/features/products/common/messages_dialog.dart';
 import 'package:monalisa_app_001/features/shared/shared.dart';
 import 'package:monalisa_app_001/features/m_inout/domain/entities/line.dart';
 import 'package:monalisa_app_001/features/m_inout/presentation/widgets/barcode_list.dart';
@@ -46,7 +50,6 @@ class MInOutScreenState extends ConsumerState<MInOutScreen> {
       final mInOutNotifier = ref.read(mInOutProvider.notifier);
       mInOutNotifier.setParameters(widget.type);
       if(documentNo.isNotEmpty && documentNo !='-1'){
-        print('----documentNo: $documentNo');
         mInOutNotifier.onDocChange(documentNo);
       } else {
         await mInOutNotifier.loadDataList(ref);
@@ -127,19 +130,20 @@ class MInOutScreenState extends ConsumerState<MInOutScreen> {
                     print(' mInOutNotifier.setDocActionConfirm');
                     mInOutNotifier.setDocActionConfirm(ref);}
                       : () {
-                    print(' mInOutNotifier._showConfirmMInOut');
-                    _showConfirmMInOut(context);
+                    //print(' mInOutNotifier._showConfirmMInOut');
+                    //_showConfirmMInOut(context);
+
+                    reloadMInOut(context,ref);
+
                   }
                       : () {
                     print(' mInOutNotifier._showWithoutRole');
                     _showWithoutRole(context);
                   },
                   icon: Icon(
-                    Icons.check,
-                    color: mInOutNotifier.isConfirmMInOut()
-                    //? themeColorSuccessful
-                        ? Colors.purple
-                        : null,
+                    mInOutNotifier.isConfirmMInOut() ? Icons.check : Symbols.cloud_sync_rounded,
+                    color: Colors.purple,
+
                   ),
                 ),
               ]
@@ -148,6 +152,7 @@ class MInOutScreenState extends ConsumerState<MInOutScreen> {
             body: TabBarView(
               children: [
                 _MInOutView(mInOutState: mInOutState, mInOutNotifier: mInOutNotifier,
+                  type: widget.type,
                   initialDocumentNo: widget.documentNo.isNotEmpty ? widget.documentNo : '',),
                 _ScanView(
                     mInOutState: mInOutState, mInOutNotifier: mInOutNotifier),
@@ -235,16 +240,25 @@ class MInOutScreenState extends ConsumerState<MInOutScreen> {
     ) ??
         false;
   }
+
+
+
+
+
+
 }
 class _MInOutView extends ConsumerStatefulWidget {
   final MInOutStatus mInOutState;
   final MInOutNotifier mInOutNotifier;
   final String initialDocumentNo;
 
+  final String type;
+
   const _MInOutView({
     required this.mInOutState,
     required this.mInOutNotifier,
     required this.initialDocumentNo,
+    required this.type,
   });
 
   @override
@@ -267,7 +281,6 @@ class _MInOutViewState extends ConsumerState<_MInOutView> {
       WidgetsBinding.instance.addPostFrameCallback((_) async {
         if (!_sentInitialToNotifier) {
           widget.mInOutNotifier.onDocChange(widget.initialDocumentNo);
-          //await Future.delayed(Duration(microseconds: 100));
           if(context.mounted){
             await loadMInOutAndLine(context, ref);
             _sentInitialToNotifier = true;
@@ -304,10 +317,17 @@ class _MInOutViewState extends ConsumerState<_MInOutView> {
               onFieldSubmitted: (value) async {
                 await loadMInOutAndLine(context, ref);
               },
-              prefixIcon: const Icon(Icons.qr_code_scanner_rounded),
+              prefixIcon: IconButton(
+                icon: const Icon(Symbols.source_notes),
+                color: Colors.purple,
+                onPressed: () async {
+                  await loadSavedMInOut(context, ref);
+
+                },
+              ),
               suffixIcon: IconButton(
-                icon: const Icon(Icons.send_rounded),
-                color: themeColorPrimary,
+                icon: const Icon(Symbols.search),
+                color: Colors.purple,
                 onPressed: () async {
                   await loadMInOutAndLine(context, ref);
                 },
@@ -351,13 +371,19 @@ class _MInOutViewState extends ConsumerState<_MInOutView> {
 
   Widget _buildMInOutHeader(BuildContext context, WidgetRef ref, MInOutStatus stateNow) {
     final m = stateNow.mInOut;
+    final c = stateNow.mInOutConfirm;
+    final bool isMovementFlow = stateNow.mInOutType == MInOutType.move ||
+        stateNow.mInOutType == MInOutType.moveConfirm ;
 
     // Fuente de verdad: allLines
     final all = m?.allLines ?? const <Line>[];
     final int totalLines = all.length;
+    final confirmedLines = ref.watch(confirmedLinesProvider);
 
     // En confirm, lines suele ser subset (ej. confirmId != null)
     final int uiLines = m?.lines.length ?? 0;
+    final int confirmLines = c?.linesConfirm.length ?? 0;
+
 
     // Si querés mostrar "filtradas por productId != null" en modo normal:
     final int productOkLines =
@@ -371,12 +397,15 @@ class _MInOutViewState extends ConsumerState<_MInOutView> {
       '_buildMInOutHeader m.lines=$uiLines m.allLines=$totalLines productOk=$productOkLines '
           'rep=$repeatedLines err=$lineWithProductIdNull type=${stateNow.mInOutType}',
     );
+    debugPrint(
+      '_buildMInOutHeader isSOTrx ${stateNow.isSOTrx} $uiLines',
+    );
 
 
     // Mensaje principal de líneas:
     // - En moveConfirm (y confirm flows): mostrar "Confirmadas en esta pantalla / Total"
     // - En otros: mostrar "Con productId ok / Total" (estable, no cambia por subsets)
-    late final String lineMsg;
+    late String lineMsg;
     final isConfirmFlow =
         stateNow.mInOutType == MInOutType.shipmentConfirm ||
             stateNow.mInOutType == MInOutType.receiptConfirm ||
@@ -397,8 +426,12 @@ class _MInOutViewState extends ConsumerState<_MInOutView> {
 
 
     if (isConfirmFlow) {
-      // uiLines puede ser 106, totalLines 142
-      lineMsg = '${Messages.LINES} : $uiLines/$totalLines ${badge}'.trim();
+      if(totalLines>0) {
+        lineMsg = '${Messages.LINES} : $uiLines/$totalLines $badge'.trim();
+      } else {
+        lineMsg = '${Messages.LINES} : $uiLines $badge'.trim();
+
+      }
     } else {
       // estable (no depende de m.lines)
       if (productOkLines == totalLines) {
@@ -413,6 +446,7 @@ class _MInOutViewState extends ConsumerState<_MInOutView> {
         : lineMsg;
 
     String confirmText =  stateNow.mInOutConfirm?.documentNo ?? '';
+    final canMerge = ref.watch(canMergeSavedProvider);
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 4),
@@ -479,8 +513,22 @@ class _MInOutViewState extends ConsumerState<_MInOutView> {
                         fontWeight: FontWeight.bold,
                       ),
                     ),
+                    if(isMovementFlow) const Text(
+                      'Whs. To: ',
+                      style: TextStyle(
+                        fontSize: themeFontSizeSmall,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
                     const Text(
                       'BP: ',
+                      style: TextStyle(
+                        fontSize: themeFontSizeSmall,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const Text(
+                      'Confirmed: ',
                       style: TextStyle(
                         fontSize: themeFontSizeSmall,
                         fontWeight: FontWeight.bold,
@@ -492,9 +540,29 @@ class _MInOutViewState extends ConsumerState<_MInOutView> {
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      m?.documentNo ?? '',
-                      style: const TextStyle(fontSize: themeFontSizeSmall),
+                    Row(
+                      children: [
+                        Text(
+                          m?.documentNo ?? '',
+                          style: const TextStyle(fontSize: themeFontSizeSmall),
+                        ),
+                        SizedBox(width: 15),
+                        IconButton(
+                          onPressed:  () {
+                            //print(' mInOutNotifier._showConfirmMInOut');
+                            //_showConfirmMInOut(context);
+                            reloadMInOut(context, ref);
+
+
+                          },
+                          icon: Icon(
+                            Symbols.cloud_sync_rounded,
+                            color: Colors.purple,
+
+                          ),
+                        ),
+
+                      ],
                     ),
                     if (isConfirmFlow)
                       Text(
@@ -544,8 +612,18 @@ class _MInOutViewState extends ConsumerState<_MInOutView> {
                       m?.mWarehouseId.identifier ?? '',
                       style: const TextStyle(fontSize: themeFontSizeSmall),
                     ),
+                    if(isMovementFlow)Text(
+                      m?.mWarehouseToId.identifier ?? '',
+                      style: const TextStyle(fontSize: themeFontSizeSmall),
+                    ),
+
                     Text(
                       m?.cBPartnerId.identifier ?? '',
+                      style: const TextStyle(fontSize: themeFontSizeSmall),
+                    ),
+                    Text(
+                      isConfirmFlow ? '$confirmedLines/C.Lines: $confirmLines':
+                      '$confirmedLines/ $uiLines',
                       style: const TextStyle(fontSize: themeFontSizeSmall),
                     ),
                   ],
@@ -557,7 +635,7 @@ class _MInOutViewState extends ConsumerState<_MInOutView> {
             right: 0,
             top: 0,
             child: IconButton(
-              icon: const Icon(Icons.clear, size: 20),
+              icon: const Icon(Icons.clear, size: 20,color: Colors.purple,),
               onPressed: stateNow.scanBarcodeListTotal.isNotEmpty
                   ? () => _showConfirmclearMInOutData(
                 context,
@@ -570,204 +648,37 @@ class _MInOutViewState extends ConsumerState<_MInOutView> {
                 await mInOutNotifier.loadDataList(ref);
               },
             ),
+          ),
+          Positioned(
+            right: 6,
+            bottom: 4,
+            child: canMerge
+                ? Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text(
+                  'Merge',
+                  style: TextStyle(fontSize: themeFontSizeSmall),
+                ),
+                IconButton(
+                  iconSize: 18,
+                  visualDensity: VisualDensity.compact,
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
+                  onPressed: () => mergeMInOut(context, ref),
+                  icon: const Icon(
+                    Symbols.arrow_and_edge_rounded,
+                    color: Colors.purple,
+                  ),
+                ),
+              ],
+            )
+                : const SizedBox.shrink(),
           ),
         ],
       ),
     );
   }
-
-
-
- /* Widget _buildMInOutHeader(BuildContext context, WidgetRef ref,MInOutStatus stateNow) {
-
-    int totalLines = stateNow.mInOut?.allLines.length ?? 0;
-    int filteredLines = stateNow.mInOut?.lines.length ?? 0;
-    final repeatedLines = ref.watch(repeatedLinesProvider.select((l) => l.length));
-    final lineWithProductIdNull = ref.watch(nullProductIdLinesProvider.select((l) => l.length));
-    debugPrint('_buildMInOutHeader END OK state.lines=${stateNow.mInOut?.lines.length} state.allLines=${stateNow.mInOut?.allLines.length}');
-    String repeated = 'R : $repeatedLines' ;
-    if(repeatedLines==0){
-      repeated = '';
-    }
-    if(lineWithProductIdNull>0){
-      repeated = '$repeated E : $lineWithProductIdNull'.trim();
-    }
-    String lineMsg = '${Messages.LINES} : $filteredLines/$totalLines  $repeated'.trim();
-    if(filteredLines==totalLines){
-      lineMsg = '${Messages.LINES} : $totalLines  $repeated'.trim();
-    }
-    final movementText = stateNow.mInOut?.movementDate != null
-        ? '${DateFormat('dd/MM/yyyy').format(stateNow.mInOut!.movementDate!)}   $lineMsg'
-        : lineMsg;
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 4),
-      child: Stack(
-        children: [
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(themeBorderRadius),
-              color: getMInOutHeaderColor(stateNow),
-            ),
-            child: Row(
-              children: [
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Document No.: ',
-                      style: TextStyle(
-                        fontSize: themeFontSizeSmall,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    if (stateNow.mInOutType == MInOutType.shipmentConfirm ||
-                        stateNow.mInOutType == MInOutType.receiptConfirm ||
-                        stateNow.mInOutType == MInOutType.pickConfirm ||
-                        stateNow.mInOutType == MInOutType.qaConfirm ||
-                        stateNow.mInOutType == MInOutType.moveConfirm)
-                    const Text(
-                      'Confirm No.: ',
-                      style: TextStyle(
-                        fontSize: themeFontSizeSmall,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const Text(
-                      'Date: ',
-                      style: TextStyle(
-                        fontSize: themeFontSizeSmall,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const Text(
-                      'Order: ',
-                      style: TextStyle(
-                        fontSize: themeFontSizeSmall,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const Text(
-                      'O. Date: ',
-                      style: TextStyle(
-                        fontSize: themeFontSizeSmall,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const Text(
-                      'Org.: ',
-                      style: TextStyle(
-                        fontSize: themeFontSizeSmall,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const Text(
-                      'Whs.: ',
-                      style: TextStyle(
-                        fontSize: themeFontSizeSmall,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const Text(
-                      'BP: ',
-                      style: TextStyle(
-                        fontSize: themeFontSizeSmall,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(width: 10),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      stateNow.mInOut?.documentNo ?? '',
-                      style: const TextStyle(fontSize: themeFontSizeSmall),
-                    ),
-                    if (stateNow.mInOutType == MInOutType.shipmentConfirm ||
-                        stateNow.mInOutType == MInOutType.receiptConfirm ||
-                        stateNow.mInOutType == MInOutType.pickConfirm ||
-                        stateNow.mInOutType == MInOutType.qaConfirm ||
-                        stateNow.mInOutType == MInOutType.moveConfirm)
-                      Text(
-                        stateNow.mInOutConfirm?.documentNo ?? '',
-                        style:
-                        const TextStyle(fontSize: themeFontSizeSmall),
-                      ),
-
-
-
-                    (repeatedLines > 0)? TextButton(
-                      style: TextButton.styleFrom(
-                        padding: EdgeInsets.zero,
-                        minimumSize: Size.zero,
-                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                        visualDensity: VisualDensity.compact,
-                        alignment: Alignment.centerLeft,
-                      ),
-                      onPressed: () => showRepeatedLinesSheet(context, ref),
-                      child: Text(
-                        movementText,
-                        style: const TextStyle(
-                          fontSize: themeFontSizeSmall,
-                          decoration: TextDecoration.underline,
-                        ),
-                      ),
-                    )
-                        :Text(movementText,
-                      style: const TextStyle(fontSize: themeFontSizeSmall),
-                    ),
-                    Text(
-                      stateNow.mInOut?.cOrderId.identifier ?? '',
-                      style: const TextStyle(fontSize: themeFontSizeSmall),
-                    ),
-                    Text(
-                      stateNow.mInOut?.dateOrdered != null
-                          ? DateFormat('dd/MM/yyyy').format(stateNow.mInOut!.dateOrdered!)
-                          : '',
-                      style: const TextStyle(fontSize: themeFontSizeSmall),
-                    ),
-                    Text(
-                      stateNow.mInOut?.adOrgId.identifier ?? '',
-                      style: const TextStyle(fontSize: themeFontSizeSmall),
-                    ),
-                    Text(
-                      stateNow.mInOut?.mWarehouseId.identifier ?? '',
-                      style: const TextStyle(fontSize: themeFontSizeSmall),
-                    ),
-                    Text(
-                      stateNow.mInOut?.cBPartnerId.identifier ?? '',
-                      style: const TextStyle(fontSize: themeFontSizeSmall),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-          Positioned(
-            right: 0,
-            top: 0,
-            child: IconButton(
-              icon: const Icon(Icons.clear, size: 20),
-              onPressed: stateNow.scanBarcodeListTotal.isNotEmpty
-                  ? () => _showConfirmclearMInOutData(
-                context,
-                mInOutNotifier,
-                stateNow,
-                ref,
-              )
-                  : () async {
-                mInOutNotifier.clearMInOutData();
-                await mInOutNotifier.loadDataList(ref);
-              },
-            ),
-          ),
-        ],
-      ),
-    );
-  }*/
 
   Future<void> _showResetManualLine(BuildContext context, Line line) {
     return showDialog(
@@ -1063,6 +974,13 @@ class _MInOutViewState extends ConsumerState<_MInOutView> {
                       ),
                     ),
                     Text(
+                      'Whs. To: ',
+                      style: const TextStyle(
+                        fontSize: themeFontSizeSmall,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    Text(
                       'BP: ',
                       style: const TextStyle(
                         fontSize: themeFontSizeSmall,
@@ -1112,6 +1030,10 @@ class _MInOutViewState extends ConsumerState<_MInOutView> {
                       style: TextStyle(fontSize: themeFontSizeSmall),
                     ),
                     Text(
+                      mInOut.mWarehouseToId.identifier ?? '',
+                      style: TextStyle(fontSize: themeFontSizeSmall),
+                    ),
+                    Text(
                       mInOut.cBPartnerId.identifier ?? '',
                       style: TextStyle(fontSize: themeFontSizeSmall),
                     ),
@@ -1137,6 +1059,7 @@ class _MInOutViewState extends ConsumerState<_MInOutView> {
   }
   Future<void> _showConfirmclearMInOutData(BuildContext context,
       MInOutNotifier mInOutNotifier, MInOutStatus mInOutState, WidgetRef ref) {
+    debugPrint('showConfirmclearMInOutData');
     return showDialog(
       context: context,
       builder: (BuildContext context) {
@@ -1276,8 +1199,10 @@ class _MInOutViewState extends ConsumerState<_MInOutView> {
               Container(
                 color: item.verifiedStatus == 'over' ||
                     item.verifiedStatus == 'manually-over'
-                    ? themeColorWarningLight
-                    : null,
+                    ? Colors.orange.shade200
+                    : item.verifiedStatus == 'minor' ||
+                    item.verifiedStatus == 'manually-minor'
+                    ? themeColorWarningLight : null,
                 child: Row(
                   children: [
                     Padding(
@@ -1349,11 +1274,22 @@ class _MInOutViewState extends ConsumerState<_MInOutView> {
                     mInOutState.rolShowQty
                         ? Padding(
                       padding: const EdgeInsets.all(8),
-                      child: Text(
-                        item.targetQty.toString(),
-                        style: const TextStyle(
-                            fontSize: themeFontSizeLarge,
-                            fontWeight: FontWeight.bold),
+                      child: Row(
+                        children: [
+                          Text(
+                            '${item.confirmedQty}',
+                            style: const TextStyle(
+                                fontSize: themeFontSizeLarge,
+                                color: Colors.purple,
+                                fontWeight: FontWeight.bold),
+                          ),
+                          Text(
+                            '/ ${item.movementQty}',
+                            style: const TextStyle(
+                                fontSize: themeFontSizeLarge,
+                                fontWeight: FontWeight.bold),
+                          ),
+                        ],
                       ),
                     )
                         : SizedBox(width: 5),
@@ -1538,7 +1474,7 @@ class _MInOutViewState extends ConsumerState<_MInOutView> {
           actions: <Widget>[
             CustomFilledButton(
               onPressed: () {
-                mInOutNotifier.confirmManualLine(context,item);
+                mInOutNotifier.confirmManualLine(context,ref,item);
                 Navigator.of(context).pop();
               },
               label: 'Confirmar',
@@ -1594,7 +1530,7 @@ class _MInOutViewState extends ConsumerState<_MInOutView> {
           actions: <Widget>[
             CustomFilledButton(
               onPressed: () {
-                mInOutNotifier.confirmManualLine(context,item);
+                mInOutNotifier.confirmManualLine(context,ref,item);
                 Navigator.of(context).pop();
               },
               label: 'Confirmar',
@@ -1613,12 +1549,142 @@ class _MInOutViewState extends ConsumerState<_MInOutView> {
   }
 
   Future<void> loadMInOutAndLine(BuildContext context, WidgetRef ref) async {
+    ref.read(savedConfirmIdProvider.notifier).state = 0;
     ref.read(mInOutProvider.notifier).loadMInOutAndLine(context, ref);
   }
 
+  Future<void> loadSavedMInOut(BuildContext context, WidgetRef ref) async {
+    final box = GetStorage();
+    final widgetType = parseMInOutTypeFromWidget(widget.type);
+    if (widgetType == null) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Tipo inválido.')),
+      );
+      return;
+    }
+
+    final key = keySaveMInOutList(widgetType.name);
+
+    // Read list from storage
+    final list = readSavedPayloadList(box: box, key: key);
+    if (list.isEmpty) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No hay datos guardados.')),
+      );
+      return;
+    }
+
+    // Show picker bottom sheet
+    final selected = await showModalBottomSheet<Map<String, dynamic>>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (ctx) {
+        return FractionallySizedBox(
+          heightFactor: 0.7,
+          child: Column(
+            children: [
+              Center(child: Text(widget.type.toUpperCase(),style: TextStyle(fontSize: 24,
+                fontWeight: FontWeight.bold,),)),
+              const Padding(
+                padding: EdgeInsets.all(16),
+                child: Text(
+                  'Seleccionar guardado',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+              ),
+              const Divider(height: 0),
+              Expanded(
+                child: ListView.builder(
+                  itemCount: list.length,
+                  itemBuilder: (_, i) {
+                    final p = list[i];
+                    final doc = payloadDocumentNo(p);
+                    final savedAt = payloadSavedAt(p);
+
+                    // Show a friendly date string if possible
+                    String dateLabel = savedAt;
+                    try {
+                      final dt = DateTime.parse(savedAt);
+                      dateLabel = DateFormat('yyyy-MM-dd HH:mm').format(dt);
+                    } catch (_) {}
+
+                    return ListTile(
+                      title: Text(doc.isEmpty ? '(sin doc)' : doc),
+                      subtitle: Text(dateLabel.isEmpty ? '(sin fecha)' : dateLabel),
+                      onTap: () => Navigator.of(ctx).pop(p),
+                    );
+                  },
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.all(16),
+                child: CustomFilledButton(
+                  onPressed: () => Navigator.of(ctx).pop(null),
+                  label: 'Cerrar',
+                  icon: const Icon(Icons.close_rounded),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+
+    if (selected == null) return;
+    if (!context.mounted) return;
+
+    // Safety check: type must match
+    final savedTypeName = (selected['mInOutType'] ?? '').toString().trim();
+    if (savedTypeName != widgetType.name) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('El guardado corresponde a "$savedTypeName".')),
+      );
+      return;
+    }
+
+    // Restore selected payload
+    final restored = await ref.read(mInOutProvider.notifier).restoreFromPayload(
+      ref,
+      selected,
+      context: context,
+    );
+
+    if (!context.mounted) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          restored ? 'Guardado restaurado correctamente ✅' : 'No se pudo restaurar el guardado.',
+        ),
+      ),
+    );
+  }
+
+
+
+
+
+
 }
 
-
+void reloadMInOut(BuildContext context, WidgetRef ref) {
+  print(' mInOutNotifier.reload');
+  final mInOutState = ref.read(mInOutProvider);
+  if(mInOutState.doc.isEmpty){
+    String message = Messages.DOCUMENT_EMPTY ;
+    showErrorMessage(context,ref, message);
+    return ;
+  }
+  mInOutState.copyWith(isLoading: true);
+  ref.read(savedConfirmIdProvider.notifier).state = mInOutState.mInOutConfirm?.id ?? 0;
+  ref.read(mInOutProvider.notifier).loadMInOutAndLine(context, ref);
+}
 
 
 TableRow _buildTableRow(String label, String value, bool alignRight) {
@@ -1941,5 +2007,53 @@ class _ScanView extends ConsumerWidget {
         );
       },
     );
+  }
+}
+void mergeMInOut(BuildContext context, WidgetRef ref) {
+  final notifier = ref.read(mInOutProvider.notifier);
+
+  final result = notifier.mergeFromStorage();
+
+  if (!result.ok) {
+    showErrorMessage(context, ref, result.message);
+    return;
+  }
+
+  if (!context.mounted) return;
+  showSuccessMessage(context, ref, result.message);
+
+}
+
+
+void saveMInOut(BuildContext context, WidgetRef ref) {
+  final box = GetStorage();
+  final stateNow = ref.read(mInOutProvider);
+
+  final payload = buildSaveMInOutPayload(stateNow);
+  if (payload == null) {
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No hay datos para guardar.')),
+      );
+    }
+    return;
+  }
+
+  try {
+    final jsonString = jsonEncode(payload);
+    box.write(KEY_SAVED_MINOUT_V1, jsonString);
+    box.write(KEY_SAVED_MINOUT_V1_TYPE, stateNow.mInOutType.name);
+
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Guardado local OK ✅')),
+      );
+    }
+  } catch (e) {
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error al guardar: $e')),
+      );
+    }
   }
 }

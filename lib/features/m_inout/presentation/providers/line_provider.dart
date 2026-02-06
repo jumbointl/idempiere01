@@ -228,3 +228,25 @@ void updateLinesWithoutConfirmId(WidgetRef ref, List<Line> allLines) {
   ref.read(lineWithoutConfirmIdProvider.notifier).state =
       findLinesWithoutConfirmId(allLines);
 }
+
+
+final confirmedLinesProvider = Provider<int>((ref) {
+  final s = ref.watch(mInOutProvider);
+
+  final validStatuses = <String>{
+    'correct',
+    'manually-correct',
+    if (s.rolCompleteLow) 'minor',
+    if (s.rolCompleteLow) 'manually-minor',
+    if (s.rolCompleteOver) 'over',
+    if (s.rolCompleteOver) 'manually-over',
+  };
+
+  final lines = s.mInOut?.lines ?? const <Line>[];
+
+  return lines.where((l) =>
+  l.verifiedStatus != 'pending' && validStatuses.contains(l.verifiedStatus)
+  ).length;
+});
+
+
