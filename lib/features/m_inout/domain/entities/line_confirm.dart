@@ -4,6 +4,7 @@ class LineConfirm {
   int? id;
   AdEntityId? mInOutLineId;
   AdEntityId? mMovementLineId;
+  AdEntityId? mInOutConfirmID;
   double? targetQty;
   double? confirmedQty;
   double? differenceQty;
@@ -17,12 +18,14 @@ class LineConfirm {
     this.confirmedQty,
     this.differenceQty,
     this.scrappedQty,
+    this.mInOutConfirmID,
   });
 
   factory LineConfirm.fromJson(Map<String, dynamic> json) => LineConfirm(
         id: json["id"],
         mInOutLineId: AdEntityId.fromJson(json["M_InOutLine_ID"] ?? {}),
         mMovementLineId: AdEntityId.fromJson(json["M_MovementLine_ID"] ?? {}),
+        mInOutConfirmID: AdEntityId.fromJson(json["M_InOutConfirm_ID"] ?? {}),
         targetQty: (json["TargetQty"] != null) ? (json["TargetQty"] is double ? json["TargetQty"] : double.tryParse(json["TargetQty"].toString()) ?? 0.0) : 0.0,
         confirmedQty: (json["ConfirmedQty"] != null) ? (json["ConfirmedQty"] is double ? json["ConfirmedQty"] : double.tryParse(json["ConfirmedQty"].toString()) ?? 0.0) : 0.0,
         differenceQty: (json["DifferenceQty"] != null) ? (json["DifferenceQty"] is double ? json["DifferenceQty"] : double.tryParse(json["DifferenceQty"].toString()) ?? 0.0) : 0.0,
@@ -38,6 +41,7 @@ class LineConfirm {
     double? confirmedQty,
     double? differenceQty,
     double? scrappedQty,
+    AdEntityId? mInOutConfirmID,
   }) {
     return LineConfirm(
       id: id ?? this.id,
@@ -47,6 +51,7 @@ class LineConfirm {
       confirmedQty: confirmedQty ?? this.confirmedQty,
       differenceQty: differenceQty ?? this.differenceQty,
       scrappedQty: scrappedQty ?? this.scrappedQty,
+      mInOutConfirmID: mInOutConfirmID ?? this.mInOutConfirmID,
     );
   }
 
@@ -59,6 +64,7 @@ class LineConfirm {
       "ConfirmedQty": confirmedQty,
       "DifferenceQty": differenceQty,
       "ScrappedQty": scrappedQty,
+      "M_InOutConfirm_ID": mInOutConfirmID?.toJson(),
     };
   }
 

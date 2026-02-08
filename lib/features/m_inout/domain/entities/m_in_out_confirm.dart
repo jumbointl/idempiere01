@@ -68,5 +68,5 @@ class MInOutConfirm {
       linesConfirm.map((e) => e.toJson()).toList(),
     };
   }
-
+  bool get isDraft => docStatus.id == 'DR';
 }

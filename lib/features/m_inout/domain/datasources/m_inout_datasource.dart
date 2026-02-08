@@ -14,6 +14,11 @@ abstract class MInOutDataSource {
   Future<MInOut> getMInOut(String mInOutDoc, WidgetRef ref);
   Future<List<Line>> getLinesMInOut(int mInOutId, WidgetRef ref);
   Future<MInOutConfirm> getMInOutConfirm(int mInOutConfirmId, WidgetRef ref);
+  Future<List<MInOutConfirm>> getMInOutConfirmInDraftByMInOutID({
+      required int mInOutId,
+      required int excludedMInOutConfirmId,
+       required WidgetRef ref,
+      });
   Future<List<LineConfirm>> getLinesMInOutConfirm(int mInOutConfirmId, WidgetRef ref);
   Future<MInOut> getMovement(String movementDoc, WidgetRef ref);
   Future<List<Line>> getLinesMovement(int movementId, WidgetRef ref);
@@ -21,13 +26,19 @@ abstract class MInOutDataSource {
   Future<List<LineConfirm>> getLinesMovementConfirm(int movementConfirmId, WidgetRef ref);
   Future<MInOut> setDocAction(WidgetRef ref);
   Future<LineConfirm> updateLineConfirm(Line line, WidgetRef ref);
+  Future<Line> updateMInOutLine(Line line, WidgetRef ref);
   Future<int> getLocator(String value, WidgetRef ref);
   Future<bool> updateLocator(Line line, WidgetRef ref);
+  Future<bool> updateMovementQty(Line line, WidgetRef ref);
+  Future<bool> updateLineConfirmTargetQty(LineConfirm line, WidgetRef ref);
 
   Future getMInOutListByDateRange({required WidgetRef ref, required DateTimeRange<DateTime> dates
     , required String inOut});
 
   Future getMovementListByDateRange({required WidgetRef ref, required DateTimeRange<DateTime> dates
     , required String inOut});
+
+  Future<List<LineConfirm>> getLinesMInOutConfirmToUpdateTargetQty({
+  required List<int> listConfirmsIds, required List<int> mInOutLineIds, required WidgetRef ref});
 
 }

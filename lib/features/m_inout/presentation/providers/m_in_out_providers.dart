@@ -83,10 +83,11 @@ class MInOutNotifier extends StateNotifier<MInOutStatus> {
         rolManualQty: RolesApp.appShipmentManual,
         rolShowScrap: false,
         rolManualScrap: false,
-        rolCompleteLow: RolesApp.appShipmentLowqty,
+        rolCompleteLow: RolesApp.appShipmentLowQty,
         rolCompleteOver: false,
         rolPrepare: RolesApp.appShipmentPrepare,
         rolComplete: RolesApp.appShipmentComplete,
+        rolQuickComplete: RolesApp.appShipmentQuickComplete,
       );
     } else if (type == 'shipmentconfirm') {
       state = state.copyWith(
@@ -97,9 +98,10 @@ class MInOutNotifier extends StateNotifier<MInOutStatus> {
         rolManualQty: RolesApp.appShipmentconfirmManual,
         rolShowScrap: false,
         rolManualScrap: false,
-        rolCompleteLow: RolesApp.appShipmentLowqty,
+        rolCompleteLow: RolesApp.appShipmentLowQty,
         rolCompleteOver: false,
         rolComplete: RolesApp.appShipmentconfirmComplete,
+        rolQuickComplete: RolesApp.appShipmentconfirmQuickComplete,
       );
     } else if (type == 'pickconfirm') {
       state = state.copyWith(
@@ -110,9 +112,10 @@ class MInOutNotifier extends StateNotifier<MInOutStatus> {
         rolManualQty: RolesApp.appPickconfirmManual,
         rolShowScrap: RolesApp.appPickconfirmQty,
         rolManualScrap: RolesApp.appPickconfirmManual,
-        rolCompleteLow: RolesApp.appShipmentLowqty,
+        rolCompleteLow: RolesApp.appShipmentLowQty,
         rolCompleteOver: false,
         rolComplete: RolesApp.appPickconfirmComplete,
+        rolQuickComplete: RolesApp.appPickconfirmQuickComplete,
       );
     } else if (type == 'receipt') {
       state = state.copyWith(
@@ -125,10 +128,11 @@ class MInOutNotifier extends StateNotifier<MInOutStatus> {
         rolManualQty: RolesApp.appReceiptManual,
         rolShowScrap: false,
         rolManualScrap: false,
-        rolCompleteLow: RolesApp.appShipmentLowqty,
+        rolCompleteLow: RolesApp.appShipmentLowQty,
         rolCompleteOver: false,
         rolPrepare: RolesApp.appReceiptPrepare,
         rolComplete: RolesApp.appReceiptComplete,
+        rolQuickComplete: RolesApp.appReceiptQuickComplete,
       );
     } else if (type == 'receiptconfirm') {
       state = state.copyWith(
@@ -139,9 +143,10 @@ class MInOutNotifier extends StateNotifier<MInOutStatus> {
         rolManualQty: RolesApp.appReceiptconfirmManual,
         rolShowScrap: RolesApp.appReceiptconfirmQty,
         rolManualScrap: RolesApp.appReceiptconfirmManual,
-        rolCompleteLow: RolesApp.appShipmentLowqty,
+        rolCompleteLow: RolesApp.appShipmentLowQty,
         rolCompleteOver: false,
         rolComplete: RolesApp.appReceiptconfirmComplete,
+        rolQuickComplete: RolesApp.appReceiptconfirmQuickComplete,
       );
     } else if (type == 'qaconfirm') {
       state = state.copyWith(
@@ -152,9 +157,10 @@ class MInOutNotifier extends StateNotifier<MInOutStatus> {
         rolManualQty: RolesApp.appQaconfirmManual,
         rolShowScrap: RolesApp.appQaconfirmQty,
         rolManualScrap: RolesApp.appQaconfirmManual,
-        rolCompleteLow: RolesApp.appShipmentLowqty,
+        rolCompleteLow: RolesApp.appShipmentLowQty,
         rolCompleteOver: false,
         rolComplete: RolesApp.appQaconfirmComplete,
+        rolQuickComplete: RolesApp.appQaconfirmQuickComplete,
       );
     } else if (type == 'move') {
       state = state.copyWith(
@@ -168,6 +174,7 @@ class MInOutNotifier extends StateNotifier<MInOutStatus> {
         rolCompleteLow: true,
         rolCompleteOver: false,
         rolComplete: RolesApp.appMovementComplete,
+        rolQuickComplete: RolesApp.appMovementQuickComplete,
       );
     } else if (type == 'moveconfirm') {
       state = state.copyWith(
@@ -181,6 +188,7 @@ class MInOutNotifier extends StateNotifier<MInOutStatus> {
         rolCompleteLow: true,
         rolCompleteOver: false,
         rolComplete: RolesApp.appMovementconfirmComplete,
+        rolQuickComplete: RolesApp.appMovementconfirmQuickComplete,
       );
     }
   }
@@ -204,6 +212,11 @@ class MInOutNotifier extends StateNotifier<MInOutStatus> {
       List<Barcode> parseBarcodeList(dynamic v) {
         if (v is! List) return <Barcode>[];
         return v.whereType<Map<String, dynamic>>().map((e) => Barcode.fromJson(e)).toList();
+      }
+
+      List<MInOutConfirm> parseMInOutConfirmList(dynamic v) {
+        if (v is! List) return <MInOutConfirm>[];
+        return v.whereType<Map<String, dynamic>>().map((e) => MInOutConfirm.fromJson(e)).toList();
       }
 
       final total = parseBarcodeList(map['scanBarcodeListTotal']);
@@ -238,6 +251,7 @@ class MInOutNotifier extends StateNotifier<MInOutStatus> {
         rolCompleteOver: map['rolCompleteOver'] as bool? ?? state.rolCompleteOver,
         rolPrepare: map['rolPrepare'] as bool? ?? state.rolPrepare,
         rolComplete: map['rolComplete'] as bool? ?? state.rolComplete,
+        rolQuickComplete: map['rolQuickComplete'] as bool? ?? state.rolQuickComplete,
 
         // data
         mInOut: restoredMInOut,
@@ -245,6 +259,8 @@ class MInOutNotifier extends StateNotifier<MInOutStatus> {
         scanBarcodeListTotal: total,
         scanBarcodeListUnique: unique,
         linesOver: over,
+        mInOutConfirmList: parseMInOutConfirmList(map['mInOutConfirmList']),
+
 
         errorMessage: '',
         isLoading: false,
@@ -255,7 +271,7 @@ class MInOutNotifier extends StateNotifier<MInOutStatus> {
       if (context != null && context.mounted) {
         updatedMInOutLineSilence('');
       }
-
+      debugPrint('RESTORED mInOutConfirmList: ${state.mInOutConfirmList.length}');
       return true;
     } catch (e) {
       state = state.copyWith(errorMessage: 'Error al restaurar: $e');
@@ -479,8 +495,7 @@ class MInOutNotifier extends StateNotifier<MInOutStatus> {
 
     // ---------------- NORMAL IN/OUT ----------------
     debugPrint('[loadMInOutAndLine] route=ONLY_MInOut');
-    await mInOutNotifier.getMInOutAndLine(ref);
-    //await _handleNormalFlow(ref: ref, notifier: mInOutNotifier);
+    await _handleNormalFlow(ref: ref, notifier: mInOutNotifier);
   }
 
 
@@ -581,7 +596,7 @@ class MInOutNotifier extends StateNotifier<MInOutStatus> {
     }
 
     // Show selection modal
-    _showSelectMInOutConfirm(confirmList, context, notifier, stateNow, ref);
+    _showSelectMInOutConfirm(context, notifier, stateNow, ref);
   }
   Future<void> _handleMoveConfirmFlow({
     required BuildContext context,
@@ -608,7 +623,6 @@ class MInOutNotifier extends StateNotifier<MInOutStatus> {
         if (!context.mounted) return;
 
         _showSelectMInOutConfirm(
-          confirmList ?? const [],
           context,
           notifier,
           stateNow,
@@ -623,7 +637,7 @@ class MInOutNotifier extends StateNotifier<MInOutStatus> {
     }
   }
 
-  /*Future<void> _handleNormalFlow({
+  Future<void> _handleNormalFlow({
     required WidgetRef ref,
     required MInOutNotifier notifier,
   }) async {
@@ -632,11 +646,10 @@ class MInOutNotifier extends StateNotifier<MInOutStatus> {
     MInOut mInOut = await notifier.getMInOutAndLine(ref);
 
 
-  }*/
+  }
 
 
   Future<void> _showSelectMInOutConfirm(
-      List<MInOutConfirm> mInOutConfirmList,
       BuildContext context,
       MInOutNotifier mInOutNotifier,
       MInOutStatus mInOutState,
@@ -650,6 +663,7 @@ class MInOutNotifier extends StateNotifier<MInOutStatus> {
         borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
       ),
       builder: (context) {
+        final mInOutConfirmList = mInOutState.mInOutConfirmList;
         return FractionallySizedBox(
           heightFactor: 0.7, // ocupa el 70% de la pantalla
           child: Column(
@@ -675,9 +689,19 @@ class MInOutNotifier extends StateNotifier<MInOutStatus> {
                   itemCount: mInOutConfirmList.length,
                   itemBuilder: (context, index) {
                     final item = mInOutConfirmList[index];
-
+                    late final Color backgroundColor ;
+                    if(item.isDraft){
+                      backgroundColor =  Colors.green.shade200;
+                    } else {
+                      backgroundColor =  Colors.white;
+                    }
                     return InkWell(
                       onTap: () {
+                        if(!item.isDraft){
+                          String message = '${Messages.DOCUMENT_STATUS} = ${item.docStatus.id}';
+                          showErrorMessage(context,ref,message);
+                          return ;
+                        }
                         if (mInOutState.mInOutType == MInOutType.moveConfirm) {
                           mInOutNotifier.getMovementConfirmAndLine(item.id!, ref);
                         } else {
@@ -687,26 +711,29 @@ class MInOutNotifier extends StateNotifier<MInOutStatus> {
                       },
                       child: Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              item.documentNo.toString(),
-                              style: const TextStyle(
-                                fontSize: themeFontSizeLarge,
-                                fontWeight: FontWeight.bold,
+                        child: Container(
+                          color: backgroundColor,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                item.documentNo.toString(),
+                                style: const TextStyle(
+                                  fontSize: themeFontSizeLarge,
+                                  fontWeight: FontWeight.bold,
+                                ),
                               ),
-                            ),
-                            Text(
-                              item.mInOutId.identifier ?? '',
-                              style: TextStyle(
-                                fontSize: themeFontSizeSmall,
-                                color: themeColorGray,
+                              Text(
+                                item.mInOutId.identifier ?? '',
+                                style: TextStyle(
+                                  fontSize: themeFontSizeSmall,
+                                  color: themeColorGray,
+                                ),
                               ),
-                            ),
-                            const SizedBox(height: 8),
-                            const Divider(height: 0),
-                          ],
+                              const SizedBox(height: 8),
+                              const Divider(height: 0),
+                            ],
+                          ),
                         ),
                       ),
                     );
@@ -1320,6 +1347,13 @@ class MInOutNotifier extends StateNotifier<MInOutStatus> {
 
       return true;
     }
+    if(state.rolQuickComplete){
+      return state.mInOut?.lines.every(
+            (line) =>
+        line.confirmedQty!=null &&  line.confirmedQty! > 0 ,
+      ) ??
+          false;
+    }
     final validStatuses = {
       'correct',
       'manually-correct',
@@ -1347,11 +1381,8 @@ class MInOutNotifier extends StateNotifier<MInOutStatus> {
       return;
     }
     try {
-      print('try setDocAction lines ${state.mInOut!.lines.length}');
       for (final line in state.mInOut!.lines) {
-        print('try setDocAction ${line.id ?? '--'}');
         if (line.editLocator != null) {
-          print('try setDocAction line.editLocator ${line.editLocator}');
           final update = await mInOutRepository.updateLocator(line, ref);
           print(
             'update  mInOutRepository ${line.id} ${update ? 'true' : 'no true'}',
@@ -1366,9 +1397,7 @@ class MInOutNotifier extends StateNotifier<MInOutStatus> {
           }
         }
       }
-      print('mInOutResponse');
       final mInOutResponse = await mInOutRepository.setDocAction(ref);
-      print('update  mInOutRepository ${mInOutResponse.docStatus.identifier}');
       print('setDocAction showMInOutResultModalBottomSheet');
 
       showMInOutResultModalBottomSheet(
@@ -1377,25 +1406,7 @@ class MInOutNotifier extends StateNotifier<MInOutStatus> {
         type: MInOutType.move,
         text: '',
         onOk: () async {
-          /*print('setDocAction onOk');
-          if(mInOutResponse.docStatus.id=='CO' || mInOutResponse.docStatus.id=='IP'){
 
-            onDocChange(state.doc);
-
-            //getMInOutAndLine(ref);
-            if(state.mInOutType == MInOutType.moveConfirm || state.mInOutType == MInOutType.move){
-                print('setDocAction clearMInOutData');
-                await getMovementAndLine(ref);
-            }
-
-
-
-          }
-        */
-          /*if(state.mInOutType == MInOutType.moveConfirm || state.mInOutType == MInOutType.move){
-            print('setDocAction clearMInOutData');
-            await getMovementAndLine(ref);
-          }*/
         },
       );
       state = state.copyWith(
@@ -1414,8 +1425,256 @@ class MInOutNotifier extends StateNotifier<MInOutStatus> {
       );
     }
   }
-
   Future<void> setDocActionConfirm(WidgetRef ref) async {
+    // EN: Switch UI into loading state and clear previous errors
+    state = state.copyWith(isLoading: true, errorMessage: '');
+    debugPrint('setDocActionConfirm');
+
+    final currentM = state.mInOut;
+    if (currentM == null) {
+      state = state.copyWith(isLoading: false, errorMessage: 'mInOut is null');
+      return;
+    }
+
+    // EN: Use ONLY currentM.lines as requested
+    final List<Line> sourceLines = currentM.lines;
+
+    // EN: Track which movement lineIds need updates (targetQty != confirmedQty)
+    final Set<int> movementLineIdsToUpdate = <int>{};
+
+    // EN: Map movement lineId -> confirmedQty (source of truth for draft confirm updates)
+    final Map<int, double> movementConfirmedQtyByLineId = <int, double>{};
+
+    try {
+      // ---------------------------------------------------------------------
+      // 1) EN: Build list of movement lines where targetQty != confirmedQty
+      //     and update MInOutLine rows (movement qty update).
+      // ---------------------------------------------------------------------
+      final List<Line> listLinesToUpdateMovementQty = [];
+
+      for (final line in sourceLines) {
+        final targetQty = line.targetQty;
+        final confirmedQty = line.confirmedQty;
+
+        if (targetQty != null &&
+            confirmedQty != null &&
+            targetQty != confirmedQty) {
+          listLinesToUpdateMovementQty.add(line);
+
+          final id = line.id;
+          if (id != null) {
+            movementLineIdsToUpdate.add(id);
+            movementConfirmedQtyByLineId[id] = confirmedQty; // <-- capture confirmedQty
+          }
+        }
+      }
+
+      debugPrint(
+        'setDocActionConfirm listLinesToUpdateMovementQty.length = ${listLinesToUpdateMovementQty.length}',
+      );
+
+      // EN: Pre-build IDs list for repository calls
+      final List<int> listIdsToUpdateMovementQty = movementLineIdsToUpdate.toList();
+      debugPrint(
+        'setDocActionConfirm listIdsToUpdateMovementQty.length = ${listIdsToUpdateMovementQty.length}',
+      );
+
+      if (listLinesToUpdateMovementQty.isNotEmpty) {
+        // 1.1) EN: Update movement lines first
+        for (final line in listLinesToUpdateMovementQty) {
+          try {
+            await mInOutRepository.updateMInOutLine(line, ref);
+          } catch (e) {
+            final msg =
+                'UpdateMovementQty: Error al actualizar cantidad en línea ${line.line}: ${e.toString()}';
+            debugPrint('setDocActionConfirm preUpdate(1) error: $msg');
+
+            state = state.copyWith(isLoading: false, errorMessage: msg);
+            if (ref.context.mounted) showErrorMessage(ref.context, ref, msg);
+            return;
+          }
+        }
+
+        // -------------------------------------------------------------------
+        // 2) EN: NEW FLOW (from confirmList via repository)
+        //     - Get drafts confirms excluding current confirm
+        //     - Extract confirm IDs
+        //     - Ask backend for LineConfirm rows to update by confirmIds + mInOutLineIds
+        //     - Copy confirmedQty(from movement) -> LineConfirm.confirmedQty
+        //     - Update via updateLineConfirmTargetQty
+        // -------------------------------------------------------------------
+        final int? mInOutId = state.mInOut?.id;
+        final int? currentConfirmId = state.mInOutConfirm?.id;
+
+        if (mInOutId != null && currentConfirmId != null) {
+          List<MInOutConfirm> confirmListDraft = [];
+          try {
+            confirmListDraft =
+            await mInOutRepository.getMInOutConfirmInDraftByMInOutID(
+              mInOutId: mInOutId,
+              excludedMInOutConfirmId: currentConfirmId,
+              ref: ref,
+            );
+          } catch (e) {
+            final msg =
+                'GetDraftConfirms: Error al obtener confirms draft: ${e.toString()}';
+            debugPrint('setDocActionConfirm preUpdate(2) error: $msg');
+
+            state = state.copyWith(isLoading: false, errorMessage: msg);
+            if (ref.context.mounted) showErrorMessage(ref.context, ref, msg);
+            return;
+          }
+
+          debugPrint(
+            'setDocActionConfirm confirmListDraft.length = ${confirmListDraft.length}',
+          );
+
+          final List<int> listConfirmsIds = confirmListDraft
+              .map((c) => c.id)
+              .whereType<int>()
+              .toList();
+
+          debugPrint(
+            'setDocActionConfirm listConfirmsIds.length = ${listConfirmsIds.length}',
+          );
+
+          if (listConfirmsIds.isNotEmpty && listIdsToUpdateMovementQty.isNotEmpty) {
+            List<LineConfirm> listLinesToUpdateTargetQty = [];
+            try {
+              listLinesToUpdateTargetQty =
+              await mInOutRepository.getLinesMInOutConfirmToUpdateTargetQty(
+                listConfirmsIds: listConfirmsIds,
+                mInOutLineIds: listIdsToUpdateMovementQty,
+                ref: ref,
+              );
+            } catch (e) {
+              final msg =
+                  'GetLinesToUpdateTargetQty: Error al obtener líneas confirm a actualizar: ${e.toString()}';
+              debugPrint('setDocActionConfirm preUpdate(3) error: $msg');
+
+              state = state.copyWith(isLoading: false, errorMessage: msg);
+              if (ref.context.mounted) showErrorMessage(ref.context, ref, msg);
+              return;
+            }
+
+            debugPrint(
+              'setDocActionConfirm listLinesToUpdateTargetQty.length = ${listLinesToUpdateTargetQty.length}',
+            );
+
+            if (listLinesToUpdateTargetQty.isNotEmpty) {
+              // EN: Copy confirmedQty from movement -> LineConfirm.confirmedQty
+              for (final lc in listLinesToUpdateTargetQty) {
+                final lineId = int.tryParse(lc.mInOutLineId?.id ?? '');
+                if (lineId == null) continue;
+
+                final confirmedQtyFromMovement = movementConfirmedQtyByLineId[lineId];
+                if (confirmedQtyFromMovement == null) continue;
+
+                lc.confirmedQty = confirmedQtyFromMovement;
+              }
+
+              // EN: Update each LineConfirm
+              for (final lineConfirm in listLinesToUpdateTargetQty) {
+                try {
+                  await mInOutRepository.updateLineConfirmTargetQty(lineConfirm, ref);
+                } catch (e) {
+                  final msg =
+                      'UpdateLineConfirmTargetQty: Error al actualizar targetQty en LineConfirm (lineId: ${lineConfirm.mInOutLineId?.id}): ${e.toString()}';
+                  debugPrint('setDocActionConfirm preUpdate(4) error: $msg');
+
+                  state = state.copyWith(isLoading: false, errorMessage: msg);
+                  if (ref.context.mounted) showErrorMessage(ref.context, ref, msg);
+                  return;
+                }
+              }
+            }
+          }
+        }
+      }
+
+      // ---------------------------------------------------------------------
+      // EN: Normal confirmation flow (unchanged)
+      // ---------------------------------------------------------------------
+      for (final line in currentM.lines) {
+        if (line.editLocator != null) {
+          debugPrint('setDocActionConfirm updateLocator');
+          final update = await mInOutRepository.updateLocator(line, ref);
+          if (!update) {
+            state = state.copyWith(
+              errorMessage:
+              'Error al actualizar la ubicación: ${line.mLocatorId!.identifier}',
+              isLoading: false,
+            );
+            return;
+          }
+        }
+
+        final lineConfirmResponse =
+        await mInOutRepository.updateLineConfirm(line, ref);
+
+        if (lineConfirmResponse.id == null) {
+          state = state.copyWith(
+            errorMessage: 'Error al confirmar la línea ${line.line}',
+            isLoading: false,
+          );
+          return;
+        }
+      }
+
+      debugPrint('setDocActionConfirm setDocAction');
+      late MInOut result;
+
+      try {
+        result = await mInOutRepository.setDocAction(ref);
+        debugPrint('setDocActionConfirm result ${result.toJson()}');
+      } catch (e) {
+        debugPrint('setDocActionConfirm Error: ${e.toString()}');
+        if (ref.context.mounted) showErrorMessage(ref.context, ref, e.toString());
+        state = state.copyWith(isLoading: false);
+        return;
+      }
+
+      state = state.copyWith(
+        errorMessage: '',
+        isLoading: false,
+        isComplete: true,
+      );
+
+      showMInOutResultModalBottomSheet(
+        ref: ref,
+        data: result,
+        type: MInOutType.move,
+        text: '',
+        onOk: () async {
+          late MInOutConfirm result2;
+
+          if (state.mInOutType == MInOutType.moveConfirm) {
+            debugPrint('getMovementConfirmAndLine ${state.mInOutConfirm!.id!}');
+            result2 =
+            await getMovementConfirmAndLine(state.mInOutConfirm!.id!, ref);
+          } else {
+            debugPrint('getMInOutConfirmAndLine ${state.mInOutConfirm!.id!}');
+            result2 =
+            await getMInOutConfirmAndLine(state.mInOutConfirm!.id!, ref);
+          }
+
+          debugPrint('setDocActionConfirm result2 ${result2.toJson()}');
+        },
+      );
+    } catch (e) {
+      debugPrint('setDocActionConfirm error ${e.toString()}');
+      state = state.copyWith(
+        errorMessage: e.toString().replaceAll('Exception: ', ''),
+        isLoading: false,
+      );
+    }
+  }
+
+
+
+
+  Future<void> setDocActionConfirmOld(WidgetRef ref) async {
+
     state = state.copyWith(isLoading: true, errorMessage: '');
     print('setDocActionConfirm');
 
@@ -1480,7 +1739,6 @@ class MInOutNotifier extends StateNotifier<MInOutStatus> {
             print('getMInOutConfirmAndLine ${state.mInOutConfirm!.id!}');
             result2 = await getMInOutConfirmAndLine(state.mInOutConfirm!.id!, ref);
           }
-          print('setDocActionConfirm result2 ${result2.toJson()}');
 
         },
       );
@@ -1493,7 +1751,6 @@ class MInOutNotifier extends StateNotifier<MInOutStatus> {
       );
     }
   }
-
 
   void addBarcode(String code, BuildContext context) {
     if (code.trim().isEmpty) return;
@@ -2405,6 +2662,7 @@ class MInOutStatus {
   final bool isLoading;
   final bool isLoadingMInOutList;
   final bool isComplete;
+  final List<MInOutConfirm> mInOutConfirmList;
 
   // ROLES
   final bool rolShowQty;
@@ -2415,6 +2673,7 @@ class MInOutStatus {
   final bool rolCompleteOver;
   final bool rolPrepare;
   final bool rolComplete;
+  final bool rolQuickComplete;
 
   MInOutStatus({
     this.doc = '',
@@ -2446,6 +2705,8 @@ class MInOutStatus {
     this.rolCompleteOver = false,
     this.rolPrepare = false,
     this.rolComplete = false,
+    this.rolQuickComplete = false,
+    this.mInOutConfirmList = const [],
   });
 
   MInOutStatus copyWith({
@@ -2477,6 +2738,8 @@ class MInOutStatus {
     bool? rolCompleteOver,
     bool? rolPrepare,
     bool? rolComplete,
+    bool? rolQuickComplete,
+    List<MInOutConfirm>? mInOutConfirmList,
   }) => MInOutStatus(
     doc: doc ?? this.doc,
     mInOutType: mInOutType ?? this.mInOutType,
@@ -2506,84 +2769,14 @@ class MInOutStatus {
     rolCompleteOver: rolCompleteOver ?? this.rolCompleteOver,
     rolPrepare: rolPrepare ?? this.rolPrepare,
     rolComplete: rolComplete ?? this.rolComplete,
+    rolQuickComplete: rolQuickComplete ?? this.rolQuickComplete,
+    mInOutConfirmList: mInOutConfirmList ?? this.mInOutConfirmList,
   );
 
 
 }
 
-// import 'package:flutter/material.dart';
-// import 'package:flutter_riverpod/flutter_riverpod.dart';
-// import 'package:monalisa_app_001/config/theme/app_theme.dart';
-// import 'tu_path/minout_status.dart'; // donde esté MInOutStatus + MInOutType
 
-/// Provider que devuelve el color de fondo del header según el estado del MInOut
-/*
-final mInOutHeaderColorProvider = Provider.family<Color, MInOutStatus>((
-  ref,
-  mInOutState,
-) {
-  final docStatusId = mInOutState.mInOut?.docStatus.id?.toString();
-  final confirmStatusId = mInOutState.mInOutConfirm?.docStatus.id?.toString();
-
-  print('mInOutHeaderColorProvider mInoutColor ${mInOutState.mInOutType}');
-  if (mInOutState.mInOutType == MInOutType.move) {
-    print('mInoutColor1 ${mInOutState.mInOutType}');
-    print('docStatus $docStatusId');
-    print('confirmStatusId $confirmStatusId');
-
-    if (docStatusId == 'DR') {
-      return themeColorWarningLight;
-    } else if (docStatusId == 'IP') {
-      return Colors.cyan.shade200;
-    } else if (docStatusId == 'CO') {
-      return themeColorSuccessfulLight;
-    } else {
-      return Colors.grey.shade200;
-    }
-  }
-  if (mInOutState.mInOutType == MInOutType.moveConfirm) {
-    print('mInoutColor2 ${mInOutState.mInOutType}');
-    print('docStatus $docStatusId');
-    print('confirmStatusId $confirmStatusId');
-
-    if (confirmStatusId == 'DR') {
-      return themeColorWarningLight;
-    } else if (confirmStatusId == 'IP') {
-      return Colors.cyan.shade200;
-    } else if (confirmStatusId == 'CO') {
-      return themeColorSuccessfulLight;
-    } else {
-      return Colors.grey.shade200;
-    }
-  }
-
-  final type = mInOutState.mInOutType;
-
-  final esInOutNormal =
-      type == MInOutType.shipment ||
-      type == MInOutType.receipt ||
-      type == MInOutType.move ||
-      type == MInOutType.moveConfirm;
-
-  if (!esInOutNormal) {
-    // usar docStatus del confirm
-    if (confirmStatusId == 'IP') {
-      return themeColorWarningLight;
-    } else if (confirmStatusId == 'CO') {
-      return themeColorSuccessfulLight;
-    }
-  } else {
-    // usar docStatus del mInOut principal
-    if (docStatusId == 'IP') {
-      return themeColorWarningLight;
-    } else if (docStatusId == 'CO') {
-      return themeColorSuccessfulLight;
-    }
-  }
-
-  return themeBackgroundColorLight;
-});
-*/
 Color getMInOutHeaderColor(MInOutStatus mInOutState) {
   final docStatusId = mInOutState.mInOut?.docStatus.id?.toString();
   final confirmStatusId = mInOutState.mInOutConfirm?.docStatus.id?.toString();
@@ -2679,6 +2872,7 @@ Map<String, dynamic>? buildSaveMInOutPayload(MInOutStatus stateNow) {
     'rolCompleteOver': stateNow.rolCompleteOver,
     'rolPrepare': stateNow.rolPrepare,
     'rolComplete': stateNow.rolComplete,
+    'rolQuickComplete': stateNow.rolQuickComplete,
 
     // Entities
     'mInOut': stateNow.mInOut?.toJson(),
@@ -2690,23 +2884,11 @@ Map<String, dynamic>? buildSaveMInOutPayload(MInOutStatus stateNow) {
     'scanBarcodeListUnique':
     stateNow.scanBarcodeListUnique.map((b) => b.toJson()).toList(),
     'linesOver': stateNow.linesOver.map((b) => b.toJson()).toList(),
+    'mInOutConfirmList': stateNow.mInOutConfirmList.map((b) => b.toJson()).toList(),
+
   };
 }
 
-// Builds a map of LineConfirm by mInOutLineId.id (String key).
-Map<String, LineConfirm> _indexConfirmByInOutLineId(
-    List<LineConfirm> lines,
-    ) {
-  final out = <String, LineConfirm>{};
-
-  for (final c in lines) {
-    final key = c.mInOutLineId?.id;
-    if (key != null && key.isNotEmpty) {
-      out[key] = c;
-    }
-  }
-  return out;
-}
 // Builds a map of LineConfirm by LineConfirm.id (int key).
 Map<int, LineConfirm> _indexConfirmByConfirmId(
     List<LineConfirm> lines,
@@ -2720,17 +2902,6 @@ Map<int, LineConfirm> _indexConfirmByConfirmId(
     }
   }
   return out;
-}
-
-
-// Merges only requested qty fields into current LineConfirm using copyWith.
-LineConfirm _mergeLineConfirmFields(LineConfirm current, LineConfirm saved) {
-  return current.copyWith(
-    targetQty: saved.targetQty,
-    confirmedQty: saved.confirmedQty,
-    differenceQty: saved.differenceQty,
-    scrappedQty: saved.scrappedQty,
-  );
 }
 
 // Merges MInOutConfirm.linesConfirm using mInOutLineId.id as key (copyWith).

@@ -43,6 +43,32 @@ class MInOutRepositoryImpl implements MInOutRepository {
   }
 
   @override
+  Future<List<MInOutConfirm>> getMInOutConfirmInDraftByMInOutID({
+    required int mInOutId,
+    required int excludedMInOutConfirmId,
+    required WidgetRef ref,
+  }) {
+    return dataSource.getMInOutConfirmInDraftByMInOutID(
+      mInOutId: mInOutId,
+      excludedMInOutConfirmId: excludedMInOutConfirmId,
+      ref: ref,
+    );
+  }
+
+  @override
+  Future<List<LineConfirm>> getLinesMInOutConfirmToUpdateTargetQty({
+    required List<int> listConfirmsIds,
+    required List<int> mInOutLineIds,
+    required WidgetRef ref,}
+      ){
+    return dataSource.getLinesMInOutConfirmToUpdateTargetQty(
+      listConfirmsIds: listConfirmsIds,
+      mInOutLineIds: mInOutLineIds,
+      ref: ref,);
+
+  }
+
+  @override
   Future<List<LineConfirm>> getLinesMInOutConfirm(
       int mInOutConfirmId, WidgetRef ref) {
     return dataSource.getLinesMInOutConfirm(mInOutConfirmId, ref);
@@ -92,6 +118,11 @@ class MInOutRepositoryImpl implements MInOutRepository {
   }
 
   @override
+  Future<Line> updateMInOutLine(Line line, WidgetRef ref) {
+    return dataSource.updateMInOutLine(line, ref);
+  }
+
+  @override
   Future<int> getLocator(String value, WidgetRef ref) {
     return dataSource.getLocator(value, ref);
   }
@@ -99,6 +130,16 @@ class MInOutRepositoryImpl implements MInOutRepository {
   @override
   Future<bool> updateLocator(Line line, WidgetRef ref) {
     return dataSource.updateLocator(line, ref);
+  }
+
+  @override
+  Future<bool> updateMovementQty(Line line, WidgetRef ref) {
+    return dataSource.updateMovementQty(line, ref);
+  }
+
+  @override
+  Future<bool> updateLineConfirmTargetQty(LineConfirm line, WidgetRef ref) {
+    return dataSource.updateLineConfirmTargetQty(line, ref);
   }
 
   @override
