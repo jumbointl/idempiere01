@@ -443,9 +443,6 @@ final confirmMovementProvider = FutureProvider.autoDispose<MovementAndLines?>((r
 
     if (response.statusCode == 200) {
       movement =  SqlDataMovement.fromJson(response.data);
-      /*MovementAndLines movementAndLines = MovementAndLines();
-      movementAndLines.cloneMovement(movement);
-      MemoryProducts.movementAndLines = movementAndLines;*/
       MovementAndLines movementAndLines = ref.read(movementAndLinesProvider);
       movementAndLines.cloneMovement(movement);
       ref.read(movementAndLinesProvider.notifier).state = movementAndLines;
@@ -534,4 +531,123 @@ final cancelMovementProvider = FutureProvider.autoDispose<MovementAndLines?>((re
 });
 final movementLineDeletedCounterProvider = StateProvider<int>((ref) {
   return 0;
+});
+final fireCreateMovementWithCompleteProvider = StateProvider.autoDispose<int>((ref) {
+  return 0;
+});
+
+final putAwayMovementCreateWithCompleteProvider = StateProvider.autoDispose<PutAwayMovement?>((ref) {
+  return null;
+});
+
+final newPutAwayMovementWithCompleteProvider = FutureProvider.autoDispose<MovementAndLines?>((ref) async {
+  final int count = ref.watch(fireCreateMovementWithCompleteProvider);
+  if(count==0) return null;
+
+  PutAwayMovement? newMovement = ref.read(putAwayMovementCreateWithCompleteProvider);
+  if(newMovement == null) return null;
+
+
+  Dio dio = await DioClient.create();
+  MemoryProducts.movementAndLines = MovementAndLines(user: Memory.sqlUsersData);
+  String step ='Movement create start';
+  debugPrint(step);
+  int errorId = Memory.ERROR_DOCUMENT_NOT_CREATED_ID ;
+  String createdMovementId ='';
+  try {
+    String url = newMovement.movementInsertUrl ??'';
+    final payLoad = newMovement.movementToCreate?.getInsertForSwitchBetweenLocatorJson() ;
+    if(url.isEmpty || payLoad == null) return null ;
+
+    final response = await dio.post(url, data: payLoad);
+    if (response.statusCode == 201) {
+      errorId = Memory.ERROR_DOCUMENT_LINE_NOT_CREATED_ID ;
+      IdempiereMovement createdMovement =  IdempiereMovement.fromJson(response.data);
+      step ='Movement created id: ${createdMovement.id ?? 0}';
+      createdMovementId = createdMovement.id?.toString() ?? '';
+      debugPrint(step);
+      if (createdMovement.id != null && createdMovement.id! > 0) {
+        MemoryProducts.movementAndLines.cloneMovement(createdMovement);
+        newMovement.movementLineToCreate!.mMovementID = createdMovement;
+        var creteDataJsonEncode2 =  newMovement.movementLineInsertJson! ;
+        String url2 = newMovement.movementLineInsertUrl!;
+        debugPrint('url $url2');
+        debugPrint('payload $creteDataJsonEncode2');
+        final responseLine = await dio.post(url2, data: creteDataJsonEncode2);
+        if (responseLine.statusCode == 201) {
+
+          final IdempiereMovementLine movementLine =  IdempiereMovementLine.fromJson(responseLine.data);
+          step ='MovementLine created id: ${movementLine.id ?? 0}';
+          debugPrint(step);
+          MemoryProducts.movementAndLines.movementLines = [movementLine];
+          SqlDataMovement newMovement = SqlDataMovement(id:createdMovement.id);
+          Memory.sqlUsersData.copyToSqlData(newMovement);
+          print(newMovement.getUpdateDocStatusJson(CommonSqlData.DOC_COMPLETE_STATUS));
+
+          String url =newMovement.getUpdateUrl();
+          print(url);
+          errorId = Memory.ERROR_DOCUMENT_NOT_COMPLETE_ID ;
+          final response = await dio.put(url, data: createdMovement.getUpdateDocStatusJson(CommonSqlData.DOC_COMPLETE_STATUS));
+          print(response);
+          print(response.statusCode);
+
+
+          if (response.statusCode == 200) {
+            step ='Movement completed id: ${createdMovement.id ?? 0}';
+            debugPrint(step);
+            createdMovement =  SqlDataMovement.fromJson(response.data);
+            MovementAndLines movementAndLines = ref.read(movementAndLinesProvider);
+            movementAndLines.cloneMovement(createdMovement);
+            ref.read(movementAndLinesProvider.notifier).state = movementAndLines;
+            MemoryProducts.movementAndLines = movementAndLines ;
+            return movementAndLines ;
+          } else {
+            step ='MovementLine not completed id: ${createdMovement.id ?? 0}';
+            return MovementAndLines(id: errorId,
+                description: Messages.ERROR_DOCUMENT_NOT_COMPLETED,
+                name: createdMovementId);
+
+          }
+
+
+
+        }
+        step ='MovementLine no created';
+        return MovementAndLines(id: errorId,
+            name: createdMovementId,
+            description: '${Messages.ERROR_DOCUMENT_NOT_CREATED} $step ${response.statusCode} : ${response.statusMessage}' );
+      } else {
+        step ='Movement no created';
+        return MovementAndLines(id: errorId,
+            name: createdMovementId,
+            description: '${Messages.ERROR_DOCUMENT_NOT_CREATED} $step ${response.statusCode} : ${response.statusMessage}' ,
+            );
+      }
+    } else {
+      step ='Movement no created';
+      return MovementAndLines(id: errorId,
+          name: createdMovementId,
+          description: '${Messages.ERROR_DOCUMENT_NOT_CREATED} $step ${response.statusCode} : ${response.statusMessage}' );
+    }
+  } on DioException catch (e) {
+    debugPrint(step);
+    debugPrint('DioException');
+
+    String title = e.response?.data['title'] ?? '';
+    int status = e.response?.data['status'] ?? '';
+    String detail = e.response?.data['detail'] ?? '';
+    String messages ='Title : $title\nStatus : $status\nDetail : $detail';
+    if(title=='' && detail==''){
+      messages = e.toString();
+    }
+
+    return MovementAndLines(id: errorId,
+        name: createdMovementId,
+        description: '${Messages.ERROR } : $messages' );
+  } catch (e) {
+    return MovementAndLines(id: errorId,
+        name: createdMovementId,
+        description: 'Exception $step ${e.toString()}' );
+  }
+
 });

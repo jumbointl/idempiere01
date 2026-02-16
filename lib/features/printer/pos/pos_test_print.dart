@@ -5,14 +5,9 @@ import 'package:esc_pos_utils_plus/esc_pos_utils_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_esc_pos_network/flutter_esc_pos_network.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image/image.dart' as img;
 import 'package:monalisa_app_001/features/printer/pos/pos_logo_and_qr_with_aligment.dart';
-import 'package:monalisa_app_001/features/printer/pos/print_receipt_with_qr_bematech.dart';
-import 'package:monalisa_app_001/features/products/common/messages_dialog.dart';
-import 'package:path/path.dart';
 
-import '../../shared/data/messages.dart';
 import 'bematech_escpos.dart';
 import 'pos_adjustment_values.dart';
 import 'pos_text_utils.dart';
@@ -93,8 +88,9 @@ Future<PosPrintResult> printWidthTestTicket({
 String _markerLine(int nCols) {
   final buf = StringBuffer();
   for (int i = 1; i <= nCols; i++) {
-    if (i == 1) buf.write('1');
-    else if (i % 10 == 0) buf.write((i ~/ 10) % 10);
+    if (i == 1) {
+      buf.write('1');
+    } else if (i % 10 == 0) buf.write((i ~/ 10) % 10);
     else buf.write('.');
   }
   return buf.toString();

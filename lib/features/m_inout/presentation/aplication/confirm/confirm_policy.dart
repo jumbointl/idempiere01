@@ -77,6 +77,7 @@ class ConfirmPolicy {
   ConfirmFlow _confirmFlowByType(MInOutType type) {
     switch (type) {
       case MInOutType.shipment:
+      case MInOutType.shipmentPrepare:
       case MInOutType.receipt:
       case MInOutType.move:
         return ConfirmFlow.directConfirm;

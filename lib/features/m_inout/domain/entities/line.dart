@@ -1,5 +1,7 @@
 import 'package:monalisa_app_001/features/shared/domain/entities/ad_entity_id.dart';
 
+import '../../../products/domain/idempiere/idempiere_attribute_set_instance.dart';
+
 class Line {
   int? id;
   int? line;
@@ -11,6 +13,7 @@ class Line {
   AdEntityId? mLocatorId;
   AdEntityId? mLocatorToId;
   AdEntityId? mProductId;
+  IdempiereAttributeSetInstance? mAttributeSetInstanceID;
   String? upc;
   String? sku;
   String? productName;
@@ -40,6 +43,7 @@ class Line {
     this.manualQty,
     this.confirmId,
     this.editLocator,
+    this.mAttributeSetInstanceID,
   });
 
   factory Line.fromJson(Map<String, dynamic> json) => Line(
@@ -73,7 +77,13 @@ class Line {
         productName: json["ProductName"],
         verifiedStatus: json["VerifiedStatus"],
         scanningQty: json["ScanningQty"],
-        manualQty: json["ManualQty"]
+        manualQty: json["ManualQty"],
+        confirmId: json["ConfirmId"],
+        editLocator: json["EditLocator"],
+        mAttributeSetInstanceID: json["M_AttributeSetInstance_ID"] != null
+            ? IdempiereAttributeSetInstance.fromJson(json["M_AttributeSetInstance_ID"])
+            : null,
+
       );
 
   Line copyWith({
@@ -95,6 +105,7 @@ class Line {
     double? manualQty,
     int? confirmId,
     int? editLocator,
+    IdempiereAttributeSetInstance? mAttributeSetInstanceID,
   }) {
     return Line(
       id: id ?? this.id,
@@ -115,6 +126,7 @@ class Line {
       manualQty: manualQty ?? this.manualQty,
       confirmId: confirmId ?? this.confirmId,
       editLocator: editLocator ?? this.editLocator,
+      mAttributeSetInstanceID: mAttributeSetInstanceID ?? this.mAttributeSetInstanceID,
     );
   }
 
@@ -135,6 +147,9 @@ class Line {
         "ScanningQty": scanningQty,
         "ManualQty": manualQty,
         "VerifiedStatus":verifiedStatus,
+        "ConfirmId": confirmId,
+        "EditLocator": editLocator,
+        "M_AttributeSetInstance_ID": mAttributeSetInstanceID?.toJson(),
   };
 
 }

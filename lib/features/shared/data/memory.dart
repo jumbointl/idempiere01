@@ -1,5 +1,4 @@
 
-import 'package:awesome_dialog/awesome_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:monalisa_app_001/features/products/domain/idempiere/idempiere_document_type.dart';
@@ -29,7 +28,9 @@ class Memory {
   static const int ERROR_ID = -2;
   //FOUND MORE THAN 1, SUCCESSFUL SQL QUERY BUT TOO MUCH RECORDS,
   static var TOO_MUCH_RECORDS_ID=-3;
-
+  static const int ERROR_DOCUMENT_NOT_COMPLETE_ID=-4;
+  static const int ERROR_DOCUMENT_NOT_CREATED_ID=-5;
+  static const int ERROR_DOCUMENT_LINE_NOT_CREATED_ID=-6;
   static bool isAdmin = true;
 
 
@@ -54,11 +55,10 @@ class Memory {
   static IdempiereProduct idempiereProduct = IdempiereProduct(id:0);
   static String lastSearch = '';
   static String lastLocator = '';
-  static AwesomeDialog? awesomeDialog;
 
   static const int ACTION_NO_ACTION =0;
   static const int ACTION_FIND_BY_UPC_SKU =1;
-  static const int ACTION_UPDATE_UPC =2;
+  static const int ACTION_FILL_NEW_UPC_TO_UPDATE =2;
   static const int ACTION_CALL_UPDATE_PRODUCT_UPC_PAGE =3;
   static const int ACTION_FIND_BY_UPC_SKU_FOR_STORE_ON_HAND = 4;
   static const int ACTION_GET_LOCATOR_TO_VALUE = 5;
@@ -67,6 +67,7 @@ class Memory {
   static const int ACTION_GO_TO_STORAGE_ON_HAND_PAGE_WITH_UPC=8;
   static const int ACTION_GO_TO_MOVEMENT_EDIT_PAGE_WITH_ID=9;
   static const int ACTION_FIND_PRINTER_BY_QR = 10;
+  static const int ACTION_FIND_PRINTER_BY_QR_WIFI = 11;
   static const int ACTION_NO_SCAN_ACTION =200;
 
   static const int UPC_EXITS = -1;
@@ -132,7 +133,7 @@ class Memory {
 
   static String URL_CUPS_SERVER ='http://192.168.188.108:3100/print';
 
-  static String VERSIONS='1.01.099';
+  static String VERSIONS='1.01.107';
 
   static String getUrlCupsServerWithPrinter({required String ip,
     required String port,required String printerName}){
@@ -183,6 +184,10 @@ class Memory {
     String description = '${Messages.APP_DESCRIPTION} $userName';
     return description;
   }
+  static String getDescriptionMoveBetweenFromApp(){
+    String description = '${Messages.MOVE_BETWEEN_LOCATORS} $userName';
+    return description;
+  }
   static const MATERIAL_MOVEMENT_ID = 1000022;
   static const MATERIAL_MOVEMENT_WITH_CONFIRM_ID = 1000064;
   static const MM_ELECTRONIC_DELIVERY_NOTE_ID = 1000047;
@@ -222,6 +227,17 @@ class Memory {
   static int MAX_ZPL_TEXT_LENGTH = 46;
 
   static double? FRACTIONNALLY_SIZE_SHEET_HEIGHT =0.85;
+
+  static String lastSearchSku='';
+  static String lastSearchName='';
+
+  static String lastSearchUpc='';
+
+  static String lastSearchLocator='';
+
+
+
+
 
   static int? get IDEMPIERE_DOC_TYPE_MATERIAL_MOVEMENT => materialMovement.id;
   static int? get IDEMPIERE_DOC_TYPE_MATERIAL_MOVEMENT_WITH_CONFIRM => materialMovementWithConfirm.id;

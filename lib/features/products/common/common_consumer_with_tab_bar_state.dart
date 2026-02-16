@@ -59,7 +59,9 @@ abstract class CommonConsumerWithTabBarState<T extends ConsumerStatefulWidget>
   // AppBar builder
   // -------------------------
 
-  PreferredSizeWidget buildTabAppBar() {
+  PreferredSizeWidget buildTabAppBar({double fontSize=themeFontSizeNormal,
+    FontWeight fontWeight = FontWeight.normal
+   }) {
     return AppBar(
       automaticallyImplyLeading: false,
       leading: IconButton(
@@ -76,8 +78,8 @@ abstract class CommonConsumerWithTabBarState<T extends ConsumerStatefulWidget>
             dividerColor: themeColorPrimary,
             tabAlignment: TabAlignment.start,
             labelStyle: TextStyle(
-              fontSize: themeFontSizeLarge,
-              fontWeight: FontWeight.bold,
+              fontSize: fontSize,
+              fontWeight: fontWeight,
               color: themeColorPrimary,
             ),
             unselectedLabelStyle: TextStyle(fontSize: themeFontSizeLarge),

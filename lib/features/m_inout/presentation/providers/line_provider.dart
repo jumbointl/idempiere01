@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
 
+import '../../../products/domain/idempiere/idempiere_locator.dart';
 import '../../domain/entities/line.dart';
 import 'm_in_out_providers.dart';
 
@@ -30,6 +31,11 @@ List<Line> findRepeatedLines(List<Line> lines) {
     return (counter[v] ?? 0) > 1;
   }).toList();
 }
+
+// Repeated lines
+final selectedLocatorForMinOutProvider = StateProvider<IdempiereLocator?>((ref) => null
+
+);
 
 List<Line> findLinesWithNullProductId(List<Line> lines) {
   // Chequea: line.mProductId?.id == null

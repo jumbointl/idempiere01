@@ -1,7 +1,6 @@
 
 import 'dart:convert';
 
-import 'package:awesome_dialog/awesome_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -182,8 +181,7 @@ class UnsortedStorageOnHandScreenForLineState
       isCardsSelected = List<bool>.filled(storageList.length, false);
     }
 
-    final canCreate = RolesApp.canCreateMovementInSameOrganization ||
-        RolesApp.canCreateDeliveryNote;
+    final canCreate = RolesApp.appMovementComplete || RolesApp.appMovementconfirmComplete;
     final canShowBottomBar = ref.watch(canShowCreateLineBottomBarProvider);
     final showScan = ref.watch(showScanFixedButtonProvider(widget.actionScanType));
 
@@ -550,34 +548,7 @@ class UnsortedStorageOnHandScreenForLineState
     Navigator.pop(context);
   }
 
-  void showErrorMessage(BuildContext context, WidgetRef ref, String message) {
-    if (!context.mounted) {
-      Future.delayed(const Duration(seconds: 1));
-      if (!context.mounted) return;
-    }
-    AwesomeDialog(
-      context: context,
-      animType: AnimType.scale,
-      dialogType: DialogType.error,
-      body: Center(
-        child: Column(
-          children: [
-            Text(
-              message,
-              style: const TextStyle(fontStyle: FontStyle.italic),
-            ),
-          ],
-        ),
-      ),
-      title: message,
-      desc: '',
-      autoHide: const Duration(seconds: 3),
-      btnOkOnPress: () {},
-      btnOkColor: Colors.amber,
-      btnCancelText: Messages.CANCEL,
-      btnOkText: Messages.OK,
-    ).show();
-  }
+
   Future<void> createMovementLineOnly() async {
     int movementId =movementAndLines.id ?? -1;
     if(movementId<=0){
@@ -587,12 +558,12 @@ class UnsortedStorageOnHandScreenForLineState
     final lines = ref.watch(movementLinesProvider(widget.movementAndLines));
     int locatorFrom = widget.storage.mLocatorID?.id ?? -1;
     if(locatorFrom<=0){
-      showAutoCloseErrorDialog(context,ref,Messages.ERROR_LOCATOR_FROM,3);
+      showErrorMessage(context,ref,Messages.ERROR_LOCATOR_FROM, durationSeconds: 3);
       return;
     }
     int locatorTo = this.locatorTo?.id ?? -1;
     if(locatorTo<=0){
-      showAutoCloseErrorDialog(context,ref,Messages.ERROR_LOCATOR_TO,3);
+      showErrorMessage(context,ref,Messages.ERROR_LOCATOR_TO,durationSeconds: 3);
       return;
     }
     if(movementId>0 && locatorFrom>0 && locatorTo>0){

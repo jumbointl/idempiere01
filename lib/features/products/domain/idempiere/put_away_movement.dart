@@ -93,6 +93,7 @@ class PutAwayMovement {
   }
   Map<String, dynamic>? get movementLineInsertJson => movementLineToCreate?.getInsertJson();
   Map<String, dynamic>? get movementInsertJson => movementToCreate?.getInsertJson();
+  Map<String, dynamic>? get movementInsertForSwitchBetweenLocatorJson => movementToCreate?.getInsertForSwitchBetweenLocatorJson();
   String? get movementInsertUrl => movementToCreate?.getInsertUrl();
   String? get movementLineInsertUrl => movementLineToCreate?.getInsertUrl();
   bool get movementCreated => movementToCreate!=null && movementToCreate!.id != null && movementToCreate!.id!>0;

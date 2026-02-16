@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:material_symbols_icons/symbols.dart';
 
+import '../../features/m_inout/presentation/providers/m_in_out_providers.dart';
 import '../../features/products/presentation/screens/store_on_hand/product_store_on_hand_screen.dart';
 import '../../features/shared/data/messages.dart';
 import '../constants/roles_app.dart';
@@ -34,34 +35,41 @@ const appMenuItems = <MenuItem>[
 
 var appHomeOptionCol1Items = <MenuItem>[
   if (RolesApp.appShipment)
-    const MenuItem(
+    MenuItem(
       title: 'Shipment',
       subTitle: '',
-      link: '/mInOut/shipment',
+      link: '/mInOut/${MInOutType.shipment.name}',
       icon: Icons.upload,
     ),
-  if (RolesApp.appShipmentconfirm)
-    const MenuItem(
-      title: 'Shipment Confirm',
+  if (RolesApp.appShipmentPrepare)
+    MenuItem(
+      title: 'Shipment Prepare',
       subTitle: '',
-      link: '/mInOut/shipmentconfirm',
-      icon: Icons.upload,
-    ),
-  if (RolesApp.appShipmentconfirm)
-    const MenuItem(
-      title: 'Pick Confirm',
-      subTitle: '',
-      link: '/mInOut/pickconfirm',
+      link: '/mInOut/${MInOutType.shipmentPrepare.name}',
       icon: Icons.upload,
     ),
   if (RolesApp.appShipmentconfirm)
     MenuItem(
-      title: 'Order Processing',
+      title: 'Shipment Confirm',
+      subTitle: '',
+      link: '/mInOut/${MInOutType.shipmentConfirm.name}',
+      icon: Icons.upload,
+    ),
+  if (RolesApp.appPickconfirm)
+    MenuItem(
+      title: 'Pick Confirm',
+      subTitle: '',
+      link: '/mInOut/${MInOutType.pickConfirm.name}',
+      icon: Icons.upload,
+    ),
+  if (RolesApp.appShipmentCreate)
+    MenuItem(
+      title: 'Shipment Create',
       subTitle: '',
       link: AppRouter.PAGE_SALES_ORDER_LIST_SCREEN,
       icon: Symbols.event_list,
     ),
-  if (RolesApp.canUpdateProductUPC)
+  if (RolesApp.appProductUPCUpdate)
   MenuItem(
     title: Messages.SEARCH_PRODUCT,
     subTitle: '',
@@ -78,24 +86,24 @@ var appHomeOptionCol1Items = <MenuItem>[
 
 var appHomeOptionCol2Items = <MenuItem>[
   if (RolesApp.appReceipt)
-    const MenuItem(
+    MenuItem(
       title: 'Receipt',
       subTitle: '',
-      link: '/mInOut/receipt',
+      link: '/mInOut/${MInOutType.receipt.name}',
       icon: Icons.download,
     ),
   if (RolesApp.appReceiptconfirm)
-    const MenuItem(
+    MenuItem(
       title: 'Receipt Confirm',
       subTitle: '',
-      link: '/mInOut/receiptconfirm',
+      link: '/mInOut/${MInOutType.receiptConfirm.name}',
       icon: Icons.download,
     ),
-  if (RolesApp.appReceiptconfirm)
-    const MenuItem(
+  if (RolesApp.appQaconfirm)
+    MenuItem(
       title: 'QA Confirm',
       subTitle: '',
-      link: '/mInOut/qaconfirm',
+      link: '/mInOut/${MInOutType.qaConfirm.name}',
       icon: Icons.download,
     ),
   if (RolesApp.canEditMovement || RolesApp.canSearchMovement)
@@ -117,29 +125,29 @@ var appHomeOptionCol2Items = <MenuItem>[
 ];
 
 final appHomeOptionCol3Items = <MenuItem>[
-  if (RolesApp.cantConfirmMovement)
-  const MenuItem(
+  if (RolesApp.appMovementComplete)
+  MenuItem(
     title: 'Move Complete',
     subTitle: '',
-    link: '/mInOut/move',
+    link: '/mInOut/${MInOutType.move.name}',
     icon: Icons.swap_horiz,
 
   ),
-  if (RolesApp.canConfirmMovementWithConfirm)
-  const MenuItem(
+  if (RolesApp.appMovementconfirmComplete)
+  MenuItem(
     title: 'Move Confirm',
     subTitle: '',
-    link: '/mInOut/moveconfirm',
+    link: '/mInOut/${MInOutType.moveConfirm.name}',
     icon: Icons.swap_horiz,
   ),
-  if (RolesApp.canCreateMovementInSameWarehouse)
+  if (RolesApp.appMovementComplete)
     MenuItem(
       title: ' PutAway',
       subTitle: '',
       link: '${AppRouter.PAGE_PRODUCT_STORE_ON_HAND}/${ProductStoreOnHandScreen.MOVEMENT_IN_SAME_WAREHOUSE}',
       icon: Icons.arrow_forward,
     ),
-  if (RolesApp.canCreateMovementInSameOrganization)
+  if (RolesApp.appMovementconfirmComplete)
   MenuItem(
     title: 'Replenish',
     subTitle: '',
@@ -153,7 +161,7 @@ final appHomeOptionCol3Items = <MenuItem>[
       link: '${AppRouter.PAGE_PRODUCT_STORE_ON_HAND}/${ProductStoreOnHandScreen.READ_STOCK_ONLY}',
       icon: Icons.inventory,
     ),
-  if (RolesApp.canCreateDeliveryNote)
+  if (RolesApp.appMovementconfirmComplete)
   MenuItem(
     title: 'Delivery Note Fiscal',
     subTitle: '',

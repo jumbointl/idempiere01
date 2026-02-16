@@ -6,12 +6,12 @@ import 'package:monalisa_app_001/config/config.dart';
 import 'package:monalisa_app_001/features/products/domain/idempiere/movement_and_lines.dart';
 import 'dart:convert';
 
-import 'package:awesome_dialog/awesome_dialog.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../../shared/data/memory.dart';
 import '../../../../../shared/data/messages.dart';
 import '../../../../common/common_consumer_state.dart';
+import '../../../../common/messages_dialog.dart';
 import '../../../../domain/idempiere/idempiere_locator.dart';
 import '../../../../domain/idempiere/idempiere_movement.dart';
 import '../../../../domain/idempiere/idempiere_warehouse.dart';
@@ -322,23 +322,7 @@ class MovementConfirmScreenState extends CommonConsumerState<MovementConfirmScre
                 ),
                 onPressed: (){
                   if(!canConfirm){
-                    AwesomeDialog(
-                      context: context,
-                      animType: AnimType.scale,
-                      dialogType: DialogType.error,
-                      body: Center(child: Text(
-                        Messages.MOVEMENT_ALREADY_COMPLETED,
-                        //style: TextStyle(fontStyle: FontStyle.italic),
-                      ),), // correct here
-                      title: Messages.MOVEMENT_ALREADY_COMPLETED,
-                      desc:   '',
-                      autoHide: const Duration(seconds: 3),
-                      btnOkOnPress: () {},
-                      btnOkColor: themeColorSuccessful,
-                      btnCancelColor: themeColorError,
-                      btnCancelText: Messages.CANCEL,
-                      btnOkText: Messages.OK,
-                    ).show();
+                    showErrorMessage(context, ref, Messages.MOVEMENT_ALREADY_COMPLETED);
                     return;
                   }
                   stateNotifier.confirmMovement(widget.movementAndLines.id);
@@ -365,32 +349,7 @@ class MovementConfirmScreenState extends CommonConsumerState<MovementConfirmScre
         ));
 
   }
-  void showAutoCloseErrorDialog(BuildContext context, WidgetRef ref, String message,int seconds) {
-    while (!context.mounted) {
-      Future.delayed(const Duration(milliseconds: 500));
 
-    }
-    AwesomeDialog(
-      context: context,
-      animType: AnimType.scale,
-      dialogType: DialogType.error,
-      body: Center(child: Column(
-        children: [
-          Text(message,
-            style: TextStyle(fontStyle: FontStyle.italic),
-          ),
-        ],
-      ),),
-      title:  message,
-      desc:   '',
-      autoHide: Duration(seconds: seconds),
-      btnOkOnPress: () {},
-      btnOkColor: Colors.amber,
-      btnCancelText: Messages.CANCEL,
-      btnOkText: Messages.OK,
-    ).show();
-    return;
-  }
 
   Widget getResultCard(BuildContext context, WidgetRef ref,MovementAndLines data) {
     String title = Messages.MOVEMENT_NOT_COMPLETED ;
@@ -433,8 +392,8 @@ class MovementConfirmScreenState extends CommonConsumerState<MovementConfirmScre
   Future<void> actionAfterShow(WidgetRef ref) async{
     if (movementAndLines?.canCompleteMovement == false) {
       String message = Messages.ERROR_CANNOT_COMPLETE_MOVEMENT;
-      showAutoCloseErrorDialog(context, ref,
-          message,5);
+      showErrorMessage(context, ref,
+          message, durationSeconds: 5);
       return ;
     }
     if(!started){

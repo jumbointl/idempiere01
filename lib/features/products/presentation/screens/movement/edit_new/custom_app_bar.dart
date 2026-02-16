@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:monalisa_app_001/features/products/domain/idempiere/movement_and_lines.dart';
 
 import '../../../../../../config/theme/app_theme.dart';
+import '../../../../../m_inout/domain/entities/line.dart';
+import '../../../../../m_inout/domain/entities/m_in_out.dart';
 import '../../../../../shared/data/messages.dart';
 
 double? get fontSizeTitle =>themeFontSizeTitle;
@@ -41,6 +43,7 @@ Widget movementAppBarTitle({
   MovementAndLines? movementAndLines,
   showBackButton = true,
   String subtitle = '',
+  Widget? button,
 }) {
   TextStyle styleMain = TextStyle(fontSize: themeFontSizeLarge);
   final m = movementAndLines;
@@ -49,6 +52,105 @@ Widget movementAppBarTitle({
 
   // Caso: ya hay movimiento
   if (m?.hasMovement ?? false) {
+    styleMain = m!.documentNo != null && m.documentNo!.length > 20
+        ? textStyleTitleMore20C
+        : textStyleLarge;
+
+    return Row(
+      children: [
+        if(showBackButton)IconButton(
+          icon: const Icon(Icons.arrow_back),
+          padding: EdgeInsets.zero,
+          constraints: const BoxConstraints(
+            minWidth: 32,
+            minHeight: 32,
+          ),
+          onPressed: onBack,
+        ),
+        const SizedBox(width: 4),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                m.documentNo ?? '',
+                style: styleMain,
+                overflow: TextOverflow.ellipsis,
+                maxLines: 1,
+              ),
+              button == null ? Text(
+                subtitle,
+                style: textStyleSmallBold,
+                overflow: TextOverflow.ellipsis,
+              ) : Row(
+                children: [
+                  Text(
+                    subtitle,
+                    style: textStyleSmallBold,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(width: 4),
+                  button,
+                ],
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  // Caso: creando movimiento / sin movimiento todavía
+  return Row(
+    children: [
+      if(showBackButton) IconButton(
+        icon: const Icon(Icons.arrow_back),
+        padding: EdgeInsets.zero,
+        constraints: const BoxConstraints(
+          minWidth: 32,
+          minHeight: 32,
+        ),
+        onPressed: onBack,
+      ),
+      const SizedBox(width: 4),
+      Expanded(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              Messages.MOVEMENT_CREATE,
+              style: styleMain,
+              overflow: TextOverflow.ellipsis,
+              maxLines: 1,
+            ),
+            Text(
+              '${m?.id ?? ''}   ${m?.docStatus?.id ?? ''}',
+              style: textStyleSmallBold,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ],
+        ),
+      ),
+    ],
+  );
+}
+
+Widget mInOutAppBarTitle({
+  required VoidCallback onBack,
+  MInOut? movementAndLines,
+  showBackButton = true,
+  String subtitle = '',
+}) {
+  TextStyle styleMain = TextStyle(fontSize: themeFontSizeLarge);
+  final m = movementAndLines;
+  if(subtitle.isEmpty) subtitle = '${m?.id ?? ''}   ${m?.docStatus.id ?? ''}';
+  final bool hasMovement = m?.id !=null  ?? false;
+
+
+  // Caso: ya hay movimiento
+  if (hasMovement ?? false) {
     styleMain = m!.documentNo != null && m.documentNo!.length > 20
         ? textStyleTitleMore20C
         : textStyleLarge;
@@ -113,7 +215,7 @@ Widget movementAppBarTitle({
               maxLines: 1,
             ),
             Text(
-              '${m?.id ?? ''}   ${m?.docStatus?.id ?? ''}',
+              '${m?.id ?? ''}   ${m?.docStatus.id ?? ''}',
               style: textStyleSmallBold,
               overflow: TextOverflow.ellipsis,
             ),
@@ -122,6 +224,56 @@ Widget movementAppBarTitle({
       ),
     ],
   );
+}
+
+Widget lineAppBarTitle({
+  required VoidCallback onBack,
+  Line? line,
+  showBackButton = true,
+  String subtitle = '',
+}) {
+  TextStyle styleMain = TextStyle(fontSize: themeFontSizeLarge);
+  final m = line;
+  if(subtitle.isEmpty) subtitle = '${m?.id ?? ''}   ${m?.line ?? ''}';
+  final bool hasMovement = m?.id !=null  ?? false;
+  // Caso: ya hay movimiento
+    styleMain = textStyleLarge;
+
+    return Row(
+      children: [
+        if(showBackButton)IconButton(
+          icon: const Icon(Icons.arrow_back),
+          padding: EdgeInsets.zero,
+          constraints: const BoxConstraints(
+            minWidth: 32,
+            minHeight: 32,
+          ),
+          onPressed: onBack,
+        ),
+        const SizedBox(width: 4),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                m?.id.toString() ?? '',
+                style: styleMain,
+                overflow: TextOverflow.ellipsis,
+                maxLines: 1,
+              ),
+              Text(
+                subtitle,
+                style: textStyleSmallBold,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+
+
 }
 
 

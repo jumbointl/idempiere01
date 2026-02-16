@@ -14,14 +14,11 @@ import 'package:monalisa_app_001/features/printer/pos/pos_text_utils.dart';
 import 'package:monalisa_app_001/features/printer/pos/printer_action_notifier.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 
-import '../../products/common/messages_dialog.dart';
 import '../../products/domain/idempiere/idempiere_movement_line.dart';
 import '../../products/domain/idempiere/movement_and_lines.dart';
 import '../../products/presentation/providers/common_provider.dart';
 import '../../products/presentation/providers/product_provider_common.dart';
-import '../../products/presentation/screens/movement/pos/movement_direct_print.dart';
 import '../../shared/data/memory.dart';
-import '../../shared/data/messages.dart';
 import 'PosTicket.dart';
 import 'bematech_escpos.dart';
 import 'pos_adjustment_selector_sheet.dart';

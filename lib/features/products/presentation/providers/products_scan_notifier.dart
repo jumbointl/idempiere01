@@ -58,7 +58,7 @@ class ProductsScanNotifier
         ref.read(fireFindMovementByIdProvider.notifier).state++;
         break;
 
-      case Memory.ACTION_UPDATE_UPC:
+      case Memory.ACTION_FILL_NEW_UPC_TO_UPDATE:
         ref.read(newUPCToUpdateProvider.notifier).state = value;
         break;
       default:

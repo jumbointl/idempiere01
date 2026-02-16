@@ -13,6 +13,8 @@ import 'package:monalisa_app_001/features/auth/presentation/providers/auth_provi
 import 'package:monalisa_app_001/features/home/presentation/screens/home_screen.dart';
 import 'package:monalisa_app_001/features/m_inout/presentation/screens/m_in_out_barcode_list_screen.dart';
 import 'package:monalisa_app_001/features/m_inout/presentation/screens/m_in_out_screen.dart';
+import 'package:monalisa_app_001/features/printer/screen/label_printer_select_page.dart';
+import 'package:monalisa_app_001/features/products/domain/idempiere/idempiere_product.dart';
 import 'package:monalisa_app_001/features/products/domain/idempiere/sales_order_and_lines.dart';
 import 'package:monalisa_app_001/features/products/presentation/screens/movement/edit_new/movement_barcode_list_screen.dart';
 import 'package:monalisa_app_001/features/products/presentation/screens/movement/list/movement_list_screen.dart';
@@ -21,7 +23,9 @@ import 'package:monalisa_app_001/features/products/presentation/screens/movement
 import 'package:monalisa_app_001/features/products/presentation/screens/store_on_hand/unsorted_storage_on__hand_read_only_screen.dart';
 import 'package:monalisa_app_001/features/sales_order/screen/sales_order_barcode_list_screen.dart';
 import '../../features/auth/presentation/screens/auth_data_screen.dart';
+import '../../features/m_inout/domain/entities/line.dart';
 import '../../features/m_inout/domain/entities/m_in_out.dart';
+import '../../features/m_inout/presentation/screens/product_store_on_hand_screen_for_minout_line.dart';
 import '../../features/printer/printer_setup_screen.dart';
 import '../../features/printer/web_template/screen/create_zpl_template_page.dart';
 import '../../features/products/domain/idempiere/movement_and_lines.dart';
@@ -88,7 +92,10 @@ class AppRouter {
   static String PAGE_M_IN_OUT_BARCODE_LIST='/m_in_out_barcode_list';
   static String PAGE_SALES_ORDER_BARCODE_LIST='/sales_order_barcode_list';
 
+  static String PAGE_PRODUCT_STORE_ON_HAND_FOR_MINOUT_LINE='/product_store_on_hand_for_minout_line';
   static String PAGE_CREATE_ZPL_TEMPLATE='/zpl_create';
+
+  static String PAGE_LABEL_PRINTER_SELECT_PAGE='/label_printer';
 
 
 
@@ -192,7 +199,7 @@ final goRouterProvider = Provider((ref) {
       GoRoute(
         path: AppRouter.PAGE_SALES_ORDER_LIST_SCREEN,
         pageBuilder: (context, state) {
-          final hasPrivilege = RolesApp.cantConfirmMovement;
+          final hasPrivilege = RolesApp.appShipmentCreate;
 
           if (hasPrivilege) {
 
@@ -213,6 +220,17 @@ final goRouterProvider = Provider((ref) {
             return const NoTransitionPage(child: HomeScreen());
           }
         },
+      ),
+      GoRoute(
+          path:  '${AppRouter.PAGE_PRODUCT_STORE_ON_HAND_FOR_MINOUT_LINE}/:productId',
+          builder: (context, state) {
+              final productId = state.pathParameters['productId'] ?? '';
+              Line data = state.extra as Line;
+              return ProductStoreOnHandScreenForMInOutLine(
+                movementLine: data, productId: productId,
+
+              );
+          }
       ),
       /*GoRoute(
         path: AppRouter.PAGE_SALES_ORDER_LIST_SCREEN,
@@ -265,8 +283,7 @@ final goRouterProvider = Provider((ref) {
       GoRoute(
           path: '${AppRouter.PAGE_PRODUCT_STORE_ON_HAND_FOR_LINE}/:productUPC',
           builder: (context, state){
-            if( RolesApp.canCreateMovementInSameOrganization ||
-                RolesApp.canCreateDeliveryNote || RolesApp.canEditMovement){
+            if( RolesApp.appMovementComplete || RolesApp.appMovementconfirmComplete){
               final productUPC = state.pathParameters['productUPC'] ?? '';
 
               MovementAndLines movementAndLines = state.extra as MovementAndLines;
@@ -286,7 +303,17 @@ final goRouterProvider = Provider((ref) {
 
       ),
 
+      GoRoute(
+          path: AppRouter.PAGE_LABEL_PRINTER_SELECT_PAGE,
+          builder: (context, state){
 
+            return LabelPrinterSelectPage(
+                dataToPrint: state.extra as IdempiereProduct,
+                );
+          }
+
+
+      ),
 
 
       GoRoute(
@@ -525,7 +552,7 @@ final goRouterProvider = Provider((ref) {
         path: AppRouter.PAGE_CREATE_MOVEMENT_LINE,
 
         builder: (context, state) {
-              if(RolesApp.canCreateMovementInSameOrganization || RolesApp.canCreateDeliveryNote) {
+              if(RolesApp.appMovementComplete || RolesApp.appMovementconfirmComplete) {
                 MovementAndLines movementAndLines = state.extra as MovementAndLines;
                 String argument = jsonEncode(movementAndLines.toJson());
                 return MovementLinesCreateScreen(
@@ -569,8 +596,7 @@ final goRouterProvider = Provider((ref) {
           final productId = state.pathParameters['productId'] ?? '';
 
           final hasPrivilege =
-              RolesApp.canCreateMovementInSameOrganization ||
-                  RolesApp.canCreateDeliveryNote ||
+              RolesApp.appMovementComplete || RolesApp.appMovementconfirmComplete ||
                   RolesApp.canSearchProductStock;
 
           if (!hasPrivilege) {
@@ -601,8 +627,7 @@ final goRouterProvider = Provider((ref) {
           final productUPC = state.pathParameters['productUPC'] ?? '';
 
           final hasPrivilege =
-              RolesApp.canCreateMovementInSameOrganization ||
-                   RolesApp.canCreateDeliveryNote ||
+              RolesApp.appMovementComplete || RolesApp.appMovementconfirmComplete ||
                   RolesApp.canSearchProductStock;
 
           if (!hasPrivilege) {
@@ -720,7 +745,7 @@ final goRouterProvider = Provider((ref) {
         path: AppRouter.PAGE_UNSORTED_STORAGE_ON_HAND_FOR_LINE_SELECT_LOCATOR,
         builder: (context, state) {
           {
-            if(!RolesApp.canCreateMovementInSameOrganization && !RolesApp.canCreateDeliveryNote){
+            if(!RolesApp.appMovementComplete && !RolesApp.appMovementconfirmComplete){
               return const HomeScreen();
             }
             MovementAndLines movementAndLines = state.extra as MovementAndLines;
@@ -742,7 +767,7 @@ final goRouterProvider = Provider((ref) {
         path: AppRouter.PAGE_UNSORTED_STORAGE_ON_HAND_FOR_LINE,
         builder: (context, state) {
           {
-            if(!RolesApp.canCreateMovementInSameOrganization && !RolesApp.canCreateDeliveryNote){
+            if(!RolesApp.appMovementComplete && !RolesApp.appMovementconfirmComplete){
               return const HomeScreen();
             }
             MovementAndLines movementAndLines = state.extra as MovementAndLines;
@@ -765,7 +790,7 @@ final goRouterProvider = Provider((ref) {
 
           return CustomTransitionPage(
             key: state.pageKey,
-            child: RolesApp.canUpdateProductUPC
+            child: RolesApp.appProductUPCUpdate
                 ? UpdateProductUpcScreen()
                 : const HomeScreen(),
             transitionDuration: Duration(milliseconds: transitionTimeMilliseconds),

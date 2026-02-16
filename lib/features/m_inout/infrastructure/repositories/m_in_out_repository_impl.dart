@@ -111,6 +111,10 @@ class MInOutRepositoryImpl implements MInOutRepository {
   Future<MInOut> setDocAction(WidgetRef ref) {
     return dataSource.setDocAction(ref);
   }
+  @override
+  Future<MInOutConfirm> setDocActionConfirm(WidgetRef ref) {
+    return dataSource.setDocActionConfirm(ref);
+  }
 
   @override
   Future<LineConfirm> updateLineConfirm(Line line, WidgetRef ref) {
@@ -118,9 +122,10 @@ class MInOutRepositoryImpl implements MInOutRepository {
   }
 
   @override
-  Future<Line> updateMInOutLine(Line line, WidgetRef ref) {
-    return dataSource.updateMInOutLine(line, ref);
+  Future<Line> updateMInOutLineMovementQty(Line line, WidgetRef ref) {
+    return dataSource.updateMInOutLineMovementQtyAndLocator(line, ref);
   }
+
 
   @override
   Future<int> getLocator(String value, WidgetRef ref) {
@@ -139,7 +144,7 @@ class MInOutRepositoryImpl implements MInOutRepository {
 
   @override
   Future<bool> updateLineConfirmTargetQty(LineConfirm line, WidgetRef ref) {
-    return dataSource.updateLineConfirmTargetQty(line, ref);
+    return dataSource.updateLineConfirmConfirmQty(line, ref);
   }
 
   @override

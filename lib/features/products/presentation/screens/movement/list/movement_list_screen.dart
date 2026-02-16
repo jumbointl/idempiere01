@@ -13,6 +13,7 @@ import 'package:monalisa_app_001/features/products/presentation/screens/movement
 import 'package:monalisa_app_001/features/products/presentation/screens/movement/provider/new_movement_provider.dart';
 import 'package:monalisa_app_001/features/products/presentation/widget/no_data_card.dart';
 
+import '../../../../../m_inout/presentation/providers/m_in_out_providers.dart';
 import '../../../../../shared/data/memory.dart';
 import '../../../../../shared/data/messages.dart';
 import '../../../../common/async_value_consumer_simple_state.dart';
@@ -216,7 +217,7 @@ class MovementListScreenState extends AsyncValueConsumerSimpleState<MovementList
 
             } else if(movement.docStatus?.id == 'IP'){
               String documentNo = movement.documentNo ?? '-1';
-              if(RolesApp.canConfirmMovementWithConfirm){
+              if(RolesApp.appMovementconfirmComplete){
                 showMovementOptionsSheet(context: context, documentNo: documentNo, movementId:
                 movementId, docStatus:docStatus);
               } else {
@@ -298,7 +299,7 @@ class MovementListScreenState extends AsyncValueConsumerSimpleState<MovementList
                       ),
                       onTap: () {
                         Navigator.of(context).pop();
-                        context.push('/mInOut/moveconfirm/$documentNo');
+                        context.push('/mInOut/${MInOutType.moveConfirm.name}/$documentNo');
                       },
                     ) : Container(),
                   ),

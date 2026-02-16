@@ -81,7 +81,7 @@ final allowScrollFabProvider = StateProvider.autoDispose<bool>((ref) {
 });
 
 final canShowCreateLineBottomBarProvider = Provider.autoDispose<bool>((ref) {
-  bool b = RolesApp.canEditMovement || RolesApp.canCreateMovementInSameOrganization || RolesApp.canCreateMovementInSameOrganization;
+  bool b = RolesApp.appMovementComplete || RolesApp.appMovementconfirmComplete;
   if(!b) return false;
 
   final qty = ref.watch(quantityToMoveProvider);          // double

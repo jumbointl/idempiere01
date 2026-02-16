@@ -699,23 +699,23 @@ StateProvider<List<SalesOrderAndLines>>((ref) => []);
 
 enum SalesOrderAction {
   createShipping,
-  createShippingConfirm,
+  /*createShippingConfirm,
   createPickConfirm,
   completeShipment,
-  cancelOrder,
+  cancelOrder,*/
 }
 String actionLabel(SalesOrderAction action) {
   switch (action) {
     case SalesOrderAction.createShipping:
       return Messages.CREATE_SHIPPING;
-    case SalesOrderAction.createShippingConfirm:
+    /*case SalesOrderAction.createShippingConfirm:
       return Messages.CREATE_SHIPPING_CONFIRM;
     case SalesOrderAction.createPickConfirm:
       return Messages.CREATE_PICK_CONFIRM;
     case SalesOrderAction.cancelOrder:
       return Messages.CANCEL_ORDER;
     case SalesOrderAction.completeShipment:
-      return Messages.COMPLETE_SHIPMENT;
+      return Messages.COMPLETE_SHIPMENT;*/
 
   }
 }

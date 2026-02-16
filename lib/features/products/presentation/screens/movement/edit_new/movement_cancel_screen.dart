@@ -4,6 +4,7 @@ import 'package:monalisa_app_001/features/products/presentation/screens/movement
 
 import '../../../../../shared/data/memory.dart';
 import '../../../../../shared/data/messages.dart';
+import '../../../../common/messages_dialog.dart';
 import '../provider/new_movement_provider.dart';
 
 class MovementCancelScreen extends MovementConfirmScreen {
@@ -28,8 +29,8 @@ class MovementCancelScreenState extends MovementConfirmScreenState {
   Future<void> actionAfterShow(WidgetRef ref) async{
     if(movementAndLines?.canCancelMovement==false){
       String message = Messages.ERROR_CANNOT_CANCEL_MOVEMENT;
-      showAutoCloseErrorDialog(context, ref,
-          message,5);
+      showErrorMessage(context, ref,
+          message,durationSeconds: 5);
       return;
     }
     if(!started){

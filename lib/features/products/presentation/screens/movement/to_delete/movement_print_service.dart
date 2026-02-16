@@ -1,12 +1,11 @@
-import 'package:awesome_dialog/awesome_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
-import '../../../../../../config/theme/app_theme.dart';
 import '../../../../../shared/data/messages.dart';
+import '../../../../common/messages_dialog.dart';
 import '../../../../domain/idempiere/movement_and_lines.dart';
 
 class MovementPrintService {
@@ -27,16 +26,7 @@ class MovementPrintService {
 
     if(data.movementLines == null || data.movementLines!.isEmpty){
       if(ref.context.mounted){
-        AwesomeDialog(
-          context: ref.context,
-          dialogType: DialogType.info,
-          animType: AnimType.scale,
-          title: Messages.LINES,
-          desc: Messages.ERROR_MOVEMENT_LINE,
-          autoHide: const Duration(seconds: 3),
-          btnOkOnPress: () {},
-          btnOkColor: themeColorSuccessful,
-        ).show();
+        showErrorMessage(ref.context, ref, Messages.ERROR_MOVEMENT_LINE);
         return;
       } else {
 

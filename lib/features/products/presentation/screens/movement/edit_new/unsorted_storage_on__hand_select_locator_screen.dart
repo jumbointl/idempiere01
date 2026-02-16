@@ -1,7 +1,6 @@
 
 import 'dart:convert';
 
-import 'package:awesome_dialog/awesome_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -29,7 +28,6 @@ import '../../../providers/common_provider.dart';
 import '../../../providers/locator_provider.dart';
 import '../../../providers/store_on_hand/action_notifier.dart';
 import '../../../widget/response_async_value_messages_card.dart';
-import '../../locator/search_locator_dialog.dart';
 import '../../store_on_hand/memory_products.dart';
 import '../provider/new_movement_provider.dart';
 import 'custom_app_bar.dart' hide fontSizeMedium;
@@ -550,13 +548,13 @@ class UnsortedStorageOnHandScreenSelectLocatorState
   Future<void> _createMovementLineOnly(WidgetRef ref) async {
     // English: Minimal guardrails; keep your original logic if you have it.
     if (!movementAndLines.hasMovement) {
-      _showErrorMessage(Messages.NO_MOVEMENT_SELECTED);
+      showErrorMessage(context,ref,Messages.NO_MOVEMENT_SELECTED,durationSeconds: 0);
       return;
     }
 
     final locatorTo = ref.read(selectedLocatorToProvider);
     if (locatorTo.id == null || (locatorTo.id ?? 0) <= 0) {
-      showAutoCloseErrorDialog(context,ref,Messages.ERROR_LOCATOR_TO,3);
+      showErrorMessage(context,ref,Messages.ERROR_LOCATOR_TO,durationSeconds: 3);
       return;
     }
     int locatorToId = locatorTo.id ?? -1;
@@ -565,7 +563,7 @@ class UnsortedStorageOnHandScreenSelectLocatorState
 
     final qty = ref.read(quantityToMoveProvider);
     if (qty <= 0) {
-      _showErrorMessage(Messages.ERROR_QUANTITY);
+      showErrorMessage(context,ref,Messages.ERROR_QUANTITY,durationSeconds: 0);
       return;
     }
 
@@ -577,7 +575,7 @@ class UnsortedStorageOnHandScreenSelectLocatorState
 
     int locatorFrom = widget.storage.mLocatorID?.id ?? -1;
     if(locatorFrom<=0){
-      showAutoCloseErrorDialog(context,ref,Messages.ERROR_LOCATOR_FROM,3);
+      showErrorMessage(context,ref,Messages.ERROR_LOCATOR_FROM,durationSeconds: 3);
       return;
     }
 
@@ -654,27 +652,7 @@ class UnsortedStorageOnHandScreenSelectLocatorState
     return widget.movementAndLines;
   }
 
-  void _showErrorMessage(String message) {
-    if (!context.mounted) return;
-    AwesomeDialog(
-      context: context,
-      animType: AnimType.scale,
-      dialogType: DialogType.error,
-      body: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(12),
-          child: Text(message, style: const TextStyle(fontStyle: FontStyle.italic)),
-        ),
-      ),
-      title: Messages.ERROR,
-      desc: '',
-      autoHide: const Duration(seconds: 3),
-      btnOkOnPress: () {},
-      btnOkColor: Colors.amber,
-      btnCancelText: Messages.CANCEL,
-      btnOkText: Messages.OK,
-    ).show();
-  }
+
 
   @override
   Future<void> handleInputString({required WidgetRef ref,

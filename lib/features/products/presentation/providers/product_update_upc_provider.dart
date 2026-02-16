@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
 import 'package:monalisa_app_001/features/products/presentation/providers/product_search_provider.dart';
@@ -16,6 +17,10 @@ final newUPCToUpdateProvider = StateProvider.autoDispose<String>((ref) {
   return '';
 });
 
+final fireUpdateUPCProvider = StateProvider.autoDispose<int>((ref) {
+  return 0;
+});
+
 final dataToUpdateUPCProvider = StateProvider.autoDispose<List<String>>((ref) {
   return [];
 });
@@ -29,7 +34,9 @@ StateNotifierProvider.autoDispose<ProductsUpdateNotifier, void>((ref) {
 
 
 final updateProductUPCProvider = FutureProvider.autoDispose<IdempiereProduct>((ref) async {
-  List<String> dataToUpdate = ref.watch(dataToUpdateUPCProvider);
+  int count = ref.watch(fireUpdateUPCProvider);
+  debugPrint('updateProductUPCProvider $count');
+  List<String> dataToUpdate = ref.read(dataToUpdateUPCProvider);
 
   if(dataToUpdate.isEmpty || dataToUpdate.length!=2){
     return IdempiereProduct(name: Messages.NO_DATA_INPUTED,id:0);

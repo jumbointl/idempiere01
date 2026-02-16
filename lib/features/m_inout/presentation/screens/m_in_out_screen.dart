@@ -4,16 +4,21 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:get_storage/get_storage.dart';
+import 'package:go_router/go_router.dart';
 import 'package:material_symbols_icons/symbols.dart';
 import 'package:monalisa_app_001/config/config.dart';
 import 'package:monalisa_app_001/features/m_inout/domain/entities/m_in_out.dart';
+import 'package:monalisa_app_001/features/m_inout/domain/entities/m_in_out_confirm.dart';
 import 'package:monalisa_app_001/features/products/common/messages_dialog.dart';
+import 'package:monalisa_app_001/features/products/domain/idempiere/put_away_movement.dart';
 import 'package:monalisa_app_001/features/shared/shared.dart';
 import 'package:monalisa_app_001/features/m_inout/domain/entities/line.dart';
 import 'package:monalisa_app_001/features/m_inout/presentation/widgets/barcode_list.dart';
 import 'package:intl/intl.dart';
 import '../../../products/common/selections_dialog.dart';
 import '../../../products/presentation/providers/common_provider.dart';
+import '../../../products/presentation/screens/movement/provider/new_movement_provider.dart';
+import '../../../shared/data/memory.dart';
 import '../../../shared/data/messages.dart';
 import '../../domain/entities/barcode.dart';
 import '../providers/line_provider.dart';
@@ -52,7 +57,7 @@ class MInOutScreenState extends ConsumerState<MInOutScreen> {
       if(documentNo.isNotEmpty && documentNo !='-1'){
         mInOutNotifier.onDocChange(documentNo);
       } else {
-        await mInOutNotifier.loadDataList(ref);
+        //await mInOutNotifier.loadDataList(ref);
       }
     });
   }
@@ -65,12 +70,20 @@ class MInOutScreenState extends ConsumerState<MInOutScreen> {
 
     ref.listen(mInOutProvider, (previous, next) {
       if (next.errorMessage.isNotEmpty) {
-        ScaffoldMessenger.of(context)
-          ..clearSnackBars()
-          ..showSnackBar(SnackBar(content: Text(next.errorMessage)));
+        showErrorCenterToast(
+          context,
+          next.errorMessage,
+          durationSeconds: 5,
+        );
       }
     });
 
+    bool showConfirmIcon =
+    mInOutNotifier.documentCanComplete(mInOutState) && mInOutState.viewMInOut;
+
+
+
+    debugPrint('showConfirmIcon : $showConfirmIcon');
     return PopScope(
       canPop: false,
       onPopInvokedWithResult: (didPop, result) async {
@@ -109,9 +122,7 @@ class MInOutScreenState extends ConsumerState<MInOutScreen> {
                     color: themeColorPrimary),
                 unselectedLabelStyle: TextStyle(fontSize: themeFontSizeLarge),
               ),
-              actions: mInOutState.viewMInOut &&
-                  !mInOutState.isComplete &&
-                  mInOutState.mInOut?.docStatus.id.toString() != 'CO'
+              actions: showConfirmIcon
                   ? [
                 IconButton(
                   onPressed: mInOutNotifier.isRolComplete()
@@ -123,21 +134,22 @@ class MInOutScreenState extends ConsumerState<MInOutScreen> {
                       mInOutState.mInOutType ==
                           MInOutType.move
                       ? () {
-                    print(' mInOutNotifier.setDocAction');
+                    debugPrint('mInOutNotifier.setDocAction');
                       mInOutNotifier.setDocAction(ref);
                     }
                       : () {
-                    print(' mInOutNotifier.setDocActionConfirm');
+                    debugPrint('mInOutNotifier.setDocActionConfirm');
+
                     mInOutNotifier.setDocActionConfirm(ref);}
                       : () {
-                    print(' mInOutNotifier._showConfirmMInOut');
+                    debugPrint('mInOutNotifier._showConfirmMInOut');
                     _showConfirmMInOut(context);
 
 
                   }
                       : () {
-                    print(' mInOutNotifier._showWithoutRole');
-                    _showWithoutRole(context);
+                    debugPrint('mInOutNotifier._showWithoutRole');
+                    _showWithoutRole(context,ref,mInOutState);
                   },
                   icon: Icon(
                     mInOutNotifier.isConfirmMInOut() ? Symbols.edit_arrow_up : Symbols.other_admission ,
@@ -146,7 +158,19 @@ class MInOutScreenState extends ConsumerState<MInOutScreen> {
                   ),
                 ),
               ]
-                  : null,
+                  : [IconButton(
+                onPressed:  () {
+                _showWithoutRole(context,ref,mInOutState);
+
+
+
+                },
+                icon: Icon(
+                  Symbols.close ,
+                  color: Colors.red,
+
+                ),
+              ),],
             ),
             body: TabBarView(
               children: [
@@ -186,7 +210,20 @@ class MInOutScreenState extends ConsumerState<MInOutScreen> {
     );
   }
 
-  Future<void> _showWithoutRole(BuildContext context) {
+  Future<void> _showWithoutRole(
+      BuildContext context,
+      WidgetRef ref,
+      MInOutStatus stateNow,
+      ) {
+    final mInOutNotifier = ref.read(mInOutProvider.notifier);
+    final mInOut = stateNow.mInOut;
+
+    // Convert values to display-friendly strings
+    final roleComplete = mInOutNotifier.isRolComplete().toString();
+    final canCompleteTask = mInOutNotifier.isConfirmMInOut().toString();
+    final docStatus = (mInOut?.docStatus.id ?? '').toString();
+    final docNo = mInOut?.documentNo ?? '';
+
     return showDialog(
       context: context,
       builder: (BuildContext context) {
@@ -194,9 +231,120 @@ class MInOutScreenState extends ConsumerState<MInOutScreen> {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(themeBorderRadius),
           ),
-          title: const Text('Acción no permitida'),
-          content: const Text(
-              'No tienes los roles necesarios para realizar esta acción.'),
+          title: Column(
+            children: [
+              const Text('Acción no permitida'),
+              Text(docNo),
+            ],
+          ),
+          content: SingleChildScrollView(
+            child: Table(
+              columnWidths: const {
+                0: IntrinsicColumnWidth(), // No
+                1: FlexColumnWidth(),      // Descripción
+                2: IntrinsicColumnWidth(), // Valor
+              },
+              defaultVerticalAlignment: TableCellVerticalAlignment.middle,
+              border: TableBorder.all(color: Colors.black12),
+              children: [
+                // Header row
+                const TableRow(
+                  children: [
+                    Padding(
+                      padding: EdgeInsets.all(8),
+                      child: Text('No', style: TextStyle(fontWeight: FontWeight.bold)),
+                    ),
+                    Padding(
+                      padding: EdgeInsets.all(8),
+                      child: Text('Descripción', style: TextStyle(fontWeight: FontWeight.bold)),
+                    ),
+                    Padding(
+                      padding: EdgeInsets.all(8),
+                      child: Text('Valor', style: TextStyle(fontWeight: FontWeight.bold)),
+                    ),
+                  ],
+                ),
+
+                // Row 1
+                TableRow(children: [
+                  const Padding(
+                    padding: EdgeInsets.all(8),
+                    child: Text('1'),
+                  ),
+                  const Padding(
+                    padding: EdgeInsets.all(8),
+                    child: Text('Role complete'),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.all(8),
+                    child: Text(roleComplete),
+                  ),
+                ]),
+
+                // Row 2
+                TableRow(children: [
+                  const Padding(
+                    padding: EdgeInsets.all(8),
+                    child: Text('2'),
+                  ),
+                  const Padding(
+                    padding: EdgeInsets.all(8),
+                    child: Text('Can Complete Task'),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.all(8),
+                    child: Text(canCompleteTask),
+                  ),
+                ]),
+
+                // Row 3
+                TableRow(children: [
+                  const Padding(
+                    padding: EdgeInsets.all(8),
+                    child: Text('3'),
+                  ),
+                  const Padding(
+                    padding: EdgeInsets.all(8),
+                    child: Text('Doc Status'),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.all(8),
+                    child: Text(docStatus),
+                  ),
+                ]),
+                // Row 4
+                TableRow(children: [
+                  const Padding(
+                    padding: EdgeInsets.all(8),
+                    child: Text('4'),
+                  ),
+                  const Padding(
+                    padding: EdgeInsets.all(8),
+                    child: Text('VIEW M INOUT'),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.all(8),
+                    child: Text(stateNow.viewMInOut.toString()),
+                  ),
+                ]),
+                // Row 5
+                TableRow(children: [
+                  const Padding(
+                    padding: EdgeInsets.all(8),
+                    child: Text('4'),
+                  ),
+                  const Padding(
+                    padding: EdgeInsets.all(8),
+                    child: Text('DOC IS COMPLETE'),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.all(8),
+                    child: Text(stateNow.isComplete.toString()),
+                  ),
+                ]),
+              ],
+            ),
+          ),
           actions: <Widget>[
             CustomFilledButton(
               onPressed: () => Navigator.of(context).pop(),
@@ -208,6 +356,7 @@ class MInOutScreenState extends ConsumerState<MInOutScreen> {
       },
     );
   }
+
 
   Future<bool> _showExitConfirmationDialog(BuildContext context) async {
     return await showDialog<bool>(
@@ -239,10 +388,6 @@ class MInOutScreenState extends ConsumerState<MInOutScreen> {
     ) ??
         false;
   }
-
-
-
-
 
 
 }
@@ -303,6 +448,8 @@ class _MInOutViewState extends ConsumerState<_MInOutView> {
       child: !stateNow.viewMInOut
           ? Column(
         children: [
+
+          stateNow.isLoading ? const LinearProgressIndicator(minHeight: 4,) : const SizedBox(height: 4,),
           const SizedBox(height: 4),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -382,6 +529,8 @@ class _MInOutViewState extends ConsumerState<_MInOutView> {
     // En confirm, lines suele ser subset (ej. confirmId != null)
     final int uiLines = m?.lines.length ?? 0;
     final int confirmLines = c?.linesConfirm.length ?? 0;
+    final mInOutNotifier = ref.read(mInOutProvider.notifier);
+
 
 
     // Si querés mostrar "filtradas por productId != null" en modo normal:
@@ -448,101 +597,29 @@ class _MInOutViewState extends ConsumerState<_MInOutView> {
               borderRadius: BorderRadius.circular(themeBorderRadius),
               color: getMInOutHeaderColor(stateNow),
             ),
-            child: Row(
+            child: // Use Table so both columns share the same row heights
+            Table(
+              columnWidths: const {
+                0: IntrinsicColumnWidth(), // label column fits content
+                1: FlexColumnWidth(),      // value column takes remaining space
+              },
+              defaultVerticalAlignment: TableCellVerticalAlignment.middle,
               children: [
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Document No.: ',
-                      style: TextStyle(
-                        fontSize: themeFontSizeSmall,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    if (isConfirmFlow)
-                      const Text(
-                        'Confirm No.: ',
-                        style: TextStyle(
-                          fontSize: themeFontSizeSmall,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    const Text(
-                      'Date: ',
-                      style: TextStyle(
-                        fontSize: themeFontSizeSmall,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const Text(
-                      'Order: ',
-                      style: TextStyle(
-                        fontSize: themeFontSizeSmall,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const Text(
-                      'O. Date: ',
-                      style: TextStyle(
-                        fontSize: themeFontSizeSmall,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const Text(
-                      'Org.: ',
-                      style: TextStyle(
-                        fontSize: themeFontSizeSmall,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const Text(
-                      'Whs.: ',
-                      style: TextStyle(
-                        fontSize: themeFontSizeSmall,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    if(isMovementFlow) const Text(
-                      'Whs. To: ',
-                      style: TextStyle(
-                        fontSize: themeFontSizeSmall,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const Text(
-                      'BP: ',
-                      style: TextStyle(
-                        fontSize: themeFontSizeSmall,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const Text(
-                      'Confirmed: ',
-                      style: TextStyle(
-                        fontSize: themeFontSizeSmall,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(width: 10),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      m?.documentNo ?? '',
-                      style: const TextStyle(fontSize: themeFontSizeSmall),
-                    ),
-                    if (isConfirmFlow)
-                      Text(
-                        confirmText,
-                        style: const TextStyle(fontSize: themeFontSizeSmall),
-                      ),
-
-                    // Clickable si hay issues (repeated o errors)
-                    hasIssues
-                        ? TextButton(
+                TableRow(children: [
+                  const _HdrLabel('Document No.:'),
+                  _HdrValue(m?.documentNo ?? ''),
+                ]),
+                if (isConfirmFlow)
+                  TableRow(children: [
+                    const _HdrLabel('Confirm No.:'),
+                    _HdrValue(confirmText),
+                  ]),
+                TableRow(children: [
+                  const _HdrLabel('Date:'),
+                  hasIssues
+                      ? Align(
+                    alignment: Alignment.centerLeft,
+                    child: TextButton(
                       style: TextButton.styleFrom(
                         padding: EdgeInsets.zero,
                         minimumSize: Size.zero,
@@ -557,47 +634,87 @@ class _MInOutViewState extends ConsumerState<_MInOutView> {
                           fontSize: themeFontSizeSmall,
                           decoration: TextDecoration.underline,
                         ),
+                        // Keep it predictable; remove this if you WANT wrapping
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
-                    )
-                        : Text(
-                      movementText,
-                      style: const TextStyle(fontSize: themeFontSizeSmall),
                     ),
-
-                    Text(
-                      m?.cOrderId.identifier ?? '',
-                      style: const TextStyle(fontSize: themeFontSizeSmall),
-                    ),
-                    Text(
-                      m?.dateOrdered != null
-                          ? DateFormat('dd/MM/yyyy').format(m!.dateOrdered!)
-                          : '',
-                      style: const TextStyle(fontSize: themeFontSizeSmall),
-                    ),
-                    Text(
-                      m?.adOrgId.identifier ?? '',
-                      style: const TextStyle(fontSize: themeFontSizeSmall),
-                    ),
-                    Text(
-                      m?.mWarehouseId.identifier ?? '',
-                      style: const TextStyle(fontSize: themeFontSizeSmall),
-                    ),
-                    if(isMovementFlow)Text(
-                      m?.mWarehouseToId.identifier ?? '',
-                      style: const TextStyle(fontSize: themeFontSizeSmall),
-                    ),
-
-                    Text(
-                      m?.cBPartnerId.identifier ?? '',
-                      style: const TextStyle(fontSize: themeFontSizeSmall),
-                    ),
-                    Text(
-                      isConfirmFlow ? '$confirmedLines/C.Lines: $confirmLines':
-                      '$confirmedLines/ $uiLines',
-                      style: const TextStyle(fontSize: themeFontSizeSmall),
-                    ),
-                  ],
-                ),
+                  )
+                      : _HdrValue(
+                    movementText,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ]),
+                TableRow(children: [
+                  const _HdrLabel('Order:'),
+                  _HdrValue(m?.cOrderId.identifier ?? ''),
+                ]),
+                TableRow(children: [
+                  const _HdrLabel('O. Date:'),
+                  _HdrValue(
+                    m?.dateOrdered != null ? DateFormat('dd/MM/yyyy').format(m!.dateOrdered!) : '',
+                  ),
+                ]),
+                TableRow(children: [
+                  const _HdrLabel('Org.:'),
+                  _HdrValue(m?.adOrgId.identifier ?? ''),
+                ]),
+                TableRow(children: [
+                  const _HdrLabel('Whs.:'),
+                  _HdrValue(m?.mWarehouseId.identifier ?? ''),
+                ]),
+                if (isMovementFlow)
+                  TableRow(children: [
+                    const _HdrLabel('Whs. To:'),
+                    _HdrValue(m?.mWarehouseToId.identifier ?? ''),
+                  ]),
+                TableRow(children: [
+                  const _HdrLabel('BP:'),
+                  _HdrValue(m?.cBPartnerId.identifier ?? ''),
+                ]),
+                TableRow(children: [
+                  const _HdrLabel('Confirmed:'),
+                  Row(
+                    children: [
+                      Text(
+                        isConfirmFlow
+                            ? '$confirmedLines/C.Lines: $confirmLines'
+                            : '$confirmedLines/ $uiLines',
+                        style: TextStyle(
+                          fontSize: themeFontSizeSmall,
+                          color: mInOutNotifier.isConfirmMInOut()
+                              ? Colors.green.shade800
+                              : Colors.red.shade800,
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      if (stateNow.rolQuickComplete && uiLines > 0)
+                        IconButton(
+                          icon: Icon(
+                            mInOutNotifier.isConfirmMInOut()
+                                ? Symbols.undo
+                                : Symbols.checklist_rtl,
+                          ),
+                          iconSize: 16,
+                          visualDensity: VisualDensity.compact,
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(),
+                          color: Colors.purple,
+                          tooltip: mInOutNotifier.isConfirmMInOut() ? 'Reset' : 'Editar',
+                          onPressed: () {
+                            // Toggle confirmed quantities
+                            debugPrint('mInOutNotifier.setConfirmedQty ${mInOutNotifier.isConfirmMInOut() && confirmLines==uiLines}');
+                            if (mInOutNotifier.isConfirmMInOut()) {
+                              mInOutNotifier.resetConfirmedQty(m?.lines ?? []);
+                            } else {
+                              mInOutNotifier.setConfirmedQtyEqualsMovementQty(m?.lines ?? []);
+                            }
+                          },
+                        ),
+                    ],
+                  ),
+                ]),
               ],
             ),
           ),
@@ -615,54 +732,16 @@ class _MInOutViewState extends ConsumerState<_MInOutView> {
               )
                   : () async {
                 mInOutNotifier.clearMInOutData();
-                await mInOutNotifier.loadDataList(ref);
+                //await mInOutNotifier.loadDataList(ref);
               },
             ),
           ),
-          Positioned(
-            right: 6,
-            bottom: 4,
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  Messages.RELOAD,
-                  style: TextStyle(fontSize: themeFontSizeSmall),
-                ),
-                IconButton(
-                  onPressed:  () {
-                    //print(' mInOutNotifier._showConfirmMInOut');
-                    //_showConfirmMInOut(context);
-                    reloadMInOut(context, ref);
 
-
-                  },
-                  icon: Icon(
-                    Symbols.cloud_sync_rounded,
-                    color: Colors.purple,
-
-                  ),
-                ),
-
-                /*IconButton(
-                  iconSize: 18,
-                  visualDensity: VisualDensity.compact,
-                  padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(),
-                  onPressed: () => mergeMInOut(context, ref),
-                  icon: const Icon(
-                    Symbols.arrow_and_edge_rounded,
-                    color: Colors.purple,
-                  ),
-                ),*/
-              ],
-            )
-                ,
-          ),
         ],
       ),
     );
   }
+
 
   Future<void> _showResetManualLine(BuildContext context, Line line) {
     return showDialog(
@@ -697,38 +776,518 @@ class _MInOutViewState extends ConsumerState<_MInOutView> {
     );
   }
 
-  Future<void> _showEditLocator(BuildContext context, MInOutStatus mInOutState,
-      Line item, WidgetRef ref) {
+  Future<void> _showEditLocator(
+      BuildContext context,
+      MInOutStatus mInOutState,
+      Line item,
+      WidgetRef ref,
+      ) {
+    final upc = item.upc ?? '';
+    final locator = item.mLocatorId?.identifier?.split(' => ').first.trim() ?? '';
+    final attSet = item.mAttributeSetInstanceID?.identifier ?? '';
+    ref.invalidate(confirmMovementProvider);
+
     return showDialog(
       context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(themeBorderRadius),
-          ),
-          title: const Text('Cambiar Estante'),
-          content: CustomTextFormField(
-            label: 'Estante Nueva',
-            initialValue: _sentInitialToNotifier ? '' :initialDocumentNo,
-            onChanged: mInOutNotifier.onEditLocatorChange,
-            autofocus: true,
-          ),
-          actions: <Widget>[
-            CustomFilledButton(
-              onPressed: () {
-                mInOutNotifier.confirmEditLocator(item, ref);
-                Navigator.of(context).pop();
-              },
-              label: 'Confirmar',
-              icon: const Icon(Icons.check),
-            ),
-            CustomFilledButton(
-              onPressed: () => Navigator.of(context).pop(),
-              label: 'Cancelar',
-              icon: const Icon(Icons.close_rounded),
-              buttonColor: themeColorGray,
-            ),
-          ],
+      builder: (dialogContext) {
+        return Consumer(
+          builder: (context, ref, _) {
+            // ✅ This will rebuild the dialog when the provider changes
+            final newLocator = ref.watch(selectedLocatorForMinOutProvider);
+            final newLocatorName = newLocator?.value ?? newLocator?.identifier ?? '';
+            AsyncValue createMovement = ref.watch(newPutAwayMovementWithCompleteProvider);
+            AsyncValue confirmMovement = ref.watch(confirmMovementProvider);
+            AsyncValue cancelMovement = ref.watch(cancelMovementProvider);
+
+            return AlertDialog(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(themeBorderRadius),
+              ),
+              title: const Text('Cambiar Estante'),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min, // ✅ prevents overflow
+                  children: [
+                    OutlinedButton.icon(
+                      onPressed: () {
+                        context.push(
+                          '${AppRouter.PAGE_PRODUCT_STORE_ON_HAND_FOR_MINOUT_LINE}/$upc',
+                          extra: item,
+                        );
+                      },
+                      style: OutlinedButton.styleFrom(
+                        side: BorderSide(color: themeColorPrimary),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                      ),
+                      icon: const Icon(Icons.search),
+                      label: Text('Buscar stock por $upc'),
+                    ),
+                
+                    const SizedBox(height: 10),
+                    const Text('Estante Anterior'),
+                    Text(locator),
+                    const SizedBox(height: 10),
+                    const Text('Att Set'),
+                    Text(attSet),
+                    const SizedBox(height: 10),
+                    const Text('Nuevo Estante'),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: Colors.purple.withOpacity(0.08),
+                        border: Border.all(
+                          color: Colors.purple,
+                          width: 1.5,
+                        ),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Text(
+                        newLocatorName.isEmpty ? 'Sin estante seleccionado' : newLocatorName,
+                        style: const TextStyle(
+                          color: Colors.purple,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                    createMovement.when(
+                      data: (movement) {
+                        WidgetsBinding.instance.addPostFrameCallback((_) {
+                          if(movement!=null && movement.id !=null && movement.id>0){
+                            final selected = ref.read(selectedLocatorForMinOutProvider);
+                            final name = selected?.value ?? selected?.identifier ?? '';
+                            if(name.isEmpty) return;
+                            mInOutNotifier.onEditLocatorChange(name);
+                            mInOutNotifier.confirmEditLocator(item, ref);
+                            ref.read(selectedLocatorForMinOutProvider.notifier).state = null;
+                            Navigator.of(context).pop();
+                          }
+                        });
+                
+                        if(movement==null) {
+                          return SizedBox(width: 10,);
+                        } else {
+                          bool canComplete = movement!.id != null && movement.id == Memory.ERROR_DOCUMENT_NOT_COMPLETE_ID ;
+                          bool canCancel = movement!.id != null && movement.id == Memory.ERROR_DOCUMENT_LINE_NOT_CREATED_ID
+                            || movement!.id != null && movement.id == Memory.ERROR_DOCUMENT_NOT_COMPLETE_ID;
+
+                          if(movement.id == null) {
+                            return Text('MOVEMENT ID : ${Messages.ERROR_DOCUMENT_NOT_CREATED}');
+                          } else if(movement.id != null && movement.id <=0){
+                            debugPrint('movement.id : ${movement.id}');
+                            if(canComplete || canCancel){
+
+                              return Column(
+                                children: [
+                                  Text(movement.description ?? ''),
+                                  if(canComplete)confirmMovement.when(data: (data){
+                                    if(data == null || data.id==null && data.id<0){
+                                      return SizedBox(width: 10,);
+                                    }
+                              
+                                    WidgetsBinding.instance.addPostFrameCallback((_) {
+                                      if(movement.id>0){
+                                        final selected = ref.read(selectedLocatorForMinOutProvider);
+                                        final name = selected?.value ?? selected?.identifier ?? '';
+                                        if(name.isEmpty) return;
+                                        mInOutNotifier.onEditLocatorChange(name);
+                                        mInOutNotifier.confirmEditLocator(item, ref);
+                                        ref.read(selectedLocatorForMinOutProvider.notifier).state = null;
+                                        Navigator.of(context).pop();
+                                      }
+                                    });
+                                    return Text(Messages.DOCUMENT_COMPLETED);
+                              
+                                  },
+                              
+                                  error: (error, stackTrace) => Text('Error: $error'),
+                                  loading: () => const LinearProgressIndicator(),),
+                                  if(canComplete)OutlinedButton.icon(
+                                    onPressed: () {
+                                      final movementId = int.tryParse(movement.name ?? '') ?? 0;
+                                      if (movementId <= 0) return;
+                              
+                                      ref.read(movementIdForConfirmProvider.notifier).state = movementId;
+                                    },
+                                    style: OutlinedButton.styleFrom(
+                                      side: BorderSide(color: themeColorWarning),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(10),
+                                      ),
+                                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                                    ),
+                                    icon: const Icon(Icons.task_alt_rounded),
+                                    label: Text('Complete ${movement.name}'),
+                                  ),
+                                  if(canCancel)cancelMovement.when(data: (data){
+                                    if(data == null || data.id==null){
+                                      return SizedBox(width: 10,);
+                                    }
+                                    if(data.id != null && data.id! <0){
+                                      return Text('${Messages.DOCUMENT_NOT_CANCELED} :  ${data.id}');
+                                    }
+
+                                    WidgetsBinding.instance.addPostFrameCallback((_) {
+                                      if(movement.id>0){
+                                        ref.read(selectedLocatorForMinOutProvider.notifier).state = null;
+                                        String message = Messages.DOCUMENT_CANCELED ;
+                                        showSuccessMessage(context, ref, message);
+                                      }
+                                    });
+                                    return Text('${Messages.DOCUMENT_CANCELED} :  ${data.id}');
+
+                                  },
+
+                                    error: (error, stackTrace) => Text('Error: $error'),
+                                    loading: () => const LinearProgressIndicator(),),
+                                  if(canCancel)OutlinedButton.icon(
+                                    onPressed: () {
+                                      final movementId = int.tryParse(movement.name ?? '') ?? 0;
+                                      if (movementId <= 0) return;
+                                      ref.read(movementIdForCancelProvider.notifier).state = movementId;
+                                    },
+                                    style: OutlinedButton.styleFrom(
+                                      side: BorderSide(color: themeColorWarning),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(10),
+                                      ),
+                                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                                    ),
+                                    icon: const Icon(Icons.delete),
+                                    label: Text('Delete ${movement.name}'),
+                                  ),
+                              
+                                ],
+                              );
+                            }
+
+                            return Text('MOVEMENT ID : ${movement.name}');
+                          } else {
+                            return Text('MOVEMENT CREATED ID : ${movement.id}');
+                          }
+                        }
+                
+                      },
+                      error: (error, stackTrace) => Text('Error: $error'),
+                      loading: () => const LinearProgressIndicator(),
+                    )
+                
+                  ],
+                ),
+              ),
+              actions: [
+                FilledButton.icon(
+                  onPressed: () {
+                    final selected = ref.read(selectedLocatorForMinOutProvider);
+                    final hasNewLocator =
+                        selected != null && (selected.id ?? 0) > 0;
+
+                    if (!hasNewLocator) {
+                      showErrorCenterToast(context, 'Debe ingresar un nuevo estante');
+                      return;
+                    }
+
+                    PutAwayMovement? putAwayMovement =
+                    createPutAwayMovementFromMinOut(
+                      ref: ref,
+                      line: item,
+                      locatorFrom: selected,
+                    );
+
+                    if (putAwayMovement == null) return;
+
+                    ref.read(putAwayMovementCreateWithCompleteProvider.notifier)
+                        .state = putAwayMovement;
+
+                    ref.read(fireCreateMovementWithCompleteProvider.notifier)
+                        .update((state) => state + 1);
+                  },
+                  style: FilledButton.styleFrom(
+                    backgroundColor: themeColorPrimary,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+                  icon: const Icon(Icons.check),
+                  label: const Text('Confirmar'),
+                ),
+
+                TextButton.icon(
+                  onPressed: () => Navigator.of(context).pop(),
+                  icon: const Icon(Icons.close_rounded),
+                  label: const Text('Cancelar'),
+                  style: TextButton.styleFrom(
+                    foregroundColor: themeColorGray,
+                  ),
+                ),
+
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+  Future<void> _deleteMovementLine(
+      BuildContext context,
+      MInOutStatus mInOutState,
+      Line item,
+      WidgetRef ref,
+      ) {
+    final upc = item.upc ?? '';
+    final locator = item.mLocatorId?.identifier?.split(' => ').first.trim() ?? '';
+    final attSet = item.mAttributeSetInstanceID?.identifier ?? '';
+    ref.invalidate(confirmMovementProvider);
+    List<MInOutConfirm> allAffectedConfirmLines = [];
+
+
+    List<dynamic> listToDelete = [];
+    listToDelete.add(item);
+
+
+
+
+    return showDialog(
+      context: context,
+      builder: (dialogContext) {
+        return Consumer(
+          builder: (context, ref, _) {
+            // ✅ This will rebuild the dialog when the provider changes
+            final newLocator = ref.watch(selectedLocatorForMinOutProvider);
+            final newLocatorName = newLocator?.value ?? newLocator?.identifier ?? '';
+            AsyncValue createMovement = ref.watch(newPutAwayMovementWithCompleteProvider);
+            AsyncValue confirmMovement = ref.watch(confirmMovementProvider);
+            AsyncValue cancelMovement = ref.watch(cancelMovementProvider);
+
+            return AlertDialog(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(themeBorderRadius),
+              ),
+              title: const Text('Cambiar Estante'),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min, // ✅ prevents overflow
+                  children: [
+                    OutlinedButton.icon(
+                      onPressed: () {
+                        context.push(
+                          '${AppRouter.PAGE_PRODUCT_STORE_ON_HAND_FOR_MINOUT_LINE}/$upc',
+                          extra: item,
+                        );
+                      },
+                      style: OutlinedButton.styleFrom(
+                        side: BorderSide(color: themeColorPrimary),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                      ),
+                      icon: const Icon(Icons.search),
+                      label: Text('Buscar stock por $upc'),
+                    ),
+
+                    const SizedBox(height: 10),
+                    const Text('Estante Anterior'),
+                    Text(locator),
+                    const SizedBox(height: 10),
+                    const Text('Att Set'),
+                    Text(attSet),
+                    const SizedBox(height: 10),
+                    const Text('Nuevo Estante'),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: Colors.purple.withOpacity(0.08),
+                        border: Border.all(
+                          color: Colors.purple,
+                          width: 1.5,
+                        ),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Text(
+                        newLocatorName.isEmpty ? 'Sin estante seleccionado' : newLocatorName,
+                        style: const TextStyle(
+                          color: Colors.purple,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                    createMovement.when(
+                      data: (movement) {
+                        WidgetsBinding.instance.addPostFrameCallback((_) {
+                          if(movement!=null && movement.id !=null && movement.id>0){
+                            final selected = ref.read(selectedLocatorForMinOutProvider);
+                            final name = selected?.value ?? selected?.identifier ?? '';
+                            if(name.isEmpty) return;
+                            mInOutNotifier.onEditLocatorChange(name);
+                            mInOutNotifier.confirmEditLocator(item, ref);
+                            ref.read(selectedLocatorForMinOutProvider.notifier).state = null;
+                            Navigator.of(context).pop();
+                          }
+                        });
+
+                        if(movement==null) {
+                          return SizedBox(width: 10,);
+                        } else {
+                          bool canComplete = movement!.id != null && movement.id == Memory.ERROR_DOCUMENT_NOT_COMPLETE_ID ;
+                          bool canCancel = movement!.id != null && movement.id == Memory.ERROR_DOCUMENT_LINE_NOT_CREATED_ID
+                              || movement!.id != null && movement.id == Memory.ERROR_DOCUMENT_NOT_COMPLETE_ID;
+
+                          if(movement.id == null) {
+                            return Text('MOVEMENT ID : ${Messages.ERROR_DOCUMENT_NOT_CREATED}');
+                          } else if(movement.id != null && movement.id <=0){
+                            debugPrint('movement.id : ${movement.id}');
+                            if(canComplete || canCancel){
+
+                              return Column(
+                                children: [
+                                  Text(movement.description ?? ''),
+                                  if(canComplete)confirmMovement.when(data: (data){
+                                    if(data == null || data.id==null && data.id<0){
+                                      return SizedBox(width: 10,);
+                                    }
+
+                                    WidgetsBinding.instance.addPostFrameCallback((_) {
+                                      if(movement.id>0){
+                                        final selected = ref.read(selectedLocatorForMinOutProvider);
+                                        final name = selected?.value ?? selected?.identifier ?? '';
+                                        if(name.isEmpty) return;
+                                        mInOutNotifier.onEditLocatorChange(name);
+                                        mInOutNotifier.confirmEditLocator(item, ref);
+                                        ref.read(selectedLocatorForMinOutProvider.notifier).state = null;
+                                        Navigator.of(context).pop();
+                                      }
+                                    });
+                                    return Text(Messages.DOCUMENT_COMPLETED);
+
+                                  },
+
+                                    error: (error, stackTrace) => Text('Error: $error'),
+                                    loading: () => const LinearProgressIndicator(),),
+                                  if(canComplete)OutlinedButton.icon(
+                                    onPressed: () {
+                                      final movementId = int.tryParse(movement.name ?? '') ?? 0;
+                                      if (movementId <= 0) return;
+
+                                      ref.read(movementIdForConfirmProvider.notifier).state = movementId;
+                                    },
+                                    style: OutlinedButton.styleFrom(
+                                      side: BorderSide(color: themeColorWarning),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(10),
+                                      ),
+                                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                                    ),
+                                    icon: const Icon(Icons.task_alt_rounded),
+                                    label: Text('Complete ${movement.name}'),
+                                  ),
+                                  if(canCancel)cancelMovement.when(data: (data){
+                                    if(data == null || data.id==null){
+                                      return SizedBox(width: 10,);
+                                    }
+                                    if(data.id != null && data.id! <0){
+                                      return Text('${Messages.DOCUMENT_NOT_CANCELED} :  ${data.id}');
+                                    }
+
+                                    WidgetsBinding.instance.addPostFrameCallback((_) {
+                                      if(movement.id>0){
+                                        ref.read(selectedLocatorForMinOutProvider.notifier).state = null;
+                                        String message = Messages.DOCUMENT_CANCELED ;
+                                        showSuccessMessage(context, ref, message);
+                                      }
+                                    });
+                                    return Text('${Messages.DOCUMENT_CANCELED} :  ${data.id}');
+
+                                  },
+
+                                    error: (error, stackTrace) => Text('Error: $error'),
+                                    loading: () => const LinearProgressIndicator(),),
+                                  if(canCancel)OutlinedButton.icon(
+                                    onPressed: () {
+                                      final movementId = int.tryParse(movement.name ?? '') ?? 0;
+                                      if (movementId <= 0) return;
+                                      ref.read(movementIdForCancelProvider.notifier).state = movementId;
+                                    },
+                                    style: OutlinedButton.styleFrom(
+                                      side: BorderSide(color: themeColorWarning),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(10),
+                                      ),
+                                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                                    ),
+                                    icon: const Icon(Icons.delete),
+                                    label: Text('Delete ${movement.name}'),
+                                  ),
+
+                                ],
+                              );
+                            }
+
+                            return Text('MOVEMENT ID : ${movement.name}');
+                          } else {
+                            return Text('MOVEMENT CREATED ID : ${movement.id}');
+                          }
+                        }
+
+                      },
+                      error: (error, stackTrace) => Text('Error: $error'),
+                      loading: () => const LinearProgressIndicator(),
+                    )
+
+                  ],
+                ),
+              ),
+              actions: [
+                FilledButton.icon(
+                  onPressed: () {
+                    final selected = ref.read(selectedLocatorForMinOutProvider);
+                    final hasNewLocator =
+                        selected != null && (selected.id ?? 0) > 0;
+
+                    if (!hasNewLocator) {
+                      showErrorCenterToast(context, 'Debe ingresar un nuevo estante');
+                      return;
+                    }
+
+                    PutAwayMovement? putAwayMovement =
+                    createPutAwayMovementFromMinOut(
+                      ref: ref,
+                      line: item,
+                      locatorFrom: selected,
+                    );
+
+                    if (putAwayMovement == null) return;
+
+                    ref.read(putAwayMovementCreateWithCompleteProvider.notifier)
+                        .state = putAwayMovement;
+
+                    ref.read(fireCreateMovementWithCompleteProvider.notifier)
+                        .update((state) => state + 1);
+                  },
+                  style: FilledButton.styleFrom(
+                    backgroundColor: themeColorPrimary,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+                  icon: const Icon(Icons.check),
+                  label: const Text('Confirmar'),
+                ),
+
+                TextButton.icon(
+                  onPressed: () => Navigator.of(context).pop(),
+                  icon: const Icon(Icons.close_rounded),
+                  label: const Text('Cancelar'),
+                  style: TextButton.styleFrom(
+                    foregroundColor: themeColorGray,
+                  ),
+                ),
+
+              ],
+            );
+          },
         );
       },
     );
@@ -798,21 +1357,126 @@ class _MInOutViewState extends ConsumerState<_MInOutView> {
     );
   }
 
-  void _showScreenLoading(BuildContext context) {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (BuildContext context) {
-        return Center(
-          child: CircularProgressIndicator(
-            color: themeBackgroundColor,
+  
+  Widget _buildMInOutList(WidgetRef ref, MInOutStatus stateNow) {
+    final mInOutList = stateNow.mInOutList;
+    final loadedMInOutList =
+    ref.watch(loadedMInOutListProvider(stateNow.mInOutType));
+
+    final isLoadingList = stateNow.isLoadingMInOutList;
+
+    if (mInOutList.isNotEmpty) {
+      return Column(
+        children: [
+          ListView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            itemCount: mInOutList.length,
+            itemBuilder: (context, index) {
+              final item = mInOutList[index];
+              return GestureDetector(
+                onTap: () async {
+                  mInOutNotifier.onDocChange(item.documentNo.toString());
+                  await loadMInOutAndLine(context, ref);
+                },
+                child: Column(
+                  children: [
+                    const Divider(height: 0),
+                    Container(
+                      color: item.docStatus.id == 'IP' ? themeColorWarningLight : null,
+                      child: Row(
+                        children: [
+                          Padding(
+                            padding: const EdgeInsets.fromLTRB(16, 8, 8, 8),
+                            child: Text(
+                              item.movementDate != null
+                                  ? DateFormat('dd/MM/yyyy').format(item.movementDate!)
+                                  : '',
+                              style: TextStyle(
+                                fontSize: themeFontSizeSmall,
+                                color: themeColorGray,
+                              ),
+                            ),
+                          ),
+                          Expanded(
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 8),
+                              child: Text(
+                                item.documentNo.toString(),
+                                style: const TextStyle(fontSize: themeFontSizeLarge),
+                              ),
+                            ),
+                          ),
+                          Padding(
+                            padding: const EdgeInsets.all(8),
+                            child: GestureDetector(
+                              onTap: () => _showMInOutData(context, item, stateNow),
+                              child: Icon(Icons.info_rounded, color: themeColorPrimary),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const Divider(height: 0),
+                  ],
+                ),
+              );
+            },
           ),
-        );
-      },
+        ],
+      );
+    }
+
+    if (isLoadingList) {
+      return const Padding(
+        padding: EdgeInsets.only(top: 32),
+        child: Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    return Padding(
+      padding: const EdgeInsets.only(top: 32),
+      child: Column(
+        children: [
+          if (isLoadingList) const LinearProgressIndicator(minHeight: 4),
+          Row(
+            children: [
+              Expanded(
+                child: CustomFilledButton(
+                  label: 'Cargar lista',
+                  icon: const Icon(Icons.download_rounded),
+                  isPosting: isLoadingList,
+                  onPressed: isLoadingList
+                      ? null
+                      : () async {
+                    await mInOutNotifier.loadDataList(ref);
+                  },
+                ),
+              ),
+              const SizedBox(width: 8),
+              if (loadedMInOutList.isNotEmpty)
+                Expanded(
+                  child: CustomFilledButton(
+                    label: 'Lista Guardada',
+                    icon: const Icon(Icons.history_rounded),
+                    isPosting: isLoadingList,
+                    onPressed: isLoadingList
+                        ? null
+                        : () async {
+                      await mInOutNotifier.loadSavedDataList(ref);
+                    },
+                  ),
+                ),
+            ],
+          ),
+        ],
+      ),
     );
   }
-  Widget _buildMInOutList(WidgetRef ref,MInOutStatus stateNow) {
+
+  /*Widget _buildMInOutList(WidgetRef ref,MInOutStatus stateNow) {
     final mInOutList = stateNow.mInOutList;
+    final loadedMInOutList = ref.watch(loadedMInOutListProvider(stateNow.mInOutType));
     return mInOutList.isNotEmpty
         ? Column(
       children: [
@@ -890,16 +1554,35 @@ class _MInOutViewState extends ConsumerState<_MInOutView> {
     )
         : Padding(
       padding: const EdgeInsets.only(top: 32),
-      child: Center(
-        child: CustomFilledButton(
-          label: 'Cargar lista',
-          onPressed: () async {
-            await mInOutNotifier.loadDataList(ref);
-          },
-        ),
+      child: Row(
+        children: [
+          Expanded(
+            child: CustomFilledButton(
+              label: 'Cargar lista',
+              onPressed: () async {
+                await mInOutNotifier.loadDataList(ref);
+              },
+            ),
+          ),
+          const SizedBox(width: 8),
+          if(loadedMInOutList.isNotEmpty)
+            Expanded(
+              child: CustomFilledButton(
+                label: 'Lista Guardada',
+                icon: const Icon(Icons.history_rounded),
+                isPosting: stateNow.isLoadingMInOutList,            // 👈 spinner también
+                expand: true,
+                onPressed: stateNow.isLoadingMInOutList
+                    ? null
+                    : () async {
+                  await mInOutNotifier.loadSavedDataList(ref);
+                },
+              ),
+            ),
+        ],
       ),
     );
-  }
+  }*/
   Future<void> _showMInOutData(BuildContext context, MInOut mInOut,MInOutStatus stateNow) {
     return showDialog(
       context: context,
@@ -1059,7 +1742,7 @@ class _MInOutViewState extends ConsumerState<_MInOutView> {
               onPressed: () async {
                 mInOutNotifier.clearMInOutData();
                 Navigator.of(context).pop();
-                await mInOutNotifier.loadDataList(ref);
+                //await mInOutNotifier.loadDataList(ref);
               },
               label: 'Si',
               icon: const Icon(Icons.check),
@@ -1077,59 +1760,89 @@ class _MInOutViewState extends ConsumerState<_MInOutView> {
     );
   }
   Widget _buildActionOrderList(MInOutNotifier mInOutNotifier,MInOutStatus stateNow) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        // pendiente
-        _buildOrderList(
-          icon: Icons.circle_outlined,
-          color: themeColorError,
-          background: themeColorErrorLight,
-          onPressed: () => mInOutNotifier.setOrderBy('pending'),
-          name: 'pending',
-          mInOutState: stateNow,
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 8.0),
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            // pendiente
+            _buildOrderList(
+              icon: Icons.circle_outlined,
+              color: themeColorError,
+              background: themeColorErrorLight,
+              onPressed: () => mInOutNotifier.setOrderBy('pending'),
+              name: 'pending',
+              mInOutState: stateNow,
+            ),
+            SizedBox(width: 4),
+            // menor
+            _buildOrderList(
+              icon: Icons.radio_button_checked_rounded,
+              color: themeColorWarning,
+              background: themeColorWarningLight,
+              onPressed: () => mInOutNotifier.setOrderBy('minor'),
+              name: 'minor',
+              mInOutState: stateNow,
+            ),
+            SizedBox(width: 4),
+            // supera
+            _buildOrderList(
+              icon: Icons.warning_amber_rounded,
+              color: themeColorWarning,
+              background: themeColorWarningLight,
+              onPressed: () => mInOutNotifier.setOrderBy('over'),
+              name: 'over',
+              mInOutState: stateNow,
+            ),
+            SizedBox(width: 4),
+            // manual
+            _buildOrderList(
+              icon: Icons.touch_app_outlined,
+              color: themeColorSuccessful,
+              background: themeColorSuccessfulLight,
+              onPressed: () => mInOutNotifier.setOrderBy('manually'),
+              name: 'manually',
+              mInOutState: stateNow,
+            ),
+            SizedBox(width: 4),
+            // correcto
+            _buildOrderList(
+              icon: Icons.check_circle_outline_rounded,
+              color: themeColorSuccessful,
+              background: themeColorSuccessfulLight,
+              onPressed: () => mInOutNotifier.setOrderBy('correct'),
+              name: 'correct',
+              mInOutState: stateNow,
+            ),
+            IconButton(
+              onPressed:  () {
+                saveMInOut(context, ref);
+              },
+              icon: Icon(
+                Symbols.save,
+                color: Colors.purple,
+
+              ),
+            ),
+            IconButton(
+              onPressed:  () {
+                //debugPrint('mInOutNotifier._showConfirmMInOut');
+                //_showConfirmMInOut(context);
+                reloadMInOut(context, ref);
+
+
+              },
+              icon: Icon(
+                Symbols.cloud_sync_rounded,
+                color: Colors.purple,
+
+              ),
+            ),
+          ],
         ),
-        SizedBox(width: 4),
-        // menor
-        _buildOrderList(
-          icon: Icons.radio_button_checked_rounded,
-          color: themeColorWarning,
-          background: themeColorWarningLight,
-          onPressed: () => mInOutNotifier.setOrderBy('minor'),
-          name: 'minor',
-          mInOutState: stateNow,
-        ),
-        SizedBox(width: 4),
-        // supera
-        _buildOrderList(
-          icon: Icons.warning_amber_rounded,
-          color: themeColorWarning,
-          background: themeColorWarningLight,
-          onPressed: () => mInOutNotifier.setOrderBy('over'),
-          name: 'over',
-          mInOutState: stateNow,
-        ),
-        SizedBox(width: 4),
-        // manual
-        _buildOrderList(
-          icon: Icons.touch_app_outlined,
-          color: themeColorSuccessful,
-          background: themeColorSuccessfulLight,
-          onPressed: () => mInOutNotifier.setOrderBy('manually'),
-          name: 'manually',
-          mInOutState: stateNow,
-        ),
-        SizedBox(width: 4),
-        // correcto
-        _buildOrderList(
-          icon: Icons.check_circle_outline_rounded,
-          color: themeColorSuccessful,
-          background: themeColorSuccessfulLight,
-          onPressed: () => mInOutNotifier.setOrderBy('correct'),
-          name: 'correct',
-          mInOutState: stateNow,
-        ),
-      ],
+      ),
     );
   }
   Widget _buildOrderList({
@@ -1174,6 +1887,23 @@ class _MInOutViewState extends ConsumerState<_MInOutView> {
       itemCount: mInOutLines.length,
       itemBuilder: (context, index) {
         final item = mInOutLines[index];
+        if(item.verifiedStatus == 'pending' && item.movementQty != null && item.confirmedQty != null && item.confirmedQty!>0){
+
+          final diff = item.confirmedQty!- item.movementQty!;
+          final status = diff>0 ? 'manually-over' : diff<0 ? 'manually-minor': 'manually-correct';
+          mInOutState.mInOut?.lines[index].copyWith(verifiedStatus: status,
+              targetQty: item.movementQty,manualQty: item.confirmedQty);
+        }
+        Color? itemColor = item.verifiedStatus == 'over' ||
+            item.verifiedStatus == 'manually-over'
+            ? Colors.orange.shade200
+            : item.verifiedStatus == 'minor' ||
+            item.verifiedStatus == 'manually-minor'
+            ? themeColorWarningLight : null;
+        debugPrint('Qty S:${item.scanningQty} M:${item.movementQty}');
+        debugPrint('Qty C:${item.confirmedQty} T:${item.targetQty}');
+
+
         return GestureDetector(
           onTap: () =>
               _selectLine(context, mInOutNotifier, mInOutState, item, ref),
@@ -1181,12 +1911,7 @@ class _MInOutViewState extends ConsumerState<_MInOutView> {
             children: [
               Divider(height: 0),
               Container(
-                color: item.verifiedStatus == 'over' ||
-                    item.verifiedStatus == 'manually-over'
-                    ? Colors.orange.shade200
-                    : item.verifiedStatus == 'minor' ||
-                    item.verifiedStatus == 'manually-minor'
-                    ? themeColorWarningLight : null,
+                color: itemColor,
                 child: Row(
                   children: [
                     Padding(
@@ -1318,7 +2043,7 @@ class _MInOutViewState extends ConsumerState<_MInOutView> {
     return showDialog(
       context: context,
       builder: (BuildContext context) {
-
+        debugPrint('showMInOutLine');
         return AlertDialog(
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(themeBorderRadius),
@@ -1366,6 +2091,7 @@ class _MInOutViewState extends ConsumerState<_MInOutView> {
                   Navigator.of(context).pop();
                   mInOutNotifier.onManualQuantityChange('${item.manualQty ?? 0}');
                   mInOutNotifier.onManualScrappedChange('${item.scrappedQty ?? 0}');
+                  debugPrint('showUpdateManualLine');
                   _showUpdateManualLine(context, mInOutState, item);
                 },
                 //
@@ -1384,6 +2110,7 @@ class _MInOutViewState extends ConsumerState<_MInOutView> {
                   } else {
                     mInOutNotifier.onManualQuantityChange('0');
                     mInOutNotifier.onManualScrappedChange('0');
+                    debugPrint('showInsertManualLine');
                     _showInsertManualLine(context, mInOutState, item);
                   }
                 },
@@ -1399,6 +2126,8 @@ class _MInOutViewState extends ConsumerState<_MInOutView> {
             CustomFilledButton(
               onPressed: () {
                 Navigator.of(context).pop();
+                debugPrint('showEditLocator');
+                ref.invalidate(selectedLocatorForMinOutProvider);
                 _showEditLocator(context, mInOutState, item, ref);
               },
               label: 'Estante',
@@ -1422,6 +2151,7 @@ class _MInOutViewState extends ConsumerState<_MInOutView> {
   }
   Future<void> _showUpdateManualLine(
       BuildContext context, MInOutStatus mInOutState, Line item) {
+    debugPrint('showUpdateManualLine');
     return showDialog(
       context: context,
       builder: (BuildContext context) {
@@ -1457,7 +2187,25 @@ class _MInOutViewState extends ConsumerState<_MInOutView> {
           ),
           actions: <Widget>[
             CustomFilledButton(
-              onPressed: () {
+              onPressed: () async {
+                 final mInOutState = ref.read(mInOutProvider);
+                if(mInOutState.manualQty==0){
+                  String message = 'La cantidad confirmada es 0, desea continuar?';
+                  String title = 'Confirmed Qty = 0' ;
+                  bool accept = await showConfirmDialog(context, title: title, message: message);
+                  debugPrint('confirmManualLine accept $accept');
+                  if(!accept){
+                    return ;
+                  }
+                  if(mInOutState.manualQty==0){
+                    String message = Messages.NOT_IMPLEMENTED_YET;
+                    if(context.mounted)showWarningCenterToast(context, message);
+                    return ;
+                  }
+
+                }
+
+                if(!context.mounted)return;
                 mInOutNotifier.confirmManualLine(context,ref,item);
                 Navigator.of(context).pop();
               },
@@ -1513,7 +2261,24 @@ class _MInOutViewState extends ConsumerState<_MInOutView> {
           ),
           actions: <Widget>[
             CustomFilledButton(
-              onPressed: () {
+              onPressed: () async {
+                final mInOutState = ref.read(mInOutProvider);
+                if(mInOutState.manualQty==0){
+                  String message = 'La cantidad confirmada es 0, desea continuar?';
+                  String title = 'Confirmed Qty = 0' ;
+                  bool accept = await showConfirmDialog(context, title: title, message: message);
+                  debugPrint('confirmManualLine accept $accept');
+                  if(!accept){
+                    return ;
+                  }
+                  if(mInOutState.manualQty==0){
+                    String message = Messages.NOT_IMPLEMENTED_YET;
+                    if(context.mounted)showWarningCenterToast(context, message);
+                    return ;
+                  }
+
+                }
+                if(!context.mounted)return;
                 mInOutNotifier.confirmManualLine(context,ref,item);
                 Navigator.of(context).pop();
               },
@@ -1542,9 +2307,7 @@ class _MInOutViewState extends ConsumerState<_MInOutView> {
     final widgetType = parseMInOutTypeFromWidget(widget.type);
     if (widgetType == null) {
       if (!context.mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Tipo inválido.')),
-      );
+      showErrorCenterToast(context, 'Tipo inválido.', durationSeconds: 5);
       return;
     }
 
@@ -1554,9 +2317,7 @@ class _MInOutViewState extends ConsumerState<_MInOutView> {
     final list = readSavedPayloadList(box: box, key: key);
     if (list.isEmpty) {
       if (!context.mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('No hay datos guardados.')),
-      );
+      showWarningCenterToast(context, 'No hay datos guardados.', durationSeconds: 3);
       return;
     }
 
@@ -1626,9 +2387,12 @@ class _MInOutViewState extends ConsumerState<_MInOutView> {
     // Safety check: type must match
     final savedTypeName = (selected['mInOutType'] ?? '').toString().trim();
     if (savedTypeName != widgetType.name) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('El guardado corresponde a "$savedTypeName".')),
+      showWarningCenterToast(
+        context,
+        'El guardado corresponde a "$savedTypeName".',
+        durationSeconds: 0, // manual para que lo lea bien
       );
+
       return;
     }
 
@@ -1638,16 +2402,14 @@ class _MInOutViewState extends ConsumerState<_MInOutView> {
       selected,
       context: context,
     );
-
     if (!context.mounted) return;
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          restored ? 'Guardado restaurado correctamente ✅' : 'No se pudo restaurar el guardado.',
-        ),
-      ),
-    );
+    if (restored) {
+      showSuccessCenterToast(context, 'Guardado restaurado correctamente ✅', durationSeconds: 3);
+    } else {
+      showErrorCenterToast(context, 'No se pudo restaurar el guardado.', durationSeconds: 5);
+    }
+
   }
 
 
@@ -1658,7 +2420,7 @@ class _MInOutViewState extends ConsumerState<_MInOutView> {
 }
 
 Future<void> reloadMInOut(BuildContext context, WidgetRef ref) async {
-  print(' mInOutNotifier.reload');
+  debugPrint('mInOutNotifier.reload');
   final mInOutState = ref.read(mInOutProvider);
   if(mInOutState.doc.isEmpty){
     String message = Messages.DOCUMENT_EMPTY ;
@@ -1868,7 +2630,7 @@ class _ScanView extends ConsumerWidget {
                                       // Guarda en GetStorage
                                       GetStorage().write(KEY_QTY_ALLOW_INPUT, parsed);
 
-                                      print("Guardado -> $parsed");
+                                      debugPrint("Guardado -> $parsed");
 
                                     }
                                   },
@@ -2016,11 +2778,12 @@ void saveMInOut(BuildContext context, WidgetRef ref) {
   final stateNow = ref.read(mInOutProvider);
 
   final payload = buildSaveMInOutPayload(stateNow);
+
+
   if (payload == null) {
     if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('No hay datos para guardar.')),
-      );
+      showWarningCenterToast(context, 'No hay datos para guardar.', durationSeconds: 3);
+
     }
     return;
   }
@@ -2031,15 +2794,49 @@ void saveMInOut(BuildContext context, WidgetRef ref) {
     box.write(KEY_SAVED_MINOUT_V1_TYPE, stateNow.mInOutType.name);
 
     if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Guardado local OK ✅')),
-      );
+      showSuccessCenterToast(context, 'Guardado local OK ✅', durationSeconds: 3);
+
     }
   } catch (e) {
     if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error al guardar: $e')),
-      );
+      showErrorCenterToast(context, 'Error al guardar: $e', durationSeconds: 5);
+
     }
+  }
+}
+class _HdrLabel extends StatelessWidget {
+  final String text;
+  const _HdrLabel(this.text);
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(right: 10),
+      child: Text(
+        text,
+        style: const TextStyle(
+          fontSize: themeFontSizeSmall,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+    );
+  }
+}
+
+class _HdrValue extends StatelessWidget {
+  final String text;
+  final int? maxLines;
+  final TextOverflow? overflow;
+
+  const _HdrValue(this.text, {this.maxLines, this.overflow});
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      text,
+      style: const TextStyle(fontSize: themeFontSizeSmall),
+      maxLines: maxLines,
+      overflow: overflow,
+    );
   }
 }

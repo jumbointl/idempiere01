@@ -89,40 +89,18 @@ class SqlDataMovementLine extends IdempiereMovementLine implements SqlData {
 
 
 
-      /*data['id'] = id;
-      data['uid'] = uid;
       if (aDClientID != null) {
         data['AD_Client_ID'] = aDClientID!.toJsonForIdempiereSqlUse();
       }
       if (aDOrgID != null) {
         data['AD_Org_ID'] = aDOrgID!.toJsonForIdempiereSqlUse();
       }
-      data['Created'] = created;
       if (createdBy != null) {
         data['CreatedBy'] = createdBy!.toJsonForIdempiereSqlUse();
       }
-      data['Updated'] = updated;
       if (updatedBy != null) {
         data['UpdatedBy'] = updatedBy!.toJsonForIdempiereSqlUse();
       }
-      data['ConfirmedQty'] = confirmedQty;
-      data['TargetQty'] = targetQty;
-      data['ScrappedQty'] = scrappedQty;
-      data['Processed'] = processed;
-      data['Value'] = value;
-      data['PriceEntered'] = priceEntered;
-      data['PriceList'] = priceList;
-      data['PriceActual'] = priceActual;
-      data['ProductName'] = productName;
-      data['LineNetAmt'] = lineNetAmt;
-      data['active'] = active;
-      data['propertyLabel'] = propertyLabel;
-      data['identifier'] = identifier;
-      data['image'] = image;
-      data['category'] = category;
-      data['name'] = name;
-      data['SKU'] = sKU;
-      data['UPC'] = uPC;*/
 
       return data;
   }

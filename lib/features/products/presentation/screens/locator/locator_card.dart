@@ -1,4 +1,3 @@
-import 'package:awesome_dialog/awesome_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:monalisa_app_001/features/products/presentation/providers/locator_provider.dart';
@@ -6,6 +5,7 @@ import 'package:monalisa_app_001/features/products/presentation/providers/store_
 
 import '../../../../../config/theme/app_theme.dart';
 import '../../../../shared/data/memory.dart';
+import '../../../common/messages_dialog.dart';
 import '../../providers/product_provider_common.dart';
 import '../../../../shared/data/messages.dart';
 import '../../../domain/idempiere/idempiere_locator.dart';
@@ -99,31 +99,6 @@ class LocatorCardState extends ConsumerState<LocatorCard> {
       ),
     );
   }
-   void showErrorMessage(BuildContext context, WidgetRef ref, String message) {
-     if (!context.mounted) {
-       Future.delayed(const Duration(seconds: 1));
-       if(!context.mounted) return;
-     }
-     AwesomeDialog(
-       context: context,
-       animType: AnimType.scale,
-       dialogType: DialogType.error,
-       body: Center(child: Column(
-         children: [
-           Text(message,
-             style: TextStyle(fontStyle: FontStyle.italic),
-           ),
-         ],
-       ),),
-       title:  message,
-       desc:   '',
-       autoHide: const Duration(seconds: 3),
-       btnOkOnPress: () {},
-       btnOkColor: Colors.amber,
-       btnCancelText: Messages.CANCEL,
-       btnOkText: Messages.OK,
-     ).show();
-     return;
-   }
+
 
 }

@@ -87,6 +87,36 @@ class SqlDataMovement extends IdempiereMovement implements SqlData {
 
       return data;
   }
+  Map<String, dynamic>  getInsertForSwitchBetweenLocatorJson() {
+
+    description = Memory.getDescriptionMoveBetweenFromApp();
+    movementDate = DateTime.now().toIso8601String().split('T').first ;
+    isActive = true;
+
+    final Map<String, dynamic> data =  <String, dynamic>{};
+
+    if (aDOrgID != null) {
+      data['AD_Org_ID'] = aDOrgID!.toJsonForIdempiereSqlUse();
+    }
+    data['IsActive'] = isActive;
+
+
+    if (mWarehouseID != null) {
+      data['M_Warehouse_ID'] = mWarehouseID!.toJsonForIdempiereSqlUse();
+    }
+    if (mWarehouseToID != null) {
+      data['M_WarehouseTo_ID'] = mWarehouseToID!.toJsonForIdempiereSqlUse();
+    }
+    data['Description'] = description ?? Memory.getDescriptionFromApp();
+    data['MovementDate'] = movementDate ?? DateTime.now().toIso8601String().split('T').first ;
+    data['model-name'] = modelName;
+    if (cDocTypeID != null) {
+      data['C_DocType_ID'] = cDocTypeID!.toJsonForIdempiereSqlUse();
+    }
+
+
+    return data;
+  }
 
 
   @override

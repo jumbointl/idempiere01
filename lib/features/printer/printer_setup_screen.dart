@@ -1,6 +1,5 @@
 import 'dart:convert';
 
-import 'package:awesome_dialog/awesome_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -359,14 +358,45 @@ class PrinterSetupScreen extends ConsumerStatefulWidget {
 
   }
 
-  void askForPrint(WidgetRef ref, MOPrinter printer) {
+  Future<void> askForPrint(WidgetRef ref, MOPrinter printer) async {
     if(printer.name==null){
       return ;
     }
     String title = Messages.PRINT_TO_LAST_PRINTER;
     String message = printer.name!;
     bool directPrint = true;
-    AwesomeDialog(
+    directPrint = await showConfirmDialog(
+      context,
+      title: title,
+      message: message,
+      okText: Messages.OK,
+      cancelText: Messages.CANCEL,
+      okColor: themeColorSuccessful,
+      cancelColor: themeColorError,
+      icon: Icons.help_outline_rounded,
+      iconColor: themeColorWarning,
+    );
+
+    if (!directPrint) {
+      ref.read(directPrintWithLastPrinterProvider.notifier).state = false;
+      return;
+    }
+
+    final printerState = ref.read(printerScanProvider);
+    final String ip = printerState.ipController.text.trim();
+    final String port = printerState.portController.text.trim();
+    final String type = printerState.typeController.text.trim();
+    final String name = printerState.nameController.text.trim();
+
+    if (ip.isEmpty || port.isEmpty || type.isEmpty || name.isEmpty) {
+      showWarningMessage(context, ref, Messages.ERROR_SAVE_PRINTER);
+      return;
+    }
+
+    final String qrData = '$ip:$port:$type:$name:END';
+    ref.read(printerScanProvider.notifier).updateFromScan(qrData, ref);
+
+    /* AwesomeDialog(
         context: ref.context,
         headerAnimationLoop: false,
         dialogType: DialogType.noHeader,
@@ -412,7 +442,7 @@ class PrinterSetupScreen extends ConsumerStatefulWidget {
 
       String qrData = '$ip:$port:$type:$name:END';
       ref.read(printerScanProvider.notifier).updateFromScan(qrData, ref);
-    });
+    });*/
   }
   Widget editableField({
     required String label,

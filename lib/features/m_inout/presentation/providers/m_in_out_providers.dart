@@ -2,22 +2,30 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
-import 'package:flutter_addons/flutter_addons.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
 import 'package:get_storage/get_storage.dart';
 import 'package:intl/intl.dart';
+import 'package:monalisa_app_001/features/auth/presentation/providers/auth_provider.dart';
 import 'package:monalisa_app_001/features/m_inout/domain/entities/line.dart';
 import 'package:monalisa_app_001/features/m_inout/domain/entities/m_in_out.dart';
 import 'package:monalisa_app_001/features/m_inout/domain/entities/m_in_out_confirm.dart';
 import 'package:monalisa_app_001/features/m_inout/domain/repositories/m_in_out_repositiry.dart';
-import 'package:monalisa_app_001/features/m_inout/presentation/providers/with_loading_m_in_out.dart';
 import 'package:monalisa_app_001/features/products/common/messages_dialog.dart';
 import 'package:monalisa_app_001/features/products/common/number_input_panel.dart';
+import 'package:monalisa_app_001/features/products/domain/idempiere/idempiere_document_type.dart';
+import 'package:monalisa_app_001/features/products/domain/idempiere/idempiere_locator.dart';
+import 'package:monalisa_app_001/features/products/domain/idempiere/idempiere_warehouse.dart';
+import 'package:monalisa_app_001/features/products/domain/idempiere/put_away_movement.dart';
 import '../../../../config/constants/roles_app.dart';
 import '../../../../config/theme/app_theme.dart';
 import '../../../products/common/number_sum_panel.dart';
 import '../../../products/common/selections_dialog.dart';
+import '../../../products/common/utils/action_progress_dialog.dart';
+import '../../../products/common/utils/action_progress_state.dart';
+import '../../../products/domain/idempiere/idempiere_organization.dart';
+import '../../../products/domain/idempiere/idempiere_product.dart';
+import '../../../products/presentation/screens/movement/create/movement_create_validation_result.dart';
 import '../../../shared/data/memory.dart';
 import '../../../shared/data/messages.dart';
 import '../../../shared/presentation/widgets/custom_filled_button.dart';
@@ -53,6 +61,12 @@ final savedConfirmIdProvider = StateProvider<int>((ref) {
   return 0;
 });
 
+final loadedMInOutListProvider =
+StateProvider.family<List<MInOut>, MInOutType>((ref, type) {
+  return <MInOut>[];
+});
+
+final usingQuickCompleteProvider = StateProvider.autoDispose<bool>((ref) => false);
 class MInOutNotifier extends StateNotifier<MInOutStatus> {
   final MInOutRepository mInOutRepository;
   final ScrollController scanBarcodeListScrollController = ScrollController();
@@ -70,9 +84,179 @@ class MInOutNotifier extends StateNotifier<MInOutStatus> {
       isComplete: false,
     ),
   );
-
   void setParameters(String type) {
-    if (type == 'shipment') {
+    MInOutType? parsed;
+
+    // Parse enum safely (avoids stringly-typed switch)
+    try {
+      parsed = MInOutType.values.byName(type);
+    } catch (_) {
+      parsed = null;
+    }
+
+    if (parsed == null) {
+      debugPrint('[setParameters] Unknown type="$type"');
+      return;
+    }
+    switch (parsed) {
+      case MInOutType.shipment:
+        state = state.copyWith(
+          isSOTrx: true,
+          mInOutType: MInOutType.shipment,
+          title: 'Shipment',
+          rolShowQty: state.mInOut?.docStatus.id.toString() == 'IP'
+              ? true
+              : RolesApp.appShipmentQty,
+          rolManualQty: RolesApp.appShipmentManual,
+          rolShowScrap: false,
+          rolManualScrap: false,
+          rolCompleteLow: RolesApp.appShipmentLowQty,
+          rolCompleteOver: RolesApp.appShipmentLowQty,
+          rolPrepare: RolesApp.appShipmentPrepare,
+          rolComplete: RolesApp.appShipmentComplete,
+          rolQuickComplete: RolesApp.appShipmentQuickComplete,
+        );
+        break;
+
+      case MInOutType.shipmentPrepare:
+      // Same as shipment, but mInOutType is shipmentPrepare
+        state = state.copyWith(
+          isSOTrx: true,
+          mInOutType: MInOutType.shipmentPrepare,
+          title: 'Shipment Prepare',
+          rolShowQty: state.mInOut?.docStatus.id.toString() == 'IP'
+              ? true
+              : RolesApp.appShipmentQty,
+          rolManualQty: RolesApp.appShipmentManual,
+          rolShowScrap: false,
+          rolManualScrap: false,
+          rolCompleteLow: RolesApp.appShipmentLowQty,
+          rolCompleteOver: RolesApp.appShipmentLowQty,
+          rolPrepare: RolesApp.appShipmentPrepare,
+          rolComplete: RolesApp.appShipmentComplete,
+          rolQuickComplete: RolesApp.appShipmentQuickComplete,
+        );
+        break;
+
+      case MInOutType.shipmentConfirm:
+        state = state.copyWith(
+          isSOTrx: true,
+          mInOutType: MInOutType.shipmentConfirm,
+          title: 'Shipment Confirm',
+          rolShowQty: RolesApp.appShipmentconfirmQty,
+          rolManualQty: RolesApp.appShipmentconfirmManual,
+          rolShowScrap: false,
+          rolManualScrap: false,
+          rolCompleteLow: RolesApp.appShipmentLowQty,
+          rolCompleteOver: RolesApp.appShipmentLowQty,
+          rolComplete: RolesApp.appShipmentconfirmComplete,
+          rolQuickComplete: RolesApp.appShipmentconfirmQuickComplete,
+        );
+        break;
+
+      case MInOutType.pickConfirm:
+        state = state.copyWith(
+          isSOTrx: true,
+          mInOutType: MInOutType.pickConfirm,
+          title: 'Pick Confirm',
+          rolShowQty: RolesApp.appPickconfirmQty,
+          rolManualQty: RolesApp.appPickconfirmManual,
+          rolShowScrap: RolesApp.appPickconfirmQty,
+          rolManualScrap: RolesApp.appPickconfirmManual,
+          rolCompleteLow: RolesApp.appShipmentLowQty,
+          rolCompleteOver: RolesApp.appShipmentLowQty,
+          rolComplete: RolesApp.appPickconfirmComplete,
+          rolQuickComplete: RolesApp.appPickconfirmQuickComplete,
+        );
+        break;
+
+      case MInOutType.receipt:
+        state = state.copyWith(
+          isSOTrx: false,
+          mInOutType: MInOutType.receipt,
+          title: 'Receipt',
+          rolShowQty: state.mInOut?.docStatus.id.toString() == 'IP'
+              ? true
+              : RolesApp.appReceiptQty,
+          rolManualQty: RolesApp.appReceiptManual,
+          rolShowScrap: false,
+          rolManualScrap: false,
+          rolCompleteLow: RolesApp.appShipmentLowQty,
+          rolCompleteOver: RolesApp.appShipmentLowQty,
+          rolPrepare: RolesApp.appReceiptPrepare,
+          rolComplete: RolesApp.appReceiptComplete,
+          rolQuickComplete: RolesApp.appReceiptQuickComplete,
+        );
+        break;
+
+      case MInOutType.receiptConfirm:
+        state = state.copyWith(
+          isSOTrx: false,
+          mInOutType: MInOutType.receiptConfirm,
+          title: 'Receipt Confirm',
+          rolShowQty: RolesApp.appReceiptconfirmQty,
+          rolManualQty: RolesApp.appReceiptconfirmManual,
+          rolShowScrap: RolesApp.appReceiptconfirmQty,
+          rolManualScrap: RolesApp.appReceiptconfirmManual,
+          rolCompleteLow: RolesApp.appShipmentLowQty,
+          rolCompleteOver: RolesApp.appShipmentLowQty,
+          rolComplete: RolesApp.appReceiptconfirmComplete,
+          rolQuickComplete: RolesApp.appReceiptconfirmQuickComplete,
+        );
+        break;
+
+      case MInOutType.qaConfirm:
+        state = state.copyWith(
+          isSOTrx: false,
+          mInOutType: MInOutType.qaConfirm,
+          title: 'QA Confirm',
+          rolShowQty: RolesApp.appQaconfirmQty,
+          rolManualQty: RolesApp.appQaconfirmManual,
+          rolShowScrap: RolesApp.appQaconfirmQty,
+          rolManualScrap: RolesApp.appQaconfirmManual,
+          rolCompleteLow: RolesApp.appShipmentLowQty,
+          rolCompleteOver: RolesApp.appShipmentLowQty,
+          rolComplete: RolesApp.appQaconfirmComplete,
+          rolQuickComplete: RolesApp.appQaconfirmQuickComplete,
+        );
+        break;
+
+      case MInOutType.move:
+        state = state.copyWith(
+          isSOTrx: null,
+          mInOutType: MInOutType.move,
+          title: 'Move',
+          rolShowQty: true,
+          rolManualQty: RolesApp.appShipmentManual,
+          rolShowScrap: false,
+          rolManualScrap: false,
+          rolCompleteLow: true,
+          rolCompleteOver: true,
+          rolComplete: RolesApp.appMovementComplete,
+          rolQuickComplete: RolesApp.appMovementQuickComplete,
+        );
+        break;
+
+      case MInOutType.moveConfirm:
+        state = state.copyWith(
+          isSOTrx: null,
+          mInOutType: MInOutType.moveConfirm,
+          title: 'Move Confirm',
+          rolShowQty: true,
+          rolManualQty: true,
+          rolShowScrap: false,
+          rolManualScrap: false,
+          rolCompleteLow: true,
+          rolCompleteOver: true,
+          rolComplete: RolesApp.appMovementconfirmComplete,
+          rolQuickComplete: RolesApp.appMovementconfirmQuickComplete,
+        );
+        break;
+    }
+  }
+
+  /*void setParameters(String type) {
+    if (type == MInOutType.shipment.name) {
       state = state.copyWith(
         isSOTrx: true,
         mInOutType: MInOutType.shipment,
@@ -89,7 +273,7 @@ class MInOutNotifier extends StateNotifier<MInOutStatus> {
         rolComplete: RolesApp.appShipmentComplete,
         rolQuickComplete: RolesApp.appShipmentQuickComplete,
       );
-    } else if (type == 'shipmentconfirm') {
+    } else if (type == MInOutType.shipmentConfirm.name) {
       state = state.copyWith(
         isSOTrx: true,
         mInOutType: MInOutType.shipmentConfirm,
@@ -103,7 +287,7 @@ class MInOutNotifier extends StateNotifier<MInOutStatus> {
         rolComplete: RolesApp.appShipmentconfirmComplete,
         rolQuickComplete: RolesApp.appShipmentconfirmQuickComplete,
       );
-    } else if (type == 'pickconfirm') {
+    } else if (type == MInOutType.pickConfirm.name) {
       state = state.copyWith(
         isSOTrx: true,
         mInOutType: MInOutType.pickConfirm,
@@ -117,7 +301,7 @@ class MInOutNotifier extends StateNotifier<MInOutStatus> {
         rolComplete: RolesApp.appPickconfirmComplete,
         rolQuickComplete: RolesApp.appPickconfirmQuickComplete,
       );
-    } else if (type == 'receipt') {
+    } else if (type == MInOutType.receipt.name) {
       state = state.copyWith(
         isSOTrx: false,
         mInOutType: MInOutType.receipt,
@@ -134,7 +318,7 @@ class MInOutNotifier extends StateNotifier<MInOutStatus> {
         rolComplete: RolesApp.appReceiptComplete,
         rolQuickComplete: RolesApp.appReceiptQuickComplete,
       );
-    } else if (type == 'receiptconfirm') {
+    } else if (type == MInOutType.receiptConfirm.name) {
       state = state.copyWith(
         isSOTrx: false,
         mInOutType: MInOutType.receiptConfirm,
@@ -148,7 +332,7 @@ class MInOutNotifier extends StateNotifier<MInOutStatus> {
         rolComplete: RolesApp.appReceiptconfirmComplete,
         rolQuickComplete: RolesApp.appReceiptconfirmQuickComplete,
       );
-    } else if (type == 'qaconfirm') {
+    } else if (type == MInOutType.qaConfirm.name) {
       state = state.copyWith(
         isSOTrx: false,
         mInOutType: MInOutType.qaConfirm,
@@ -162,7 +346,7 @@ class MInOutNotifier extends StateNotifier<MInOutStatus> {
         rolComplete: RolesApp.appQaconfirmComplete,
         rolQuickComplete: RolesApp.appQaconfirmQuickComplete,
       );
-    } else if (type == 'move') {
+    } else if (type == MInOutType.move.name) {
       state = state.copyWith(
         isSOTrx: null,
         mInOutType: MInOutType.move,
@@ -176,7 +360,7 @@ class MInOutNotifier extends StateNotifier<MInOutStatus> {
         rolComplete: RolesApp.appMovementComplete,
         rolQuickComplete: RolesApp.appMovementQuickComplete,
       );
-    } else if (type == 'moveconfirm') {
+    } else if (type == MInOutType.moveConfirm.name) {
       state = state.copyWith(
         isSOTrx: null,
         mInOutType: MInOutType.moveConfirm,
@@ -191,7 +375,7 @@ class MInOutNotifier extends StateNotifier<MInOutStatus> {
         rolQuickComplete: RolesApp.appMovementconfirmQuickComplete,
       );
     }
-  }
+  }*/
   Future<bool> restoreFromPayload(
       WidgetRef ref,
       Map<String, dynamic> map, {
@@ -205,7 +389,12 @@ class MInOutNotifier extends StateNotifier<MInOutStatus> {
 
       final MInOut? restoredMInOut =
       (mInOutJson is Map<String, dynamic>) ? MInOut.fromJson(mInOutJson) : null;
-
+      if(restoredMInOut != null){
+        final stateLines = restoredMInOut.lines ;
+        for(final line in stateLines){
+          debugPrint('restoredMInOut ${line.line ?? ''}, ${line.confirmId ?? 'confirmId null'}');
+        }
+      }
       final MInOutConfirm? restoredConfirm =
       (mInOutConfirmJson is Map<String, dynamic>) ? MInOutConfirm.fromJson(mInOutConfirmJson) : null;
 
@@ -241,8 +430,21 @@ class MInOutNotifier extends StateNotifier<MInOutStatus> {
         scrappedQty: (map['scrappedQty'] as num?)?.toDouble() ?? state.scrappedQty,
         editLocator: (map['editLocator'] ?? '').toString(),
         isComplete: map['isComplete'] as bool? ?? false,
+        usingRolQuickComplete: map['usingRolQuickComplete'] as bool? ?? false,
 
-        // roles
+
+        // roles (SECURITY): do NOT restore from payload
+        rolShowQty: state.rolShowQty,
+        rolShowScrap: state.rolShowScrap,
+        rolManualQty: state.rolManualQty,
+        rolManualScrap: state.rolManualScrap,
+        rolCompleteLow: state.rolCompleteLow,
+        rolCompleteOver: state.rolCompleteOver,
+        rolPrepare: state.rolPrepare,
+        rolComplete: state.rolComplete,
+        rolQuickComplete: state.rolQuickComplete,
+        /*
+        // roles old
         rolShowQty: map['rolShowQty'] as bool? ?? state.rolShowQty,
         rolShowScrap: map['rolShowScrap'] as bool? ?? state.rolShowScrap,
         rolManualQty: map['rolManualQty'] as bool? ?? state.rolManualQty,
@@ -251,7 +453,7 @@ class MInOutNotifier extends StateNotifier<MInOutStatus> {
         rolCompleteOver: map['rolCompleteOver'] as bool? ?? state.rolCompleteOver,
         rolPrepare: map['rolPrepare'] as bool? ?? state.rolPrepare,
         rolComplete: map['rolComplete'] as bool? ?? state.rolComplete,
-        rolQuickComplete: map['rolQuickComplete'] as bool? ?? state.rolQuickComplete,
+        rolQuickComplete: map['rolQuickComplete'] as bool? ?? state.rolQuickComplete,*/
 
         // data
         mInOut: restoredMInOut,
@@ -266,11 +468,13 @@ class MInOutNotifier extends StateNotifier<MInOutStatus> {
         isLoading: false,
         isLoadingMInOutList: false,
       );
-
-      // Optional: recompute line status based on saved barcodes
-      if (context != null && context.mounted) {
-        updatedMInOutLineSilence('');
+      if(state.mInOut != null){
+        final stateLines = state.mInOut!.lines ;
+        for(final line in stateLines){
+          debugPrint('restoredMInOut state ${line.line ?? ''}, M ${line.movementQty ?? ''}, C ${line.confirmedQty ?? ''}');
+        }
       }
+
       debugPrint('RESTORED mInOutConfirmList: ${state.mInOutConfirmList.length}');
       return true;
     } catch (e) {
@@ -379,49 +583,24 @@ class MInOutNotifier extends StateNotifier<MInOutStatus> {
 
     debugPrint('[loadMInOutAndLine] START');
 
-    final stateNow = state;
-    final String doc = stateNow.doc;
+    final String doc = state.doc;
 
-    debugPrint('[loadMInOutAndLine] type=${stateNow.mInOutType} doc=$doc');
+    debugPrint('[loadMInOutAndLine] type=${state.mInOutType} doc=$doc');
 
     // ---------------- CONFIRM FLOWS ----------------
-    if (_isConfirmType(stateNow.mInOutType)) {
+    if (isMInOutConfirmType(state.mInOutType)) {
       debugPrint('[loadMInOutAndLine] route=CONFIRM');
       int savedConfirmId = ref.read(savedConfirmIdProvider) ;
       try {
-        /*final result = await withLoadingMInOut(
-          context: context,
-          tag: 'CONFIRM getMInOutAndLine',
-          action: () async {
-            final mInOut = await mInOutNotifier.getMInOutAndLine(ref);
-            if(mInOut.id == null) return (mInOut,const<MInOutConfirm>[]);
-            final list = await mInOutNotifier.getMInOutConfirmList(mInOut.id!, ref);
 
-            if(savedConfirmId>0){
-              MInOutConfirm m = await mInOutNotifier.getMInOutConfirmAndLine(savedConfirmId, ref);
-              stateNow.copyWith(mInOutConfirm: m,mInOut: mInOut,isLoading: false);
-            }
-            return (mInOut,list);
-          },
-        );
-        final mInOut = result?.$1 ;
-        final confirmList = result?.$2 ?? const <MInOutConfirm>[];
-        */
         final mInOut = await mInOutNotifier.getMInOutAndLine(ref);
-        final confirmList = await mInOutNotifier.getMInOutConfirmList(mInOut.id!, ref);
-
-        if(savedConfirmId>0){
-          MInOutConfirm m = await mInOutNotifier.getMInOutConfirmAndLine(savedConfirmId, ref);
-          stateNow.copyWith(mInOutConfirm: m,mInOut: mInOut,isLoading: false);
-        }
-
-        debugPrint('[loadMInOutAndLine] mInOut ${mInOut.toJson()}');
         if (mInOut.id == null) {
           state = state.copyWith(
               isLoading: false
           );
           if (!context.mounted) return;
           showErrorMessage(
+            durationSeconds: 0,
             context,
             ref,
             '${Messages.NOT_M_IN_OUT_RECORD_FOUND} : $doc',
@@ -429,13 +608,19 @@ class MInOutNotifier extends StateNotifier<MInOutStatus> {
           return;
         }
 
-        if(savedConfirmId<=0) {
+        if(savedConfirmId>0){
+          MInOutConfirm m = await mInOutNotifier.getMInOutConfirmAndLine(savedConfirmId, ref);
+          state = state.copyWith(mInOutConfirm: m,mInOut: mInOut,isLoading: false,viewMInOut: true);
+        } else {
+
+            final confirmList = await mInOutNotifier.getMInOutConfirmList(mInOut.id!, ref);
+            state = state.copyWith(mInOutConfirmList: confirmList,isLoading: false);
             if (!context.mounted) return;
             await _handleConfirmFlow(
             context: context,
             ref: ref,
             notifier: mInOutNotifier,
-            stateNow: stateNow,
+            stateNow: state,
             doc: doc,
             mInOut: mInOut,
             confirmList: confirmList,
@@ -451,32 +636,22 @@ class MInOutNotifier extends StateNotifier<MInOutStatus> {
     }
 
     // ---------------- MOVE CONFIRM ----------------
-    if (_isMoveConfirmType(stateNow.mInOutType)) {
+    if (isMoveConfirmType(state.mInOutType)) {
       debugPrint('[loadMInOutAndLine] route=MOVE_CONFIRM');
       int savedConfirmId = ref.read(savedConfirmIdProvider) ;
       if(savedConfirmId>0){
-        /*await withLoadingMInOut(
-          context: context,
-          tag: 'MOVE_CONFIRM getMovementAndLine',
-          action: () async {
-            MInOut i = await mInOutNotifier.getMovementAndLine(ref) ;
-            MInOutConfirm c = await mInOutNotifier.getMovementConfirmAndLine(savedConfirmId, ref);
-            stateNow.copyWith(mInOutConfirm: c, mInOut: i,isLoading: false);
-            return i;
 
-          },
-        );*/
-        await mInOutNotifier.getMovementAndLine(ref) ;
-        await mInOutNotifier.getMovementConfirmAndLine(savedConfirmId, ref);
-        stateNow.copyWith(isLoading: false);
+        final mInOut = await mInOutNotifier.getMovementAndLine(ref) ;
+        final mInOutConfirm = await mInOutNotifier.getMovementConfirmAndLine(savedConfirmId, ref);
+        state = state.copyWith(mInOut:mInOut,mInOutConfirm: mInOutConfirm, isLoading: false);
 
       } else {
-
+        debugPrint('[loadMInOutAndLine] route=MOVE_CONFIRM no savedConfirmId');
         await _handleMoveConfirmFlow(
           context: context,
           ref: ref,
           notifier: mInOutNotifier,
-          stateNow: stateNow,
+          stateNow: state,
         );
       }
 
@@ -487,7 +662,7 @@ class MInOutNotifier extends StateNotifier<MInOutStatus> {
     }
 
     // ---------------- MOVE ----------------
-    if (_isMoveType(stateNow.mInOutType)) {
+    if (isMoveType(state.mInOutType)) {
       debugPrint('[loadMInOutAndLine] route=MOVE');
       await mInOutNotifier.getMovementAndLine(ref);
       return;
@@ -499,29 +674,34 @@ class MInOutNotifier extends StateNotifier<MInOutStatus> {
   }
 
 
-  bool _isConfirmType(MInOutType t) {
+  bool isMInOutConfirmType(MInOutType t) {
     return t == MInOutType.shipmentConfirm ||
         t == MInOutType.receiptConfirm ||
         t == MInOutType.pickConfirm ||
         t == MInOutType.qaConfirm;
   }
+  bool isShipmentPrepareType(MInOutType t) {
+    return t == MInOutType.shipmentPrepare;
+  }
 
-  bool _isMoveConfirmType(MInOutType t) {
+  bool isMoveConfirmType(MInOutType t) {
     return t == MInOutType.moveConfirm;
   }
 
-  bool _isMoveType(MInOutType t) {
+  bool isMoveType(MInOutType t) {
     return t == MInOutType.move;
   }
 
 
-  bool _isConfirmFlow(MInOutType type, List<MInOutConfirm> mInOutConfirmList) {
+  bool isMInOutConfirmCreateFlow(MInOutType type, List<MInOutConfirm> mInOutConfirmList) {
     if(mInOutConfirmList.isNotEmpty) return false;
-    if(!RolesApp.canCreateConfirm) return false;
+    if(!canCreateDocument(type)) return false;
     return type == MInOutType.shipmentConfirm ||
         type == MInOutType.receiptConfirm ||
         type == MInOutType.pickConfirm ||
-        type == MInOutType.qaConfirm;
+        type == MInOutType.qaConfirm ||
+        type == MInOutType.shipment
+    ;
   }
   Future<void> _handleConfirmFlow({
     required BuildContext context,
@@ -532,8 +712,10 @@ class MInOutNotifier extends StateNotifier<MInOutStatus> {
     required MInOut mInOut,
     required List<MInOutConfirm> confirmList,
   }) async {
+    debugPrint('_handleConfirmFlow');
+
     // Decide whether to auto-create a confirm or let user pick one
-    if (_isConfirmFlow(stateNow.mInOutType, confirmList)) {
+    if (isMInOutConfirmCreateFlow(stateNow.mInOutType, confirmList)) {
       final isPickConfirm = stateNow.mInOutType == MInOutType.pickConfirm;
       final isQaConfirm = stateNow.mInOutType == MInOutType.qaConfirm;
       final isShipmentConfirm = stateNow.mInOutType == MInOutType.shipmentConfirm;
@@ -545,7 +727,6 @@ class MInOutNotifier extends StateNotifier<MInOutStatus> {
 
       debugPrint('[loadMInOutAndLine] auto-create confirm flow');
 
-      await Future.delayed(const Duration(milliseconds: 500));
       if (!context.mounted) return;
 
       if (isPickConfirm && canCreatePickConfirm) {
@@ -593,49 +774,85 @@ class MInOutNotifier extends StateNotifier<MInOutStatus> {
       }
 
       // If none matched, fall back to selection
-    }
 
+    }
     // Show selection modal
-    _showSelectMInOutConfirm(context, notifier, stateNow, ref);
+    _showSelectMInOutConfirm(context, notifier, stateNow,confirmList, ref);
+
   }
   Future<void> _handleMoveConfirmFlow({
-    required BuildContext context,
+    required BuildContext context, // lo dejamos pero no lo usamos para UI
     required WidgetRef ref,
     required MInOutNotifier notifier,
     required MInOutStatus stateNow,
   }) async {
-    // Fetch movement with loading
+    debugPrint('_handleMoveConfirmFlow');
+    state = state.copyWith(isLoading: true, errorMessage: '',viewMInOut: true);
+
     try {
-      final mInOut = await withLoadingMInOut(
-        context: context,
-        tag: 'MOVE_CONFIRM getMovementAndLine',
-        action: () => notifier.getMovementAndLine(ref),
-      );
+      final mInOut = await notifier.getMovementAndLine(ref);
+      if (mInOut.id == null) return;
 
-      if (mInOut == null || mInOut.id == null) return;
-      if (!context.mounted) return;
-      if(context.mounted) {
-        final confirmList = await withLoadingMInOut(
-          context: context,
-          tag: 'MOVE_CONFIRM getMovementConfirmList',
-          action: () => notifier.getMovementConfirmList(mInOut.id!, ref),
-        );
-        if (!context.mounted) return;
+      // ✅ usa un context estable
+      final stableCtx = ref.context;
+      if (!stableCtx.mounted) {
+        debugPrint('_handleMoveConfirmFlow ABORT (ref.context unmounted) after getMovementAndLine');
+        return;
+      }
 
-        _showSelectMInOutConfirm(
-          context,
-          notifier,
-          stateNow,
-          ref,
-        );
+      final confirmList = await notifier.getMovementConfirmList(mInOut.id!, ref);
+
+
+      if (!stableCtx.mounted) {
+        debugPrint('_handleMoveConfirmFlow ABORT (ref.context unmounted) after getMovementConfirmList');
+        return;
       }
 
 
-    } catch (e) {
-      // Error already logged by _withLoading
+      if(confirmList.isEmpty){
+        state = state.copyWith(
+            isLoading: false, errorMessage: '', isComplete: false,
+            viewMInOut: true);
+        WidgetsBinding.instance.addPostFrameCallback((_) async {
+          if (!stableCtx.mounted) return;
 
+          await showWarningMessage(
+            durationSeconds: 0,
+            stableCtx,
+            ref,
+            'No hay confirmaciones disponibles para este movimiento.\n${mInOut.documentNo}',
+          );
+
+          if (!stableCtx.mounted) return;
+
+          clearMInOutData();
+        });
+
+        return;
+      }
+      state = state.copyWith(
+          mInOut: mInOut,
+          isLoading: false, errorMessage: '', isComplete: false,
+          viewMInOut: true);
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!stableCtx.mounted) return;
+
+
+        _showSelectMInOutConfirm(
+          stableCtx,
+          notifier,
+          stateNow,
+          confirmList,
+          ref,
+        );
+      });
+    } catch (e) {
+      state = state.copyWith(mInOut:null,isLoading: false, errorMessage: e.toString());
+      debugPrint('_handleMoveConfirmFlow error $e');
     }
   }
+
+
 
   Future<void> _handleNormalFlow({
     required WidgetRef ref,
@@ -653,8 +870,10 @@ class MInOutNotifier extends StateNotifier<MInOutStatus> {
       BuildContext context,
       MInOutNotifier mInOutNotifier,
       MInOutStatus mInOutState,
+      List<MInOutConfirm> mInOutConfirmList,
       WidgetRef ref,
       ) {
+    debugPrint('_showSelectMInOutConfirm ${mInOutConfirmList.length}');
     return showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -663,7 +882,6 @@ class MInOutNotifier extends StateNotifier<MInOutStatus> {
         borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
       ),
       builder: (context) {
-        final mInOutConfirmList = mInOutState.mInOutConfirmList;
         return FractionallySizedBox(
           heightFactor: 0.7, // ocupa el 70% de la pantalla
           child: Column(
@@ -689,17 +907,20 @@ class MInOutNotifier extends StateNotifier<MInOutStatus> {
                   itemCount: mInOutConfirmList.length,
                   itemBuilder: (context, index) {
                     final item = mInOutConfirmList[index];
+                    debugPrint('item ${item.docStatus.toJson()}');
+                    final bool canComplete = item.isDraft || item.isInProgress;
+
                     late final Color backgroundColor ;
-                    if(item.isDraft){
+                    if(canComplete){
                       backgroundColor =  Colors.green.shade200;
                     } else {
                       backgroundColor =  Colors.white;
                     }
                     return InkWell(
                       onTap: () {
-                        if(!item.isDraft){
+                        if(!canComplete){
                           String message = '${Messages.DOCUMENT_STATUS} = ${item.docStatus.id}';
-                          showErrorMessage(context,ref,message);
+                          showErrorMessage(durationSeconds: 0,context,ref,message);
                           return ;
                         }
                         if (mInOutState.mInOutType == MInOutType.moveConfirm) {
@@ -716,12 +937,20 @@ class MInOutNotifier extends StateNotifier<MInOutStatus> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(
-                                item.documentNo.toString(),
-                                style: const TextStyle(
-                                  fontSize: themeFontSizeLarge,
-                                  fontWeight: FontWeight.bold,
-                                ),
+                              Row(
+                                children: [
+                                  Text(
+                                    item.documentNo.toString(),
+                                    style: const TextStyle(
+                                      fontSize: themeFontSizeLarge,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                  SizedBox(width: 10,),
+                                  Text(
+                                    item.docStatus.id.toString(),
+                                    style: TextStyle(color: Colors.purple),)
+                                ],
                               ),
                               Text(
                                 item.mInOutId.identifier ?? '',
@@ -770,12 +999,23 @@ class MInOutNotifier extends StateNotifier<MInOutStatus> {
       await getMInOutList(ref);
     }
   }
+  Future<void> loadSavedDataList(WidgetRef ref) async {
+    state = state.copyWith(isLoadingMInOutList: true, errorMessage: '');
+    final mInOutType = ref.read(mInOutProvider).mInOutType;
+    state = state.copyWith(mInOutList: ref.read(loadedMInOutListProvider(mInOutType)));
+    state = state.copyWith(
+      isLoadingMInOutList: false,
+    );
+
+  }
 
   Future<void> getMInOutList(WidgetRef ref) async {
     debugPrint('getMInOutList');
     state = state.copyWith(isLoadingMInOutList: true, errorMessage: '');
+    final mInOutType = ref.read(mInOutProvider).mInOutType;
     try {
       final mInOutResponse = await mInOutRepository.getMInOutList(ref);
+      ref.read(loadedMInOutListProvider(mInOutType).notifier).state = mInOutResponse;
       if (mInOutResponse.isEmpty) {
         state = state.copyWith(mInOutList: [], isLoadingMInOutList: false);
         return;
@@ -860,8 +1100,10 @@ class MInOutNotifier extends StateNotifier<MInOutStatus> {
   Future<void> getMovementList(WidgetRef ref) async {
     debugPrint('getMovementList');
     state = state.copyWith(isLoadingMInOutList: true, errorMessage: '');
+    final mInOutType = ref.read(mInOutProvider).mInOutType;
     try {
       final mInOutResponse = await mInOutRepository.getMovementList(ref);
+      ref.read(loadedMInOutListProvider(mInOutType).notifier).state = mInOutResponse;
       if (mInOutResponse.isEmpty) {
         state = state.copyWith(mInOutList: [], isLoadingMInOutList: false);
         return;
@@ -914,24 +1156,20 @@ class MInOutNotifier extends StateNotifier<MInOutStatus> {
       );
       throw Exception('Por favor ingrese un número de documento válido');
     }
-    if (state.mInOutType == MInOutType.shipment ||
-        state.mInOutType == MInOutType.receipt) {
-      state = state.copyWith(
-        isLoading: true,
-        viewMInOut: true,
-        errorMessage: '',
-      );
-    }
+    final bool isConfirm = isMInOutConfirmType(state.mInOutType);
+    state = state.copyWith(
+      isLoading: true,
+      viewMInOut: true,
+      errorMessage: '',
+    );
 
     try {
       final mInOutResponse = await mInOutRepository.getMInOut(state.doc, ref);
-      print('mInOutResponse ${mInOutResponse.id} ${mInOutResponse.lines.length}');
       final filteredLines = mInOutResponse.lines
           .where((line) => line.mProductId?.id != null)
           .toList();
       if (state.mInOutType == MInOutType.shipment ||
-          state.mInOutType == MInOutType.shipmentConfirm
-          || state.mInOutType == MInOutType.receipt) {
+           state.mInOutType == MInOutType.receipt) {
         for (int i = 0; i < filteredLines.length; i++) {
           filteredLines[i] = filteredLines[i].copyWith(
             targetQty: filteredLines[i].movementQty,
@@ -939,14 +1177,22 @@ class MInOutNotifier extends StateNotifier<MInOutStatus> {
           );
         }
       }
-      state = state.copyWith(
-        viewMInOut:
-        state.mInOutType == MInOutType.receipt ||
-            state.mInOutType == MInOutType.receiptConfirm ||
-            state.mInOutType == MInOutType.shipment ,
-        mInOut: mInOutResponse.copyWith(lines: filteredLines,allLines: mInOutResponse.lines),
-        isLoading: false,
-      );
+      final newMInOut = mInOutResponse.copyWith(lines: filteredLines,allLines: mInOutResponse.lines);
+      if(isConfirm){
+        state = state.copyWith(
+          viewMInOut: false,
+          mInOut: newMInOut,
+
+        );
+      } else {
+        state = state.copyWith(
+          viewMInOut: true ,
+          mInOut: newMInOut,
+          isLoading: false,
+          errorMessage: '',
+        );
+      }
+
       return mInOutResponse;
     } catch (e) {
       state = state.copyWith(
@@ -954,7 +1200,6 @@ class MInOutNotifier extends StateNotifier<MInOutStatus> {
         isLoading: false,
         viewMInOut: false,
       );
-      //if(ref.context.mounted)showWarningMessage(ref.context, ref, e.toString());
       print('mInOutResponse Exception: ${e.toString()} ${state.doc}');
       throw Exception(e.toString().replaceAll('Exception: ', ''));
     }
@@ -1018,13 +1263,11 @@ class MInOutNotifier extends StateNotifier<MInOutStatus> {
       );
       throw Exception('Por favor ingrese un número de documento válido');
     }
-    if (state.mInOutType == MInOutType.move) {
-      state = state.copyWith(
-        isLoading: true,
-        viewMInOut: true,
-        errorMessage: '',
-      );
-    }
+    state = state.copyWith(
+      isLoading: true,
+      viewMInOut: false,
+      errorMessage: '',
+    );
 
     try {
       final mInOutResponse = await mInOutRepository.getMovement(state.doc, ref);
@@ -1061,14 +1304,25 @@ class MInOutNotifier extends StateNotifier<MInOutStatus> {
         }
       }
 
-      debugPrint('[$req] BEFORE setState filtered=${filteredLines.length} all=${mInOutResponse.lines.length}');
-      state = state.copyWith(
-        viewMInOut: state.mInOutType == MInOutType.move || state.mInOutType == MInOutType.moveConfirm,
-        mInOut: mInOutResponse.copyWith(lines: filteredLines,allLines: mInOutResponse.lines),
-        isLoading: false,
+      final newMInOut = mInOutResponse.copyWith(
+        lines: filteredLines,
+        allLines: mInOutResponse.lines,
       );
+      debugPrint('[$req] BEFORE setState filtered=${filteredLines.length} all=${mInOutResponse.lines.length}');
+
+      if (state.mInOutType == MInOutType.move) {
+        state = state.copyWith(
+          viewMInOut: true,
+          mInOut: newMInOut,
+          isLoading: false,
+          errorMessage: '',
+        );
+      }
+
       debugPrint('[$req] END OK state.lines=${state.mInOut?.lines.length} state.allLines=${state.mInOut?.allLines.length}');
-      return mInOutResponse;
+      return newMInOut;
+
+
     } catch (e) {
       state = state.copyWith(
         errorMessage: e.toString().replaceAll('Exception: ', ''),
@@ -1238,10 +1492,14 @@ class MInOutNotifier extends StateNotifier<MInOutStatus> {
   }
 
   void confirmManualLine(BuildContext context, WidgetRef ref,Line line) {
+    debugPrint('confirmManualLine');
+
+
     line = line.copyWith(verifiedStatus: 'manually');
     final List<Line> updatedLines = state.mInOut!.lines;
     final int index = updatedLines.indexWhere((l) => l.id == line.id);
     if (index != -1) {
+
       final Line verifyLine = _verifyLineStatusQty(
         line,
         line.scanningQty?.toDouble() ?? 0.0,
@@ -1288,16 +1546,14 @@ class MInOutNotifier extends StateNotifier<MInOutStatus> {
 
   Future<void> confirmEditLocator(Line line, WidgetRef ref) async {
     String locator = line.mLocatorId!.identifier!.split(' => ').first.trim();
+
     try {
-      final idLocator = await mInOutRepository.getLocator(
-        state.editLocator,
-        ref,
-      );
+
+
       final updatedLocator = line.mLocatorId?.copyWith(
         identifier: '$locator => ${state.editLocator}',
       );
       final updatedLine = line.copyWith(
-        editLocator: idLocator,
         mLocatorId: updatedLocator,
       );
       final updatedLines = state.mInOut!.lines
@@ -1337,7 +1593,7 @@ class MInOutNotifier extends StateNotifier<MInOutStatus> {
   }
 
   bool isConfirmMInOut() {
-    print(
+    /*print(
       'isConfirmMInOut',
     );
     if (((state.mInOutType == MInOutType.shipment ||
@@ -1347,13 +1603,10 @@ class MInOutNotifier extends StateNotifier<MInOutStatus> {
 
       return true;
     }
-    if(state.rolQuickComplete){
-      return state.mInOut?.lines.every(
-            (line) =>
-        line.confirmedQty!=null &&  line.confirmedQty! > 0 ,
-      ) ??
-          false;
-    }
+    print(
+      'state.rolQuickComplete ${state.rolQuickComplete}',
+    );
+*/
     final validStatuses = {
       'correct',
       'manually-correct',
@@ -1370,7 +1623,7 @@ class MInOutNotifier extends StateNotifier<MInOutStatus> {
         false;
   }
 
-  Future<void> setDocAction(WidgetRef ref) async {
+  /*Future<void> setDocAction(WidgetRef ref) async {
     print('setDocAction init');
     state = state.copyWith(isLoading: true, errorMessage: '');
     if (state.mInOut?.id == null) {
@@ -1424,11 +1677,395 @@ class MInOutNotifier extends StateNotifier<MInOutStatus> {
         isLoading: false,
       );
     }
+  }*/
+  Future<void> setDocAction(WidgetRef ref) async {
+    final messageConfirm = '${Messages.COMFIRM} ${state.title}?';
+    final bool? ok = await showConfirmationDialog(ref.context, ref, messageConfirm);
+    if (ok == null || !ok) return;
+
+    // UI loading switch to false, using other progress indicator
+    state = state.copyWith(isLoading: false, errorMessage: '');
+
+    final currentM = state.mInOut;
+    if (currentM == null) {
+      state = state.copyWith(isLoading: false, errorMessage: 'mInOut is null');
+      return;
+    }
+
+    final progress = ref.read(actionProgressProvider.notifier);
+    progress.start(message: 'Preparando operación...');
+    await openProgressIfNeeded(ref);
+
+    final List<Line> sourceLines = currentM.lines;
+
+    final Set<int> movementLineIdsToUpdate = <int>{};
+    final Map<int, double> movementConfirmedQtyByLineId = <int, double>{};
+    int step = 1;
+    try {
+
+      progress.setStep(0, 'Analizando líneas a actualizar...');
+      final List<Line> listLinesToUpdateMovementQty = [];
+
+      for (final line in sourceLines) {
+        final movementQty = line.movementQty;
+        final confirmedQty = line.confirmedQty;
+
+        final bool editQty = movementQty != null &&
+            confirmedQty != null &&
+            movementQty != confirmedQty;
+
+
+        if (editQty) {
+          listLinesToUpdateMovementQty.add(line);
+
+          final id = line.id;
+          if (id != null) {
+            movementLineIdsToUpdate.add(id);
+            movementConfirmedQtyByLineId[id] = confirmedQty;
+          }
+        }
+
+      }
+
+      final List<int> listIdsToUpdateMovementQty = movementLineIdsToUpdate.toList();
+
+      // ---------------------------------------------------------
+      // 1) Update movement lines qty
+      // ---------------------------------------------------------
+
+      debugPrint('setDocAction 1: ${state.isLoading}');
+      if (sourceLines.isNotEmpty) {
+        progress.setStep(1, 'Actualizando cantidades en líneas de movimiento...');
+        for (final line in sourceLines) {
+          await mInOutRepository.updateMInOutLineMovementQty(line, ref);
+        }
+      } else {
+        // Igual avanzamos, para que el usuario vea que pasó esa etapa.
+        progress.setStep(1, 'No hay líneas de movimiento para actualizar.');
+      }
+
+      // ---------------------------------------------------------
+      // 2) Get draft confirms excluding current confirm
+      // ---------------------------------------------------------
+      step++;
+      debugPrint('setDocAction 2: ${state.isLoading}');
+      final int? mInOutId = state.mInOut?.id;
+      final int currentConfirmId = state.mInOutConfirm?.id ?? -1;
+
+      List<MInOutConfirm> confirmListDraft = [];
+      if (mInOutId != null) {
+        progress.setStep(2, 'Obteniendo confirms en borrador (excluyendo el actual)...');
+        confirmListDraft = await mInOutRepository.getMInOutConfirmInDraftByMInOutID(
+          mInOutId: mInOutId,
+          excludedMInOutConfirmId: currentConfirmId,
+          ref: ref,
+        );
+      } else {
+        progress.setStep(2, 'Saltando borradores (faltan IDs de documento/confirm).');
+      }
+
+      // ---------------------------------------------------------
+      // 3) Get LineConfirm rows to update by confirmIds + mInOutLineIds
+      // ---------------------------------------------------------
+      step++;
+      debugPrint('setDocAction 3: ${state.isLoading}');
+      final List<int> listConfirmsIds = confirmListDraft
+          .map((c) => c.id)
+          .whereType<int>()
+          .toList();
+
+      List<LineConfirm> listLinesToUpdateTargetQty = [];
+      if (listConfirmsIds.isNotEmpty && listIdsToUpdateMovementQty.isNotEmpty) {
+        progress.setStep(3, 'Buscando líneas LineConfirm a actualizar (draft confirms)...');
+        listLinesToUpdateTargetQty =
+        await mInOutRepository.getLinesMInOutConfirmToUpdateTargetQty(
+          listConfirmsIds: listConfirmsIds,
+          mInOutLineIds: listIdsToUpdateMovementQty,
+          ref: ref,
+        );
+      } else {
+        progress.setStep(3, 'No hay LineConfirm para actualizar (sin confirms o sin líneas editadas).');
+      }
+      debugPrint(
+          'setDocActionConfirm listLinesToUpdateTargetQty.length = ${listLinesToUpdateTargetQty.length}');
+      // ---------------------------------------------------------
+      // 4) Update LineConfirm rows with new targetQty / confirmedQty from movement
+      // ---------------------------------------------------------
+      step++;
+      debugPrint('setDocAction 4: ${state.isLoading}');
+      if (listLinesToUpdateTargetQty.isNotEmpty) {
+        progress.setStep(4, 'Actualizando LineConfirm en borradores (target/confirmed)...');
+
+        // Copia confirmedQty desde movement
+        for (final lc in listLinesToUpdateTargetQty) {
+          final lineId = int.tryParse(lc.mInOutLineId?.id ?? '');
+          if (lineId == null) continue;
+
+          final confirmedQtyFromMovement = movementConfirmedQtyByLineId[lineId];
+          if (confirmedQtyFromMovement == null) continue;
+
+          lc.confirmedQty = confirmedQtyFromMovement;
+        }
+
+        for (final lc in listLinesToUpdateTargetQty) {
+          await mInOutRepository.updateLineConfirmTargetQty(lc, ref);
+        }
+      } else {
+        progress.setStep(4, 'No hay borradores LineConfirm para actualizar.');
+      }
+      debugPrint('setDocAction 5: ${state.isLoading}');
+
+      // ---------------------------------------------------------
+      // 5) SetDocAction confirm
+      // ---------------------------------------------------------
+      step++;
+      progress.setStep(5, 'Confirmando documento (SetDocAction)...');
+      final result = await mInOutRepository.setDocAction(ref);
+
+      progress.finish(message: 'Completado ✅');
+      debugPrint('setDocActionConfirm finish: ${state.isLoading}');
+
+      state = state.copyWith(
+        mInOut: result,
+        errorMessage: '',
+        isLoading: false,
+        isComplete: true,
+      );
+
+      if (result.documentNo != null && result.documentNo!.isNotEmpty) {
+        removeSavedMInOutData(ref);
+      }
+      closeProgressDialogSafe(ref);
+      await showMInOutResultModalBottomSheet(
+        ref: ref,
+        data: result,
+        type: state.mInOutType,
+      );
+    } catch (e) {
+      debugPrint('setDocAction error $step: ${e.toString()}');
+      final msg = e.toString().replaceAll('Exception: ', '');
+      closeProgressDialogSafe(ref);
+      state = state.copyWith(
+        errorMessage: '',
+        isLoading: false,
+      );
+
+      if (ref.context.mounted) {
+        showErrorMessage(durationSeconds: 0, ref.context, ref, msg);
+      }
+    } finally {
+      // Limpieza del provider (opcional)
+
+      ref.read(actionProgressProvider.notifier).hide();
+    }
   }
   Future<void> setDocActionConfirm(WidgetRef ref) async {
+    final messageConfirm = '${Messages.COMFIRM} ${state.title}?';
+    final bool? ok = await showConfirmationDialog(ref.context, ref, messageConfirm);
+    if (ok == null || !ok) return;
+
+    // UI loading switch to false, using other progress indicator
+    state = state.copyWith(isLoading: false, errorMessage: '');
+
+    final currentM = state.mInOut;
+    if (currentM == null) {
+      state = state.copyWith(isLoading: false, errorMessage: 'mInOut is null');
+      return;
+    }
+
+    final progress = ref.read(actionProgressProvider.notifier);
+    progress.start(message: 'Preparando operación...');
+    await openProgressIfNeeded(ref);
+
+    final List<Line> sourceLines = currentM.lines;
+
+    final Set<int> movementLineIdsToUpdate = <int>{};
+    final Map<int, double> movementConfirmedQtyByLineId = <int, double>{};
+    int step =1;
+    try {
+
+
+      progress.setStep(0, 'Analizando líneas a actualizar...');
+      final List<Line> listLinesToUpdateMovementQty = [];
+
+
+      for (final line in sourceLines) {
+        final movementQty = line.movementQty;
+        final confirmedQty = line.confirmedQty;
+
+        final bool editQty = movementQty != null &&
+            confirmedQty != null &&
+            movementQty != confirmedQty;
+
+
+
+        if (editQty) {
+          listLinesToUpdateMovementQty.add(line);
+
+          final id = line.id;
+          if (id != null) {
+            movementLineIdsToUpdate.add(id);
+            movementConfirmedQtyByLineId[id] = confirmedQty;
+
+          }
+        }
+
+      }
+
+
+      debugPrint('setDocActionConfirm 1: ${state.isLoading}');
+      final List<int> listIdsToUpdateMovementQty = movementLineIdsToUpdate.toList();
+      // ---------------------------------------------------------
+      // 1) Update movement lines qty
+      // ---------------------------------------------------------
+      if (listLinesToUpdateMovementQty.isNotEmpty) {
+        progress.setStep(1, 'Actualizando cantidades en líneas de movimiento...');
+        for (final line in listLinesToUpdateMovementQty) {
+          await mInOutRepository.updateMInOutLineMovementQty(line, ref);
+        }
+      } else {
+        // Igual avanzamos, para que el usuario vea que pasó esa etapa.
+        progress.setStep(1, 'No hay líneas de movimiento para actualizar.');
+      }
+
+      // ---------------------------------------------------------
+      // 2) Get draft confirms excluding current confirm
+      // ---------------------------------------------------------
+      step++;
+      final int? mInOutId = state.mInOut?.id;
+      final int? currentConfirmId = state.mInOutConfirm?.id;
+      debugPrint('setDocActionConfirm 2: ${state.isLoading}');
+      List<MInOutConfirm> confirmListDraft = [];
+      if (mInOutId != null && currentConfirmId != null) {
+        progress.setStep(2, 'Obteniendo confirms en borrador (excluyendo el actual)...');
+        confirmListDraft = await mInOutRepository.getMInOutConfirmInDraftByMInOutID(
+          mInOutId: mInOutId,
+          excludedMInOutConfirmId: currentConfirmId,
+          ref: ref,
+        );
+      } else {
+        progress.setStep(2, 'Saltando borradores (faltan IDs de documento/confirm).');
+      }
+
+      // ---------------------------------------------------------
+      // 3) Get LineConfirm rows to update by confirmIds + mInOutLineIds
+      // ---------------------------------------------------------
+      step++;
+      debugPrint('setDocActionConfirm 3: ${state.isLoading}');
+      final List<int> listConfirmsIds = confirmListDraft
+          .map((c) => c.id)
+          .whereType<int>()
+          .toList();
+
+      List<LineConfirm> listLinesToUpdateTargetQty = [];
+      if (listConfirmsIds.isNotEmpty && listIdsToUpdateMovementQty.isNotEmpty) {
+        progress.setStep(3, 'Buscando líneas LineConfirm a actualizar (draft confirms)...');
+        listLinesToUpdateTargetQty =
+        await mInOutRepository.getLinesMInOutConfirmToUpdateTargetQty(
+          listConfirmsIds: listConfirmsIds,
+          mInOutLineIds: listIdsToUpdateMovementQty,
+          ref: ref,
+        );
+      } else {
+        progress.setStep(3, 'No hay LineConfirm para actualizar (sin confirms o sin líneas editadas).');
+      }
+      debugPrint(
+        'setDocActionConfirm listLinesToUpdateTargetQty.length = ${listLinesToUpdateTargetQty.length}');
+      // ---------------------------------------------------------
+      // 4) Update LineConfirm rows with new targetQty / confirmedQty from movement
+      // ---------------------------------------------------------
+      step++;
+      debugPrint('setDocActionConfirm 4: ${state.isLoading}');
+      if (listLinesToUpdateTargetQty.isNotEmpty) {
+        progress.setStep(4, 'Actualizando LineConfirm en borradores (target/confirmed)...');
+
+        // Copia confirmedQty desde movement
+        for (final lc in listLinesToUpdateTargetQty) {
+          final lineId = int.tryParse(lc.mInOutLineId?.id ?? '');
+          if (lineId == null) continue;
+
+          final confirmedQtyFromMovement = movementConfirmedQtyByLineId[lineId];
+          if (confirmedQtyFromMovement == null) continue;
+
+          lc.confirmedQty = confirmedQtyFromMovement;
+        }
+
+        for (final lc in listLinesToUpdateTargetQty) {
+          await mInOutRepository.updateLineConfirmTargetQty(lc, ref);
+        }
+      } else {
+        progress.setStep(4, 'No hay borradores LineConfirm para actualizar.');
+      }
+
+      // ---------------------------------------------------------
+      // 5) Update current confirm lines with new confirmedQty
+      // ---------------------------------------------------------
+      step++;
+      debugPrint('setDocActionConfirm 5: ${state.isLoading}');
+      progress.setStep(5, 'Actualizando líneas del confirm actual...');
+      for (final line in currentM.lines) {
+        final lineConfirmResponse = await mInOutRepository.updateLineConfirm(line, ref);
+        if (lineConfirmResponse.id == null) {
+          throw Exception('Error al confirmar la línea ${line.line}');
+        }
+      }
+      step++;
+      debugPrint('setDocActionConfirm 6: ${state.isLoading}');
+      // ---------------------------------------------------------
+      // 6) SetDocAction confirm
+      // ---------------------------------------------------------
+      progress.setStep(6, 'Confirmando documento (SetDocAction)...');
+      final result = await mInOutRepository.setDocActionConfirm(ref);
+
+      progress.finish(message: 'Completado ✅');
+      debugPrint('setDocActionConfirm finish: ${state.isLoading}');
+
+      state = state.copyWith(
+        mInOutConfirm: result,
+        errorMessage: '',
+        isLoading: false,
+        isComplete: true,
+      );
+
+      if (result.documentNo != null && result.documentNo!.isNotEmpty) {
+        removeSavedMInOutData(ref);
+      }
+      closeProgressDialogSafe(ref);
+      await showMInOutConfirmResultModalBottomSheet(
+        ref: ref,
+        data: result,
+        type: state.mInOutType,
+      );
+    } catch (e) {
+      debugPrint('setDocActionConfirm error $step: ${e.toString()}');
+      final msg = e.toString().replaceAll('Exception: ', '');
+      closeProgressDialogSafe(ref);
+      state = state.copyWith(
+        errorMessage: '',
+        isLoading: false,
+      );
+
+      if (ref.context.mounted) {
+        showErrorMessage(durationSeconds: 0, ref.context, ref, msg);
+      }
+    } finally {
+      // Limpieza del provider (opcional)
+
+      ref.read(actionProgressProvider.notifier).hide();
+    }
+  }
+
+  Future<void> setDocActionConfirmOld2(WidgetRef ref) async {
+    String message = '${Messages.COMFIRM} ${state.title}?';
+    bool? result = await showConfirmationDialog(ref.context, ref, message);
+    debugPrint('setDocActionConfirm started $result');
+    if(result == null || !result) return;
+
     // EN: Switch UI into loading state and clear previous errors
-    state = state.copyWith(isLoading: true, errorMessage: '');
-    debugPrint('setDocActionConfirm');
+
+
+    state = state.copyWith(isLoading: false, errorMessage: '');
+    debugPrint('setDocActionConfirm started');
 
     final currentM = state.mInOut;
     if (currentM == null) {
@@ -1453,18 +2090,20 @@ class MInOutNotifier extends StateNotifier<MInOutStatus> {
       final List<Line> listLinesToUpdateMovementQty = [];
 
       for (final line in sourceLines) {
-        final targetQty = line.targetQty;
+        final movementQty = line.movementQty;
         final confirmedQty = line.confirmedQty;
-
-        if (targetQty != null &&
+        bool editQty = movementQty != null &&
             confirmedQty != null &&
-            targetQty != confirmedQty) {
+            movementQty != confirmedQty ;
+        bool editLocator = line.editLocator != null;
+
+        if (editQty || editLocator) {
           listLinesToUpdateMovementQty.add(line);
 
           final id = line.id;
           if (id != null) {
             movementLineIdsToUpdate.add(id);
-            movementConfirmedQtyByLineId[id] = confirmedQty; // <-- capture confirmedQty
+            if(confirmedQty != null) movementConfirmedQtyByLineId[id] = confirmedQty; // <-- capture confirmedQty
           }
         }
       }
@@ -1483,14 +2122,14 @@ class MInOutNotifier extends StateNotifier<MInOutStatus> {
         // 1.1) EN: Update movement lines first
         for (final line in listLinesToUpdateMovementQty) {
           try {
-            await mInOutRepository.updateMInOutLine(line, ref);
+            await mInOutRepository.updateMInOutLineMovementQty(line, ref);
           } catch (e) {
             final msg =
                 'UpdateMovementQty: Error al actualizar cantidad en línea ${line.line}: ${e.toString()}';
             debugPrint('setDocActionConfirm preUpdate(1) error: $msg');
 
             state = state.copyWith(isLoading: false, errorMessage: msg);
-            if (ref.context.mounted) showErrorMessage(ref.context, ref, msg);
+            if (ref.context.mounted) showErrorMessage(durationSeconds: 0, ref.context, ref, msg);
             return;
           }
         }
@@ -1521,7 +2160,7 @@ class MInOutNotifier extends StateNotifier<MInOutStatus> {
             debugPrint('setDocActionConfirm preUpdate(2) error: $msg');
 
             state = state.copyWith(isLoading: false, errorMessage: msg);
-            if (ref.context.mounted) showErrorMessage(ref.context, ref, msg);
+            if (ref.context.mounted) showErrorMessage(durationSeconds: 0, ref.context, ref, msg);
             return;
           }
 
@@ -1553,7 +2192,7 @@ class MInOutNotifier extends StateNotifier<MInOutStatus> {
               debugPrint('setDocActionConfirm preUpdate(3) error: $msg');
 
               state = state.copyWith(isLoading: false, errorMessage: msg);
-              if (ref.context.mounted) showErrorMessage(ref.context, ref, msg);
+              if (ref.context.mounted) showErrorMessage(durationSeconds: 0, ref.context, ref, msg);
               return;
             }
 
@@ -1583,7 +2222,7 @@ class MInOutNotifier extends StateNotifier<MInOutStatus> {
                   debugPrint('setDocActionConfirm preUpdate(4) error: $msg');
 
                   state = state.copyWith(isLoading: false, errorMessage: msg);
-                  if (ref.context.mounted) showErrorMessage(ref.context, ref, msg);
+                  if (ref.context.mounted) showErrorMessage(durationSeconds: 0, ref.context, ref, msg);
                   return;
                 }
               }
@@ -1596,18 +2235,6 @@ class MInOutNotifier extends StateNotifier<MInOutStatus> {
       // EN: Normal confirmation flow (unchanged)
       // ---------------------------------------------------------------------
       for (final line in currentM.lines) {
-        if (line.editLocator != null) {
-          debugPrint('setDocActionConfirm updateLocator');
-          final update = await mInOutRepository.updateLocator(line, ref);
-          if (!update) {
-            state = state.copyWith(
-              errorMessage:
-              'Error al actualizar la ubicación: ${line.mLocatorId!.identifier}',
-              isLoading: false,
-            );
-            return;
-          }
-        }
 
         final lineConfirmResponse =
         await mInOutRepository.updateLineConfirm(line, ref);
@@ -1622,129 +2249,33 @@ class MInOutNotifier extends StateNotifier<MInOutStatus> {
       }
 
       debugPrint('setDocActionConfirm setDocAction');
-      late MInOut result;
+      late MInOutConfirm result;
 
       try {
-        result = await mInOutRepository.setDocAction(ref);
-        debugPrint('setDocActionConfirm result ${result.toJson()}');
+        result = await mInOutRepository.setDocActionConfirm(ref);
+        debugPrint('setDocActionConfirm result ${result.docStatus.toJson()}');
       } catch (e) {
         debugPrint('setDocActionConfirm Error: ${e.toString()}');
-        if (ref.context.mounted) showErrorMessage(ref.context, ref, e.toString());
+        if (ref.context.mounted) showErrorMessage(durationSeconds: 0, ref.context, ref, e.toString());
         state = state.copyWith(isLoading: false);
         return;
       }
 
       state = state.copyWith(
+        mInOutConfirm: result,
         errorMessage: '',
         isLoading: false,
         isComplete: true,
       );
-
-      showMInOutResultModalBottomSheet(
+      if(result.documentNo!=null && result.documentNo!.isNotEmpty)removeSavedMInOutData(ref);
+      showMInOutConfirmResultModalBottomSheet(
         ref: ref,
         data: result,
         type: MInOutType.move,
-        text: '',
-        onOk: () async {
-          late MInOutConfirm result2;
 
-          if (state.mInOutType == MInOutType.moveConfirm) {
-            debugPrint('getMovementConfirmAndLine ${state.mInOutConfirm!.id!}');
-            result2 =
-            await getMovementConfirmAndLine(state.mInOutConfirm!.id!, ref);
-          } else {
-            debugPrint('getMInOutConfirmAndLine ${state.mInOutConfirm!.id!}');
-            result2 =
-            await getMInOutConfirmAndLine(state.mInOutConfirm!.id!, ref);
-          }
-
-          debugPrint('setDocActionConfirm result2 ${result2.toJson()}');
-        },
       );
     } catch (e) {
       debugPrint('setDocActionConfirm error ${e.toString()}');
-      state = state.copyWith(
-        errorMessage: e.toString().replaceAll('Exception: ', ''),
-        isLoading: false,
-      );
-    }
-  }
-
-
-
-
-  Future<void> setDocActionConfirmOld(WidgetRef ref) async {
-
-    state = state.copyWith(isLoading: true, errorMessage: '');
-    print('setDocActionConfirm');
-
-    try {
-      for (final line in state.mInOut!.lines) {
-        if (line.editLocator != null) {
-          print('setDocActionConfirm updateLocator');
-          final update = await mInOutRepository.updateLocator(line, ref);
-          if (!update) {
-            state = state.copyWith(
-              errorMessage:
-              'Error al actualizar la ubicación: ${line.mLocatorId!.identifier}',
-              isLoading: false,
-            );
-            return;
-          }
-        }
-        final lineConfirmResponse = await mInOutRepository.updateLineConfirm(
-          line,
-          ref,
-        );
-        if (lineConfirmResponse.id == null) {
-          state = state.copyWith(
-            errorMessage: 'Error al confirmar la línea ${line.line}',
-            isLoading: false,
-          );
-          return;
-        }
-      }
-      print('setDocActionConfirm setDocAction');
-      late MInOut result;
-      try {
-        result = await mInOutRepository.setDocAction(ref);
-        print('setDocActionConfirm result ${result.toJson()}');
-
-      } catch (e) {
-        print('setDocActionConfirm Error: ${e.toString()}');
-        if(ref.context.mounted){
-          showErrorMessage(ref.context, ref, e.toString());
-        }
-        return ;
-      }
-
-      state = state.copyWith(
-        errorMessage: '',
-        isLoading: false,
-        isComplete: true,
-      );
-
-      showMInOutResultModalBottomSheet(
-        ref: ref,
-        data: result,
-        type: MInOutType.move,
-        text: '',
-        onOk: () async {
-
-          late MInOutConfirm result2 ;
-          if (state.mInOutType == MInOutType.moveConfirm) {
-            print('getMovementConfirmAndLine ${state.mInOutConfirm!.id!}');
-            result2 = await getMovementConfirmAndLine(state.mInOutConfirm!.id!, ref);
-          } else {
-            print('getMInOutConfirmAndLine ${state.mInOutConfirm!.id!}');
-            result2 = await getMInOutConfirmAndLine(state.mInOutConfirm!.id!, ref);
-          }
-
-        },
-      );
-
-    } catch (e) {
-      print('setDocActionConfirm error ${e.toString()}');
       state = state.copyWith(
         errorMessage: e.toString().replaceAll('Exception: ', ''),
         isLoading: false,
@@ -2215,19 +2746,6 @@ class MInOutNotifier extends StateNotifier<MInOutStatus> {
       List<Line> lines = state.mInOut!.lines;
       List<Barcode> linesOver = [];
 
-      for (int i = 0; i < lines.length; i++) {
-        if (lines[i].verifiedStatus == null ||
-            !lines[i].verifiedStatus!.contains('manually') ||
-            lines[i].upc == barcode) {
-          lines[i] = lines[i].copyWith(
-            manualQty: 0,
-            scanningQty: 0,
-            confirmedQty: 0,
-            scrappedQty: 0,
-            verifiedStatus: 'pending',
-          );
-        }
-      }
 
       for (final barcode in state.scanBarcodeListUnique) {
         final lineIndex = lines.indexWhere((line) => line.upc == barcode.code);
@@ -2314,7 +2832,10 @@ class MInOutNotifier extends StateNotifier<MInOutStatus> {
       ) {
     String status = 'pending';
     double confirmedQty = 0;
+
     if (manualQty > 0) {
+
+
       if (manualQty == line.targetQty) {
         status = 'manually-correct';
       } else if (manualQty < (line.targetQty ?? 0)) {
@@ -2333,11 +2854,44 @@ class MInOutNotifier extends StateNotifier<MInOutStatus> {
       }
       confirmedQty = scanningQty;
     }
-    return line.copyWith(
+
+    final newLine = line.copyWith(
       manualQty: manualQty,
       scanningQty: scanningQty.toInt(),
       confirmedQty: confirmedQty,
       scrappedQty: scrappedQty,
+      verifiedStatus: status,
+    );
+
+    return newLine;
+  }
+
+  Line _setLineStatusByQty(
+      Line line,
+    ) {
+    String status = 'pending';
+    double confirmedQty = line.confirmedQty ?? 0;
+    double movementQty = line.movementQty ?? 0;
+    double targetQty = line.targetQty ?? 0;
+    double scrappedQty = line.scrappedQty ?? 0;
+    double diff = movementQty - confirmedQty;
+    if (diff == 0) {
+      status = 'manually-correct';
+    } else if (diff < 0) {
+      status = 'manually-minor';
+    } else {
+      status = 'manually-over';
+    }
+
+
+
+
+    return line.copyWith(
+      manualQty: confirmedQty,
+      scanningQty: 0,
+      confirmedQty: confirmedQty,
+      scrappedQty: scrappedQty,
+      targetQty:(targetQty==0 && movementQty>0) ? movementQty : targetQty,
       verifiedStatus: status,
     );
   }
@@ -2612,6 +3166,80 @@ class MInOutNotifier extends StateNotifier<MInOutStatus> {
     );
   }
 
+  void removeSavedMInOutData(WidgetRef ref) {
+    // EN: Remove saved payload for the current documentNo in the per-type list
+    final box = GetStorage();
+
+    try {
+      final stateNow = ref.read(mInOutProvider);
+
+      // EN: Use current loaded documentNo (best source of truth)
+      final currentDoc = (stateNow.mInOut?.documentNo ?? '').trim();
+      if (currentDoc.isEmpty) return;
+
+      // EN: Per-type storage key
+      final key = keySaveMInOutList(stateNow.mInOutType.name);
+
+      // EN: Read list
+      final list = readSavedPayloadList(box: box, key: key);
+      if (list.isEmpty) return;
+
+      // EN: Filter out the payload matching current documentNo
+      final filtered = list.where((p) => payloadDocumentNo(p).trim() != currentDoc).toList();
+
+      if (filtered.isEmpty) {
+        // EN: Clean key if list becomes empty
+        box.remove(key);
+      } else {
+        _writeSavedPayloadList(box: box, key: key, list: filtered);
+      }
+
+      debugPrint('removeSavedMInOutData OK doc=$currentDoc key=$key before=${list.length} after=${filtered.length}');
+    } catch (e) {
+      // EN: Keep silent; never break main flow
+      debugPrint('removeSavedMInOutData ERROR: $e');
+    }
+  }
+
+  void setConfirmedQtyEqualsMovementQty(List<Line> filteredLines) {
+    for (int i = 0; i < filteredLines.length; i++) {
+      filteredLines[i] = filteredLines[i].copyWith(
+        confirmedQty: filteredLines[i].movementQty,
+        verifiedStatus: 'manually-correct',
+      );
+    }
+    state = state.copyWith(
+      usingRolQuickComplete: true,
+      mInOut: state.mInOut!.copyWith(lines: filteredLines),
+    );
+  }
+  void resetConfirmedQty(List<Line> filteredLines) {
+    for (int i = 0; i < filteredLines.length; i++) {
+      filteredLines[i] = filteredLines[i].copyWith(
+        confirmedQty: 0,
+        verifiedStatus: 'pending',
+      );
+    }
+    state = state.copyWith(
+      usingRolQuickComplete: false,
+      mInOut: state.mInOut!.copyWith(lines: filteredLines),
+    );
+  }
+
+  bool documentCanComplete(MInOutStatus mInOutState) {
+    bool isDraft = false;
+
+    if(isMInOutConfirmType(mInOutState.mInOutType)){
+      isDraft = mInOutState.mInOutConfirm?.docStatus.id == 'DR' ;
+    } else {
+      isDraft=  mInOutState.mInOut?.docStatus.id == 'DR' ||
+       mInOutState.mInOut?.docStatus.id == 'IP'  ;
+    }
+    return isDraft;
+
+  }
+
+
 
 
 
@@ -2633,6 +3261,7 @@ class MergeMInOutResult {
 enum MInOutType {
   shipment,
   shipmentConfirm,
+  shipmentPrepare,
   receipt,
   receiptConfirm,
   pickConfirm,
@@ -2663,6 +3292,8 @@ class MInOutStatus {
   final bool isLoadingMInOutList;
   final bool isComplete;
   final List<MInOutConfirm> mInOutConfirmList;
+  final bool usingRolQuickComplete;
+
 
   // ROLES
   final bool rolShowQty;
@@ -2707,7 +3338,16 @@ class MInOutStatus {
     this.rolComplete = false,
     this.rolQuickComplete = false,
     this.mInOutConfirmList = const [],
+    this.usingRolQuickComplete = false,
   });
+
+  bool get isConfirmFlow => mInOutType==MInOutType.moveConfirm ||
+      mInOutType == MInOutType.shipmentConfirm ||
+     mInOutType == MInOutType.pickConfirm ||
+     mInOutType == MInOutType.qaConfirm ||
+     mInOutType == MInOutType.receiptConfirm
+  ;
+  bool get isMovement => mInOutType == MInOutType.move || mInOutType == MInOutType.moveConfirm ;
 
   MInOutStatus copyWith({
     String? doc,
@@ -2740,6 +3380,7 @@ class MInOutStatus {
     bool? rolComplete,
     bool? rolQuickComplete,
     List<MInOutConfirm>? mInOutConfirmList,
+    bool? usingRolQuickComplete,
   }) => MInOutStatus(
     doc: doc ?? this.doc,
     mInOutType: mInOutType ?? this.mInOutType,
@@ -2771,6 +3412,7 @@ class MInOutStatus {
     rolComplete: rolComplete ?? this.rolComplete,
     rolQuickComplete: rolQuickComplete ?? this.rolQuickComplete,
     mInOutConfirmList: mInOutConfirmList ?? this.mInOutConfirmList,
+    usingRolQuickComplete: usingRolQuickComplete ?? this.usingRolQuickComplete,
   );
 
 
@@ -2821,6 +3463,8 @@ MInOutType? parseMInOutTypeFromWidget(String type) {
       return MInOutType.shipment;
     case 'shipmentconfirm':
       return MInOutType.shipmentConfirm;
+    case 'shipmentprepare':
+      return MInOutType.shipmentPrepare;
     case 'receipt':
       return MInOutType.receipt;
     case 'receiptconfirm':
@@ -2839,6 +3483,13 @@ MInOutType? parseMInOutTypeFromWidget(String type) {
 }
 
 Map<String, dynamic>? buildSaveMInOutPayload(MInOutStatus stateNow) {
+  debugPrint('>>> buildSaveMInOutPayload llamado');
+  final stateLines = stateNow.mInOut?.lines ?? [];
+  for(final line in stateLines){
+    debugPrint('${line.line ?? ''}, M ${line.movementQty ?? ''}, C ${line.confirmedQty ?? ''}, S ${line.scanningQty ?? ''}');
+  }
+
+  debugPrint('>>> buildSaveMInOutPayload llamado');
   final hasDoc = stateNow.doc.trim().isNotEmpty;
   final hasLines = (stateNow.mInOut?.lines.isNotEmpty ?? false) ||
       (stateNow.mInOut?.allLines.isNotEmpty ?? false);
@@ -2863,6 +3514,7 @@ Map<String, dynamic>? buildSaveMInOutPayload(MInOutStatus stateNow) {
     'editLocator': stateNow.editLocator,
     'isComplete': stateNow.isComplete,
 
+
     // Roles
     'rolShowQty': stateNow.rolShowQty,
     'rolShowScrap': stateNow.rolShowScrap,
@@ -2873,6 +3525,8 @@ Map<String, dynamic>? buildSaveMInOutPayload(MInOutStatus stateNow) {
     'rolPrepare': stateNow.rolPrepare,
     'rolComplete': stateNow.rolComplete,
     'rolQuickComplete': stateNow.rolQuickComplete,
+    'usingRolQuickComplete': stateNow.usingRolQuickComplete,
+
 
     // Entities
     'mInOut': stateNow.mInOut?.toJson(),
@@ -3023,3 +3677,78 @@ String payloadDocumentNo(Map<String, dynamic> payload) {
 String payloadSavedAt(Map<String, dynamic> payload) {
   return (payload['savedAt'] ?? '').toString();
 }
+Future<void> openProgressIfNeeded(WidgetRef ref) async {
+  if (!ref.context.mounted) return;
+  // Abrimos el dialog UNA sola vez al inicio.
+  // Si ya está abierto, no pasa nada malo, pero evitamos duplicar.
+  // Truco simple: abrir y dejar que el flujo lo cierre al final.
+  showActionProgressDialog(context: ref.context, ref: ref);
+}
+
+
+bool canCreateDocument(MInOutType type) {
+    switch (type) {
+      case MInOutType.shipmentConfirm:
+        return RolesApp.appShipmentconfirmComplete;
+      case MInOutType.receiptConfirm:
+        return RolesApp.appReceiptconfirmComplete;
+      case MInOutType.pickConfirm:
+        return RolesApp.appPickconfirmComplete;
+      case MInOutType.qaConfirm:
+        return RolesApp.appQaconfirmComplete;
+      case MInOutType.moveConfirm:
+        return RolesApp.appMovementconfirmComplete;
+      case MInOutType.shipment:
+        return RolesApp.appShipmentCreate;
+      case MInOutType.receipt:
+        return false;
+      case MInOutType.move:
+        return RolesApp.appMovementComplete;
+      case MInOutType.shipmentPrepare:
+        return RolesApp.appShipmentPrepare;
+    }
+}
+
+PutAwayMovement? createPutAwayMovementFromMinOut({required WidgetRef ref,
+  required Line line, required IdempiereLocator locatorFrom}){
+
+  // English: Ensure org link is consistent (some models need org propagation)
+  final org = ref.read(authProvider).selectedOrganization;
+  int orgId = int.tryParse(org?.id.toString() ?? '') ?? 0;
+
+  final int productId = int.tryParse(line.mProductId?.id ?? '') ?? 0;
+  MInOut? mInOut = ref.read(mInOutProvider).mInOut;
+  final currentLocatorFrom = line.mLocatorId;
+  final int locatorToId = int.tryParse(currentLocatorFrom?.id ?? '') ?? 0;
+
+  final PutAwayMovement putAwayMovement = PutAwayMovement();
+  putAwayMovement.setUser(Memory.sqlUsersData);
+  final IdempiereDocumentType documentType = Memory.materialMovement ;
+
+  putAwayMovement.movementLineToCreate!.mProductID = IdempiereProduct(id: productId);
+  putAwayMovement.movementLineToCreate!.mLocatorID = locatorFrom;
+  putAwayMovement.movementLineToCreate!.mLocatorToID =IdempiereLocator(id: locatorToId);
+  putAwayMovement.movementLineToCreate!.movementQty = line.confirmedQty?? 0 ;
+  putAwayMovement.movementLineToCreate!.line = 10;
+  putAwayMovement.movementToCreate!.cDocTypeID = documentType;
+
+  putAwayMovement.movementToCreate!.locatorFromId = locatorFrom.id;
+  int warehouseId = int.tryParse(mInOut?.mWarehouseId.id ??'') ?? 0;
+  if(warehouseId<=0) return null ;
+  IdempiereWarehouse warehouse = IdempiereWarehouse(id: warehouseId,aDOrgID: IdempiereOrganization(id: orgId));
+  putAwayMovement.movementToCreate!.mWarehouseID = warehouse;
+  putAwayMovement.movementToCreate!.mWarehouseToID = warehouse;
+
+  final check = putAwayMovement.canCreatePutAwayMovement();
+
+  final ui = mapPutAwayCheckToUi(check);
+
+  if (!ui.ok) {
+    showErrorCenterToast(ref.context, ui.message);
+    return null;
+  }
+
+  return putAwayMovement;
+
+}
+

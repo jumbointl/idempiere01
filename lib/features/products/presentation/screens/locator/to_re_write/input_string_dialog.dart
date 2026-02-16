@@ -1,14 +1,13 @@
-import 'package:awesome_dialog/awesome_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
 import 'package:monalisa_app_001/features/products/common/input_dialog.dart';
-import 'package:monalisa_app_001/features/products/presentation/providers/locator_provider.dart';
 import 'package:monalisa_app_001/features/products/presentation/providers/product_provider_common.dart';
 
 import '../../../../common/input_data_processor.dart';
 import '../../../../../shared/data/memory.dart';
 import '../../../../../shared/data/messages.dart';
+import '../../../../common/messages_dialog.dart';
 class InputStringDialog extends ConsumerStatefulWidget implements InputDataProcessor {
   int dialogType = Memory.TYPE_DIALOG_SEARCH;
   String title = Messages.INPUT_DIALOG_TITLE;
@@ -31,22 +30,7 @@ class InputStringDialog extends ConsumerStatefulWidget implements InputDataProce
         required String inputData,
         required int actionScan}) async {
     if (inputData == '') {
-      AwesomeDialog(
-        context: ref.context,
-        animType: AnimType.scale,
-        dialogType: DialogType.error,
-        body: Center(child: Text(
-          Messages.ERROR_LOCATOR_EMPTY,
-        ),),
-        // correct here
-        title: Messages.ERROR_LOCATOR_EMPTY,
-        desc: '',
-        autoHide: const Duration(seconds: 3),
-        btnOkOnPress: () {},
-        btnOkColor: Colors.amber,
-        btnCancelText: Messages.CANCEL,
-        btnOkText: Messages.OK,
-      ).show();
+      showErrorMessage(ref.context, ref, Messages.ERROR_LOCATOR_EMPTY);
     } else {
       var textState = ref.read(textStateProvider.notifier);
       textState.update((state) => inputData);

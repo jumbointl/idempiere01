@@ -40,9 +40,7 @@ final isScanningFromDialogProvider = StateProvider.autoDispose<bool>((ref) {
 });
 
 
-final productIdProvider = StateProvider.autoDispose<int>((ref) {
-  return 0;
-});
+
 
 
 

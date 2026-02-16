@@ -1,15 +1,21 @@
 
 
 
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
 import 'package:material_symbols_icons/symbols.dart';
+import 'package:monalisa_app_001/features/products/common/widget/ocr_dialog.dart';
+import 'package:monalisa_app_001/features/products/common/widget/scan_button_fixed_short.dart';
+import 'package:simple_barcode_scanner/simple_barcode_scanner.dart';
 
 import '../../../config/theme/app_theme.dart';
 import '../../shared/data/memory.dart';
 import '../../shared/data/messages.dart';
+import '../presentation/providers/actions/find_product_by_sku_name_action_provider.dart';
 import '../presentation/providers/common_provider.dart';
 import '../presentation/providers/product_provider_common.dart';
 import 'messages_dialog.dart';
@@ -402,31 +408,58 @@ Future<void> openInputDialogWithAction({
 }) async {
 
 
-  String lastSearch = Memory.lastSearch;
+  String lastSearch = '';
 
 
   String title = Messages.INPUT_DATA;
 
   if (actionScan == Memory.ACTION_FIND_MOVEMENT_BY_ID) {
     title = Messages.FIND_MOVEMENT_BY_ID;
-  } else if (actionScan == Memory.ACTION_FIND_BY_UPC_SKU_FOR_STORE_ON_HAND) {
+    lastSearch = Memory.lastSearchMovement;
+  } else if (actionScan == Memory.ACTION_FIND_BY_UPC_SKU_FOR_STORE_ON_HAND
+  || actionScan == Memory.ACTION_FIND_BY_UPC_SKU) {
+    final searchMode = ref.read(productSearchModeProvider);
     title = Messages.FIND_PRODUCT_BY_UPC_SKU;
+    switch (searchMode) {
+      case ProductSearchMode.upc:
+        title = Messages.FIND_PRODUCT_BY_UPC;
+        lastSearch = Memory.lastSearchUpc;
+        break;
+      case ProductSearchMode.sku:
+        title = Messages.FIND_PRODUCT_BY_SKU;
+        lastSearch = Memory.lastSearchSku;
+        break;
+      case ProductSearchMode.name:
+        title = Messages.FIND_BY_NAME;
+        lastSearch = Memory.lastSearchName;
+        break;
+    }
+
   } else if (actionScan == Memory.ACTION_GET_LOCATOR_TO_VALUE) {
     title = Messages.FIND_LOCATOR;
+    lastSearch = Memory.lastSearchLocator;
+  } else {
+    lastSearch = Memory.lastSearch ;
+  }
+  debugPrint(lastSearch);
+  final controller = TextEditingController();
+  final maxLinesNotifier = ValueNotifier<int>(1);
+  int computeMaxLines(String text) {
+    final t = text.trim();
+    if (t.isEmpty) return 1;
+
+    // English: One line per 23 characters
+    final int chars = t.length;
+
+    // English: ceil division
+    final int linesByLength = (chars / 23).ceil();
+
+    // English: keep between 1 and 6 lines for UI stability
+    return linesByLength.clamp(1, 6);
   }
 
-  final controller = TextEditingController();
-  lastSearch = Memory.lastSearch;
-  if (actionScan == Memory.ACTION_FIND_MOVEMENT_BY_ID) {
-    lastSearch = Memory.lastSearchMovement;
-  }
+
   if (lastSearch == '-1') lastSearch = '';
-  if (history) {
-    controller.text =
-    lastSearch.isEmpty ? Messages.NO_RECORDS_FOUND : lastSearch;
-  } else {
-    controller.text = lastSearch;
-  }
   ref.read(actionScanProvider.notifier).state = Memory.ACTION_NO_SCAN_ACTION;
   ref.read(isDialogShowedProvider.notifier).state = true;
   final result = await showModalBottomSheet<String?>(
@@ -437,6 +470,22 @@ Future<void> openInputDialogWithAction({
     builder: (BuildContext context) {
       return Consumer(
         builder: (context, ref, _) {
+          final searchMode = ref.read(productSearchModeProvider);
+
+          // English: OCR always available (you can restrict if needed)
+          final bool showOcrButton = true;
+
+          // English: callbacks to write into the controller
+          void applyToController(String value) {
+            controller.text = value;
+            controller.selection = TextSelection.fromPosition(
+              TextPosition(offset: controller.text.length),
+            );
+
+            // English: Update maxLines when text changes (OCR/SCAN/etc.)
+            maxLinesNotifier.value = computeMaxLines(controller.text);
+          }
+
           final useNumberKeyboard = ref.watch(useNumberKeyboardProvider);
           final useScreenKeyBoard = ref.watch(useScreenKeyboardProvider);
 
@@ -445,7 +494,7 @@ Future<void> openInputDialogWithAction({
 
           // English: Local helper to run "confirm" logic from both button and Enter key
           void submit() {
-            final text = controller.text.trim();
+            String text = controller.text.trim();
 
             if (text.isEmpty) {
               showErrorMessage(context, ref, Messages.TEXT_FIELD_EMPTY);
@@ -455,6 +504,38 @@ Future<void> openInputDialogWithAction({
             ref.read(isDialogShowedProvider.notifier).state = false;
             ref.read(actionScanProvider.notifier).state = actionScan;
 
+            final searchMode = ref.read(productSearchModeProvider);
+
+            switch (actionScan) {
+              case Memory.ACTION_FIND_MOVEMENT_BY_ID:
+                Memory.lastSearchMovement = text;
+              break;
+              case Memory.ACTION_GET_LOCATOR_TO_VALUE:
+                Memory.lastSearchLocator = text;
+              break;
+              case Memory.ACTION_FIND_BY_UPC_SKU_FOR_STORE_ON_HAND:
+              case Memory.ACTION_FIND_BY_UPC_SKU:
+                switch (searchMode) {
+                  case ProductSearchMode.upc:
+                    Memory.lastSearchUpc = text;
+                    break;
+                  case ProductSearchMode.sku:
+                    Memory.lastSearchSku = text;
+
+                    break;
+                  case ProductSearchMode.name:
+                    Memory.lastSearchName = text;
+                    break;
+                }
+              break;
+              default:
+                Memory.lastSearch = text;
+                break;
+
+            }
+
+
+
             onOk(
               ref: ref,
               inputData: text,
@@ -463,7 +544,10 @@ Future<void> openInputDialogWithAction({
 
             Navigator.pop(context, text);
           }
+          final available = MediaQuery.of(context).size.height - bottomInset;
 
+          // English: top padding grows when there is room, shrinks when keyboard appears
+          final topPad = min(60.0, max(0.0, available * 0.10));
           return PopScope(
             canPop: false,
             onPopInvokedWithResult: (didPop, result) async {
@@ -476,7 +560,7 @@ Future<void> openInputDialogWithAction({
             child: SafeArea(
               child: Padding(
                 // English: This is the key line that makes the sheet move up with the keyboard
-                padding: EdgeInsets.only(bottom: bottomInset,top: 150),
+                padding: EdgeInsets.only(bottom: bottomInset,top: topPad),
                 child: FractionallySizedBox(
                   heightFactor: 0.92,
                   child: Material(
@@ -487,14 +571,35 @@ Future<void> openInputDialogWithAction({
                         // English: Header pinned to the top
                         Padding(
                           padding: const EdgeInsets.fromLTRB(12, 16, 12, 8),
-                          child: Text(
-                            title,
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              fontSize: fontSizeLarge,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.purple,
-                            ),
+                          child: Row(
+                            children: [
+                              Text(
+                                title,
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  fontSize: fontSizeLarge,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.purple,
+                                ),
+                              ),
+                              SizedBox(width: 10),
+
+                              if (showOcrButton)
+                                Padding(
+                                  padding: const EdgeInsets.only(right: 6,left: 6),
+                                  child: ScanButtonFixedShort(
+                                    label: 'OCR',
+                                    customAction: (ctx, r) async {
+                                      final mode = r.read(productSearchModeProvider);
+                                      return showOCRDialog(context: ctx, ref: r, searchMode: mode);
+                                    },
+                                    onOk: ({required WidgetRef ref, required String inputData, required int actionScan}) {
+                                      // English: inputData comes from OCR dialog confirm
+                                      applyToController(inputData);
+                                    },
+                                  ),
+                                ),
+                            ],
                           ),
                         ),
 
@@ -524,26 +629,31 @@ Future<void> openInputDialogWithAction({
                                     : const SizedBox.shrink(),
                               ),
                               Expanded(
-                                child: TextField(
-                                  autofocus: true,
-                                  maxLines: 1,
-                                  controller: controller,
-                                  style: TextStyle(
-                                    fontSize: fontSizeLarge,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.purple,
-                                  ),
-                                  keyboardType: numberOnly == true
-                                      ? TextInputType.number
-                                      : TextInputType.text,
+                                child: ValueListenableBuilder<int>(
+                                  valueListenable: maxLinesNotifier,
+                                  builder: (context, maxLines, _) {
+                                    return TextField(
+                                      autofocus: true,
+                                      maxLines: maxLines, // <-- dynamic
+                                      controller: controller,
+                                      style: TextStyle(
+                                        fontSize: fontSizeLarge,
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.purple,
+                                      ),
+                                      keyboardType: numberOnly == true
+                                          ? TextInputType.number
+                                          : TextInputType.text,
+                                      textInputAction: TextInputAction.done,
+                                      onSubmitted: (_) => submit(),
 
-                                  // English: Show "done" (or "search") button on keyboard
-                                  textInputAction: TextInputAction.done,
-
-                                  // English: Pressing Enter submits
-                                  onSubmitted: (_) => submit(),
+                                      // English: When user types manually, update maxLines too
+                                      onChanged: (v) => maxLinesNotifier.value = computeMaxLines(v),
+                                    );
+                                  },
                                 ),
                               ),
+
                               IconButton(
                                 onPressed: () {
                                   final oldValue =
@@ -620,11 +730,31 @@ Future<void> openInputDialogWithAction({
                                 child: TextButton(
                                   style: TextButton.styleFrom(
                                     foregroundColor: Colors.white,
+                                    backgroundColor: themeColorPrimary,
+                                  ),
+                                  onPressed: () {
+                                    controller.text = lastSearch ;
+
+                                    controller.selection = TextSelection.fromPosition(
+                                      TextPosition(offset: controller.text.length),
+                                    );
+
+                                    // English: Recalculate dynamic lines when COPY is pressed
+                                    maxLinesNotifier.value = computeMaxLines(controller.text);
+                                  },
+                                  child: Text(Messages.COPY),
+                                ),
+                              ),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: TextButton(
+                                  style: TextButton.styleFrom(
+                                    foregroundColor: Colors.white,
                                     backgroundColor: Colors.green,
                                   ),
                                   // English: Same submit logic as Enter key
                                   onPressed: submit,
-                                  child: Text(Messages.CONFIRM),
+                                  child: Text(Messages.OK),
                                 ),
                               ),
                             ],
@@ -1450,4 +1580,228 @@ void removeText(BuildContext context,WidgetRef ref,TextEditingController textCon
 
 
 
+
+
+// English: Filtering helpers for OCR
+bool _isUpcLike(String s) {
+  final cleaned = s.replaceAll('-', '');
+  final onlyDigits = RegExp(r'^\d+$').hasMatch(cleaned);
+  return onlyDigits && cleaned.length >= 6;
+}
+
+bool _isSkuLike(String s) {
+  final cleaned = s.trim();
+  final alphaNumNoSpaces = RegExp(r'^[A-Za-z0-9]+$').hasMatch(cleaned);
+  return alphaNumNoSpaces && cleaned.length >= 5;
+}
+
+
+Future<String?> showScanDialog(BuildContext context, WidgetRef ref) async {
+  String? result = await SimpleBarcodeScanner.scanBarcode(
+    context,
+    barcodeAppBar: BarcodeAppBar(
+      appBarTitle: Messages.SCANNING,
+      centerTitle: false,
+      enableBackButton: true,
+      backButtonIcon: const Icon(Icons.arrow_back_ios),
+    ),
+    isShowFlashIcon: true,
+    delayMillis: 300,
+    cameraFace: CameraFace.back,
+  );
+
+  result = result?.trim();
+  if (result == null || result.isEmpty) return null;
+  return result;
+}
+
+Future<String?> showOCRDialog({
+  required BuildContext context,
+  required WidgetRef ref,
+  required ProductSearchMode searchMode,
+}) async {
+  final rawResults = await performOcr(context, ref);
+  if (rawResults.isEmpty) return null;
+
+  final filteredResults = () {
+    if (searchMode == ProductSearchMode.upc) {
+      return rawResults.where(_isUpcLike).toList();
+    }
+    if (searchMode == ProductSearchMode.sku) {
+      return rawResults.where(_isSkuLike).toList();
+    }
+    return rawResults;
+  }();
+
+  final selected = <String>{};
+
+  return showModalBottomSheet<String?>(
+    context: context,
+    isScrollControlled: true,
+    builder: (sheetCtx) {
+      final bottomInset = MediaQuery.of(sheetCtx).viewInsets.bottom;
+      final needsTabs =
+          searchMode == ProductSearchMode.upc || searchMode == ProductSearchMode.sku;
+
+      return StatefulBuilder(
+        builder: (ctx, setState) {
+          // English: build list WITH setState so checkboxes repaint
+          Widget buildList(List<String> items) {
+            if (items.isEmpty) return const Center(child: Text('No results'));
+
+            return ListView.builder(
+              itemCount: items.length,
+              itemBuilder: (_, i) {
+                final v = items[i];
+                final isChecked = selected.contains(v);
+
+                return CheckboxListTile(
+                  value: isChecked,
+                  title: Text(v),
+                  controlAffinity: ListTileControlAffinity.leading,
+                  onChanged: (val) {
+                    setState(() {
+                      if (val == true) {
+                        selected.add(v);
+                      } else {
+                        selected.remove(v);
+                      }
+                    });
+                  },
+                );
+              },
+            );
+          }
+
+          final selectedText = selected.join(' ');
+
+          void clearSelection() => setState(selected.clear);
+
+          void selectAll(List<String> items) => setState(() {
+            selected
+              ..clear()
+              ..addAll(items);
+          });
+
+          return SafeArea(
+            child: Padding(
+              padding: EdgeInsets.only(bottom: bottomInset),
+              child: FractionallySizedBox(
+                heightFactor: 0.92,
+                child: Material(
+                  color: Colors.white,
+                  child: Column(
+                    children: [
+                      const SizedBox(height: 12),
+                      Text(
+                        'OCR Results',
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 18,
+                        ),
+                      ),
+
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
+                        child: Container(
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            border: Border.all(color: Colors.purple),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(
+                            selectedText.isEmpty
+                                ? 'Selected: (none)'
+                                : 'Selected: $selectedText',
+                            style: const TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                      ),
+
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 12),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: TextButton(
+                                onPressed: clearSelection,
+                                child: const Text('CLEAR'),
+                              ),
+                            ),
+                            Expanded(
+                              child: TextButton(
+                                onPressed: () {
+                                  final items =
+                                  needsTabs ? filteredResults : rawResults;
+                                  selectAll(items);
+                                },
+                                child: const Text('SELECT ALL'),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+
+                      const Divider(height: 1),
+
+                      Expanded(
+                        child: needsTabs
+                            ? DefaultTabController(
+                          length: 2,
+                          child: Column(
+                            children: [
+                              const TabBar(
+                                tabs: [
+                                  Tab(text: 'RAW'),
+                                  Tab(text: 'FILTERED'),
+                                ],
+                              ),
+                              Expanded(
+                                child: TabBarView(
+                                  children: [
+                                    buildList(rawResults),
+                                    buildList(filteredResults),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        )
+                            : buildList(rawResults),
+                      ),
+
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(12, 6, 12, 16),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: TextButton(
+                                onPressed: () => Navigator.pop(sheetCtx, null),
+                                child: const Text('CANCEL'),
+                              ),
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: TextButton(
+                                onPressed: () {
+                                  final value = selected.join(' ').trim();
+                                  Navigator.pop(sheetCtx, value.isEmpty ? null : value);
+                                },
+                                child: const Text('CONFIRM'),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          );
+        },
+      );
+    },
+  );
+}
 

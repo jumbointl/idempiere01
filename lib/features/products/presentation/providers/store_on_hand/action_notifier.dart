@@ -3,6 +3,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:monalisa_app_001/features/products/presentation/providers/actions/find_locator_to_action.dart';
 import 'package:monalisa_app_001/features/products/presentation/providers/actions/find_movement_by_id_action.dart';
+import 'package:monalisa_app_001/features/products/presentation/providers/actions/find_product_by_sku_name_action.dart';
 
 import '../actions/create_movement_and_lines_action.dart';
 import '../actions/create_movement_line_action.dart';
@@ -32,4 +33,9 @@ Provider.autoDispose<FindMovementByIdAction>((ref) {
 final actionFindStoreOnHandByUpcSkuProvider =
 Provider.autoDispose<FindStoreOnHandByUpcSkuAction>(
       (ref) => FindStoreOnHandByUpcSkuAction(ref: ref),
+);
+
+final actionFindProductBySkuNameProvider =
+Provider.autoDispose<FindProductBySkuNameAction>(
+      (ref) => FindProductBySkuNameAction(ref: ref),
 );

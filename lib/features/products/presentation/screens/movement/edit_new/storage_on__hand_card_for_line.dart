@@ -266,7 +266,7 @@ class _StorageOnHandCardForLineState
 
             // English: Locator
             Text(
-              '${Messages.LOCATOR_TO}: $locator',
+              '${Messages.LOCATOR}: $locator',
               style: const TextStyle(fontSize: 14),
             ),
 

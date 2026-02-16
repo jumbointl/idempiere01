@@ -1,5 +1,4 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../../../../config/constants/roles_app.dart';
 
 import '../../../domain/entities/m_in_out.dart';
 import '../../../domain/entities/m_in_out_confirm.dart';
@@ -39,7 +38,7 @@ class MInOutFlowService {
     final List<MInOutConfirm> confirms = await repo.getMInOutConfirmList(mInOut.id!, ref);
 
     // 3.1 沒有 confirm 且允許建立 → 根據規則回傳建立動作
-    if (confirms.isEmpty && RolesApp.canCreateConfirm) {
+    if (confirms.isEmpty && canCreateDocument(state.mInOutType)) {
       final type = state.mInOutType;
 
       // ✅ 新規則：QA Confirm = pickConfirm 規則（一起走 pickLike）

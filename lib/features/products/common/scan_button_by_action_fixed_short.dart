@@ -12,16 +12,27 @@ class ScanButtonByActionFixedShort extends ConsumerStatefulWidget {
   final int actionTypeInt;
   final Color? color;
 
-  /// Callback que se dispara cuando el lector termina (Enter)
-  /// o cuando se escanea con la cámara y hay datos.
-  final void Function({required WidgetRef ref
-  , required String inputData,required int actionScan}) onOk;
+  /// English: Button label (default: "SCAN")
+  final String label;
+
+  /// English: Optional custom action (OCR dialog / custom scan flow).
+  /// If provided, it will be used instead of SimpleBarcodeScanner.
+  final Future<String?> Function(BuildContext context, WidgetRef ref)? customAction;
+
+  /// Callback fired when we have a non-empty result.
+  final void Function({
+  required WidgetRef ref,
+  required String inputData,
+  required int actionScan,
+  }) onOk;
 
   const ScanButtonByActionFixedShort({
     super.key,
     required this.actionTypeInt,
     required this.onOk,
     this.color,
+    this.label = 'SCAN',
+    this.customAction,
   });
 
   @override
@@ -32,7 +43,6 @@ class ScanButtonByActionFixedShort extends ConsumerStatefulWidget {
 class ScanButtonByActionFixedShortState
     extends ConsumerState<ScanButtonByActionFixedShort> {
   final FocusNode _focusNode = FocusNode();
-
   String scannedData = "";
 
   late bool isScanning;
@@ -42,9 +52,7 @@ class ScanButtonByActionFixedShortState
   void initState() {
     super.initState();
     _focusNode.addListener(() {
-      if (mounted) {
-        setState(() {});
-      }
+      if (mounted) setState(() {});
     });
     _focusNode.requestFocus();
   }
@@ -56,18 +64,64 @@ class ScanButtonByActionFixedShortState
   }
 
   void _handleKeyEvent(KeyEvent event) async {
-    // Solo manejamos cuando el scanner "termina" (Enter)
+    // English: Only handle when scanner "finishes" (Enter)
     if (event.logicalKey == LogicalKeyboardKey.enter) {
       if (scannedData.isNotEmpty && context.mounted) {
-        widget.onOk(ref: ref, inputData: scannedData,actionScan: widget.actionTypeInt);
+        widget.onOk(
+          ref: ref,
+          inputData: scannedData,
+          actionScan: widget.actionTypeInt,
+        );
       }
       scannedData = "";
       return;
     }
 
-    // Acumular caracteres enviados por el scanner
+    // English: Accumulate characters coming from the scanner keyboard
     if (event.character != null && event.character!.isNotEmpty) {
       scannedData += event.character!;
+    }
+  }
+
+  Future<void> _runPressedAction() async {
+    ref.read(isScanningProvider.notifier).state = true;
+
+    try {
+      String? result;
+
+      if (widget.customAction != null) {
+        // English: Custom action (OCR dialog, custom scan dialog, etc.)
+        result = await widget.customAction!(context, ref);
+      } else {
+        // English: Default barcode scan (camera)
+        result = await SimpleBarcodeScanner.scanBarcode(
+          context,
+          barcodeAppBar: BarcodeAppBar(
+            appBarTitle: Messages.SCANNING,
+            centerTitle: false,
+            enableBackButton: true,
+            backButtonIcon: const Icon(Icons.arrow_back_ios),
+          ),
+          isShowFlashIcon: true,
+          delayMillis: 300,
+          cameraFace: CameraFace.back,
+        );
+      }
+
+      result = result?.trim();
+      if (result != null && result.isNotEmpty) {
+        widget.onOk(ref: ref, inputData: result, actionScan: widget.actionTypeInt);
+      } else {
+        // English: If user canceled, do nothing (or show error if you prefer)
+        // showErrorMessage(context, ref, Messages.ERROR_SCANNING);
+      }
+    } catch (_) {
+      showErrorMessage(context, ref, Messages.ERROR_SCANNING);
+    } finally {
+      await Future.delayed(const Duration(milliseconds: 200));
+      if (mounted) {
+        ref.read(isScanningProvider.notifier).state = false;
+      }
     }
   }
 
@@ -76,76 +130,39 @@ class ScanButtonByActionFixedShortState
     isDialogShowed = ref.watch(isDialogShowedProvider);
     isScanning = ref.watch(isScanningProvider);
 
-    // Mantener foco en el botón para que el lector de código
-    // (como teclado) siga enviando eventos aquí.
+    // English: Keep focus for keyboard-scanner events
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted && !_focusNode.hasFocus) {
-        _focusNode.requestFocus();
-      }
+      if (mounted && !_focusNode.hasFocus) _focusNode.requestFocus();
     });
 
     return KeyboardListener(
       focusNode: _focusNode,
       onKeyEvent: (event) {
-        // Bloquear entrada si está escaneando o hay diálogo abierto
+        // English: Block keyboard-scanner input if scanning or dialog open
         if (isScanning || isDialogShowed) return;
         _handleKeyEvent(event);
       },
       child: TextButton(
-        onPressed: () async {
-          // marcar que está escaneando (si querés que el estado sea global)
-          ref.read(isScanningProvider.notifier).state = true;
-
-          String? result = await SimpleBarcodeScanner.scanBarcode(
-            context,
-            barcodeAppBar: BarcodeAppBar(
-              appBarTitle: Messages.SCANNING,
-              centerTitle: false,
-              enableBackButton: true,
-              backButtonIcon: const Icon(Icons.arrow_back_ios),
-            ),
-            isShowFlashIcon: true,
-            delayMillis: 300,
-            cameraFace: CameraFace.back,
-          );
-
-          result = result?.trim();
-          if (result != null && result.isNotEmpty) {
-            widget.onOk(ref: ref,  inputData: result,actionScan: widget.actionTypeInt);
-
-          } else {
-            showErrorMessage(context, ref, Messages.ERROR_SCANNING);
-          }
-
-          await Future.delayed(const Duration(milliseconds: 200));
-          if (mounted) {
-            ref.read(isScanningProvider.notifier).state = false;
-          }
-        },
+        onPressed: _runPressedAction,
         style: TextButton.styleFrom(
           backgroundColor: _focusNode.hasFocus
               ? (widget.color ?? themeColorPrimary)
               : Colors.grey,
           foregroundColor: Colors.white,
-          padding: const EdgeInsets.symmetric(
-            horizontal: 8,
-            vertical: 4,
-          ),
-          minimumSize: const Size(60, 32),          // 🔹 más compacto
-          tapTargetSize: MaterialTapTargetSize.shrinkWrap, // 🔹 reduce zona táctil extra
-          visualDensity: VisualDensity.compact,     // 🔹 menos espacio vertical
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+          minimumSize: const Size(60, 32),
+          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+          visualDensity: VisualDensity.compact,
         ),
-        child: const Text(
-          'SCAN',
-          style: TextStyle(
+        child: Text(
+          widget.label,
+          style: const TextStyle(
             color: Colors.white,
-            fontSize: themeFontSizeSmall, // 🔹 fuente más chica
+            fontSize: themeFontSizeSmall,
             fontWeight: FontWeight.bold,
           ),
         ),
       ),
     );
   }
-
-
 }

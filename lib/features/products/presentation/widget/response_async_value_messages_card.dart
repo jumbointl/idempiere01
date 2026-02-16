@@ -14,9 +14,10 @@ class ResponseAsyncValueMessagesCardAnimated extends StatelessWidget {
   Widget build(BuildContext context) {
     // English comment: "KeyedSubtree guarantees AnimatedSwitcher sees a 'different child' per state"
     return Column(
-      spacing: 10,
+      // NOTE: Column has no 'spacing' in stable Flutter. Use SizedBox / Gap instead.
       children: [
         _AnimatedIcon(ui: ui),
+        const SizedBox(height: 10),
         AnimatedSwitcher(
           duration: const Duration(milliseconds: 280),
           switchInCurve: Curves.easeOutCubic,
@@ -81,13 +82,13 @@ class _CardBody extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final hasAction = ui.onPressed != null;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-
         Row(
           children: [
-
             Expanded(
               child: Text(
                 ui.title,
@@ -103,7 +104,10 @@ class _CardBody extends StatelessWidget {
         const SizedBox(height: 6),
         Text(
           ui.subtitle,
-          style: const TextStyle(fontWeight: FontWeight.w500,color: Colors.white,),
+          style: const TextStyle(
+            fontWeight: FontWeight.w500,
+            color: Colors.white,
+          ),
         ),
         const SizedBox(height: 8),
 
@@ -113,10 +117,33 @@ class _CardBody extends StatelessWidget {
           child: SingleChildScrollView(
             child: Text(
               ui.message,
-              style: const TextStyle(fontSize: 14,color: Colors.white,),
+              style: const TextStyle(fontSize: 14, color: Colors.white),
             ),
           ),
         ),
+
+        if (hasAction) ...[
+          const SizedBox(height: 12),
+          Align(
+            alignment: Alignment.centerRight,
+            child: ui.buttonIcon != null
+                ? TextButton.icon(
+              onPressed: ui.onPressed,
+              style: TextButton.styleFrom(
+                foregroundColor: Colors.white,
+              ),
+              icon: Icon(ui.buttonIcon, size: 18),
+              label: Text(ui.buttonLabel ?? 'Action'),
+            )
+                : TextButton(
+              onPressed: ui.onPressed,
+              style: TextButton.styleFrom(
+                foregroundColor: Colors.white,
+              ),
+              child: Text(ui.buttonLabel ?? 'Action'),
+            ),
+          ),
+        ],
       ],
     );
   }

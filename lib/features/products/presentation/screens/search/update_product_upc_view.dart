@@ -14,7 +14,7 @@ import '../../widget/no_data_card.dart';
 class UpdateProductUpcView extends ConsumerStatefulWidget {
   int countScannedCamera = 0;
   late ProductsScanNotifier productsNotifier;
-  final int actionTypeInt = Memory.ACTION_UPDATE_UPC;
+  final int actionTypeInt = Memory.ACTION_FILL_NEW_UPC_TO_UPDATE;
 
   UpdateProductUpcView({super.key});
 

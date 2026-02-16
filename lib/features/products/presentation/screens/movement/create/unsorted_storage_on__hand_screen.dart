@@ -1,4 +1,3 @@
-import 'package:awesome_dialog/awesome_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -19,6 +18,7 @@ import '../../../../../../config/theme/app_theme.dart';
 import '../../../../../auth/presentation/providers/auth_provider.dart';
 import '../../../../../shared/data/memory.dart';
 import '../../../../../shared/data/messages.dart';
+import '../../../../common/messages_dialog.dart';
 import '../../../providers/actions/find_locator_to_action_provider.dart';
 import '../../../providers/common_provider.dart';
 import '../../../providers/locator_provider.dart';
@@ -238,8 +238,7 @@ class UnsortedStorageOnHandScreenState
   // ---------- Main UI ----------
   @override
   Widget getMainDataCard(BuildContext context, WidgetRef ref) {
-    final canCreate = RolesApp.canCreateMovementInSameOrganization ||
-        RolesApp.canCreateDeliveryNote;
+    final canCreate = RolesApp.appMovementComplete || RolesApp.appMovementconfirmComplete;
 
     return Container(
       padding: const EdgeInsets.all(10),
@@ -487,33 +486,7 @@ class UnsortedStorageOnHandScreenState
     );
   }
 
-  void showErrorMessage(BuildContext context, WidgetRef ref, String message) {
-    // English: Avoid showing dialogs if widget is disposed
-    if (!context.mounted) return;
 
-    AwesomeDialog(
-      context: context,
-      animType: AnimType.scale,
-      dialogType: DialogType.error,
-      body: Center(
-        child: Column(
-          children: [
-            Text(
-              message,
-              style: const TextStyle(fontStyle: FontStyle.italic),
-            ),
-          ],
-        ),
-      ),
-      title: message,
-      desc: '',
-      autoHide: const Duration(seconds: 3),
-      btnOkOnPress: () {},
-      btnOkColor: Colors.amber,
-      btnCancelText: Messages.CANCEL,
-      btnOkText: Messages.OK,
-    ).show();
-  }
 
   // ---------- Movement card ----------
   Widget getMovementCard(BuildContext context, WidgetRef ref) {

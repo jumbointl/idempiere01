@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:monalisa_app_001/config/config.dart';
+import 'package:monalisa_app_001/features/products/common/messages_dialog.dart';
 import 'package:simple_barcode_scanner/simple_barcode_scanner.dart';
 
 import '../../../../shared/data/memory.dart';
@@ -17,7 +19,7 @@ import '../search/product_result_with_photo_card.dart';
 import '../../../common/common_consumer_state.dart';
 
 class UpdateProductUpcScreen extends ConsumerStatefulWidget {
-  final int actionTypeInt = Memory.ACTION_UPDATE_UPC;
+  final int actionTypeInt = Memory.ACTION_FILL_NEW_UPC_TO_UPDATE;
 
   const UpdateProductUpcScreen({super.key});
 
@@ -35,10 +37,17 @@ class UpdateProductUpcScreenState
   late var dataToUpdateUPC;
 
   final hinTextUpdateUPC = Messages.UPDATE_UPC;
+  get actionScanTypeInt => Memory.ACTION_FILL_NEW_UPC_TO_UPDATE ;
 
   @override
   void initState() {
+
     super.initState();
+    debugPrint('widget.actionTypeInt ${widget.actionTypeInt}');
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(actionScanProvider.notifier).state = Memory.ACTION_FILL_NEW_UPC_TO_UPDATE;
+    });
+
   }
 
   @override
@@ -70,7 +79,7 @@ class UpdateProductUpcScreenState
           if (showScan)
             ScanButtonByActionFixedShort(
               actionTypeInt: widget.actionTypeInt,
-              onOk: ref.read(productsUpdateNotifierProvider.notifier).handleInputString,
+              onOk: handleInputString,
             ),
           IconButton(
             icon: const Icon(Icons.keyboard, color: Colors.purple),
@@ -78,7 +87,7 @@ class UpdateProductUpcScreenState
               openInputDialogWithAction(
                 ref: ref,
                 history: false,
-                onOk: ref.read(productsUpdateNotifierProvider.notifier).handleInputString,
+                onOk: handleInputString,
                 actionScan: widget.actionTypeInt,
               );
             },
@@ -90,25 +99,22 @@ class UpdateProductUpcScreenState
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            isScanning
+            (isScanning)
                 ? LinearProgressIndicator(
               backgroundColor: Colors.cyan,
               color: Colors.amber[600],
               minHeight: 36,
-            )
-                : _getSearchBar(),
+            ) : SizedBox(height: 6,) ,
 
             Expanded(
               child: dataToUpdateUPC.state.length == 2
                   ? updateAsync.when(
                 data: (product) {
+
                   WidgetsBinding.instance.addPostFrameCallback((_) {
                     stopScanning();
-                  });
 
-                  // English: Optional success feedback
-                  // (If you already show success elsewhere, remove this)
-                  // showSuccessSheet(Messages.SUCCESS);
+                  });
 
                   return _getProductDetailCard(product: product);
                 },
@@ -128,64 +134,6 @@ class UpdateProductUpcScreenState
     );
   }
 
-  // -------------------------
-  // UI widgets
-  // -------------------------
-
-  Widget _buttonScanWithPhone() {
-    final isScanning = ref.watch(isScanningProvider);
-
-    return TextButton(
-      style: TextButton.styleFrom(
-        backgroundColor: isScanning ? Colors.grey : Colors.cyan[200],
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(0)),
-      ),
-      onPressed: isScanning
-          ? null
-          : () async {
-        // English: Open camera scanner and store the result
-        final result = await SimpleBarcodeScanner.scanBarcode(
-          context,
-          barcodeAppBar: BarcodeAppBar(
-            appBarTitle: Messages.SCANNING,
-            centerTitle: false,
-            enableBackButton: true,
-            backButtonIcon: const Icon(Icons.arrow_back_ios),
-          ),
-          isShowFlashIcon: true,
-          delayMillis: 300,
-          cameraFace: CameraFace.back,
-        );
-
-        if (result != null && result.isNotEmpty) {
-          ref
-              .read(scanHandleProvider.notifier)
-              .addNewUPCCode(result);
-        }
-      },
-      child: Text(Messages.OPEN_CAMERA),
-    );
-  }
-
-  Widget _getSearchBar() {
-
-    return SizedBox(
-      width: MediaQuery.of(context).size.width - 30,
-      height: 36,
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Expanded(
-            child: Text(
-              Messages.PLEASE_SCAN_NEW_UPC,
-              textAlign: TextAlign.center,
-              style: textStyleMediumBold,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 
   Widget _getProductDetailCard({required IdempiereProduct product}) {
     return ProductResultWithPhotoCard(
@@ -266,85 +214,19 @@ class UpdateProductUpcScreenState
               ),
             ),
 
-            SizedBox(
-              width: double.infinity,
-              child: TextButton(
-                style: TextButton.styleFrom(
-                  backgroundColor:
-                  isCanEditUPC() ? Colors.purple : Colors.grey[600],
-                  foregroundColor: Colors.white,
-                ),
-                onPressed: () async {
-                  if (!isCanEditUPC()) return;
 
-                  final id = ref.read(productForUpcUpdateProvider).id?.toString() ?? '';
-                  final newUPC = ref.read(newUPCToUpdateProvider.notifier).state;
-
-                  // English: Validate inputs
-                  final idOk = id.isNotEmpty && int.tryParse(id) != null && int.parse(id) > 0;
-                  final upcOk = newUPC.isNotEmpty &&
-                      int.tryParse(newUPC) != null &&
-                      int.parse(newUPC) > 0;
-
-                  if (!idOk || !upcOk) {
-                    await showErrorSheet(
-                      '${Messages.DATA_NOT_VALID}\nID: $id, UPC: $newUPC',
-                    );
-                    return;
-                  }
-
-                  // English: Ask confirmation using unified bottom sheet
-                  final ok = await confirmAction(
-                    title: Messages.CONFIRM,
-                    message: 'ID: $id\nUPC: $newUPC',
-                  );
-                  if (!ok) return;
-
-                  // English: Trigger update flow
-                  final updateData = <String>[id, newUPC];
-                  ref.read(dataToUpdateUPCProvider.notifier).update((_) => updateData);
-
-                  // English: Mark scanning (optional UX)
-                  startScanning();
-                },
-                child: Text(hinTextUpdateUPC),
-              ),
-            ),
-
-            const SizedBox(height: 10),
-
-            // English: Optional: Provide camera scan button in this card
-            _buttonScanWithPhone(),
           ],
         ),
       ),
     );
   }
 
-  // -------------------------
-  // Business rules
-  // -------------------------
 
-  bool isCanEditUPC() {
-    final p = ref.read(productForUpcUpdateProvider);
-
-    if (p.id == null || p.id == 0) return false;
-
-    // English: If product has no UPC yet, allow updating when new UPC is valid
-    if (p.uPC == null || p.uPC!.isEmpty) {
-      final aux = ref.read(newUPCToUpdateProvider.notifier).state;
-      if (aux == hinTextUpdateUPC) return false;
-      if (int.tryParse(aux) == null) return false;
-      if (int.parse(aux) == 0) return false;
-      return true;
-    }
-
-    return false;
-  }
 
   @override
-  Future<void> handleInputString({required WidgetRef ref, required String inputData, required int actionScan}) {
-    // TODO: implement handleInputString
-    throw UnimplementedError();
+  Future<void> handleInputString({required WidgetRef ref, required String inputData, required int actionScan}) async {
+    ref.read(productsUpdateNotifierProvider.notifier).handleInputString(ref: ref,
+        inputData: inputData,actionScan: widget.actionTypeInt) ;
   }
+
 }

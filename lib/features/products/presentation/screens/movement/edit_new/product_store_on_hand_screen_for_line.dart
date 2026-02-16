@@ -4,17 +4,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-// Async base
-import 'package:monalisa_app_001/features/products/common/async_value_consumer_screen_state.dart';
-import 'package:monalisa_app_001/features/products/common/input_data_processor.dart';
+import 'package:monalisa_app_001/features/products/common/messages_dialog.dart';
 
 // Domain
 import 'package:monalisa_app_001/features/products/domain/idempiere/movement_and_lines.dart';
 import 'package:monalisa_app_001/features/products/domain/idempiere/idempiere_storage_on_hande.dart';
 import 'package:monalisa_app_001/features/products/domain/idempiere/response_async_value.dart';
 import 'package:monalisa_app_001/features/products/domain/idempiere/response_async_value_ui_model.dart';
-import 'package:monalisa_app_001/features/products/presentation/providers/common/code_and_fire_action_notifier.dart';
-import 'package:monalisa_app_001/features/products/presentation/providers/store_on_hand/action_notifier.dart';
+import 'package:monalisa_app_001/features/products/presentation/providers/actions/find_product_by_sku_name_action_provider.dart';
 
 // Providers
 import 'package:monalisa_app_001/features/products/presentation/providers/store_on_hand_provider.dart';
@@ -25,11 +22,15 @@ import 'package:monalisa_app_001/features/products/presentation/screens/movement
 import 'package:monalisa_app_001/features/products/presentation/screens/movement/edit_new/storage_on__hand_card_for_line.dart';
 import 'package:monalisa_app_001/features/products/presentation/screens/store_on_hand/product_resume_card.dart';
 import 'package:monalisa_app_001/features/products/presentation/widget/no_records_card.dart';
+import 'package:monalisa_app_001/features/products/presentation/widget/product_search_mode_button.dart';
 
 // Local
 import '../../../../../../config/router/app_router.dart';
 import '../../../../../shared/data/memory.dart';
 import '../../../../../shared/data/messages.dart';
+import '../../../../common/input_dialog.dart';
+import '../../../../common/widget/async_value_consumer_product_state.dart';
+import '../../../../domain/idempiere/idempiere_product.dart';
 import '../../../../domain/idempiere/product_with_stock.dart';
 import '../../../providers/common_provider.dart';
 import '../../../providers/product_provider_common.dart';
@@ -40,12 +41,11 @@ import 'custom_app_bar.dart';
 import 'product_detail_card_for_line.dart';
 
 class ProductStoreOnHandScreenForLine extends ConsumerStatefulWidget
-    implements InputDataProcessor {
+     {
   final String productId;
   final String argument;
   final MovementAndLines movementAndLines;
 
-  /// English: Scan action used by this screen
   final int actionTypeInt = Memory.ACTION_FIND_BY_UPC_SKU_FOR_STORE_ON_HAND;
 
   const ProductStoreOnHandScreenForLine({
@@ -55,62 +55,27 @@ class ProductStoreOnHandScreenForLine extends ConsumerStatefulWidget
     super.key,
   });
 
-  /// English: Notifier will be assigned in State.build via provider
-
   @override
   ConsumerState<ProductStoreOnHandScreenForLine> createState() =>
       ProductStoreOnHandScreenForLineState();
 
-  @override
-  Future<void> handleInputString({
-    required WidgetRef ref,
-    required String inputData,
-    required int actionScan,
-  }) async {
-    if (inputData.trim().isEmpty) return;
-    ref.invalidate(productStoreOnHandCacheProvider);
-    await Future.delayed(const Duration(milliseconds: 100));
-    ref.read(actionFindStoreOnHandByUpcSkuProvider).handleInputString(
-        ref: ref,
-        inputData: inputData,
-        actionScan: actionScan
-    );
-  }
+
+
+
 }
 
 class ProductStoreOnHandScreenForLineState
-    extends AsyncValueConsumerState<ProductStoreOnHandScreenForLine> {
-  // ---------- UI colors ----------
+    extends AsyncValueConsumerProductState<ProductStoreOnHandScreenForLine> {
   final Color colorBackgroundHasMovementId = Colors.yellow.shade200;
   final Color colorBackgroundNoMovementId = Colors.white;
 
-  // ---------- Screen state ----------
   late MovementAndLines movement;
   late int movementId;
-
-  late bool showResultCard;
-
   @override
   bool get showLeading => true;
 
   @override
   int get actionScanTypeInt => widget.actionTypeInt;
-
-  @override
-  AsyncValue<ResponseAsyncValue> get mainDataAsync {
-    final cached = ref.watch(productStoreOnHandCacheProvider);
-    if (cached != null) {
-      return AsyncData(
-        ResponseAsyncValue(
-          isInitiated: true,
-          success: true,
-          data: cached,
-        ),
-      );
-    }
-
-    return  ref.watch(mainNotifier.responseAsyncValueProvider);
-  }
 
   @override
   Color? getAppBarBackgroundColor(BuildContext context, WidgetRef ref) {
@@ -126,6 +91,17 @@ class ProductStoreOnHandScreenForLineState
       onBack: () => popScopeAction(context, ref),
       showBackButton: false,
       subtitle: '${Messages.LINES} : (${movement.movementLines?.length ?? 0})',
+      button: getSearchModeButton(
+          context: context,
+        onModeChanged: (mode) {
+          openInputDialogWithAction(
+            ref: ref,
+            history: false,
+            onOk: handleInputString,
+            actionScan: actionScanTypeInt,
+          );
+        },
+      ),
     );
   }
 
@@ -134,7 +110,6 @@ class ProductStoreOnHandScreenForLineState
       BuildContext context,
       WidgetRef ref,
       ) async {
-    // English: Resolve movement from argument (priority) or injected object
     if (widget.argument.isNotEmpty && widget.argument != '-1') {
       movement = MovementAndLines.fromJson(jsonDecode(widget.argument));
     } else {
@@ -144,17 +119,11 @@ class ProductStoreOnHandScreenForLineState
     movementId = movement.id ?? -1;
   }
 
-  @override
-  void initialSettingAtBuild(BuildContext context, WidgetRef ref) {
-    // English: Bind notifier from provider each build
 
-    showResultCard = ref.watch(showResultCardProvider);
-  }
 
   @override
   Future<void> executeAfterShown() async {
     _resetFlags(ref);
-
 
     if (widget.productId.isNotEmpty && widget.productId != '-1') {
       await handleInputString(
@@ -165,13 +134,6 @@ class ProductStoreOnHandScreenForLineState
     }
   }
 
-  // ---------------------------------------------------------------------------
-  // AsyncValue UI
-  // ---------------------------------------------------------------------------
-
-  /// English:
-  /// With the new provider style, most "errors" come through AsyncValue.data
-  /// (result.success == false). This handler is kept as a safety net.
   @override
   Widget asyncValueErrorHandle(
       WidgetRef ref, {
@@ -191,7 +153,6 @@ class ProductStoreOnHandScreenForLineState
       WidgetRef ref, {
         required ResponseAsyncValue result,
       }) {
-    // English: Show consistent message card for idle/empty/error states
     if (!result.isInitiated ||
         (result.success == true && result.data == null) ||
         (result.success != true)) {
@@ -204,57 +165,46 @@ class ProductStoreOnHandScreenForLineState
       return ResponseAsyncValueMessagesCardAnimated(ui: ui);
     }
 
-
-
-    // English: At this point -> initiated == true, success == true, data != null
     final dynamic raw = result.data;
 
+    if (raw is ProductWithStock && raw.hasProduct) {
+      final product = raw;
+      MemoryProducts.productWithStock = product;
+      final double width = MediaQuery.of(context).size.width - 30;
 
-    // Defensive: unexpected data type
-    if (raw is! ProductWithStock || !raw.hasProduct) {
-      final ui = ResponseAsyncValueUiModel(
-        state: ResponseUiState.error,
-        title: Messages.ERROR,
-        subtitle: Messages.NO_DATA_FOUND,
-        message: result.message ?? Messages.ERROR,
-        backgroundColor: Colors.red[200]!,
-        borderColor: Colors.red,
-        icon: Icons.error,
+      return Column(
+        spacing: 10,
+        children: [
+          ProductDetailCardForLine(product: product,
+            onPrintTap: (){
+              context.push(AppRouter.PAGE_LABEL_PRINTER_SELECT_PAGE,extra: product);
+            },
+          ),
+          if (product.hasListStorageOnHande && product.hasSortedStorageOnHande)
+            _buildStoragesOnHand(product.sortedStorageOnHande!, width),
+        ],
       );
-      return ResponseAsyncValueMessagesCardAnimated(ui: ui);
     }
 
-    final product = raw;
+    if (raw is List<IdempiereProduct>) {
+      final double width = MediaQuery.of(context).size.width - 30;
+      return _buildProducts(raw, width);
+    }
 
-    // English: Keep global selection (same behavior as before)
-    MemoryProducts.productWithStock = product;
-    final double width = MediaQuery.of(context).size.width - 30;
-
-    return Column(
-      spacing: 10,
-      children: [
-        ProductDetailCardForLine(
-          product: product,
-        ),
-        if (product.hasListStorageOnHande && product.hasSortedStorageOnHande)
-          _buildStoragesOnHand(product.sortedStorageOnHande!, width),
-      ],
+    final ui = ResponseAsyncValueUiModel(
+      state: ResponseUiState.error,
+      title: Messages.ERROR,
+      subtitle: Messages.NO_DATA_FOUND,
+      message: result.message ?? Messages.ERROR,
+      backgroundColor: Colors.red[200]!,
+      borderColor: Colors.red,
+      icon: Icons.error,
     );
+    return ResponseAsyncValueMessagesCardAnimated(ui: ui);
   }
-
-  @override
-  void afterAsyncValueAction(
-      WidgetRef ref, {
-        required ResponseAsyncValue result,
-      }) {
-    // English: No-op
-  }
-
-  // ---------------------------------------------------------------------------
-  // Storages UI
-  // ---------------------------------------------------------------------------
 
   Widget _buildStoragesOnHand(List<IdempiereStorageOnHande> storages, double width) {
+    final showResultCard = ref.watch(showResultCardProvider);
     if (!showResultCard) {
       return Text(Messages.NO_DATA_FOUND);
     }
@@ -275,7 +225,6 @@ class ProductStoreOnHandScreenForLineState
       );
     }
 
-    // English: +1 item for resume header
     return ListView.separated(
       physics: const NeverScrollableScrollPhysics(),
       shrinkWrap: true,
@@ -308,59 +257,46 @@ class ProductStoreOnHandScreenForLineState
     );
   }
 
-  // ---------------------------------------------------------------------------
-  // Input handling
-  // ---------------------------------------------------------------------------
-
   @override
   Future<void> handleInputString({
     required WidgetRef ref,
     required String inputData,
     required int actionScan,
   }) async {
-    await widget.handleInputString(
+    if (inputData.trim().isEmpty) return;
+    ref.invalidate(productStoreOnHandCacheProvider);
+    await Future.delayed(const Duration(milliseconds: 100));
+    mainNotifier.handleInputString(
       ref: ref,
       inputData: inputData,
       actionScan: actionScan,
     );
   }
 
-  // ---------------------------------------------------------------------------
-  // Back / Pop navigation
-  // ---------------------------------------------------------------------------
-
   @override
   void popScopeAction(BuildContext context, WidgetRef ref) {
-
-
-    // English: Defer navigation to avoid Router rebuild during build phase
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!context.mounted) return;
-      ref.read(actionScanProvider.notifier).state =
-          Memory.ACTION_FIND_MOVEMENT_BY_ID;
+
+      ref.read(actionScanProvider.notifier).state = Memory.ACTION_FIND_MOVEMENT_BY_ID;
       ref.invalidate(productStoreOnHandCacheProvider);
+
       final counter = ref.read(movementLineDeletedCounterProvider);
-      final route = '${AppRouter.PAGE_MOVEMENT_REPAINT}${counter%2}/$movementId';
+      final route = '${AppRouter.PAGE_MOVEMENT_REPAINT}${counter % 2}/$movementId';
       ref.read(movementLineDeletedCounterProvider.notifier).state++;
 
       context.go(route);
     });
   }
 
-  // ---------------------------------------------------------------------------
-  // Helpers
-  // ---------------------------------------------------------------------------
-
   void _resetFlags(WidgetRef ref) {
-    // English: Reset scanning/dialog flags
     ref.read(isScanningFromDialogProvider.notifier).update((_) => false);
     ref.read(isScanningProvider.notifier).update((_) => false);
     ref.read(isScanningForLineProvider.notifier).update((_) => false);
     ref.read(isDialogShowedProvider.notifier).update((_) => false);
     ref.invalidate(allowedMovementDocumentTypeProvider);
-    ref.read(actionScanProvider.notifier).update((state) =>actionScanTypeInt );
+    ref.read(actionScanProvider.notifier).update((_) => actionScanTypeInt);
 
-    // English: Reset movement temporary data (same behavior)
     MemoryProducts.movementAndLines.clearData();
   }
 
@@ -369,8 +305,36 @@ class ProductStoreOnHandScreenForLineState
     return MediaQuery.of(context).size.width;
   }
 
-  @override
-  CodeAndFireActionNotifier get mainNotifier => ref.read(actionFindStoreOnHandByUpcSkuProvider);
+  Widget _buildProducts(List<IdempiereProduct> products, double width) {
+    if (products.isEmpty) return NoRecordsCard(width: width);
+
+    return ListView.separated(
+      physics: const NeverScrollableScrollPhysics(),
+      shrinkWrap: true,
+      itemCount: products.length,
+      separatorBuilder: (_, __) => const SizedBox(height: 10),
+      itemBuilder: (context, index) {
+        final p = products[index];
+        return ProductDetailCardForLine(
+          product: p,
+          onTap: () {
+
+            final upc = (p.uPC ?? '').trim();
+            if (upc.isEmpty) {
+              String message = Messages.ERROR_UPC;
+              showErrorCenterToast(context, message);
+              return;
+            }
+            goToUpcSearch(upc);
+          },
+          onPrintTap: () {
+            onPrintTap(context,ref,p);
+          }
+
+        );
+      },
+    );
+  }
+
+
 }
-
-

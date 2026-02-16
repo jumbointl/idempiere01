@@ -52,6 +52,7 @@ class DateRangeFilterRowPanel extends ConsumerWidget {
                 DateFormat('dd/MM/yyyy').format(selectedDates.end)];
 
     // --------- PRIMEIRA LINHA (data / hoje / scan) ----------
+    final double fontSize =14;
     final firstRow = Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
@@ -141,7 +142,7 @@ class DateRangeFilterRowPanel extends ConsumerWidget {
           },
           child: Text(dateTexts[0]==dateTexts[1] ? dateTexts[0] :
             '${dateTexts[0].substring(0,5)}-${dateTexts[1].substring(0,5)}',
-            style: const TextStyle(color: Colors.purple),
+            style: TextStyle(color: Colors.purple,fontSize: fontSize),
           ),
         ),
         OutlinedButton(
@@ -154,7 +155,7 @@ class DateRangeFilterRowPanel extends ConsumerWidget {
           },
           child: Text(
             Messages.TODAY,
-            style: const TextStyle(color: Colors.purple),
+            style: TextStyle(color: Colors.purple,fontSize: fontSize),
           ),
         ),
         OutlinedButton(
@@ -169,9 +170,9 @@ class DateRangeFilterRowPanel extends ConsumerWidget {
             backgroundColor: themeColorPrimary,
             visualDensity: VisualDensity.compact,
           ),
-          child: const Text(
+          child: Text(
             'SCAN',
-            style: TextStyle(color: Colors.white),
+            style: TextStyle(color: Colors.white,fontSize: fontSize),
           ),
         ),
         Container(

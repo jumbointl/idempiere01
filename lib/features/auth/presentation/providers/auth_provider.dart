@@ -193,6 +193,10 @@ class AuthNotifier extends StateNotifier<AuthState> {
       final rolesApp = rolesResponse.roles
           .where((role) => role.name.startsWith('APP_'))
           .toList();
+      for(final Role rol in rolesResponse.roles){
+        debugPrint('rolesApp: ${rol.toJson()}');
+      }
+
       if (rolesApp.isNotEmpty) {
         RolesApp.set(rolesApp);
         // print('RolesApp: ${RolesApp.getString()}');

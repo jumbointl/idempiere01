@@ -3,7 +3,6 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:monalisa_app_001/config/config.dart';
-import 'package:monalisa_app_001/features/products/common/messages_dialog.dart';
 import 'package:monalisa_app_001/features/products/presentation/providers/common/code_and_fire_action_notifier.dart';
 import 'package:monalisa_app_001/features/sales_order/screen/sales_order_barcode_list_screen.dart';
 import 'package:monalisa_app_001/features/sales_order/screen/sales_order_no_data_card.dart';
@@ -576,9 +575,12 @@ class _SalesOrderListScreenState
         return AlertDialog(
           title: Row(
             children: [
-              Icon(Icons.home,color: Colors.red,size: 36,),
+              Icon(Icons.home,color: Colors.red,size: 20,),
               const SizedBox(width: 8),
-              Text(Messages.GO_TO_HOME_PAGE,style: TextStyle(fontSize: themeFontSizeNormal),),
+              Text(Messages.GO_TO_HOME_PAGE,
+                style: TextStyle(fontSize: themeFontSizeSmall),
+                overflow: TextOverflow.ellipsis,
+              ),
             ],
           ),
           content: Text(Messages.EXIT_THIS_PAGE,style: TextStyle(fontSize: themeFontSizeTitle),),
@@ -816,11 +818,9 @@ class _SalesOrderListScreenState
                             ),
                             onPressed: () {
                               Navigator.pop(ctx);
-                              showWarningMessage(
-                                ref.context,
-                                ref,
-                                Messages.NOT_IMPLEMENTED_YET,
-                              );
+
+                              doSalesOrderActions(ref, selectedOrders, selectedActions);
+
                             },
                             child: Text(Messages.CONFIRM),
                           ),
@@ -943,6 +943,78 @@ class _SalesOrderListScreenState
   @override
   // TODO: implement mainNotifier
   CodeAndFireActionNotifier get mainNotifier => throw UnimplementedError();
+
+  void doSalesOrderActions(
+      WidgetRef ref,
+      List<SalesOrderAndLines> selectedOrders,
+      Set<SalesOrderAction> selectedActions,
+      ) {
+    if (selectedOrders.isEmpty) {
+      _showSnack(ref, 'No hay órdenes seleccionadas.');
+      return;
+    }
+    if (selectedActions.isEmpty) {
+      _showSnack(ref, 'No seleccionaste ninguna acción.');
+      return;
+    }
+
+    // Execute actions in a deterministic order (enum order)
+    final actions = SalesOrderAction.values.where(selectedActions.contains).toList();
+
+    final logs = <String>[];
+    for (final order in selectedOrders) {
+      for (final action in actions) {
+        // Dispatch each action to its corresponding handler
+        switch (action) {
+          case SalesOrderAction.createShipping:
+            logs.addAll(_createShipping(ref, order));
+            break;
+          /*case SalesOrderAction.createShippingConfirm:
+            logs.addAll(_createShippingConfirm(ref, order));
+            break;
+          case SalesOrderAction.createPickConfirm:
+            logs.addAll(_createPickConfirm(ref, order));
+            break;
+          case SalesOrderAction.completeShipment:
+            logs.addAll(_completeShipment(ref, order));
+            break;
+          case SalesOrderAction.cancelOrder:
+            logs.addAll(_cancelOrder(ref, order));
+            break;*/
+        }
+      }
+    }
+
+    // Show a single feedback message (avoids dialog spam)
+    _showSnack(ref, logs.join('\n'));
+  }
+
+  /// Shows a SnackBar with the given message.
+  void _showSnack(WidgetRef ref, String message) {
+    final ctx = ref.context;
+    if (!ctx.mounted) return;
+
+    ScaffoldMessenger.of(ctx).clearSnackBars();
+    ScaffoldMessenger.of(ctx).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        duration: const Duration(seconds: 4),
+      ),
+    );
+  }
+
+  String _orderLabel(SalesOrderAndLines o) {
+    final doc = o.documentNo ?? '—';
+    final id = o.id?.toString() ?? '—';
+    return 'Doc:$doc / ID:$id';
+  }
+
+  /// ===== Action handlers (simulated for now) =====
+
+  List<String> _createShipping(WidgetRef ref, SalesOrderAndLines order) {
+    // Simulate: create shipment document for this order
+    return ['Acción realizada: createShipping (${_orderLabel(order)})'];
+  }
 
 }
 

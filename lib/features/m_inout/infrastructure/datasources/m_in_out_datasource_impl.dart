@@ -1,7 +1,6 @@
 
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/src/material/date.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:monalisa_app_001/features/m_inout/domain/entities/line_confirm.dart';
@@ -16,6 +15,7 @@ import 'package:monalisa_app_001/features/shared/domain/entities/standard_respon
 
 import '../../../../config/config.dart';
 import '../../../auth/presentation/providers/auth_provider.dart';
+import '../../../products/common/idempiere_rest_api.dart';
 import '../../../products/domain/models/idempiere_query_page_utils.dart';
 import '../../../products/domain/models/m_in_out_list_type.dart';
 import '../../../shared/domain/entities/ad_login_request.dart';
@@ -295,17 +295,35 @@ class MInOutDataSourceImpl implements MInOutDataSource {
     final List<MInOutConfirm> confirmList = [];
     int skip = 0;
     bool hasMoreRecords = true;
+    final isMovement = mInOutState.mInOutType == MInOutType.move ||
+        mInOutState.mInOutType == MInOutType.moveConfirm;
+    final modelName = isMovement ? 'M_MovementConfirm' : 'M_InOutConfirm';
+    final columnId = isMovement ? 'M_MovementConfirm_ID' : 'M_InOutConfirm_ID';
+    final columnSearch = isMovement ? 'M_Movement_ID' : 'M_InOut_ID';
+
+
 
     try {
       while (hasMoreRecords) {
         // EN: Keep filter operators consistent (use "and")
-        final String url =
-            "/api/v1/models/m_inoutconfirm?"
-            "\$filter=M_InOut_ID%20eq%20$mInOutId%20and%20"
-            "M_InOutConfirm_ID%20neq%20$excludedMInOutConfirmId%20and%20"
+        late final String url;
+        if(excludedMInOutConfirmId>0) {
+          url =
+        "/api/v1/models/$modelName?"
+            "\$filter=$columnSearch%20eq%20$mInOutId%20and%20"
+            "$columnId%20neq%20$excludedMInOutConfirmId%20and%20"
             "DocStatus%20eq%20'DR'"
-            "&\$orderby=M_InOutConfirm_ID"
+            "&\$orderby=$columnId"
             "&\$skip=$skip";
+        } else {
+          url =
+          "/api/v1/models/$modelName?"
+              "\$filter=$columnSearch%20eq%20$mInOutId%20and%20"
+              "DocStatus%20eq%20'DR'"
+              "&\$orderby=$columnId"
+              "&\$skip=$skip";
+        }
+
 
         debugPrint('url $url');
         final response = await dio.get(url);
@@ -346,7 +364,7 @@ class MInOutDataSourceImpl implements MInOutDataSource {
     required List<int> mInOutLineIds,
     required WidgetRef ref,
   }) async {
-
+    debugPrint('getLinesMInOutConfirmToUpdateTargetQty');
     await _dioInitialized;
 
     final mInOutState = ref.read(mInOutProvider);
@@ -356,6 +374,9 @@ class MInOutDataSourceImpl implements MInOutDataSource {
     const int chunkSize = 50;
 
     final List<LineConfirm> allLines = [];
+    final isMovement = mInOutState.mInOutType == MInOutType.move ||
+        mInOutState.mInOutType == MInOutType.moveConfirm;
+
 
     try {
 
@@ -387,8 +408,8 @@ class MInOutDataSourceImpl implements MInOutDataSource {
 
             final String url =
                 "/api/v1/models/m_inoutlineconfirm?"
-                "\$filter=M_InOutLine_ID%20in($lineIds)%20and%20"
-                "M_InOutConfirm_ID%20in($confirmsIds)"
+                "\$filter=M_InOutLine_ID%20in%20($lineIds)%20and%20"
+                "M_InOutConfirm_ID%20in%20($confirmsIds)"
                 "&\$orderby=M_InOutLineConfirm_ID"
                 "&\$skip=$skip";
 
@@ -450,11 +471,9 @@ class MInOutDataSourceImpl implements MInOutDataSource {
         if (responseApi.records != null && responseApi.records!.isNotEmpty) {
           final mInOut = responseApi.records!.first;
 
-          debugPrint('mInOutgetMInOut-----${mInOut.mWarehouseToId.identifier ?? 'NULL'}');
           final lines = await getLinesMovement(mInOut.id!, ref);
           await Future.delayed(Duration(microseconds: 500));
           mInOut.lines = lines;
-          print('mInOutgetMInOut--lines ${lines.isNotEmpty ? mInOut.lines.length :'empty' }');
 
           return mInOut;
         } else {
@@ -529,30 +548,61 @@ class MInOutDataSourceImpl implements MInOutDataSource {
 
   @override
   Future<List<MInOutConfirm>> getMovementConfirmList(
-      int movementId, WidgetRef ref) async {
+      int movementId,
+      WidgetRef ref,
+      ) async {
     await _dioInitialized;
     final mInOutState = ref.read(mInOutProvider);
 
+    final List<MInOutConfirm> allConfirms = [];
+    int skip = 0;
+    bool hasMoreRecords = true;
+
     try {
-      final String url =
-          "/api/v1/models/m_movementConfirm?\$filter=M_Movement_ID%20eq%20$movementId";
+      while (hasMoreRecords) {
+        final String url =
+            "/api/v1/models/m_movementConfirm?\$filter=M_Movement_ID%20eq%20$movementId"
+            "&\$orderby=M_MovementConfirm_ID"
+            "&\$skip=$skip";
+        debugPrint('url $url');
 
-      final response = await dio.get(url);
+        final response = await dio.get(url);
 
-      if (response.statusCode == 200) {
-        final responseApi = ResponseApi<MInOutConfirm>.fromJson(
-            response.data, MInOutConfirm.fromJson);
-
-        if (responseApi.records != null && responseApi.records!.isNotEmpty) {
-          final mInOutConfirmList = responseApi.records!;
-          return mInOutConfirmList;
-        } else {
-          return [];
+        if (response.statusCode != 200) {
+          throw Exception(
+            'Error al obtener la lista de ${mInOutState.title}: ${response.statusCode}',
+          );
         }
-      } else {
-        throw Exception(
-            'Error al obtener la lista de ${mInOutState.title}: ${response.statusCode}');
+
+        final responseApi = ResponseApi<MInOutConfirm>.fromJson(
+          response.data,
+          MInOutConfirm.fromJson,
+        );
+
+        // Si no hay records, cortamos.
+        if (responseApi.records == null || responseApi.records!.isEmpty) {
+          // A diferencia de getLinesMovement, acá NO tiramos excepción si skip==0,
+          // porque para confirm list es válido que no haya confirms.
+          break;
+        }
+
+        allConfirms.addAll(responseApi.records!);
+        skip += responseApi.records!.length;
+
+        debugPrint(
+          'Total records: ${responseApi.rowCount} extracted records: $skip',
+        );
+
+        final rowCount = responseApi.rowCount ?? 0;
+        hasMoreRecords = rowCount > skip;
+
+        debugPrint('hasMoreRecords: $hasMoreRecords');
+
+        // Micro-pausa (igual a tu patrón)
+        await Future.delayed(const Duration(microseconds: 200));
       }
+
+      return allConfirms;
     } on DioException catch (e) {
       final authDataNotifier = ref.read(authProvider.notifier);
       throw CustomErrorDioException(e, authDataNotifier);
@@ -560,6 +610,7 @@ class MInOutDataSourceImpl implements MInOutDataSource {
       throw Exception(e.toString());
     }
   }
+
 
   @override
   Future<MInOutConfirm> getMovementConfirm(
@@ -613,7 +664,7 @@ class MInOutDataSourceImpl implements MInOutDataSource {
     try {
       while (hasMoreRecords) {
         final String url =
-            "/api/v1/models/m_movementlineconfirm?\$filter=M_MovementConfirm_ID%20eq%20$movementConfirmId&\$orderby=M_MovementLine_ID&\$skip=$skip";
+            "/api/v1/models/m_movementlineconfirm?\$filter=M_MovementConfirm_ID%20eq%20$movementConfirmId&\$orderby=M_MovementLineConfirm_ID&\$skip=$skip";
         print(url);
         final response = await dio.get(url);
 
@@ -654,7 +705,10 @@ class MInOutDataSourceImpl implements MInOutDataSource {
 
     final isConfirm = mInOutState.mInOutType != MInOutType.shipment &&
         mInOutState.mInOutType != MInOutType.receipt &&
+        mInOutState.mInOutType != MInOutType.shipmentPrepare &&
         mInOutState.mInOutType != MInOutType.move;
+
+
 
     final currentStatus = isConfirm
         ? mInOutState.mInOutConfirm?.docStatus.id?.toString() ?? 'DR'
@@ -667,6 +721,9 @@ class MInOutDataSourceImpl implements MInOutDataSource {
             : (currentStatus == 'IP' ? 'CO' : 'DR'));
     if(mInOutState.mInOutType == MInOutType.move){
       status ='CO';
+    }
+    if(mInOutState.mInOutType == MInOutType.shipmentPrepare){
+      status ='PR';
     }
     print('-----status : $status currentStatus : $currentStatus isConfirm : $isConfirm');
 
@@ -723,11 +780,14 @@ class MInOutDataSourceImpl implements MInOutDataSource {
         final standardResponse =
             StandardResponse.fromJson(response.data['StandardResponse']);
         if (standardResponse.isError == false) {
+
           int duration = 3;
           await Future.delayed(Duration(seconds: duration));
-          final bool getDataMovement =(mInOutState.mInOutType == MInOutType.move
+          final bool isMovement =(mInOutState.mInOutType == MInOutType.move
               || mInOutState.mInOutType == MInOutType.moveConfirm);
-          final mInOutResponse = getDataMovement
+
+
+          final mInOutResponse = isMovement
 
               ? await getMovement(
                   mInOutState.mInOut!.documentNo!.toString(), ref)
@@ -755,6 +815,137 @@ class MInOutDataSourceImpl implements MInOutDataSource {
     }
   }
   @override
+  Future<MInOutConfirm> setDocActionConfirm(WidgetRef ref) async {
+    print('----------setDocAction----------init ');
+    await _dioInitialized;
+    final mInOutState = ref.read(mInOutProvider);
+
+
+    final currentStatus = mInOutState.mInOutConfirm?.docStatus.id?.toString() ?? 'DR';
+
+
+    var status = 'CO';
+
+    print('-----status : $status currentStatus : $currentStatus isConfirm');
+
+    try {
+      final String url =
+          "/ADInterface/services/rest/model_adservice/set_docaction";
+      final authData = ref.read(authProvider);
+
+      final serviceType = mInOutState.mInOutType == MInOutType.moveConfirm
+          ? 'SetDocumentActionMovementConfirm'
+          : 'SetDocumentActionInOutConfirm';
+
+      final tableName = mInOutState.mInOutType == MInOutType.moveConfirm
+          ? 'M_MovementConfirm'
+          : 'M_InOutConfirm';
+
+      final recordId =  mInOutState.mInOutConfirm?.id ?? 0 ;
+
+      final request = {
+        'ModelSetDocActionRequest': ModelSetDocActionRequest(
+          modelSetDocAction: ModelSetDocAction(
+            serviceType: serviceType,
+            tableName: tableName,
+            recordId: recordId,
+            docAction: status,
+          ),
+          adLoginRequest: AdLoginRequest(
+            user: authData.userName,
+            pass: authData.password,
+            lang: "es_PY",
+            clientId: authData.selectedClient!.id,
+            roleId: authData.selectedRole!.id,
+            orgId: authData.selectedOrganization!.id,
+            warehouseId: authData.selectedWarehouse!.id,
+            stage: 9,
+          ),
+        ).toJson()
+      };
+      print(request);
+      print(url);
+
+      final response = await dio.post(url, data: request);
+      if (response.statusCode == 200) {
+        final standardResponse =
+        StandardResponse.fromJson(response.data['StandardResponse']);
+        if (standardResponse.isError == false) {
+
+          int duration = 3;
+          await Future.delayed(Duration(seconds: duration));
+          final bool isMovement =(mInOutState.mInOutType == MInOutType.move
+              || mInOutState.mInOutType == MInOutType.moveConfirm);
+
+
+          final mInOutResponse = isMovement
+
+              ? await getMovementConfirm(
+              recordId, ref)
+              : await getMInOutConfirm(
+              recordId, ref);
+          if (mInOutResponse.id == recordId) {
+
+            return mInOutResponse;
+          } else {
+            throw Exception('Error al confirmar el ${mInOutState.title}');
+          }
+        } else {
+          throw Exception(standardResponse.error ?? 'Unknown error');
+        }
+      } else {
+        throw Exception(
+            'Error al cargar los datos del ${mInOutState.title}: ${response.statusCode}');
+      }
+
+    } on DioException catch (e) {
+      final authDataNotifier = ref.read(authProvider.notifier);
+      throw CustomErrorDioException(e, authDataNotifier);
+    } catch (e) {
+      throw Exception(e.toString());
+    }
+  }
+
+  @override
+  Future<Line> updateMInOutLineMovementQtyAndLocator(Line line, WidgetRef ref) async {
+    final mInOutState = ref.read(mInOutProvider);
+
+    // Decide target model & qty column
+    final bool isMovement = mInOutState.isMovement;
+    final String modelName = isMovement ? 'm_movementline' : 'm_inoutline';
+    final String qtyColumn = 'MovementQty';
+    final String qtyEnteredColumn = 'QtyEntered';
+    final bool isConfirmFlow = mInOutState.isConfirmFlow;
+
+    final int? recordId = line.id;
+    if (recordId == null) {
+      throw Exception('Line.id is null. Cannot update record.');
+    }
+
+    // Build payload
+    final Map<String, dynamic> payload = {
+      qtyColumn: (line.confirmedQty ?? 0.0),
+      if(!isMovement) qtyEnteredColumn: (line.confirmedQty ?? 0.0),
+      if(!isConfirmFlow) 'ConfirmedQty' :(line.confirmedQty ?? 0),
+    };
+
+    // Optional locator update
+    /*if (line.editLocator != null) {
+      // Try int first. If your server requires object, use {'id': line.editLocator}.
+      payload['M_Locator_ID'] = line.editLocator;
+    }*/
+
+    await updateDataByRESTAPI(
+      modelName: modelName,
+      id: recordId,
+      data: payload,
+      ref: ref,
+    );
+
+    return Line(id: recordId);
+  }
+
+  /*@override
   Future<Line> updateMInOutLine(Line line, WidgetRef ref) async {
     await _dioInitialized;
     try {
@@ -779,7 +970,7 @@ class MInOutDataSourceImpl implements MInOutDataSource {
           modelCrud: ModelCrud(
             serviceType: serviceType,
             tableName: tableName,
-            recordId: line.confirmId,
+            recordId: line.id,
             action: "Update",
             dataRow: {
               'field': [
@@ -829,7 +1020,7 @@ class MInOutDataSourceImpl implements MInOutDataSource {
     } catch (e) {
       throw Exception(e.toString());
     }
-  }
+  }*/
 
   @override
   Future<LineConfirm> updateLineConfirm(Line line, WidgetRef ref) async {
@@ -848,7 +1039,6 @@ class MInOutDataSourceImpl implements MInOutDataSource {
         serviceType = 'UpdateMovementLineConfirm';
         tableName = 'M_MovementLineConfirm';
       }
-      bool editTargetQty = line.confirmedQty != line.targetQty;
       final request = {
         'ModelCRUDRequest': ModelCrudRequest(
           modelCrud: ModelCrud(
@@ -858,9 +1048,7 @@ class MInOutDataSourceImpl implements MInOutDataSource {
             action: "Update",
             dataRow: {
               'field': [
-                if(editTargetQty)
-                  FieldCrud(
-                      column: 'TargetQty', val: line.confirmedQty.toString()),
+
                 FieldCrud(
                     column: 'ConfirmedQty', val: line.confirmedQty.toString()),
                 FieldCrud(
@@ -963,7 +1151,7 @@ class MInOutDataSourceImpl implements MInOutDataSource {
           mInOutData.mInOutType == MInOutType.moveConfirm) {
         serviceType = 'UpdateMovementLine';
         tableName = 'M_MovementLine';
-        locator = 'M_LocatorTo_ID';
+        locator = 'M_Locator_ID';
       }
 
       final request = {
@@ -1095,6 +1283,55 @@ class MInOutDataSourceImpl implements MInOutDataSource {
     }
   }
   @override
+  Future<bool> updateLineConfirmConfirmQty(LineConfirm line, WidgetRef ref) async {
+    await _dioInitialized;
+
+    final authData = ref.read(authProvider);
+    final mInOutData = ref.read(mInOutProvider);
+
+    // Model correcto según tipo
+    final String modelName =
+    (mInOutData.mInOutType == MInOutType.moveConfirm)
+        ? 'M_MovementLineConfirm'
+        : 'M_InOutLineConfirm';
+
+    // Valor a escribir (tu flujo actual copia confirmedQty -> TargetQty)
+    final double confirmedQty = (line.confirmedQty ?? 0).toDouble();
+
+    // Payload mínimo: solo TargetQty + (opcional) Description
+    final Map<String, dynamic> data = <String, dynamic>{
+      'ConfirmedQty': confirmedQty,
+      'Description':
+      '${DateFormat('dd/MM/yyyy HH:mm:ss').format(DateTime.now())} --> '
+          '${authData.userName} --> ConfirmedQty(${line.targetQty ?? 0}) --> $confirmedQty',
+    };
+
+    try {
+      debugPrint('updateLineConfirmTargetQty model=$modelName id=${line.id} data=$data');
+
+      final int? id = line.id;
+      if (id == null || id <= 0) {
+        throw Exception('LineConfirm.id inválido: $id');
+      }
+
+      final resp = await updateDataByRESTAPI(
+        modelName: modelName,
+        id: id,
+        data: data,
+        ref: ref,
+      );
+
+      // Si llegó 200 en updateDataByRESTAPI, OK.
+      return resp.statusCode == 200;
+    } on DioException catch (e) {
+      final authDataNotifier = ref.read(authProvider.notifier);
+      throw CustomErrorDioException(e, authDataNotifier);
+    } catch (e) {
+      throw Exception(e.toString());
+    }
+  }
+
+  /* @override
   Future<bool> updateLineConfirmTargetQty(LineConfirm line, WidgetRef ref) async {
 
     print('update LineConfirm movementQty line : ${line.toJson()}');
@@ -1116,7 +1353,6 @@ class MInOutDataSourceImpl implements MInOutDataSource {
         tableName = 'M_MovementLineConfirm';
       }
 
-      String columnToUpdate = 'TargetQty';
 
       final request = {
         'ModelCRUDRequest': ModelCrudRequest(
@@ -1128,10 +1364,16 @@ class MInOutDataSourceImpl implements MInOutDataSource {
             dataRow: {
               'field': [
                 FieldCrud(
+                    column: 'TargetQty', val: line.confirmedQty.toString()),
+                FieldCrud(
+                    column: 'ConfirmedQty', val: line.confirmedQty.toString()),
+                FieldCrud(
+                    column: 'ScrappedQty', val: '0'),
+                FieldCrud(
                     column: 'Description',
                     val:
                     '${DateFormat('dd/MM/yyyy HH:mm:ss').format(DateTime.now())} --> ${authData.userName} --> TargetQty --> ${line.confirmedQty}'),
-                FieldCrud(column: columnToUpdate, val: line.confirmedQty.toString()),
+
               ].map((field) => field.toJson()).toList(),
             },
           ),
@@ -1170,7 +1412,7 @@ class MInOutDataSourceImpl implements MInOutDataSource {
     } catch (e) {
       throw Exception(e.toString());
     }
-  }
+  }*/
 
 
   @override
@@ -1282,6 +1524,7 @@ class MInOutDataSourceImpl implements MInOutDataSource {
       while (hasMoreRecords) {
         final String url =
             "/api/v1/models/m_inoutlineconfirm?\$filter=M_InOutConfirm_ID%20eq%20$mInOutConfirmId&orderby=M_InOutLineConfirm_ID&\$skip=$skip";
+        debugPrint(url);
         final response = await dio.get(url);
 
         if (response.statusCode != 200) {
@@ -1312,6 +1555,10 @@ class MInOutDataSourceImpl implements MInOutDataSource {
       throw Exception(e.toString());
     }
   }
+
+
+
+
 
 
 }

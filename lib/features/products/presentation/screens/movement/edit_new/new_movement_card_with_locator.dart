@@ -1,6 +1,5 @@
 // ignore_for_file: public_member_api_docs, sort_constructors_first
 
-import 'package:awesome_dialog/awesome_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_addons/flutter_addons.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -14,6 +13,7 @@ import '../../../../../printer/zpl/new/models/zpl_template.dart';
 import '../../../../../printer/zpl/new/provider/template_zpl_provider.dart';
 import '../../../../../shared/data/memory.dart';
 import '../../../../../shared/data/messages.dart';
+import '../../../../common/messages_dialog.dart';
 import '../../../../common/widget/show_delete_confirmation_sheet.dart';
 import '../../../providers/product_provider_common.dart';
 import '../provider/new_movement_provider.dart';
@@ -47,8 +47,27 @@ class MovementHeaderCardWithLocatorState extends ConsumerState<NewMovementCardWi
   Widget get getActionCompleteMessage {
     if(widget.movementAndLines.canCompleteMovement){
       return GestureDetector(
-        onTap: (){
-            AwesomeDialog(
+        onTap: () async {
+          final confirm = await showConfirmDialog(
+            context,
+            title: Messages.COMPLETE_MOVEMENT,
+            message: 'Completar movimiento?',
+            icon: Icons.help_outline_rounded,
+            iconColor: themeColorWarning,
+            okText: Messages.OK,
+            cancelText: Messages.CANCEL,
+            okColor: themeColorSuccessful,
+            cancelColor: themeColorError,
+          );
+
+          if (confirm && context.mounted) {
+            GoRouterHelper(context).go(
+              AppRouter.PAGE_MOVEMENTS_CONFIRM_SCREEN,
+              extra: widget.movementAndLines,
+            );
+          }
+
+          /*AwesomeDialog(
               context: context,
               animType: AnimType.scale,
               dialogType: DialogType.question,
@@ -69,7 +88,7 @@ class MovementHeaderCardWithLocatorState extends ConsumerState<NewMovementCardWi
               btnCancelColor: themeColorError,
               btnCancelText: Messages.CANCEL,
               btnOkText: Messages.OK,
-            ).show();
+            ).show();*/
 
         },
         child: Container(

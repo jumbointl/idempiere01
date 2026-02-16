@@ -157,14 +157,12 @@ class StoreOnHandNavigation {
   // ---------------------------------------------------------------------------
 
   static bool _hasPrivilegeForLine() {
-    return RolesApp.canCreateMovementInSameOrganization ||
-        RolesApp.canCreateDeliveryNote ||
+    return RolesApp.appMovementComplete || RolesApp.appMovementconfirmComplete ||
         RolesApp.canEditMovement;
   }
 
   static bool _hasPrivilegeForSelectLocator() {
-    return RolesApp.canCreateMovementInSameOrganization ||
-        RolesApp.canCreateDeliveryNote;
+    return RolesApp.appMovementComplete || RolesApp.appMovementconfirmComplete;
   }
 }
 
