@@ -170,7 +170,7 @@ abstract class AsyncValueConsumerSimpleState<T extends ConsumerStatefulWidget>
         bottomNavigationBar: getBottomAppBar(context, ref),
         body: SafeArea(
           child: PopScope(
-            canPop: true, // ✅ deja que el sistema haga pop si hay stack
+            canPop: false,
             onPopInvokedWithResult: (didPop, result) {
               // English: If the route already popped, do nothing.
               if (didPop) return;

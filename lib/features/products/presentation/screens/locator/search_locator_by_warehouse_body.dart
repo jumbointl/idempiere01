@@ -12,9 +12,9 @@ import 'locator_card.dart';
 class SearchLocatorByWarehouseBody extends ConsumerStatefulWidget {
   // send result to state provider to display selection
   String? title;
-  final bool searchLocatorFrom;
+  final bool readOnly;
   SearchLocatorByWarehouseBody( {
-    required this.searchLocatorFrom,
+    required this.readOnly,
     this.title,
     super.key});
 
@@ -65,7 +65,7 @@ class SearchLocatorByWarehouseBodyState extends ConsumerState<SearchLocatorByWar
                     itemBuilder: (context, index) =>Center(
                       child: Center(
                         child: LocatorCard(
-                            searchLocatorFrom: widget.searchLocatorFrom,
+                            searchLocatorFrom: widget.readOnly,
                             data: locators[index],width: width,
                             index: index),
                       ),

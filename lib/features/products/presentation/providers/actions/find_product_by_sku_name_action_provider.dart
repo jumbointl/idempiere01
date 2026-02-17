@@ -41,7 +41,6 @@ final findProductBySKUNameProvider = FutureProvider.autoDispose<ResponseAsyncVal
     searchField = 'name';
   }
   Memory.lastSearch = scannedCode;
-  ref.read(scannedCodeForSearchBySKUNameProvider.notifier).state ='';
 
   Dio dio = await DioClient.create();
   ResponseAsyncValue asyncValue=ResponseAsyncValue(
@@ -83,6 +82,8 @@ final findProductBySKUNameProvider = FutureProvider.autoDispose<ResponseAsyncVal
     asyncValue.message = e.toString();
     asyncValue.success = false;
     return asyncValue;
+  } finally{
+
   }
 
 });

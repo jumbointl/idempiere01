@@ -154,13 +154,7 @@ final appHomeOptionCol3Items = <MenuItem>[
     link: '${AppRouter.PAGE_PRODUCT_STORE_ON_HAND}/-1',
     icon: Icons.arrow_forward,
   ),
-  if (RolesApp.showProductSearchScreen)
-    MenuItem(
-      title: Messages.STORE_ON_HAND,
-      subTitle: '',
-      link: '${AppRouter.PAGE_PRODUCT_STORE_ON_HAND}/${ProductStoreOnHandScreen.READ_STOCK_ONLY}',
-      icon: Icons.inventory,
-    ),
+
   if (RolesApp.appMovementconfirmComplete)
   MenuItem(
     title: 'Delivery Note Fiscal',
@@ -169,7 +163,13 @@ final appHomeOptionCol3Items = <MenuItem>[
     icon: Icons.arrow_forward,
   ),
 
-
+  if (RolesApp.appMovementComplete)
+    MenuItem(
+      title: Messages.STORE_ON_HAND,
+      subTitle: '',
+      link: '${AppRouter.PAGE_PRODUCT_STORE_ON_HAND}/${ProductStoreOnHandScreen.READ_STOCK_ONLY}',
+      icon: Icons.inventory,
+    ),
 
 
 ];

@@ -11,9 +11,9 @@ import '../../providers/product_provider_common.dart';
 
 class SearchLocatorScreen extends ConsumerStatefulWidget {
   String? title;
-  final bool searchLocatorFrom;
+  final bool readOnly;
 
-  SearchLocatorScreen( {required this.searchLocatorFrom,
+  SearchLocatorScreen( {required this.readOnly,
     this.title, super.key});
 
   @override
@@ -30,7 +30,7 @@ class SearchLocatorScreenState extends ConsumerState<SearchLocatorScreen> {
   @override
   Widget build(BuildContext context){
     int defaultTabIndex = 0;
-     if(widget.searchLocatorFrom ?? false){
+     if(widget.readOnly ?? false){
        //ref.read(actionScanProvider.notifier).update((state) => Memory.ACTION_GET_LOCATOR_FROM_VALUE);
        defaultTabIndex = 0;
      } else {
@@ -47,7 +47,7 @@ class SearchLocatorScreenState extends ConsumerState<SearchLocatorScreen> {
             onPressed: () {
               FocusScope.of(context).unfocus();
 
-              if(widget.searchLocatorFrom){
+              if(widget.readOnly){
                 ref.read(actionScanProvider.notifier).update((state) =>Memory.ACTION_GET_LOCATOR_FROM_VALUE);
               } else {
                 ref.read(actionScanProvider.notifier).update((state) =>Memory.ACTION_GET_LOCATOR_TO_VALUE);
@@ -94,9 +94,9 @@ class SearchLocatorScreenState extends ConsumerState<SearchLocatorScreen> {
           child: TabBarView(
             children: [
               SearchLocatorByWarehouseBody(
-                searchLocatorFrom: widget.searchLocatorFrom),
+                readOnly: widget.readOnly),
               SearchLocatorByLocatorBody(
-                searchLocatorFrom: widget.searchLocatorFrom,
+                searchLocatorFrom: widget.readOnly,
                 ),
 
            ]

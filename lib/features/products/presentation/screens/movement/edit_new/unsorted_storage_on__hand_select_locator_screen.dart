@@ -28,6 +28,7 @@ import '../../../providers/common_provider.dart';
 import '../../../providers/locator_provider.dart';
 import '../../../providers/store_on_hand/action_notifier.dart';
 import '../../../widget/response_async_value_messages_card.dart';
+import '../../locator/search_locator_dialog.dart';
 import '../../store_on_hand/memory_products.dart';
 import '../provider/new_movement_provider.dart';
 import 'custom_app_bar.dart' hide fontSizeMedium;
@@ -403,6 +404,21 @@ class UnsortedStorageOnHandScreenSelectLocatorState
                 ),
               ),
             ),
+            const SizedBox(width: 8),
+            IconButton(
+              onPressed:(){
+                showDialog(
+                  context: context,
+                  builder: (_) {
+                    return SearchLocatorDialog(
+                      readOnly: false,
+                      forCreateLine: false,
+                    );
+                  },
+                );
+              },
+              icon: const Icon(Icons.search, color: Colors.purple),
+            ),
           ],
         ),
       );
@@ -413,7 +429,38 @@ class UnsortedStorageOnHandScreenSelectLocatorState
         title: Messages.LOCATOR_TO,
         subtitle: result.message ?? Messages.ERROR_LOCATOR_TO,
       );
-      resultCard = ResponseAsyncValueMessagesCardAnimated(ui: ui);
+      resultCard = Column(
+        children: [
+          TextButton.icon(
+            onPressed: () {
+              showDialog(
+                context: context,
+                builder: (_) {
+                  return SearchLocatorDialog(
+                    readOnly: false,
+                    forCreateLine: false,
+                  );
+                },
+              );
+            },
+            icon: const Icon(Icons.search),
+            label: Text(Messages.FIND_LOCATOR),
+            style: TextButton.styleFrom(
+              side: const BorderSide(
+                color: Colors.blue, // cambiá al color que quieras
+                width: 1.2,
+              ),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+            ),
+          ),
+
+          SizedBox(height: _cardGap),
+          ResponseAsyncValueMessagesCardAnimated(ui: ui),
+        ],
+      );
     }
 
 
@@ -514,6 +561,21 @@ class UnsortedStorageOnHandScreenSelectLocatorState
                     color: Colors.black,
                   ),
                 ),
+              ),
+              const SizedBox(width: 8),
+              IconButton(
+                onPressed:(){
+                  showDialog(
+                    context: context,
+                    builder: (_) {
+                      return SearchLocatorDialog(
+                        readOnly: false,
+                        forCreateLine: false,
+                      );
+                    },
+                  );
+                },
+                icon: const Icon(Icons.search, color: Colors.purple),
               ),
             ],
           ),

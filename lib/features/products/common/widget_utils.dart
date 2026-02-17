@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../config/theme/app_theme.dart';
+import '../../shared/data/memory.dart';
+import '../presentation/providers/product_provider_common.dart';
 import 'input_dialog.dart';
 
 Widget compactIconButton({
@@ -63,18 +65,22 @@ class CompactEditableField extends ConsumerWidget {
 
   final void Function(WidgetRef ref)? onTapAction;
   final void Function(WidgetRef ref)? onEditingCompleteAction;
+  int? oldAction;
 
-  const CompactEditableField({
+  CompactEditableField({
     super.key,
     required this.label,
     required this.controller,
     required this.keyboardType,
     this.onTapAction,
     this.onEditingCompleteAction,
+    this.oldAction,
   });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    oldAction = ref.read(actionScanProvider);
+
     return TextField(
       controller: controller,
       keyboardType: keyboardType,
@@ -82,12 +88,14 @@ class CompactEditableField extends ConsumerWidget {
 
       onTap: () {
         if (onTapAction != null) {
+          ref.read(actionScanProvider.notifier).state = Memory.ACTION_NO_SCAN_ACTION;
           onTapAction!(ref);
         }
       },
 
       onEditingComplete: () {
         if (onEditingCompleteAction != null) {
+          ref.read(actionScanProvider.notifier).state = oldAction ?? 0;
           onEditingCompleteAction!(ref);
         }
       },

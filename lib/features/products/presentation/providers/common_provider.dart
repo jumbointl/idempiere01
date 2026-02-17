@@ -10,11 +10,13 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../m_inout/presentation/providers/m_in_out_providers.dart';
 import '../../../printer/models/mo_printer.dart';
+import '../../../printer/models/printer_select_models.dart';
 import '../../../shared/data/memory.dart';
 import '../../../shared/data/messages.dart';
 import '../../domain/idempiere/idempiere_locator.dart';
 import '../../domain/idempiere/movement_and_lines.dart';
 import '../../domain/idempiere/response_async_value.dart';
+import '../../domain/models/label_profile.dart';
 import '../screens/movement/provider/new_movement_provider.dart';
 import 'actions/find_locator_to_action_provider.dart';
 import 'locator_provider.dart';
@@ -284,3 +286,9 @@ class NumButtonData {
 final enableScannerKeyboardProvider =  StateProvider<bool>((ref) => true);
 
 final movementInSameWarehouseProvider =  StateProvider<bool>((ref) => false);
+final labelProfilesProvider = StateProvider<List<LabelProfile>>((ref) => []);
+final selectedLabelProfileIdProvider = StateProvider<String?>((ref) => null);
+enum PrinterInputMode { scan, manual }
+
+final printerInputModeProvider =
+StateProvider<PrinterInputMode>((ref) => PrinterInputMode.scan);

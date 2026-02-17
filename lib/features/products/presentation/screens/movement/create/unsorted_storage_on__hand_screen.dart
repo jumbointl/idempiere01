@@ -548,7 +548,7 @@ class UnsortedStorageOnHandScreenState
                   context: context,
                   builder: (_) {
                     return SearchLocatorDialog(
-                      searchLocatorFrom: false,
+                      readOnly: false,
                       forCreateLine: false,
                     );
                   },
@@ -588,7 +588,7 @@ class UnsortedStorageOnHandScreenState
                     context: context,
                     builder: (_) {
                       return SearchLocatorDialog(
-                        searchLocatorFrom: false,
+                        readOnly: false,
                         forCreateLine: false,
                       );
                     },
@@ -629,7 +629,7 @@ class UnsortedStorageOnHandScreenState
                   context: context,
                   builder: (_) {
                     return SearchLocatorDialog(
-                      searchLocatorFrom: false,
+                      readOnly: false,
                       forCreateLine: false,
                     );
                   },
@@ -679,7 +679,7 @@ class UnsortedStorageOnHandScreenState
                 context: context,
                 builder: (_) {
                   return SearchLocatorDialog(
-                    searchLocatorFrom: false,
+                    readOnly: false,
                     forCreateLine: false,
                   );
                 },

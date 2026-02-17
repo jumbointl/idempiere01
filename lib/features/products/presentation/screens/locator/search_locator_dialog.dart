@@ -10,10 +10,10 @@ import '../../providers/product_provider_common.dart';
 
 class SearchLocatorDialog extends ConsumerStatefulWidget {
   String? title;
-  final bool searchLocatorFrom;
+  final bool readOnly;
   final bool forCreateLine;
   SearchLocatorDialog({
-    required this.searchLocatorFrom,
+    required this.readOnly,
     required this.forCreateLine,
     this.title,
     super.key});
@@ -26,17 +26,16 @@ class SearchLocatorDialog extends ConsumerStatefulWidget {
 
 class SearchLocatorDialogState extends ConsumerState<SearchLocatorDialog> {
 
-
+ late int actionScanType ;
+  late int oldAction;
   @override
   Widget build(BuildContext context){
-    int defaultTabIndex = 0;
-    if(widget.searchLocatorFrom ?? false){
-      //ref.read(actionScanProvider.notifier).update((state) => Memory.ACTION_GET_LOCATOR_FROM_VALUE);
-      defaultTabIndex = 0;
+    if(widget.readOnly){
+      actionScanType = Memory.ACTION_GET_LOCATOR_FROM_VALUE ;
     } else {
-      //ref.read(actionScanProvider.notifier).update((state) => Memory.ACTION_GET_LOCATOR_TO_VALUE);
+      actionScanType = Memory.ACTION_NO_SCAN_ACTION ;
     }
-
+    oldAction = ref.read(actionScanProvider);
     return DefaultTabController(
       length: 2,
       child: Scaffold(
@@ -48,6 +47,7 @@ class SearchLocatorDialogState extends ConsumerState<SearchLocatorDialog> {
               popScopeAction(context, ref);
             },
           ),
+
           bottom: PreferredSize(
             preferredSize: Size.fromHeight(36),
             child: Row(
@@ -89,10 +89,9 @@ class SearchLocatorDialogState extends ConsumerState<SearchLocatorDialog> {
           child: TabBarView(
               children: [
                 SearchLocatorByWarehouseBody(
-                    searchLocatorFrom: widget.searchLocatorFrom),
-                //Center(child: Text(Messages.NOT_IMPLEMENTED)),
+                    readOnly: widget.readOnly),
                 SearchLocatorByLocatorBody(
-                  searchLocatorFrom: widget.searchLocatorFrom,
+                  searchLocatorFrom: widget.readOnly,
                 ),
 
               ]
@@ -104,13 +103,7 @@ class SearchLocatorDialogState extends ConsumerState<SearchLocatorDialog> {
 
   void popScopeAction(BuildContext context, WidgetRef ref) {
     FocusScope.of(context).unfocus();
-
-    if(widget.searchLocatorFrom){
-      ref.read(actionScanProvider.notifier).update((state) =>Memory.ACTION_GET_LOCATOR_FROM_VALUE);
-    } else {
-      ref.read(actionScanProvider.notifier).update((state) =>Memory.ACTION_GET_LOCATOR_TO_VALUE);
-    }
-
+    ref.read(actionScanProvider.notifier).update((state) =>oldAction);
     Navigator.pop(context);
   }
 

@@ -27,6 +27,7 @@ import '../../../../domain/sql/sql_data_movement_line.dart';
 import '../../../providers/common_provider.dart';
 import '../../../providers/locator_provider.dart';
 import '../../../providers/products_scan_notifier.dart';
+import '../../locator/search_locator_dialog.dart';
 import '../provider/new_movement_provider.dart';
 import '../../store_on_hand/memory_products.dart';
 
@@ -375,6 +376,7 @@ class UnsortedStorageOnHandScreenForLineState
                 color: Colors.black,
               ),
             ),
+
           ),
         ],
       ),

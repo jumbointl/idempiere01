@@ -47,6 +47,8 @@ class PrinterState {
   static const String PRINTER_TYPE_A4 = 'A4';
   static const String PRINTER_TYPE_LABEL = 'LABEL';
   static const String PRINTER_TYPE_LASER = 'LASER';
+  static const String PRINTER_TYPE_BLUETOOTH_BLE = 'BLE';
+  static const String PRINTER_TYPE_BLUETOOTH_NO_BLE = 'NO_BLE';
 
 
 
@@ -260,14 +262,14 @@ class PrinterScanNotifier extends StateNotifier<PrinterState>  {
     final printer = FlutterNetPrinter();
     int port = int.tryParse(state.portController.text) ?? 9100;
     switch(state.typeController.text) {
-      case PrinterState.PRINTER_TYPE_POS_INT:
-      case PrinterState.PRINTER_TYPE_ZPL_INT:
-      case PrinterState.PRINTER_TYPE_TSPL_INT:
+      case PrinterState.PRINTER_TYPE_POS:
+      case PrinterState.PRINTER_TYPE_ZPL:
+      case PrinterState.PRINTER_TYPE_TSPL:
         // Lógica común para estos tipos si es necesario
         showWarningMessage(ref.context, ref, Messages.NOT_ENABLED);
         break;
-      case PrinterState.PRINTER_TYPE_A4__INT:
-      case PrinterState.PRINTER_TYPE_LASER__INT:
+      case PrinterState.PRINTER_TYPE_A4:
+      case PrinterState.PRINTER_TYPE_LASER:
 
         MovementAndLines movementAndLines = ref.read(movementAndLinesProvider);
         final image = await imageLogo;

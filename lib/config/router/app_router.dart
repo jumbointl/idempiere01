@@ -65,7 +65,7 @@ class AppRouter {
   static const String PAGE_MOVEMENTS_EDIT = '/movement_search';
   static const String PAGE_MOVEMENTS_LIST = '/movement_list';
 
-  static const String PAGE_SEARCH_LOCATOR_FROM = '/product/movement/createMovement/searchLocatorFrom';
+  static const String PAGE_SEARCH_LOCATOR = '/searchLocator';
   static const String PAGE_SEARCH_LOCATOR_TO = '/product/movement/createMovement/searchLocatorTo';
   static const String PAGE_CREATE_MOVEMENT_LINE = '/create_movement_line';
   static const String PAGE_MOVEMENTS_CONFIRM_SCREEN = '/movement_confirm_screen';
@@ -566,14 +566,14 @@ final goRouterProvider = Provider((ref) {
 
 
       GoRoute(
-        path: AppRouter.PAGE_SEARCH_LOCATOR_FROM,
+        path: AppRouter.PAGE_SEARCH_LOCATOR,
         builder: (context, state) => RolesApp.hasStockPrivilege ?
-        SearchLocatorScreen(searchLocatorFrom: true) : const HomeScreen(),
+        SearchLocatorScreen(readOnly: true) : const HomeScreen(),
       ),
       GoRoute(
         path: AppRouter.PAGE_SEARCH_LOCATOR_TO,
         builder: (context, state) => RolesApp.hasStockPrivilege ?
-        SearchLocatorScreen( searchLocatorFrom: false) : const HomeScreen(),
+        SearchLocatorScreen( readOnly: false) : const HomeScreen(),
       ),
 
       GoRoute(
