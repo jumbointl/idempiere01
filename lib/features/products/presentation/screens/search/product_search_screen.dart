@@ -213,7 +213,7 @@ class _ProductSearchScreenState
                         goToUpcSearch(productUPC);
                       },
                       onPrintTap: (){
-                        context.push(AppRouter.PAGE_LABEL_PRINTER_SELECT_PAGE,extra: product);
+                        context.push(AppRouter.PAGE_PRODUCT_LABEL_PRINTER_SELECT_PAGE,extra: product);
                       },
                     ),
                   );
@@ -308,7 +308,7 @@ class _ProductSearchScreenState
             goToUpcSearch(productUPC);
           },
           onPrintTap: (){
-            context.go(AppRouter.PAGE_LABEL_PRINTER_SELECT_PAGE,extra: products[index]);
+            context.go(AppRouter.PAGE_PRODUCT_LABEL_PRINTER_SELECT_PAGE,extra: products[index]);
           },
         );
       },

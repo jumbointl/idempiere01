@@ -292,3 +292,6 @@ enum PrinterInputMode { scan, manual }
 
 final printerInputModeProvider =
 StateProvider<PrinterInputMode>((ref) => PrinterInputMode.scan);
+
+final locatorScreenInputModeProvider =
+StateProvider<PrinterInputMode>((ref) => PrinterInputMode.manual);

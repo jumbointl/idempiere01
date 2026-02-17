@@ -12,17 +12,17 @@ class InputStringDialog extends ConsumerStatefulWidget implements InputDataProce
   int dialogType = Memory.TYPE_DIALOG_SEARCH;
   String title = Messages.INPUT_DIALOG_TITLE;
   final StateProvider textStateProvider;
-  InputStringDialog({required this.title, required this.textStateProvider,
+  final StateProvider fireActionProvider;
+  InputStringDialog({required this.title
+    , required this.textStateProvider,
+    required this.fireActionProvider,
     required this.dialogType, super.key});
 
 
   @override
   ConsumerState<InputStringDialog> createState() => InputStringDialogState();
 
-  @override
-  void addQuantityText(BuildContext context, WidgetRef ref, TextEditingController quantityController, int i) {
-    // TODO: implement addQuantityText
-  }
+
 
   @override
   Future<void> handleInputString(
@@ -34,6 +34,7 @@ class InputStringDialog extends ConsumerStatefulWidget implements InputDataProce
     } else {
       var textState = ref.read(textStateProvider.notifier);
       textState.update((state) => inputData);
+      ref.read(fireActionProvider.notifier).state++;
     }
   }
 
@@ -44,7 +45,7 @@ class InputStringDialogState extends ConsumerState<InputStringDialog> {
 
   @override
   Widget build(BuildContext context) {
-
+    debugPrint('Action Scan: ${ref.read(actionScanProvider)}');
      switch(widget.dialogType){
        case Memory.TYPE_DIALOG_SEARCH: // Barcode input dialog
          return IconButton(
@@ -72,9 +73,6 @@ class InputStringDialogState extends ConsumerState<InputStringDialog> {
      }
   }
   Future<void> getInputText(BuildContext context, WidgetRef ref) async{
-    TextEditingController controller = TextEditingController();
-    // You would typically show a dialog here using showDialog or a similar method.
-    // Example:
     bool history = false ;
     if(widget.dialogType == Memory.TYPE_DIALOG_HISTOY){
       history = true;

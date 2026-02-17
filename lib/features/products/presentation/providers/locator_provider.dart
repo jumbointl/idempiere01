@@ -23,7 +23,9 @@ final isScanningLocatorToProvider = StateProvider.autoDispose<bool>((ref) {
 });
 
 
-
+final fireSearchLocatorListProvider = StateProvider.autoDispose<int>((ref) {
+  return 0;
+});
 
 final scannedLocatorsListProvider = StateProvider.autoDispose<String>((ref) {
   return '';
@@ -42,6 +44,9 @@ final actualLocatorFromProvider = StateProvider<int>((ref) {
 
 final userWarehouseIdForSearchLocatorProvider = StateProvider.autoDispose<int>((ref) {
   return Memory.sqlUsersData.mWarehouseID?.id ?? 0;
+});
+final fireWarehouseSearchLocatorProvider = StateProvider.autoDispose<int>((ref) {
+  return 0;
 });
 
 final filterWarehouseValueForSearchLocatorProvider = StateProvider.autoDispose<String?>((ref) {

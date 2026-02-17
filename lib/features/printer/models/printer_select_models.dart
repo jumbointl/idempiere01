@@ -147,8 +147,8 @@ String buildTsplProductLabel({
   int narrow = profile.barcodeNarrow;
   int wide = profile.barcodeWidth;
   if (sym == BarcodeSymbology.code128 && normalized.length >= 15) {
-    narrow = narrow-1;
-    wide = wide-1;
+    narrow = narrow>1 ? narrow-1 : 1;
+    wide = wide>1 ? wide-1 :1;
   }
 
   // Helpers
@@ -275,7 +275,7 @@ String buildTsplProductLabel({
   return sb.toString();
 }
 
-String buildTsplProductLabelSmall({
+String buildTsplProductLabelSimple({
   required String upc,
   required String sku,
   required LabelProfile profile,
@@ -302,11 +302,11 @@ String buildTsplProductLabelSmall({
   };
 
   // Module widths
-  int narrow = 2;
-  int wide = 2;
+  int narrow = profile.barcodeNarrow;
+  int wide = profile.barcodeWidth;
   if (sym == BarcodeSymbology.code128 && normalized.length >= 15) {
-    narrow = 1;
-    wide = 2;
+    narrow = profile.barcodeNarrow > 1 ? profile.barcodeNarrow - 1 : 1;
+    wide = profile.barcodeWidth > 1 ? profile.barcodeWidth - 1 : 1;
   }
 
   // Helpers
@@ -318,12 +318,10 @@ String buildTsplProductLabelSmall({
 
   // Layout
   final int lineH = 24;
-  final int gap = profile.gapMm;
+  final int gapMm = profile.gapMm;
+  final int gapDots = (gapMm * dotsPerMm).round();
 
-  // Put barcode near top, SKU below (or swap if you prefer)
-  // We'll do barcode first (centered), then SKU at bottom.
-  final int maxBarcodeH = (profile.barcodeHeightMm * dotsPerMm).round();
-  final int barcodeH = (maxBarcodeH - 30).clamp(30, 90);
+  final int barcodeH = profile.barcodeHeight;
 
   // Center barcode (rough estimation)
   final approxBarcodeWidth = (sym == BarcodeSymbology.code128)
@@ -333,33 +331,35 @@ String buildTsplProductLabelSmall({
   final xBarcode =
   ((wDots - approxBarcodeWidth) / 2).round().clamp(mx, wDots - mx);
 
-  // y positions
-  final int yBarcode = my.clamp(my, (hDots - barcodeH - (lineH + gap + 8)));
-  final int ySku = (yBarcode + barcodeH + gap + 30).clamp(my, hDots - lineH - 6);
+  final int ySku = my;
+  final int yBarcodeDesired = ySku + lineH + gapDots + 10;
+
+  // Clamp barcode so it fits inside label
+  final int yBarcodeMax = hDots - barcodeH - my;
+  final int yBarcode = yBarcodeDesired.clamp(my, yBarcodeMax);
 
   final sb = StringBuffer();
   sb.writeln('SIZE ${profile.widthMm} mm,${profile.heightMm} mm');
-  sb.writeln('GAP $gap mm,0 mm');
+  sb.writeln('GAP ${profile.gapMm} mm,0 mm');
   sb.writeln('DENSITY 8');
   sb.writeln('SPEED 4');
   sb.writeln('DIRECTION 1');
   sb.writeln('REFERENCE 0,0');
   sb.writeln('CLS');
 
-  // Barcode (human readable = 1)
-  sb.writeln(
-    'BARCODE $xBarcode,$yBarcode,"$barcodeTypeStr",$barcodeH,1,0,$narrow,$wide,"$normalized"',
-  );
-
-  // SKU below barcode
   if (skuLine.isNotEmpty) {
     sb.writeln('TEXT $mx,$ySku,"${profile.fontId}",0,1,1,"$skuLine"');
   }
+
+  sb.writeln(
+    'BARCODE $xBarcode,$yBarcode,"$barcodeTypeStr",$barcodeH,1,0,$narrow,$wide,"$normalized"',
+  );
 
   sb.writeln('PRINT 1,${profile.copies}');
   debugPrint(sb.toString());
   return sb.toString();
 }
+
 
 
 /// English: Get default profiles

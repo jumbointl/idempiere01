@@ -63,7 +63,7 @@ class Memory {
   static const int ACTION_FIND_BY_UPC_SKU_FOR_STORE_ON_HAND = 4;
   static const int ACTION_GET_LOCATOR_TO_VALUE = 5;
   static const int ACTION_FIND_MOVEMENT_BY_ID=6;
-  static const int ACTION_GET_LOCATOR_FROM_VALUE=7;
+  static const int ACTION_GET_LOCATOR_VALUE=7;
   static const int ACTION_GO_TO_STORAGE_ON_HAND_PAGE_WITH_UPC=8;
   static const int ACTION_GO_TO_MOVEMENT_EDIT_PAGE_WITH_ID=9;
   static const int ACTION_FIND_PRINTER_BY_QR = 10;
@@ -133,7 +133,7 @@ class Memory {
 
   static String URL_CUPS_SERVER ='http://192.168.188.108:3100/print';
 
-  static String VERSIONS='1.01.108';
+  static String VERSIONS='1.01.109';
 
   static String getUrlCupsServerWithPrinter({required String ip,
     required String port,required String printerName}){

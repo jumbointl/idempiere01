@@ -198,7 +198,7 @@ class _ProductStoreOnHandScreenState
         ProductDetailCard(
            product: product,
            onPrintTap: (){
-              context.push(AppRouter.PAGE_LABEL_PRINTER_SELECT_PAGE,extra: product);
+              context.push(AppRouter.PAGE_PRODUCT_LABEL_PRINTER_SELECT_PAGE,extra: product);
            },
         ),
         if (product.hasListStorageOnHande)
@@ -319,7 +319,7 @@ class _ProductStoreOnHandScreenState
             goToUpcSearch(productUPC);
           },
           onPrintTap: (){
-            context.go(AppRouter.PAGE_LABEL_PRINTER_SELECT_PAGE,extra: products[index]);
+            context.go(AppRouter.PAGE_PRODUCT_LABEL_PRINTER_SELECT_PAGE,extra: products[index]);
           },
         );
       },

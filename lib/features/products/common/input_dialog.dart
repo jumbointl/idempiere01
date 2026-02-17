@@ -435,7 +435,8 @@ Future<void> openInputDialogWithAction({
         break;
     }
 
-  } else if (actionScan == Memory.ACTION_GET_LOCATOR_TO_VALUE) {
+  } else if (actionScan == Memory.ACTION_GET_LOCATOR_TO_VALUE
+  || actionScan == Memory.ACTION_GET_LOCATOR_VALUE) {
     title = Messages.FIND_LOCATOR;
     lastSearch = Memory.lastSearchLocator;
   } else {
@@ -511,6 +512,7 @@ Future<void> openInputDialogWithAction({
                 Memory.lastSearchMovement = text;
               break;
               case Memory.ACTION_GET_LOCATOR_TO_VALUE:
+              case Memory.ACTION_GET_LOCATOR_VALUE:
                 Memory.lastSearchLocator = text;
               break;
               case Memory.ACTION_FIND_BY_UPC_SKU_FOR_STORE_ON_HAND:

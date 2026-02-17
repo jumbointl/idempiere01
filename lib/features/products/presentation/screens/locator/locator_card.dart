@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:monalisa_app_001/features/products/presentation/providers/locator_provider.dart';
 import 'package:monalisa_app_001/features/products/presentation/providers/store_on_hand/action_notifier.dart';
 
+import '../../../../../config/router/app_router.dart';
 import '../../../../../config/theme/app_theme.dart';
 import '../../../../shared/data/memory.dart';
 import '../../../common/messages_dialog.dart';
@@ -19,9 +21,9 @@ class LocatorCard extends ConsumerStatefulWidget {
 
   String? title;
   double? width;
-  final bool searchLocatorFrom;
+  final bool readOnly;
 
-  LocatorCard({required this.searchLocatorFrom,
+  LocatorCard({required this.readOnly,
     required this.data,this.selected, this.title, super.key,
     required this.index, this.width});
 
@@ -47,6 +49,36 @@ class LocatorCardState extends ConsumerState<LocatorCard> {
     String locatorName = widget.data.value ?? '';
 
     Color backGroundColor = Colors.white;
+    if(widget.readOnly){
+      return Container(
+        width: widget.width,
+        decoration: BoxDecoration(
+          color: backGroundColor,
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(
+            color: themeColorPrimary,
+            width: 1,
+          ),
+        ),
+        child: ListTile(
+          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+          title: Text(
+            locatorName,
+            style: const TextStyle(color: Colors.purple),
+          ),
+          subtitle: Text(warehouseName),
+          trailing: IconButton(
+            icon: const Icon(Icons.print),
+            onPressed: () {
+              ref.read(actionScanProvider.notifier).state = Memory.ACTION_FIND_PRINTER_BY_QR_WIFI_BLUETOOTH;
+              context.push(AppRouter.PAGE_LOCATOR_LABEL_PRINTER_SELECT_PAGE,
+              extra: widget.data);
+            },
+          ),
+        ),
+      );
+
+    }
 
     return GestureDetector(
       onTap: () {
@@ -55,7 +87,7 @@ class LocatorCardState extends ConsumerState<LocatorCard> {
             return;
           }
 
-          if(widget.searchLocatorFrom){
+          if(widget.readOnly){
             //To do not implement
           } else {
             ref.invalidate(selectedLocatorToProvider);
@@ -74,27 +106,25 @@ class LocatorCardState extends ConsumerState<LocatorCard> {
 
 
       },
-      child: SingleChildScrollView(
-        child: Container(
-          width: widget.width,
-          decoration: BoxDecoration(
-            color: backGroundColor,
-            borderRadius: BorderRadius.circular(10),
-            border: Border.all(
-              color: themeColorPrimary,
-              width: 1,
-            ),
+      child: Container(
+        width: widget.width,
+        decoration: BoxDecoration(
+          color: backGroundColor,
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(
+            color: themeColorPrimary,
+            width: 1,
           ),
-          padding: const EdgeInsets.all(10),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            spacing: 5,
-            children: [
-              Text(locatorName, style: TextStyle(color: Colors.purple),),
-              Text(warehouseName),
+        ),
+        padding: const EdgeInsets.all(10),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          spacing: 5,
+          children: [
+            Text(locatorName, style: TextStyle(color: Colors.purple),),
+            Text(warehouseName),
 
-            ],
-          ),
+          ],
         ),
       ),
     );

@@ -65,7 +65,7 @@ class SearchLocatorByWarehouseBodyState extends ConsumerState<SearchLocatorByWar
                     itemBuilder: (context, index) =>Center(
                       child: Center(
                         child: LocatorCard(
-                            searchLocatorFrom: widget.readOnly,
+                            readOnly: widget.readOnly,
                             data: locators[index],width: width,
                             index: index),
                       ),
@@ -104,8 +104,12 @@ class SearchLocatorByWarehouseBodyState extends ConsumerState<SearchLocatorByWar
                 IconButton(onPressed: (){
                   ref.read(filterWarehouseValueForSearchLocatorProvider.notifier).state = '0';
                 },icon:  Icon(Icons.list_alt,color: Colors.purple,)),
-                InputStringDialog(title: Messages.FIND_LOCATOR, textStateProvider: filterWarehouseValueForSearchLocatorProvider, dialogType: Memory.TYPE_DIALOG_SEARCH),
-                InputStringDialog(title: Messages.FIND_LOCATOR, textStateProvider: filterWarehouseValueForSearchLocatorProvider, dialogType: Memory.TYPE_DIALOG_HISTOY),
+
+                InputStringDialog(title: Messages.FIND_LOCATOR,
+                    textStateProvider: filterWarehouseValueForSearchLocatorProvider,
+                    fireActionProvider: fireWarehouseSearchLocatorProvider,
+                    dialogType: Memory.TYPE_DIALOG_SEARCH),
+
 
               ],
             ),

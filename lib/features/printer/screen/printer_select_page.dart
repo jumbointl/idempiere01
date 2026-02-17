@@ -1,6 +1,7 @@
 // ===============================
 // printer_select_page.dart
 // ===============================
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
@@ -8,13 +9,16 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
 import 'package:get_storage/get_storage.dart';
+import 'package:monalisa_app_001/config/config.dart';
 import 'package:monalisa_app_001/features/products/common/messages_dialog.dart';
+import 'package:pos_universal_printer/pos_universal_printer.dart';
 import 'package:print_bluetooth_thermal/print_bluetooth_thermal.dart';
 
 import '../../products/common/bluetooth_permission.dart';
 import '../../products/common/widget_utils.dart';
 import '../../products/presentation/providers/common_provider.dart';
 import '../../products/presentation/providers/product_provider_common.dart';
+import '../../shared/data/memory.dart';
 import '../../shared/data/messages.dart';
 import '../models/printer_select_models.dart';
 import '../printer_scan_notifier.dart';
@@ -48,6 +52,8 @@ class _PrinterSelectPageState extends ConsumerState<PrinterSelectPage>
   final _btType = TextEditingController(text: PrinterState.PRINTER_TYPE_BLUETOOTH_NO_BLE);
 
   final box = GetStorage();
+  StreamSubscription<PrinterDevice>? _btScanSub;
+  final List<PrinterDevice> _btScanDevices = <PrinterDevice>[];
 
   @override
   void initState() {
@@ -103,6 +109,7 @@ class _PrinterSelectPageState extends ConsumerState<PrinterSelectPage>
   }
 
   void _addOrUpdatePrinter(PrinterConnConfig p) {
+    debugPrint('addOrUpdatePrinter: $p');
     final list = [...ref.read(printerListProvider)];
     final idx = list.indexWhere((x) => x.id == p.id);
     if (idx >= 0) {
@@ -151,7 +158,71 @@ class _PrinterSelectPageState extends ConsumerState<PrinterSelectPage>
     } catch (_) {}
   }
 
+
+  final PosUniversalPrinter _pos = PosUniversalPrinter.instance;
+
   Future<bool> _testBluetoothTsplConnection(String mac) async {
+    const String tsplTest =
+        'SIZE 40 mm,25 mm\r\n'
+        'GAP 2 mm,0 mm\r\n'
+        'CLS\r\n'
+        'TEXT 20,20,"2",0,1,1,"TEST"\r\n'
+        'PRINT 1,1\r\n';
+
+    const int maxAttempts = 3;
+    const Duration backoffBase = Duration(milliseconds: 250);
+
+    bool isValidMac(String s) {
+      final t = s.trim().toUpperCase();
+      final macRegex = RegExp(r'^([0-9A-F]{2}:){5}[0-9A-F]{2}$');
+      return macRegex.hasMatch(t);
+    }
+
+    final macTrim = mac.trim();
+    if (macTrim.isEmpty || !isValidMac(macTrim)) {
+      debugPrint('POS BT test: invalid MAC: "$mac"');
+      return false;
+    }
+
+    for (int attempt = 1; attempt <= maxAttempts; attempt++) {
+      try {
+        // Create device (adjust fields if your plugin differs)
+        final device = PrinterDevice(
+          id: macTrim,
+          name: 'BT Printer $macTrim',
+          address: macTrim,
+          type: PrinterType.bluetooth,
+        );
+
+        await _pos.registerDevice(PosPrinterRole.sticker, device);
+
+        final connected = _pos.isRoleConnected(PosPrinterRole.sticker);
+        if (!connected) {
+          debugPrint('POS BT test: not connected (attempt $attempt/$maxAttempts)');
+          await Future.delayed(backoffBase + Duration(milliseconds: attempt * 150));
+          continue;
+        }
+
+        final bytes = latin1.encode(tsplTest);
+        _pos.printRaw(PosPrinterRole.sticker, bytes);
+
+        await Future.delayed(const Duration(milliseconds: 200));
+        debugPrint('POS BT test: OK (attempt $attempt/$maxAttempts)');
+        return true;
+      } catch (e) {
+        debugPrint('POS BT test: exception (attempt $attempt/$maxAttempts): $e');
+        await Future.delayed(backoffBase + Duration(milliseconds: attempt * 200));
+      }
+    }
+
+    return false;
+  }
+
+
+
+
+
+  /*Future<bool> _testBluetoothTsplConnection(String mac) async {
     const String tsplTest = 'CLS\n';
 
     try {
@@ -174,35 +245,12 @@ class _PrinterSelectPageState extends ConsumerState<PrinterSelectPage>
       await _disconnectSafe();
       return false;
     }
-  }
+  }*/
 
   Future<void> testConnection(PrinterConnConfig p) async {
     try {
       if (p.type == PrinterConnType.wifi) {
-        final ip = p.ip ?? '';
-        final port = p.port ?? 9100;
-
-        final socket = await Socket.connect(
-          ip,
-          port,
-          timeout: const Duration(seconds: 4),
-        );
-        socket.destroy();
-
-        if (!mounted) return;
-        await showDialog(
-          context: context,
-          builder: (_) => AlertDialog(
-            title: const Text('Connection'),
-            content: Text('✅ WiFi OK: $ip:$port'),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('OK'),
-              )
-            ],
-          ),
-        );
+        // ... igual que ya lo tenés
       } else {
         final mac = (p.btAddress ?? '').trim();
         if (mac.isEmpty) {
@@ -211,6 +259,7 @@ class _PrinterSelectPageState extends ConsumerState<PrinterSelectPage>
         }
 
         final ok = await _testBluetoothTsplConnection(mac);
+
         if (!mounted) return;
         await _showMsg(
           'Connection',
@@ -221,6 +270,32 @@ class _PrinterSelectPageState extends ConsumerState<PrinterSelectPage>
       if (!mounted) return;
       await _showMsg('Connection', '❌ Error: $e');
     }
+  }
+
+  void _saveBtFromValues({
+    required String name,
+    required String mac,
+  }) {
+    final lang = _btLang.text.trim().toUpperCase();
+    final btType = _btType.text.trim().toUpperCase();
+
+    // Defaults seguros si estás en SCAN y inputs están bloqueados
+    final safeLang = (lang == 'TSPL' || lang == 'ZPL') ? lang : 'TSPL';
+    final safeType = (btType == PrinterState.PRINTER_TYPE_BLUETOOTH_BLE ||
+        btType == PrinterState.PRINTER_TYPE_BLUETOOTH_NO_BLE)
+        ? btType
+        : PrinterState.PRINTER_TYPE_BLUETOOTH_NO_BLE;
+
+    final p = PrinterConnConfig(
+      id: 'bt_$mac',
+      type: PrinterConnType.bluetooth,
+      name: name.isEmpty ? 'BT Printer' : name,
+      btAddress: mac,
+      lang: safeLang,
+      typeText: safeType,
+    );
+
+    _addOrUpdatePrinter(p);
   }
 
   Future<void> _showMsg(String title, String msg) async {
@@ -250,12 +325,31 @@ class _PrinterSelectPageState extends ConsumerState<PrinterSelectPage>
       return;
     }
 
-    List<BluetoothInfo> devices = [];
+    // Clean previous scan if any
+    await _btScanSub?.cancel();
+    _btScanSub = null;
+    _btScanDevices.clear();
+
+    bool scanning = true;
+
+    // Start scan
     try {
-      devices = await PrintBluetoothThermal.pairedBluetooths;
+      _btScanSub = _pos.scanBluetooth().listen((device) {
+        // Deduplicate by address
+        final addr = (device.address)?.trim() ??'';
+        if (addr.isEmpty) return;
+
+        final exists = _btScanDevices.any((d) => (d.address?.trim()??'') == addr);
+        if (!exists) {
+          _btScanDevices.add(device);
+        }
+      }, onDone: () {
+        scanning = false;
+      }, onError: (_) {
+        scanning = false;
+      });
     } catch (e) {
-      if (!mounted) return;
-      await _showMsg('Bluetooth', '❌ Error obteniendo lista: $e');
+      await _showMsg('Bluetooth', '❌ Error al iniciar scan: $e');
       return;
     }
 
@@ -264,71 +358,165 @@ class _PrinterSelectPageState extends ConsumerState<PrinterSelectPage>
     await showDialog(
       context: context,
       builder: (ctx) {
-        return AlertDialog(
-          title: const Text('Bluetooth devices (paired)'),
-          content: SizedBox(
-            width: double.maxFinite,
-            child: devices.isEmpty
-                ? const Text('No paired devices found.')
-                : ListView.separated(
-              shrinkWrap: true,
-              itemCount: devices.length,
-              separatorBuilder: (_, __) => const Divider(height: 1),
-              itemBuilder: (_, i) {
-                final d = devices[i];
-                final name = d.name.trim().isEmpty ? 'Unknown' : d.name.trim();
-                final mac = d.macAdress.trim();
+        return StatefulBuilder(
+          builder: (ctx, setState) {
+            // Small timer to refresh UI while scanning
+            // (no heavy stuff; just redraw)
+            Future.microtask(() {
+              if (ctx.mounted) setState(() {});
+            });
 
-                return ListTile(
-                  title: Text(name),
-                  subtitle: Text(mac),
-                  leading: const Icon(Icons.print),
-                  onTap: () async {
-                    try {
-                      final already = await PrintBluetoothThermal.connectionStatus;
-                      if (already) {
-                        await _disconnectSafe();
-                        await Future.delayed(const Duration(milliseconds: 120));
-                      }
+            Future<void> stopScan() async {
+              try {
+                await _btScanSub?.cancel();
+              } catch (_) {}
+              _btScanSub = null;
+              scanning = false;
+              if (ctx.mounted) setState(() {});
+            }
 
-                      final connected = await PrintBluetoothThermal.connect(
-                        macPrinterAddress: mac,
-                      );
-                      if (!connected) {
-                        if (!ctx.mounted) return;
-                        await _showMsg('Bluetooth', '❌ No se pudo conectar a $mac');
-                        return;
-                      }
+            Future<void> rescan() async {
+              await stopScan();
+              _btScanDevices.clear();
+              scanning = true;
 
-                      if (mounted) {
-                        _btName.text = name.isEmpty ? 'BT Printer' : name;
-                        _btAddress.text = mac;
-                      }
+              try {
+                _btScanSub = _pos.scanBluetooth().listen((device) {
+                  final addr = device.address?.trim() ??'';
+                  if (addr.isEmpty) return;
 
-                      await Future.delayed(const Duration(milliseconds: 120));
-                      await _disconnectSafe();
+                  final exists = _btScanDevices.any((d) => (d.address?.trim() ?? '')== addr);
+                  if (!exists) {
+                    _btScanDevices.add(device);
+                    if (ctx.mounted) setState(() {});
+                  }
+                }, onDone: () {
+                  scanning = false;
+                  if (ctx.mounted) setState(() {});
+                }, onError: (_) {
+                  scanning = false;
+                  if (ctx.mounted) setState(() {});
+                });
+              } catch (_) {
+                scanning = false;
+              }
 
-                      if (ctx.mounted) Navigator.pop(ctx);
-                    } catch (e) {
-                      await _disconnectSafe();
-                      if (!ctx.mounted) return;
-                      await _showMsg('Bluetooth', '❌ Error: $e');
-                    }
-                  },
+              if (ctx.mounted) setState(() {});
+            }
+
+            Future<void> connectAndFill(PrinterDevice d) async {
+              // Stop scan to avoid radio conflicts on some devices
+              await stopScan();
+
+              try {
+                await _pos.registerDevice(PosPrinterRole.sticker, d);
+
+                final connected = _pos.isRoleConnected(PosPrinterRole.sticker);
+                if (!connected) {
+                  if (!ctx.mounted) return;
+                  await _showMsg('Bluetooth', '❌ No se pudo conectar a ${d.address}');
+                  return;
+                }
+
+                // Fill form (even if inputs disabled, we can set text)
+                if (mounted) {
+                  _btName.text = (d.name.trim().isEmpty) ? 'BT Printer' : d.name.trim();
+                  _btAddress.text = d.address?.trim() ??'';
+
+                  // Defaults seguros (si estabas en SCAN y no podías editar)
+                  final lang = _btLang.text.trim().toUpperCase();
+                  if (lang != 'TSPL' && lang != 'ZPL') _btLang.text = 'TSPL';
+
+                  final btType = _btType.text.trim().toUpperCase();
+                  if (btType != PrinterState.PRINTER_TYPE_BLUETOOTH_BLE &&
+                      btType != PrinterState.PRINTER_TYPE_BLUETOOTH_NO_BLE) {
+                    _btType.text = PrinterState.PRINTER_TYPE_BLUETOOTH_NO_BLE;
+                  }
+                }
+
+                // Save immediately (recommended, because SCAN disables manual inputs)
+                final p = PrinterConnConfig(
+                  id: 'bt_${d.address?.trim() ?? ''}',
+                  type: PrinterConnType.bluetooth,
+                  name: _btName.text.trim().isEmpty ? 'BT Printer' : _btName.text.trim(),
+                  btAddress: d.address?.trim() ?? '',
+                  lang: _btLang.text.trim().toUpperCase(),
+                  typeText: _btType.text.trim().toUpperCase(),
                 );
-              },
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: const Text('Close'),
-            ),
-          ],
+                _addOrUpdatePrinter(p);
+
+                if (ctx.mounted) Navigator.pop(ctx);
+              } catch (e) {
+                if (!ctx.mounted) return;
+                await _showMsg('Bluetooth', '❌ Error conectando: $e');
+              }
+            }
+
+            return AlertDialog(
+              title: Row(
+                children: [
+                  const Expanded(child: Text('Bluetooth devices (scan)')),
+                  if (scanning)
+                    const Padding(
+                      padding: EdgeInsets.only(left: 8),
+                      child: SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2)),
+                    ),
+                ],
+              ),
+              content: SizedBox(
+                width: double.maxFinite,
+                child: _btScanDevices.isEmpty
+                    ? Text(scanning
+                    ? 'Buscando dispositivos...'
+                    : 'No se encontraron dispositivos.')
+                    : ListView.separated(
+                  shrinkWrap: true,
+                  itemCount: _btScanDevices.length,
+                  separatorBuilder: (_, __) => const Divider(height: 1),
+                  itemBuilder: (_, i) {
+                    final d = _btScanDevices[i];
+                    final name = d.name.trim().isEmpty ? 'Unknown' : d.name.trim();
+                    final mac = d.address?.trim() ?? '';
+
+                    return ListTile(
+                      title: Text(name),
+                      subtitle: Text(mac),
+                      leading: const Icon(Icons.print),
+                      onTap: () => connectAndFill(d),
+                    );
+                  },
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () async {
+                    await stopScan();
+                    if (ctx.mounted) Navigator.pop(ctx);
+                  },
+                  child: const Text('Close'),
+                ),
+                TextButton(
+                  onPressed: scanning ? null : () => rescan(),
+                  child: const Text('Rescan'),
+                ),
+                TextButton(
+                  onPressed: scanning ? () => stopScan() : null,
+                  child: const Text('Stop'),
+                ),
+              ],
+            );
+          },
         );
       },
     );
+
+    // Safety: stop scan when dialog closed
+    try {
+      await _btScanSub?.cancel();
+    } catch (_) {}
+    _btScanSub = null;
   }
+
 
   @override
   Widget build(BuildContext context) {
@@ -427,9 +615,53 @@ class _PrinterSelectPageState extends ConsumerState<PrinterSelectPage>
             const Divider(),
             const SizedBox(height: 8),
         
+            Row(
+              children: [
+                const Text(
+                  'Add / Update printer',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+                Spacer(),
+                SegmentedButton<PrinterInputMode>(
+                  segments: const [
+                    ButtonSegment(
+                      value: PrinterInputMode.scan,
+                      label: Text('SCAN'),
+                      icon: Icon(Icons.qr_code_scanner, size: 16),
+                    ),
+                    ButtonSegment(
+                      value: PrinterInputMode.manual,
+                      label: Text('MANUAL'),
+                      icon: Icon(Icons.edit, size: 16),
+                    ),
+                  ],
+                  selected: {inputMode},
+                  onSelectionChanged: (set) {
+                    final mode = set.first;
+
+                    ref.read(printerInputModeProvider.notifier).state = mode;
+
+                    ref.read(actionScanProvider.notifier).state =
+                    mode == PrinterInputMode.scan
+                        ? Memory.ACTION_FIND_PRINTER_BY_QR_WIFI_BLUETOOTH
+                        : Memory.ACTION_NO_SCAN_ACTION;
+                  },
+                  style: ButtonStyle(
+                    padding: MaterialStateProperty.all(
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                    ),
+                    visualDensity: VisualDensity.compact,
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    textStyle: MaterialStateProperty.all(
+                      const TextStyle(fontSize: 12),
+                    ),
+                  ),
+                )
+              ],
+            ),
             const Text(
-              'Add / Update printer(switch scan/manual to disable/enable input)',
-              style: TextStyle(fontWeight: FontWeight.bold),
+              'switch scan/manual to disable/enable input',
+              style: TextStyle(fontSize: themeFontSizeNormal),
             ),
             const SizedBox(height: 8),
         

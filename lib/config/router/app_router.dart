@@ -27,7 +27,10 @@ import '../../features/m_inout/domain/entities/line.dart';
 import '../../features/m_inout/domain/entities/m_in_out.dart';
 import '../../features/m_inout/presentation/screens/product_store_on_hand_screen_for_minout_line.dart';
 import '../../features/printer/printer_setup_screen.dart';
+import '../../features/printer/screen/locator_label_printer_select_page.dart';
+import '../../features/printer/screen/product_label_printer_select_page.dart';
 import '../../features/printer/web_template/screen/create_zpl_template_page.dart';
+import '../../features/products/domain/idempiere/idempiere_locator.dart';
 import '../../features/products/domain/idempiere/movement_and_lines.dart';
 import '../../features/products/presentation/screens/locator/search_locator_screen.dart';
 import '../../features/products/presentation/screens/movement/edit_new/movement_cancel_screen.dart';
@@ -65,7 +68,7 @@ class AppRouter {
   static const String PAGE_MOVEMENTS_EDIT = '/movement_search';
   static const String PAGE_MOVEMENTS_LIST = '/movement_list';
 
-  static const String PAGE_SEARCH_LOCATOR = '/searchLocator';
+  static const String PAGE_SEARCH_LOCATOR_LIST = '/search_locator_list';
   static const String PAGE_SEARCH_LOCATOR_TO = '/product/movement/createMovement/searchLocatorTo';
   static const String PAGE_CREATE_MOVEMENT_LINE = '/create_movement_line';
   static const String PAGE_MOVEMENTS_CONFIRM_SCREEN = '/movement_confirm_screen';
@@ -95,7 +98,8 @@ class AppRouter {
   static String PAGE_PRODUCT_STORE_ON_HAND_FOR_MINOUT_LINE='/product_store_on_hand_for_minout_line';
   static String PAGE_CREATE_ZPL_TEMPLATE='/zpl_create';
 
-  static String PAGE_LABEL_PRINTER_SELECT_PAGE='/label_printer';
+  static String PAGE_PRODUCT_LABEL_PRINTER_SELECT_PAGE='/product_label_printer';
+  static String PAGE_LOCATOR_LABEL_PRINTER_SELECT_PAGE='/locator_label_printer';
 
 
 
@@ -304,15 +308,22 @@ final goRouterProvider = Provider((ref) {
       ),
 
       GoRoute(
-          path: AppRouter.PAGE_LABEL_PRINTER_SELECT_PAGE,
+          path: AppRouter.PAGE_PRODUCT_LABEL_PRINTER_SELECT_PAGE,
           builder: (context, state){
 
-            return LabelPrinterSelectPage(
+            return ProductLabelPrinterSelectPage(
                 dataToPrint: state.extra as IdempiereProduct,
                 );
           }
+      ),
+      GoRoute(
+          path: AppRouter.PAGE_LOCATOR_LABEL_PRINTER_SELECT_PAGE,
+          builder: (context, state){
 
-
+            return LocatorLabelPrinterSelectPage(
+              dataToPrint: state.extra as IdempiereLocator,
+            );
+          }
       ),
 
 
@@ -566,9 +577,9 @@ final goRouterProvider = Provider((ref) {
 
 
       GoRoute(
-        path: AppRouter.PAGE_SEARCH_LOCATOR,
-        builder: (context, state) => RolesApp.hasStockPrivilege ?
-        SearchLocatorScreen(readOnly: true) : const HomeScreen(),
+        path: AppRouter.PAGE_SEARCH_LOCATOR_LIST,
+        builder: (context, state) =>
+        SearchLocatorScreen(readOnly: true) ,
       ),
       GoRoute(
         path: AppRouter.PAGE_SEARCH_LOCATOR_TO,

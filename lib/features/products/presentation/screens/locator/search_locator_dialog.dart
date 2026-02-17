@@ -31,7 +31,7 @@ class SearchLocatorDialogState extends ConsumerState<SearchLocatorDialog> {
   @override
   Widget build(BuildContext context){
     if(widget.readOnly){
-      actionScanType = Memory.ACTION_GET_LOCATOR_FROM_VALUE ;
+      actionScanType = Memory.ACTION_GET_LOCATOR_VALUE ;
     } else {
       actionScanType = Memory.ACTION_NO_SCAN_ACTION ;
     }
@@ -91,7 +91,7 @@ class SearchLocatorDialogState extends ConsumerState<SearchLocatorDialog> {
                 SearchLocatorByWarehouseBody(
                     readOnly: widget.readOnly),
                 SearchLocatorByLocatorBody(
-                  searchLocatorFrom: widget.readOnly,
+                  readOnly: widget.readOnly,
                 ),
 
               ]

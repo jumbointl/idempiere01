@@ -177,7 +177,7 @@ class ProductStoreOnHandScreenForLineState
         children: [
           ProductDetailCardForLine(product: product,
             onPrintTap: (){
-              context.push(AppRouter.PAGE_LABEL_PRINTER_SELECT_PAGE,extra: product);
+              context.push(AppRouter.PAGE_PRODUCT_LABEL_PRINTER_SELECT_PAGE,extra: product);
             },
           ),
           if (product.hasListStorageOnHande && product.hasSortedStorageOnHande)

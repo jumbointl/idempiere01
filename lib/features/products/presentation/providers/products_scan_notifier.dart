@@ -49,7 +49,7 @@ class ProductsScanNotifier
         findLocatorTo(value);
         break;
 
-      case Memory.ACTION_GET_LOCATOR_FROM_VALUE:
+      case Memory.ACTION_GET_LOCATOR_VALUE:
         findLocatorFrom(value);
         break;
 

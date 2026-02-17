@@ -77,6 +77,12 @@ var appHomeOptionCol1Items = <MenuItem>[
     icon: Icons.search,
   ),
   MenuItem(
+    title: 'Locator List',
+    subTitle: '',
+    link: AppRouter.PAGE_SEARCH_LOCATOR_LIST,
+    icon: Icons.search,
+  ),
+  MenuItem(
     title: 'ZPL Template',
     subTitle: '',
     link: AppRouter.PAGE_CREATE_ZPL_TEMPLATE,

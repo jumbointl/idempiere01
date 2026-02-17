@@ -10,9 +10,9 @@ import 'locator_card.dart';
 
 
 class SearchLocatorByLocatorBody extends ConsumerStatefulWidget {
-  final bool searchLocatorFrom;
+  final bool readOnly;
   const SearchLocatorByLocatorBody( {
-    required this.searchLocatorFrom, super.key });
+    required this.readOnly, super.key });
 
   @override
   ConsumerState<ConsumerStatefulWidget> createState() => SearchLocatorByLocatorBodyState();
@@ -53,7 +53,7 @@ class SearchLocatorByLocatorBodyState extends ConsumerState<SearchLocatorByLocat
                     itemBuilder: (context, index) =>Center(
                       child: Center(
                         child: LocatorCard(
-                            searchLocatorFrom: widget.searchLocatorFrom,
+                            readOnly: widget.readOnly,
                             data: locators[index],width: width,
                             index: index),
                       ),
@@ -89,8 +89,11 @@ class SearchLocatorByLocatorBodyState extends ConsumerState<SearchLocatorByLocat
                     textAlign: TextAlign.right,
 
                   ),
-                InputStringDialog(title: Messages.FIND_LOCATOR, textStateProvider: scannedLocatorsListProvider, dialogType: Memory.TYPE_DIALOG_SEARCH),
-                InputStringDialog(title: Messages.FIND_LOCATOR, textStateProvider: scannedLocatorsListProvider, dialogType: Memory.TYPE_DIALOG_HISTOY),
+                InputStringDialog(title: Messages.FIND_LOCATOR,
+                    textStateProvider: scannedLocatorsListProvider,
+                    fireActionProvider: fireSearchLocatorListProvider,
+                    dialogType: Memory.TYPE_DIALOG_SEARCH),
+
 
               ],
             ),

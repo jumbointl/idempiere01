@@ -7,39 +7,75 @@ import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_riverpod/legacy.dart';
 import 'package:get_storage/get_storage.dart';
-import 'package:monalisa_app_001/config/config.dart';
-import 'package:monalisa_app_001/features/products/common/scan_button_by_action_fixed_short.dart';
+import 'package:monalisa_app_001/features/products/common/scan_button_by_action_fixed_short2.dart';
+import 'package:pos_universal_printer/pos_universal_printer.dart';
 import 'package:print_bluetooth_thermal/print_bluetooth_thermal.dart';
 
-import '../../products/domain/idempiere/idempiere_product.dart';
-import '../../products/domain/models/label_profile.dart';
-import '../../products/presentation/providers/common_provider.dart';
-import '../../products/presentation/providers/product_provider_common.dart';
-import '../../shared/data/memory.dart';
+import 'package:monalisa_app_001/config/config.dart';
+import 'package:monalisa_app_001/features/products/common/scan_button_by_action_fixed_short.dart';
+import 'package:monalisa_app_001/features/products/domain/models/label_profile.dart';
+import 'package:monalisa_app_001/features/products/presentation/providers/common_provider.dart';
+import 'package:monalisa_app_001/features/products/presentation/providers/product_provider_common.dart';
+
 import '../models/printer_select_models.dart';
 import '../printer_scan_notifier.dart';
+import '../tspl/tspl_printer_helper.dart';
 import 'printer_select_page.dart';
 
-// Profiles providers live here
 
 
+// -----------------------------------------------------------------------------
+// Base class: LabelPrinterSelectPage (parent)
+// - 3 tabs: Home / Profiles / Printers
+// - Loads/saves label profiles
+// - Loads/saves printers (shared with PrinterSelectPage via printerListProvider)
+// - Handles QR scan to add WiFi printer
+// - Provides generic printing pipeline (TSPL) and a hook to build TSPL per child
+// -----------------------------------------------------------------------------
+abstract class LabelPrinterSelectPage extends ConsumerStatefulWidget {
+  final dynamic dataToPrint;
+  const LabelPrinterSelectPage({super.key, required this.dataToPrint});
 
-class LabelPrinterSelectPage extends PrinterSelectPage {
-  const LabelPrinterSelectPage({super.key, required super.dataToPrint});
+  /// Override to define which scan action this page uses.
+  int get actionScanType;
+
+  /// Optional: customize title in AppBar.
+  String get pageTitle => 'Label Printer Select';
+
+  /// Override: build TSPL for the current `dataToPrint`.
+  /// `printSimpleData` can be ignored by implementations that don't need it.
+  String buildTsplForData({
+    required LabelProfile profile,
+    required bool printSimpleData,
+  });
+
+  /// Override: validates the `dataToPrint` and returns a user-friendly error if invalid.
+  /// Return null if OK.
+  String? validateDataToPrint();
 
   @override
-  ConsumerState<PrinterSelectPage> createState() => _LabelPrinterSelectPageState();
+  ConsumerState<LabelPrinterSelectPage> createState() =>
+      _LabelPrinterSelectPageState();
+  Widget buildPrintingPanel({
+    required BuildContext context,
+    required WidgetRef ref,
+    required PrinterConnConfig? selectedPrinter,
+    required LabelProfile profile40,
+    required LabelProfile profile60,
+    required Future<void> Function({
+    required LabelProfile profile,
+    required bool printSimpleData,
+    }) onPrint,
+  });
+
 }
 
-class _LabelPrinterSelectPageState extends ConsumerState<PrinterSelectPage>
+class _LabelPrinterSelectPageState extends ConsumerState<LabelPrinterSelectPage>
     with SingleTickerProviderStateMixin {
   final box = GetStorage();
 
-  final int actionScanType = Memory.ACTION_FIND_PRINTER_BY_QR_WIFI_BLUETOOTH;
   late final int oldAction;
-
   late final TabController _tab; // Home / Profiles / Printers
 
   @override
@@ -50,8 +86,9 @@ class _LabelPrinterSelectPageState extends ConsumerState<PrinterSelectPage>
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _loadLabelProfiles();
       _loadPrintersForHome();
+
       oldAction = ref.read(actionScanProvider);
-      ref.read(actionScanProvider.notifier).state = actionScanType;
+      ref.read(actionScanProvider.notifier).state = widget.actionScanType;
       ref.read(printerInputModeProvider.notifier).state = PrinterInputMode.scan;
     });
   }
@@ -106,7 +143,7 @@ class _LabelPrinterSelectPageState extends ConsumerState<PrinterSelectPage>
     );
   }
 
-  LabelProfile _selectedProfileOrDefault40() {
+  LabelProfile selectedProfileOrDefault40() {
     final list = ref.read(labelProfilesProvider);
     final id = ref.read(selectedLabelProfileIdProvider);
 
@@ -118,7 +155,7 @@ class _LabelPrinterSelectPageState extends ConsumerState<PrinterSelectPage>
     return p ?? defaultLabel40x25();
   }
 
-  LabelProfile _selectedProfileOrDefault60() {
+  LabelProfile selectedProfileOrDefault60() {
     final list = ref.read(labelProfilesProvider);
     final id = ref.read(selectedLabelProfileIdProvider);
 
@@ -131,14 +168,20 @@ class _LabelPrinterSelectPageState extends ConsumerState<PrinterSelectPage>
   }
 
   Future<void> _editOrCreateProfile({LabelProfile? initial}) async {
-    var inputModeOld = ref.read(printerInputModeProvider);
+    final inputModeOld = ref.read(printerInputModeProvider);
     if (inputModeOld == PrinterInputMode.scan) {
       ref.read(printerInputModeProvider.notifier).state = PrinterInputMode.manual;
     }
-    final profile = await showLabelConfigBottomSheet(context: context, initial: initial);
-    if(inputModeOld!=ref.read(printerInputModeProvider)){
+
+    final profile = await showLabelConfigBottomSheet(
+      context: context,
+      initial: initial,
+    );
+
+    if (inputModeOld != ref.read(printerInputModeProvider)) {
       ref.read(printerInputModeProvider.notifier).state = inputModeOld;
     }
+
     if (profile == null) return;
 
     final list = [...ref.read(labelProfilesProvider)];
@@ -171,8 +214,24 @@ class _LabelPrinterSelectPageState extends ConsumerState<PrinterSelectPage>
   }
 
   // ------------------------------------------------------------
-  // Printers: save (so QR scan persists)
+  // Printers: load/save (shared providers from printer_select_page.dart)
   // ------------------------------------------------------------
+  void _loadPrintersForHome() {
+    final raw = box.read(PrinterSelectStorageKeys.printersList);
+    final selectedId = box.read(PrinterSelectStorageKeys.selectedPrinterId);
+
+    if (raw is String && raw.trim().isNotEmpty) {
+      final list = (jsonDecode(raw) as List)
+          .map((e) => PrinterConnConfig.fromJson(Map<String, dynamic>.from(e)))
+          .toList();
+      ref.read(printerListProvider.notifier).state = list;
+    }
+
+    if (selectedId is String && selectedId.trim().isNotEmpty) {
+      ref.read(selectedPrinterIdProvider.notifier).state = selectedId;
+    }
+  }
+
   void _savePrintersToStorageFromHere() {
     final list = ref.read(printerListProvider);
     box.write(
@@ -207,13 +266,28 @@ class _LabelPrinterSelectPageState extends ConsumerState<PrinterSelectPage>
     required int port,
     required String tspl,
   }) async {
-    final socket = await Socket.connect(ip, port, timeout: const Duration(seconds: 5));
+    final socket = await Socket.connect(ip, port,
+        timeout: const Duration(seconds: 5));
     socket.add(Uint8List.fromList(tspl.codeUnits));
     await socket.flush();
     await socket.close();
   }
-
   Future<void> sendTsplViaBluetooth({
+    required String btAddress,
+    required String tspl,
+  }) async {
+
+    final pos = PosUniversalPrinter.instance;
+
+    if (!pos.isRoleConnected(PosPrinterRole.sticker)) {
+      throw Exception('Bluetooth printer not connected');
+    }
+
+    final bytes = latin1.encode(tspl);
+    pos.printRaw(PosPrinterRole.sticker, bytes);
+  }
+
+  /*Future<void> sendTsplViaBluetooth({
     required String btAddress,
     required String tspl,
   }) async {
@@ -226,22 +300,22 @@ class _LabelPrinterSelectPageState extends ConsumerState<PrinterSelectPage>
       await Future.delayed(const Duration(milliseconds: 120));
     }
 
-    final connected = await PrintBluetoothThermal.connect(macPrinterAddress: mac);
+    final connected =
+    await PrintBluetoothThermal.connect(macPrinterAddress: mac);
     if (!connected) {
       throw Exception('No se pudo conectar por Bluetooth: $mac');
     }
 
     await Future.delayed(const Duration(milliseconds: 150));
-    final ok = await PrintBluetoothThermal.writeBytes(utf8.encode(tspl).toList());
+    final ok =
+    await PrintBluetoothThermal.writeBytes(tspl.codeUnits.toList());
 
     await Future.delayed(const Duration(milliseconds: 120));
     await _disconnectSafe();
 
-    if (!ok) {
-      throw Exception('Bluetooth writeBytes returned false');
-    }
+    if (!ok) throw Exception('Bluetooth writeBytes returned false');
   }
-
+*/
   Future<void> _showMsg(String title, String msg) async {
     if (!mounted) return;
     await showDialog(
@@ -259,41 +333,43 @@ class _LabelPrinterSelectPageState extends ConsumerState<PrinterSelectPage>
     );
   }
 
-  Future<void> _printLabel({required LabelProfile profile}) async {
+  // ------------------------------------------------------------
+  // Printing pipeline (extendible)
+  // ------------------------------------------------------------
+  Future<void> printLabel({
+    required LabelProfile profile,
+    required bool printSimpleData,
+  }) async {
     final printer = _selectedPrinter();
     if (printer == null) {
       await _showMsg('Printer', 'Select a printer first.');
       return;
     }
 
-    final data = widget.dataToPrint;
-    if (data is! IdempiereProduct) {
-      await _showMsg('Data', 'dataToPrint must be IdempiereProduct.');
+    final err = widget.validateDataToPrint();
+    if (err != null) {
+      await _showMsg('Data', err);
       return;
     }
 
-    final upc = normalizeUpc(data.uPC ?? '');
-    final sku = (data.sKU ?? 'sku').trim();
-    final name = (data.name ?? 'name').trim();
-
-    if (upc.isEmpty) {
-      await _showMsg('UPC', 'Product has empty UPC.');
-      return;
-    }
-
-    late final String tspl;
-    if (profile.widthMm <= 50) {
-      tspl = buildTsplProductLabelSmall(upc: upc, sku: sku, profile: profile);
-    } else {
-      tspl = buildTsplProductLabel(upc: upc, sku: sku, name: name, profile: profile);
-    }
+    final tspl = widget.buildTsplForData(
+      profile: profile,
+      printSimpleData: printSimpleData,
+    );
 
     try {
       if (printer.type == PrinterConnType.wifi) {
-        await sendTsplViaWifi(ip: printer.ip!, port: printer.port ?? 9100, tspl: tspl);
+        await sendTsplViaWifi(
+          ip: printer.ip!,
+          port: printer.port ?? 9100,
+          tspl: tspl,
+        );
         await _showMsg('Print', '✅ Printed via WiFi');
       } else {
-        await sendTsplViaBluetooth(btAddress: printer.btAddress!, tspl: tspl);
+        await sendTsplViaBluetooth(
+          btAddress: printer.btAddress!,
+          tspl: tspl,
+        );
         await _showMsg('Print', '✅ Printed via Bluetooth');
       }
     } catch (e) {
@@ -314,7 +390,7 @@ class _LabelPrinterSelectPageState extends ConsumerState<PrinterSelectPage>
     return s.length > maxCharsPerLine ? s.substring(0, maxCharsPerLine) : s;
   }
 
-  Future<void> imprimirEtiquetaDeAjuste({required LabelProfile profile}) async {
+  Future<void> printAdjustmentSticker({required LabelProfile profile}) async {
     final printer = _selectedPrinter();
     if (printer == null) {
       await _showMsg('Printer', 'Select a printer first.');
@@ -324,25 +400,76 @@ class _LabelPrinterSelectPageState extends ConsumerState<PrinterSelectPage>
     const upc = '1234567890123';
     final line = _buildAdjustmentLine(profile.maxCharsPerLine);
 
-    final String tspl;
-    if (profile.widthMm <= 50) {
-      tspl = buildTsplProductLabelSmall(upc: upc, sku: line, profile: profile);
-    } else {
-      tspl = buildTsplProductLabel(upc: upc, sku: line, name: line, profile: profile);
-    }
+    // Default: use the "simple" layout idea. Child can still override by
+    // returning something else in buildTsplForData, but adjustment is generic.
+    final tspl = _buildGenericAdjustmentTspl(
+      profile: profile,
+      topText: line,
+      barcodeData: upc,
+    );
 
     try {
       if (printer.type == PrinterConnType.wifi) {
-        await sendTsplViaWifi(ip: printer.ip!, port: printer.port ?? 9100, tspl: tspl);
+        await sendTsplViaWifi(
+          ip: printer.ip!,
+          port: printer.port ?? 9100,
+          tspl: tspl,
+        );
         await _showMsg('Print', '✅ Adjustment label printed via WiFi');
       } else {
-        await sendTsplViaBluetooth(btAddress: printer.btAddress!, tspl: tspl);
+        await sendTsplViaBluetooth(
+          btAddress: printer.btAddress!,
+          tspl: tspl,
+        );
         await _showMsg('Print', '✅ Adjustment label printed via Bluetooth');
       }
     } catch (e) {
       await _showMsg('Print', '❌ Error: $e');
     }
   }
+
+  String _buildGenericAdjustmentTspl({
+    required LabelProfile profile,
+    required String topText,
+    required String barcodeData,
+  }) {
+    const int dotsPerMm = 8;
+
+    final int labelW = (profile.widthMm * dotsPerMm).round();
+    final int labelH = (profile.heightMm * dotsPerMm).round();
+
+    final int marginX = (profile.marginXmm * dotsPerMm).round();
+    final int marginY = (profile.marginYmm * dotsPerMm).round();
+
+    final int yText = marginY + 10;
+    final int yBar = yText + 40;
+
+    final int h = profile.barcodeHeight > 0 ? profile.barcodeHeight : 80;
+    final int narrow = profile.barcodeNarrow > 0 ? profile.barcodeNarrow : 2;
+    final int wide = profile.barcodeWidth > 0 ? profile.barcodeWidth : 3;
+
+    final int estBarcodeWidth =
+    estimateBarcodeWidthDots(barcodeData.length, narrow);
+
+    int xBarcode = ((labelW - estBarcodeWidth) / 2).round();
+
+    xBarcode = xBarcode.clamp(marginX, labelW - marginX - estBarcodeWidth);
+
+    final res = [
+      'SIZE ${profile.widthMm} mm,${profile.heightMm} mm',
+      'GAP ${profile.gapMm} mm,0 mm',
+      'DIRECTION 1',
+      'CLS',
+      'TEXT $marginX,$yText,"${profile.fontId}",0,1,1,"$topText"',
+      'BARCODE $xBarcode,$yBar,"128",$h,1,0,$narrow,$wide,"$barcodeData"',
+      'PRINT ${profile.copies},1',
+      '',
+    ].join('\n');
+
+    debugPrint(res);
+    return res;
+  }
+
 
   Future<void> _showPrintOptionsDialog() async {
     if (!mounted) return;
@@ -360,23 +487,22 @@ class _LabelPrinterSelectPageState extends ConsumerState<PrinterSelectPage>
           TextButton(
             onPressed: () async {
               Navigator.pop(context);
-              await _printLabel(profile: _selectedProfileOrDefault40());
+              await printLabel(
+                profile: selectedProfileOrDefault40(),
+                printSimpleData: true,
+              );
             },
-            child: const Text('1) Imprimir etiqueta 40x25'),
+            child: const Text('1) Imprimir simple'),
           ),
           TextButton(
             onPressed: () async {
               Navigator.pop(context);
-              await _printLabel(profile: _selectedProfileOrDefault60());
+              await printLabel(
+                profile: selectedProfileOrDefault60(),
+                printSimpleData: false,
+              );
             },
-            child: const Text('2) Imprimir etiqueta 60x40'),
-          ),
-          TextButton(
-            onPressed: () async {
-              Navigator.pop(context);
-              await imprimirEtiquetaDeAjuste(profile: _selectedProfileOrDefault40());
-            },
-            child: const Text('3) Imprimir etiqueta tique de ajuste'),
+            child: const Text('2) Imprimir completo'),
           ),
         ],
       ),
@@ -384,9 +510,8 @@ class _LabelPrinterSelectPageState extends ConsumerState<PrinterSelectPage>
   }
 
   // ------------------------------------------------------------
-  // QR handler
-  // BLUETOOTH*name*mac*TSPL*PRINTER_TYPE_BLUETOOTH_BLE
-  // WiFi: ip:port:type:name:serverIp:serverPort
+  // QR handler: WiFi only (Bluetooth QR disabled)
+  // WiFi: ip:port:type:name:serverIp:serverPort  (you use first 3..4 parts)
   // ------------------------------------------------------------
   void handleInputString({
     required int actionScan,
@@ -395,7 +520,7 @@ class _LabelPrinterSelectPageState extends ConsumerState<PrinterSelectPage>
   }) async {
     final qrData = inputData.trim();
     if (qrData.isEmpty) return;
-    if (actionScan != actionScanType) return;
+    if (actionScan != widget.actionScanType) return;
 
     bool isValidLang(String s) {
       final t = s.trim().toUpperCase();
@@ -407,68 +532,11 @@ class _LabelPrinterSelectPageState extends ConsumerState<PrinterSelectPage>
       return t == 'TPL' ? PrinterState.PRINTER_TYPE_TSPL : t;
     }
 
-    bool isValidBtType(String s) {
-      final t = s.trim().toUpperCase();
-      return t == PrinterState.PRINTER_TYPE_BLUETOOTH_BLE ||
-          t == PrinterState.PRINTER_TYPE_BLUETOOTH_NO_BLE;
-    }
-
-    // Bluetooth printer from scan disable
-
     if (qrData.toUpperCase().startsWith('BLUETOOTH*')) {
       await _showMsg('QR', 'not for Bluetooth printers.');
-      return ;
-      /*
-      final parts = qrData.split('*');
-      if (parts.length < 5) {
-        await _showMsg('QR', 'Invalid Bluetooth QR format.');
-        return;
-      }
-
-      final name = parts[1].trim();
-      final mac = parts[2].trim();
-      final langRaw = parts[3].trim().toUpperCase();
-      final btTypeRaw = parts[4].trim().toUpperCase();
-
-      if (!isValidLang(langRaw)) {
-        await _showMsg('Printer', 'Tipo impresora invalido para configuración de impresora');
-        return;
-      }
-      if (!isValidBtType(btTypeRaw)) {
-        await _showMsg('Printer', 'Tipo Bluetooth inválido');
-        return;
-      }
-
-      final lang = normalizeLang(langRaw);
-
-      final newPrinter = PrinterConnConfig(
-        id: 'bt_$mac',
-        type: PrinterConnType.bluetooth,
-        name: name.isEmpty ? 'Bluetooth Printer' : name,
-        btAddress: mac,
-        lang: lang,
-        typeText: btTypeRaw,
-      );
-
-      final list = [...ref.read(printerListProvider)];
-      final idx = list.indexWhere((p) => p.id == newPrinter.id);
-      if (idx >= 0) {
-        list[idx] = newPrinter;
-      } else {
-        list.add(newPrinter);
-      }
-      ref.read(printerListProvider.notifier).state = list;
-      ref.read(selectedPrinterIdProvider.notifier).state = newPrinter.id;
-      _savePrintersToStorageFromHere();
-
-      await _showMsg('Printer', 'Impresora Bluetooth guardada: ${newPrinter.name}');
-      _tab.index = 0;
-      await _showPrintOptionsDialog();
       return;
-       */
     }
 
-    // WiFi
     final parts = qrData.split(':');
     if (parts.length < 3) {
       await _showMsg('QR', 'Invalid WiFi QR format.');
@@ -515,7 +583,6 @@ class _LabelPrinterSelectPageState extends ConsumerState<PrinterSelectPage>
     ref.read(selectedPrinterIdProvider.notifier).state = newPrinter.id;
     _savePrintersToStorageFromHere();
 
-    //await _showMsg('Printer', 'Impresora WiFi guardada: ${newPrinter.name}');
     _tab.index = 0;
     await _showPrintOptionsDialog();
   }
@@ -524,14 +591,12 @@ class _LabelPrinterSelectPageState extends ConsumerState<PrinterSelectPage>
   // Back
   // ------------------------------------------------------------
   void popScopeAction(BuildContext context, WidgetRef ref) {
-    debugPrint('popScopeAction $oldAction');
-    debugPrint('popScopeAction ${Memory.ACTION_FIND_BY_UPC_SKU_FOR_STORE_ON_HAND}');
     ref.read(actionScanProvider.notifier).state = oldAction;
     Navigator.pop(context);
   }
 
   // ------------------------------------------------------------
-  // UI: 3 tabs
+  // UI
   // ------------------------------------------------------------
   @override
   Widget build(BuildContext context) {
@@ -550,63 +615,25 @@ class _LabelPrinterSelectPageState extends ConsumerState<PrinterSelectPage>
           (p) => p?.id == selectedPrinterId,
       orElse: () => null,
     );
+
     final inputMode = ref.watch(printerInputModeProvider);
 
     return Scaffold(
       appBar: AppBar(
         automaticallyImplyLeading: true,
-        title: Column(
-          children: [
-            const Text('Label Printer Select',style: TextStyle(fontSize: themeFontSizeLarge),),
-            SegmentedButton<PrinterInputMode>(
-              segments: const [
-                ButtonSegment(
-                  value: PrinterInputMode.scan,
-                  label: Text('SCAN'),
-                  icon: Icon(Icons.qr_code_scanner, size: 16),
-                ),
-                ButtonSegment(
-                  value: PrinterInputMode.manual,
-                  label: Text('MANUAL'),
-                  icon: Icon(Icons.edit, size: 16),
-                ),
-              ],
-              selected: {inputMode},
-              onSelectionChanged: (set) {
-                final mode = set.first;
-
-                ref.read(printerInputModeProvider.notifier).state = mode;
-
-                ref.read(actionScanProvider.notifier).state =
-                mode == PrinterInputMode.scan
-                    ? Memory.ACTION_FIND_PRINTER_BY_QR_WIFI_BLUETOOTH
-                    : Memory.ACTION_NO_SCAN_ACTION;
-              },
-              style: ButtonStyle(
-                padding: MaterialStateProperty.all(
-                  const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-                ),
-                visualDensity: VisualDensity.compact,
-                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                textStyle: MaterialStateProperty.all(
-                  const TextStyle(fontSize: 12),
-                ),
-              ),
-            )
-
-          ],
+        title: Text(
+          widget.pageTitle,
+          style: const TextStyle(fontSize: themeFontSizeLarge),
         ),
         actions: [
-
-
           if (inputMode == PrinterInputMode.scan)
-          Padding(
-            padding: const EdgeInsets.only(right: 8),
-            child: ScanButtonByActionFixedShort(
-              onOk: handleInputString,
-              actionTypeInt: actionScanType,
+            Padding(
+              padding: const EdgeInsets.only(right: 8),
+              child: ScanButtonByActionFixedShort(
+                onOk: handleInputString,
+                actionTypeInt: widget.actionScanType,
+              ),
             ),
-          ),
         ],
         bottom: TabBar(
           controller: _tab,
@@ -626,31 +653,17 @@ class _LabelPrinterSelectPageState extends ConsumerState<PrinterSelectPage>
         child: TabBarView(
           controller: _tab,
           children: [
-            _buildHomeTab(selectedProfile: selectedProfile, selectedPrinter: selectedPrinter),
+            _buildHomeTab(
+              selectedProfile: selectedProfile,
+              selectedPrinter: selectedPrinter,
+            ),
             _buildProfilesTab(),
-            // Reuse PrinterSelectPage (add/edit/delete already there)
             PrinterSelectPage(dataToPrint: widget.dataToPrint),
           ],
         ),
       ),
     );
   }
-  void _loadPrintersForHome() {
-    final raw = box.read(PrinterSelectStorageKeys.printersList);
-    final selectedId = box.read(PrinterSelectStorageKeys.selectedPrinterId);
-
-    if (raw is String && raw.trim().isNotEmpty) {
-      final list = (jsonDecode(raw) as List)
-          .map((e) => PrinterConnConfig.fromJson(Map<String, dynamic>.from(e)))
-          .toList();
-      ref.read(printerListProvider.notifier).state = list;
-    }
-
-    if (selectedId is String && selectedId.trim().isNotEmpty) {
-      ref.read(selectedPrinterIdProvider.notifier).state = selectedId;
-    }
-  }
-
 
   Widget _buildHomeTab({
     required LabelProfile selectedProfile,
@@ -658,17 +671,25 @@ class _LabelPrinterSelectPageState extends ConsumerState<PrinterSelectPage>
   }) {
     final printers = ref.watch(printerListProvider);
     final selectedPrinterId = ref.watch(selectedPrinterIdProvider);
+    final profile40 = selectedProfileOrDefault40();
+    final profile60 = selectedProfileOrDefault60();
+
     return SafeArea(
       child: ListView(
         padding: const EdgeInsets.all(12),
         children: [
-          const Text('Selected configuration', style: TextStyle(fontWeight: FontWeight.bold)),
+          const Text(
+            'Selected configuration',
+            style: TextStyle(fontWeight: FontWeight.bold),
+          ),
           const SizedBox(height: 8),
 
           Card(
             child: ListTile(
               title: Text('Profile: ${selectedProfile.name}'),
-              subtitle: Text('${selectedProfile.widthMm}x${selectedProfile.heightMm}mm  copies:${selectedProfile.copies}'),
+              subtitle: Text(
+                '${selectedProfile.widthMm}x${selectedProfile.heightMm}mm  copies:${selectedProfile.copies}',
+              ),
               trailing: const Icon(Icons.tune),
               onTap: () => _tab.index = 1,
             ),
@@ -676,7 +697,11 @@ class _LabelPrinterSelectPageState extends ConsumerState<PrinterSelectPage>
 
           Card(
             child: ListTile(
-              title: Text(selectedPrinter == null ? 'Printer: (none selected)' : 'Printer: ${selectedPrinter.name}'),
+              title: Text(
+                selectedPrinter == null
+                    ? 'Printer: (none selected)'
+                    : 'Printer: ${selectedPrinter.name}',
+              ),
               subtitle: Text(
                 selectedPrinter == null
                     ? 'Go to Printers tab to add/select one.'
@@ -700,27 +725,15 @@ class _LabelPrinterSelectPageState extends ConsumerState<PrinterSelectPage>
           ),
 
           const SizedBox(height: 10),
-
-          Row(
-            children: [
-              Expanded(
-                child: ElevatedButton(
-                  onPressed: selectedPrinter == null
-                      ? null
-                      : () async => _printLabel(profile: _selectedProfileOrDefault40()),
-                  child: const Text('Print 40x25'),
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: ElevatedButton(
-                  onPressed: selectedPrinter == null
-                      ? null
-                      : () async => _printLabel(profile: _selectedProfileOrDefault60()),
-                  child: const Text('Print 60x40'),
-                ),
-              ),
-            ],
+          widget.buildPrintingPanel(
+            context: context,
+            ref: ref,
+            selectedPrinter: selectedPrinter,
+            profile40: profile40,
+            profile60: profile60,
+            onPrint: ({required LabelProfile profile, required bool printSimpleData}) {
+              return printLabel(profile: profile, printSimpleData: printSimpleData);
+            },
           ),
 
           const SizedBox(height: 10),
@@ -728,10 +741,11 @@ class _LabelPrinterSelectPageState extends ConsumerState<PrinterSelectPage>
           ElevatedButton(
             onPressed: selectedPrinter == null
                 ? null
-                : () async => imprimirEtiquetaDeAjuste(profile: _selectedProfileOrDefault40()),
+                : () async => printAdjustmentSticker(profile: selectedProfileOrDefault40()),
             child: const Text('Print adjustment label'),
           ),
-          // ✅ Selector rápido
+
+          // Quick select printers
           ExpansionTile(
             initiallyExpanded: true,
             title: const Text('Saved printers (quick select)'),
@@ -755,7 +769,7 @@ class _LabelPrinterSelectPageState extends ConsumerState<PrinterSelectPage>
                     onChanged: (v) {
                       if (v == null) return;
                       ref.read(selectedPrinterIdProvider.notifier).state = v;
-                      _savePrintersToStorageFromHere(); // 👈 persiste selección
+                      _savePrintersToStorageFromHere();
                     },
                   );
                 }).toList(),
@@ -831,6 +845,8 @@ class _LabelPrinterSelectPageState extends ConsumerState<PrinterSelectPage>
       ),
     );
   }
+
+
 }
 
 // -----------------------------------------------------------------------------
@@ -978,7 +994,8 @@ class _LabelConfigSheetState extends State<_LabelConfigSheet> {
                     ElevatedButton(
                       onPressed: () {
                         final initial = widget.initial;
-                        final id = initial?.id ?? 'custom_${DateTime.now().millisecondsSinceEpoch}';
+                        final id = initial?.id ??
+                            'custom_${DateTime.now().millisecondsSinceEpoch}';
 
                         final profile = LabelProfile(
                           id: id,
@@ -1023,6 +1040,3 @@ class _LabelConfigSheetState extends State<_LabelConfigSheet> {
     );
   }
 }
-
-
-
