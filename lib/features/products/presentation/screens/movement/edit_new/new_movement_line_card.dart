@@ -194,7 +194,7 @@ class NewMovementLineCardState extends ConsumerState<NewMovementLineCard> {
                 }
               },
 
-              error: (_, __) {
+              error: (_, _) {
                 ref
                     .read(updateMovementLineIdProvider.notifier)
                     .state = null;

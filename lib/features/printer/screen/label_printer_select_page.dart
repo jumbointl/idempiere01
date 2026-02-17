@@ -8,9 +8,7 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:get_storage/get_storage.dart';
-import 'package:monalisa_app_001/features/products/common/scan_button_by_action_fixed_short2.dart';
 import 'package:pos_universal_printer/pos_universal_printer.dart';
-import 'package:print_bluetooth_thermal/print_bluetooth_thermal.dart';
 
 import 'package:monalisa_app_001/config/config.dart';
 import 'package:monalisa_app_001/features/products/common/scan_button_by_action_fixed_short.dart';
@@ -252,14 +250,7 @@ class _LabelPrinterSelectPageState extends ConsumerState<LabelPrinterSelectPage>
         .firstWhere((e) => e != null, orElse: () => null);
   }
 
-  // ------------------------------------------------------------
-  // Printing helpers (WiFi/BT)
-  // ------------------------------------------------------------
-  Future<void> _disconnectSafe() async {
-    try {
-      await PrintBluetoothThermal.disconnect;
-    } catch (_) {}
-  }
+
 
   Future<void> sendTsplViaWifi({
     required String ip,
@@ -287,35 +278,7 @@ class _LabelPrinterSelectPageState extends ConsumerState<LabelPrinterSelectPage>
     pos.printRaw(PosPrinterRole.sticker, bytes);
   }
 
-  /*Future<void> sendTsplViaBluetooth({
-    required String btAddress,
-    required String tspl,
-  }) async {
-    final mac = btAddress.trim();
-    if (mac.isEmpty) throw Exception('BT address vacío');
 
-    final already = await PrintBluetoothThermal.connectionStatus;
-    if (already) {
-      await _disconnectSafe();
-      await Future.delayed(const Duration(milliseconds: 120));
-    }
-
-    final connected =
-    await PrintBluetoothThermal.connect(macPrinterAddress: mac);
-    if (!connected) {
-      throw Exception('No se pudo conectar por Bluetooth: $mac');
-    }
-
-    await Future.delayed(const Duration(milliseconds: 150));
-    final ok =
-    await PrintBluetoothThermal.writeBytes(tspl.codeUnits.toList());
-
-    await Future.delayed(const Duration(milliseconds: 120));
-    await _disconnectSafe();
-
-    if (!ok) throw Exception('Bluetooth writeBytes returned false');
-  }
-*/
   Future<void> _showMsg(String title, String msg) async {
     if (!mounted) return;
     await showDialog(
@@ -772,7 +735,7 @@ class _LabelPrinterSelectPageState extends ConsumerState<LabelPrinterSelectPage>
                       _savePrintersToStorageFromHere();
                     },
                   );
-                }).toList(),
+                }),
             ],
           ),
         ],
@@ -868,7 +831,7 @@ Future<LabelProfile?> showLabelConfigBottomSheet({
 
 class _LabelConfigSheet extends StatefulWidget {
   final LabelProfile? initial;
-  const _LabelConfigSheet({super.key, this.initial});
+  const _LabelConfigSheet({this.initial});
 
   @override
   State<_LabelConfigSheet> createState() => _LabelConfigSheetState();

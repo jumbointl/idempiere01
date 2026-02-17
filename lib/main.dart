@@ -1,12 +1,8 @@
-import 'dart:io';
 
-import 'package:device_info_plus/device_info_plus.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_addons/flutter_addons.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:get_storage/get_storage.dart';
 import 'package:monalisa_app_001/config/config.dart';
-import 'package:permission_handler/permission_handler.dart';
 
 import 'features/products/common/bluetooth_permission.dart';
 import 'features/shared/data/memory.dart';

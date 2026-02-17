@@ -31,7 +31,7 @@ Future<List<ZplTemplate>?> showSearchZplTemplateSheet({
       return StatefulBuilder(
         builder: (ctx, setState) {
           return Consumer(
-            builder: (_, consumerRef, __) {
+            builder: (_, consumerRef, _) {
               // English comment: "Trigger refresh only once"
               if (!didTrigger) {
                 didTrigger = true;

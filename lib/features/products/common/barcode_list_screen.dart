@@ -266,7 +266,7 @@ abstract class BarcodeListScreenState<W extends BarcodeListScreen<T>, T>
             physics: const NeverScrollableScrollPhysics(),
             shrinkWrap: true,
             itemCount: documentExtraQrs.length,
-            separatorBuilder: (_, __) => const SizedBox(height: 14),
+            separatorBuilder: (_, _) => const SizedBox(height: 14),
             itemBuilder: (context, index) {
               final item = documentExtraQrs[index];
               return Container(
@@ -314,7 +314,7 @@ abstract class BarcodeListScreenState<W extends BarcodeListScreen<T>, T>
       physics: const NeverScrollableScrollPhysics(),
       shrinkWrap: true,
       itemCount: filtered.length,
-      separatorBuilder: (_, __) => const SizedBox(height: 20),
+      separatorBuilder: (_, _) => const SizedBox(height: 20),
       itemBuilder: (context, index) {
         final item = filtered[index];
 
@@ -389,7 +389,7 @@ abstract class BarcodeListScreenState<W extends BarcodeListScreen<T>, T>
       physics: const NeverScrollableScrollPhysics(),
       shrinkWrap: true,
       itemCount: unique.length,
-      separatorBuilder: (_, __) => const SizedBox(height: 20),
+      separatorBuilder: (_, _) => const SizedBox(height: 20),
       itemBuilder: (context, index) {
         final item = unique[index];
 

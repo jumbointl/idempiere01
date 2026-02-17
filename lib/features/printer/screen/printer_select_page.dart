@@ -3,7 +3,6 @@
 // ===============================
 import 'dart:async';
 import 'dart:convert';
-import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -12,17 +11,13 @@ import 'package:get_storage/get_storage.dart';
 import 'package:monalisa_app_001/config/config.dart';
 import 'package:monalisa_app_001/features/products/common/messages_dialog.dart';
 import 'package:pos_universal_printer/pos_universal_printer.dart';
-import 'package:print_bluetooth_thermal/print_bluetooth_thermal.dart';
 
 import '../../products/common/bluetooth_permission.dart';
-import '../../products/common/widget_utils.dart';
 import '../../products/presentation/providers/common_provider.dart';
 import '../../products/presentation/providers/product_provider_common.dart';
 import '../../shared/data/memory.dart';
-import '../../shared/data/messages.dart';
 import '../models/printer_select_models.dart';
 import '../printer_scan_notifier.dart';
-import 'label_printer_select_page.dart';
 
 final printerListProvider = StateProvider<List<PrinterConnConfig>>((ref) => []);
 final selectedPrinterIdProvider = StateProvider<String?>((ref) => null);
@@ -152,11 +147,6 @@ class _PrinterSelectPageState extends ConsumerState<PrinterSelectPage>
     }
   }
 
-  Future<void> _disconnectSafe() async {
-    try {
-      await PrintBluetoothThermal.disconnect;
-    } catch (_) {}
-  }
 
 
   final PosUniversalPrinter _pos = PosUniversalPrinter.instance;
@@ -472,7 +462,7 @@ class _PrinterSelectPageState extends ConsumerState<PrinterSelectPage>
                     : ListView.separated(
                   shrinkWrap: true,
                   itemCount: _btScanDevices.length,
-                  separatorBuilder: (_, __) => const Divider(height: 1),
+                  separatorBuilder: (_, _) => const Divider(height: 1),
                   itemBuilder: (_, i) {
                     final d = _btScanDevices[i];
                     final name = d.name.trim().isEmpty ? 'Unknown' : d.name.trim();
@@ -647,12 +637,12 @@ class _PrinterSelectPageState extends ConsumerState<PrinterSelectPage>
                         : Memory.ACTION_NO_SCAN_ACTION;
                   },
                   style: ButtonStyle(
-                    padding: MaterialStateProperty.all(
+                    padding: WidgetStateProperty.all(
                       const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
                     ),
                     visualDensity: VisualDensity.compact,
                     tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                    textStyle: MaterialStateProperty.all(
+                    textStyle: WidgetStateProperty.all(
                       const TextStyle(fontSize: 12),
                     ),
                   ),

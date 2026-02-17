@@ -1,8 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:monalisa_app_001/config/config.dart';
-import 'package:monalisa_app_001/features/products/common/messages_dialog.dart';
-import 'package:simple_barcode_scanner/simple_barcode_scanner.dart';
 
 import '../../../../shared/data/memory.dart';
 import '../../../../shared/data/messages.dart';
@@ -37,7 +34,7 @@ class UpdateProductUpcScreenState
   late var dataToUpdateUPC;
 
   final hinTextUpdateUPC = Messages.UPDATE_UPC;
-  get actionScanTypeInt => Memory.ACTION_FILL_NEW_UPC_TO_UPDATE ;
+  int get actionScanTypeInt => Memory.ACTION_FILL_NEW_UPC_TO_UPDATE ;
 
   @override
   void initState() {

@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_riverpod/legacy.dart';
 import 'package:monalisa_app_001/features/products/presentation/screens/locator/search_locator_by_locator_body.dart';
 import 'package:monalisa_app_001/features/products/presentation/screens/locator/search_locator_by_warehouse_body.dart';
 
@@ -83,12 +82,12 @@ class SearchLocatorScreenState extends ConsumerState<SearchLocatorScreen> {
               
             },
             style: ButtonStyle(
-              padding: MaterialStateProperty.all(
+              padding: WidgetStateProperty.all(
                 const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
               ),
               visualDensity: VisualDensity.compact,
               tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-              textStyle: MaterialStateProperty.all(
+              textStyle: WidgetStateProperty.all(
                 const TextStyle(fontSize: 12),
               ),
             ),

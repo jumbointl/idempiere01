@@ -734,7 +734,7 @@ class UnsortedStorageOnHandScreenState
           return storageOnHandCard(storageList[index], index);
         },
         itemCount: storageList.length,
-        separatorBuilder: (_, __) => const SizedBox(height: 5),
+        separatorBuilder: (_, _) => const SizedBox(height: 5),
       ),
     );
   }

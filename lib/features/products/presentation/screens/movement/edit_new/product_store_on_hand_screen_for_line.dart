@@ -11,7 +11,6 @@ import 'package:monalisa_app_001/features/products/domain/idempiere/movement_and
 import 'package:monalisa_app_001/features/products/domain/idempiere/idempiere_storage_on_hande.dart';
 import 'package:monalisa_app_001/features/products/domain/idempiere/response_async_value.dart';
 import 'package:monalisa_app_001/features/products/domain/idempiere/response_async_value_ui_model.dart';
-import 'package:monalisa_app_001/features/products/presentation/providers/actions/find_product_by_sku_name_action_provider.dart';
 
 // Providers
 import 'package:monalisa_app_001/features/products/presentation/providers/store_on_hand_provider.dart';
@@ -229,7 +228,7 @@ class ProductStoreOnHandScreenForLineState
       physics: const NeverScrollableScrollPhysics(),
       shrinkWrap: true,
       itemCount: storages.length + 1,
-      separatorBuilder: (_, __) => const SizedBox(height: 10),
+      separatorBuilder: (_, _) => const SizedBox(height: 10),
       itemBuilder: (context, index) {
         if (index == 0) {
           return Container(
@@ -312,7 +311,7 @@ class ProductStoreOnHandScreenForLineState
       physics: const NeverScrollableScrollPhysics(),
       shrinkWrap: true,
       itemCount: products.length,
-      separatorBuilder: (_, __) => const SizedBox(height: 10),
+      separatorBuilder: (_, _) => const SizedBox(height: 10),
       itemBuilder: (context, index) {
         final p = products[index];
         return ProductDetailCardForLine(

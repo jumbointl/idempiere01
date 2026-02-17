@@ -47,7 +47,7 @@ abstract class DataCreateScreenState<T extends DataCreateScreen>
       body: SafeArea(
         child: PopScope(
           canPop: false,
-          onPopInvokedWithResult: (_, __) => onClose(context, ref),
+          onPopInvokedWithResult: (_, _) => onClose(context, ref),
           child: buildBody(context, ref),
         ),
       ),

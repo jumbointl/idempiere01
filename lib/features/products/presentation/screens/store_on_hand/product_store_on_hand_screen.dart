@@ -20,10 +20,8 @@ import '../../../../shared/data/memory.dart';
 import '../../../../shared/data/messages.dart';
 import '../../providers/locator_provider.dart';
 import '../../providers/product_provider_common.dart';
-import '../../providers/store_on_hand_for_put_away_movement.dart';
 import '../../widget/product_search_mode_button.dart';
 import '../../widget/response_async_value_messages_card.dart';
-import '../movement/widget/base_product_store_on_hand_screen.dart';
 import 'new_storage_on_hand_card.dart';
 import 'product_detail_card.dart';
 import 'product_resume_card.dart';
@@ -219,7 +217,7 @@ class _ProductStoreOnHandScreenState
       physics: const NeverScrollableScrollPhysics(),
       shrinkWrap: true,
       itemCount: storages.length + 1,
-      separatorBuilder: (_, __) => const SizedBox(height: 10),
+      separatorBuilder: (_, _) => const SizedBox(height: 10),
       itemBuilder: (context, index) {
         if (index == 0) {
           return ProductResumeCard(storages, width);
@@ -305,7 +303,7 @@ class _ProductStoreOnHandScreenState
       physics: const NeverScrollableScrollPhysics(),
       shrinkWrap: true,
       itemCount: products.length,
-      separatorBuilder: (_, __) => const SizedBox(height: 10),
+      separatorBuilder: (_, _) => const SizedBox(height: 10),
       itemBuilder: (context, index) {
         return ProductDetailCard(
           product: products[index],

@@ -747,7 +747,7 @@ class _CreateZplTemplatePageState extends ConsumerState<CreateZplTemplatePage>
           height: 240,
           child: ListView.separated(
             itemCount: missing.length,
-            separatorBuilder: (_, __) => const Divider(height: 1),
+            separatorBuilder: (_, _) => const Divider(height: 1),
             itemBuilder: (_, i) => ListTile(
               leading: const Icon(Icons.error_outline, color: Colors.red),
               title: Text(missing[i]),

@@ -415,7 +415,7 @@ void showGenerateJobsSheet({
                   Expanded(
                     child: ListView.separated(
                       itemCount: selectedItems.length,
-                      separatorBuilder: (_, __) => const Divider(height: 0),
+                      separatorBuilder: (_, _) => const Divider(height: 0),
                       itemBuilder: (context, index) {
                         final item = selectedItems[index];
                         final icon = (item.isSoTrx == true)

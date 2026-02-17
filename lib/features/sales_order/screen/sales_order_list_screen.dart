@@ -319,7 +319,7 @@ class _SalesOrderListScreenState
 
         return ListView.separated(
           itemCount: filteredOrders.length,
-          separatorBuilder: (_, __) => const SizedBox(height: 4),
+          separatorBuilder: (_, _) => const SizedBox(height: 4),
           itemBuilder: (context, index) {
             final order = filteredOrders[index];
             final isChecked = selected.any((o) => o.id == order.id);
@@ -901,7 +901,7 @@ class _SalesOrderListScreenState
                 child: ListView.separated(
                   shrinkWrap: true,
                   itemCount: bpList.length,
-                  separatorBuilder: (_, __) => const Divider(height: 1),
+                  separatorBuilder: (_, _) => const Divider(height: 1),
                   itemBuilder: (context, index) {
                     final bp = bpList[index];
                     final bool isSelected = bp.id == selectedBp.id;

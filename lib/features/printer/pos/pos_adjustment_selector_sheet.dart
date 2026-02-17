@@ -314,7 +314,7 @@ Future<PosAdjustmentValues?> showPosAdjustmentSelectorSheet({
                       child: ListView.separated(
                         shrinkWrap: true,
                         itemCount: profiles.length,
-                        separatorBuilder: (_, __) =>
+                        separatorBuilder: (_, _) =>
                         const Divider(height: 1),
                         itemBuilder: (context, i) {
                           final p = profiles[i];

@@ -292,7 +292,7 @@ class _ProductSearchScreenState
       physics: const NeverScrollableScrollPhysics(),
       shrinkWrap: true,
       itemCount: products.length,
-      separatorBuilder: (_, __) => const SizedBox(height: 10),
+      separatorBuilder: (_, _) => const SizedBox(height: 10),
       itemBuilder: (context, index) {
         debugPrint('product index $index');
         return ProductDetailCard(

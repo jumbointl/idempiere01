@@ -234,7 +234,7 @@ class _UseZplTemplateSheetState
               padding:
               const EdgeInsets.fromLTRB(16, 8, 16, 8),
               itemCount: list.length,
-              separatorBuilder: (_, __) =>
+              separatorBuilder: (_, _) =>
               const SizedBox(height: 8),
               itemBuilder: (_, i) {
                 final x = list[i];

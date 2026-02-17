@@ -229,7 +229,7 @@ class UnsortedStorageOnHandScreenSelectLocatorState
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
       itemCount: storageList.length,
-      separatorBuilder: (_, __) => SizedBox(height: cardGap),
+      separatorBuilder: (_, _) => SizedBox(height: cardGap),
       itemBuilder: (ctx, i) => storageOnHandCard(ref, storageList[i], i),
     );
   }

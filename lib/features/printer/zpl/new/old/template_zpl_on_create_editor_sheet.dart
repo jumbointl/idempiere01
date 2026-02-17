@@ -381,7 +381,7 @@ Future<ZplTemplate?> showZplTemplateEditorDialogMode({
                                 title: 'Table rows',
                                 numberOnly: true,
                                 height: 46, // ✅ ahora sí funciona
-                                onChangedAfterDialog: (_, __) => setState(() {}),
+                                onChangedAfterDialog: (_, _) => setState(() {}),
                                 maxLines: 1,
                               ),
                             ),

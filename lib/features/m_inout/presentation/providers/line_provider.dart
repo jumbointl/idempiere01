@@ -112,7 +112,7 @@ Future<void> showRepeatedLinesSheet(BuildContext context, WidgetRef ref) {
                           ? const Center(child: Text('No hay líneas repetidas.'))
                           : ListView.separated(
                         itemCount: repeated.length,
-                        separatorBuilder: (_, __) => const Divider(height: 1),
+                        separatorBuilder: (_, _) => const Divider(height: 1),
                         itemBuilder: (ctx, i) {
                           final l = repeated[i];
                           return ListTile(
@@ -135,7 +135,7 @@ Future<void> showRepeatedLinesSheet(BuildContext context, WidgetRef ref) {
                           ? const Center(child: Text('No hay líneas faltantes.'))
                           : ListView.separated(
                         itemCount: missingLines.length,
-                        separatorBuilder: (_, __) => const Divider(height: 1),
+                        separatorBuilder: (_, _) => const Divider(height: 1),
                         itemBuilder: (ctx, i) {
                           final lineValue = missingLines[i];
                           return ListTile(
@@ -154,7 +154,7 @@ Future<void> showRepeatedLinesSheet(BuildContext context, WidgetRef ref) {
                           ? const Center(child: Text('No hay errores de Product ID.'))
                           : ListView.separated(
                         itemCount: nullProductLines.length,
-                        separatorBuilder: (_, __) => const Divider(height: 1),
+                        separatorBuilder: (_, _) => const Divider(height: 1),
                         itemBuilder: (ctx, i) {
                           final l = nullProductLines[i];
                           final upc = (l.upc ?? '').trim();
@@ -176,7 +176,7 @@ Future<void> showRepeatedLinesSheet(BuildContext context, WidgetRef ref) {
                             ? const Center(child: Text('No hay líneas sin confirmación.'))
                             : ListView.separated(
                           itemCount: noConfirmLines.length,
-                          separatorBuilder: (_, __) => const Divider(height: 1),
+                          separatorBuilder: (_, _) => const Divider(height: 1),
                           itemBuilder: (ctx, i) {
                             final l = noConfirmLines[i];
                             final upc = (l.upc ?? '').trim();
