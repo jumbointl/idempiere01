@@ -66,6 +66,12 @@ abstract class LabelPrinterSelectPage extends ConsumerStatefulWidget {
     required bool printSimpleData,
     }) onPrint,
   });
+  Future<bool> printDataToNiimbot({
+    required BuildContext context,
+    required PrinterConnConfig printer,
+    required LabelProfile profile,
+    required dynamic data,
+  });
 
 }
 
@@ -263,11 +269,11 @@ class _LabelPrinterSelectPageState extends ConsumerState<LabelPrinterSelectPage>
     await socket.flush();
     await socket.close();
   }
+
   Future<void> sendTsplViaBluetooth({
     required String btAddress,
     required String tspl,
   }) async {
-
     final pos = PosUniversalPrinter.instance;
 
     if (!pos.isRoleConnected(PosPrinterRole.sticker)) {
@@ -275,7 +281,55 @@ class _LabelPrinterSelectPageState extends ConsumerState<LabelPrinterSelectPage>
     }
 
     final bytes = latin1.encode(tspl);
-    pos.printRaw(PosPrinterRole.sticker, bytes);
+
+    try {
+      pos.printRaw(PosPrinterRole.sticker, bytes);
+
+      // Tiempo para que el buffer salga por Bluetooth
+      await Future.delayed(const Duration(milliseconds: 700));
+    } finally {
+      try {
+        await pos.unregisterDevice(PosPrinterRole.sticker);
+      } catch (_) {}
+    }
+  }
+
+
+  Future<void> _disconnectStickerRoleSafe(PosUniversalPrinter pos) async {
+    try {
+      final dynamic dyn = pos;
+
+      // Intento 1
+      try {
+        debugPrint('Disconnecting sticker role disconnect');
+        await dyn.disconnect(PosPrinterRole.sticker);
+        return;
+      } catch (_) {
+        debugPrint('Disconnecting sticker role disconnect failed');
+      }
+
+      // Intento 2 (algunas versiones usan unregisterDevice)
+      try {
+        debugPrint('Disconnecting sticker role unregisterDevice');
+        await dyn.unregisterDevice(PosPrinterRole.sticker);
+        return;
+      } catch (_) {
+        debugPrint('Disconnecting sticker role unregisterDevice failed');
+      }
+
+      // Intento 3 (otros nombres posibles)
+      try {
+        debugPrint('Disconnecting sticker role disconnectRole');
+        await dyn.disconnectRole(PosPrinterRole.sticker);
+        return;
+      } catch (_) {
+        debugPrint('Disconnecting sticker role disconnectRole failed');
+      }
+
+      // Si no existe ninguno, no hacemos nada (mejor no romper el flujo)
+    } catch (_) {
+      debugPrint('Disconnecting sticker role failed');
+    }
   }
 
 
@@ -314,11 +368,32 @@ class _LabelPrinterSelectPageState extends ConsumerState<LabelPrinterSelectPage>
       await _showMsg('Data', err);
       return;
     }
+    ref.read(isPrintingProvider.notifier).state = true;
+    if(printer.typeText== PrinterState.PRINTER_TYPE_NIIMBOT) {
+      final res = await widget.printDataToNiimbot(context: context, printer: printer,
+          profile: profile, data: widget.dataToPrint);
+      ref.read(isPrintingProvider.notifier).state = false;
+      if(res){
+        await _showMsg('Print', '✅ Printed via Niimbot');
+      } else {
+        await _showMsg('Print', '❌ Error: $res');
+      }
+      return ;
+    }
+
+
 
     final tspl = widget.buildTsplForData(
       profile: profile,
       printSimpleData: printSimpleData,
     );
+    final bool connected = await testConnectionPrinterSilence(context, printer);
+    if(!connected) {
+      ref.read(isPrintingProvider.notifier).state = false;
+      await _showMsg('Printer', 'Printer not connected');
+
+      return;
+    }
 
     try {
       if (printer.type == PrinterConnType.wifi) {
@@ -327,16 +402,23 @@ class _LabelPrinterSelectPageState extends ConsumerState<LabelPrinterSelectPage>
           port: printer.port ?? 9100,
           tspl: tspl,
         );
+        ref.read(isPrintingProvider.notifier).state = false;
         await _showMsg('Print', '✅ Printed via WiFi');
       } else {
         await sendTsplViaBluetooth(
           btAddress: printer.btAddress!,
           tspl: tspl,
         );
+        ref.read(isPrintingProvider.notifier).state = false;
         await _showMsg('Print', '✅ Printed via Bluetooth');
       }
     } catch (e) {
+      ref.read(isPrintingProvider.notifier).state = false;
       await _showMsg('Print', '❌ Error: $e');
+    } finally {
+      ref
+          .read(isPrintingProvider.notifier)
+          .state = false;
     }
   }
 
@@ -370,24 +452,36 @@ class _LabelPrinterSelectPageState extends ConsumerState<LabelPrinterSelectPage>
       topText: line,
       barcodeData: upc,
     );
-
+    ref.read(isPrintingProvider.notifier).state = true;
     try {
+      final connected = await testConnectionPrinterSilence(context, printer);
+      if(!connected) {
+        ref.read(isPrintingProvider.notifier).state = false;
+        await _showMsg('Printer', 'Printer not connected');
+        return;
+      }
       if (printer.type == PrinterConnType.wifi) {
         await sendTsplViaWifi(
           ip: printer.ip!,
           port: printer.port ?? 9100,
           tspl: tspl,
         );
+        ref.read(isPrintingProvider.notifier).state = false;
         await _showMsg('Print', '✅ Adjustment label printed via WiFi');
       } else {
         await sendTsplViaBluetooth(
           btAddress: printer.btAddress!,
           tspl: tspl,
         );
+        ref.read(isPrintingProvider.notifier).state = false;
         await _showMsg('Print', '✅ Adjustment label printed via Bluetooth');
       }
     } catch (e) {
       await _showMsg('Print', '❌ Error: $e');
+    } finally {
+      ref
+          .read(isPrintingProvider.notifier)
+          .state = false;
     }
   }
 
@@ -568,6 +662,7 @@ class _LabelPrinterSelectPageState extends ConsumerState<LabelPrinterSelectPage>
 
     final printers = ref.watch(printerListProvider);
     final selectedPrinterId = ref.watch(selectedPrinterIdProvider);
+    final isPrinting = ref.watch(isPrintingProvider) ;
 
     final selectedProfile = profiles.firstWhere(
           (p) => p.id == selectedProfileId,
@@ -613,7 +708,7 @@ class _LabelPrinterSelectPageState extends ConsumerState<LabelPrinterSelectPage>
           if (didPop) return;
           popScopeAction(context, ref);
         },
-        child: TabBarView(
+        child: isPrinting ? LinearProgressIndicator() : TabBarView(
           controller: _tab,
           children: [
             _buildHomeTab(
@@ -636,6 +731,8 @@ class _LabelPrinterSelectPageState extends ConsumerState<LabelPrinterSelectPage>
     final selectedPrinterId = ref.watch(selectedPrinterIdProvider);
     final profile40 = selectedProfileOrDefault40();
     final profile60 = selectedProfileOrDefault60();
+    final printerConnected = ref.watch(printerConnectedProvider);
+
 
     return SafeArea(
       child: ListView(
@@ -648,18 +745,22 @@ class _LabelPrinterSelectPageState extends ConsumerState<LabelPrinterSelectPage>
           const SizedBox(height: 8),
 
           Card(
+
             child: ListTile(
               title: Text('Profile: ${selectedProfile.name}'),
               subtitle: Text(
                 '${selectedProfile.widthMm}x${selectedProfile.heightMm}mm  copies:${selectedProfile.copies}',
               ),
-              trailing: const Icon(Icons.tune),
+              trailing: IconButton(onPressed: null, icon: Icon(Icons.tune)),
               onTap: () => _tab.index = 1,
             ),
           ),
 
           Card(
             child: ListTile(
+              trailing: IconButton(onPressed: (){
+                 testConnectionSelectPrinterPage(selectedPrinter: selectedPrinter);
+              }, icon:Icon(Icons.link),color: printerConnected? Colors.green : Colors.grey,),
               title: Text(
                 selectedPrinter == null
                     ? 'Printer: (none selected)'
@@ -672,7 +773,6 @@ class _LabelPrinterSelectPageState extends ConsumerState<LabelPrinterSelectPage>
                     ? 'WiFi: ${selectedPrinter.ip}:${selectedPrinter.port}  lang:${selectedPrinter.lang ?? "-"}'
                     : 'BT: ${selectedPrinter.btAddress}  lang:${selectedPrinter.lang ?? "-"}  type:${selectedPrinter.typeText ?? "-"}',
               ),
-              trailing: const Icon(Icons.print),
               onTap: () => _tab.index = 2,
             ),
           ),
@@ -808,6 +908,20 @@ class _LabelPrinterSelectPageState extends ConsumerState<LabelPrinterSelectPage>
       ),
     );
   }
+
+  void testConnectionSelectPrinterPage({PrinterConnConfig? selectedPrinter}) async {
+    if (selectedPrinter == null) {
+      await _showMsg('Printer', 'No hay impresora seleccionada.');
+      return;
+    }
+
+    // Reusa el helper del otro archivo
+    bool res = await testConnectionPrinter(context, selectedPrinter);
+    ref.read(printerConnectedProvider.notifier).state = res;
+
+
+  }
+
 
 
 }

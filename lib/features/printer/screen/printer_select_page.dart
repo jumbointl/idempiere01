@@ -3,6 +3,7 @@
 // ===============================
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -17,10 +18,12 @@ import '../../products/presentation/providers/common_provider.dart';
 import '../../products/presentation/providers/product_provider_common.dart';
 import '../../shared/data/memory.dart';
 import '../models/printer_select_models.dart';
+import '../niimbot/niimbot_printer_helper.dart';
 import '../printer_scan_notifier.dart';
 
 final printerListProvider = StateProvider<List<PrinterConnConfig>>((ref) => []);
 final selectedPrinterIdProvider = StateProvider<String?>((ref) => null);
+final printerConnectedProvider = StateProvider<bool>((ref) => false);
 
 class PrinterSelectPage extends ConsumerStatefulWidget {
   final dynamic dataToPrint;
@@ -212,82 +215,6 @@ class _PrinterSelectPageState extends ConsumerState<PrinterSelectPage>
 
 
 
-  /*Future<bool> _testBluetoothTsplConnection(String mac) async {
-    const String tsplTest = 'CLS\n';
-
-    try {
-      final already = await PrintBluetoothThermal.connectionStatus;
-      if (already) {
-        await _disconnectSafe();
-      }
-
-      final connected = await PrintBluetoothThermal.connect(macPrinterAddress: mac);
-      if (!connected) return false;
-
-      await Future.delayed(const Duration(milliseconds: 150));
-      final ok = await PrintBluetoothThermal.writeBytes(utf8.encode(tsplTest).toList());
-
-      await Future.delayed(const Duration(milliseconds: 120));
-      await _disconnectSafe();
-
-      return ok;
-    } catch (_) {
-      await _disconnectSafe();
-      return false;
-    }
-  }*/
-
-  Future<void> testConnection(PrinterConnConfig p) async {
-    try {
-      if (p.type == PrinterConnType.wifi) {
-        // ... igual que ya lo tenés
-      } else {
-        final mac = (p.btAddress ?? '').trim();
-        if (mac.isEmpty) {
-          showErrorMessage(context, ref, '❌ BT address vacío');
-          return;
-        }
-
-        final ok = await _testBluetoothTsplConnection(mac);
-
-        if (!mounted) return;
-        await _showMsg(
-          'Connection',
-          ok ? '✅ Bluetooth OK: $mac' : '❌ Bluetooth ERROR: $mac',
-        );
-      }
-    } catch (e) {
-      if (!mounted) return;
-      await _showMsg('Connection', '❌ Error: $e');
-    }
-  }
-
-  void _saveBtFromValues({
-    required String name,
-    required String mac,
-  }) {
-    final lang = _btLang.text.trim().toUpperCase();
-    final btType = _btType.text.trim().toUpperCase();
-
-    // Defaults seguros si estás en SCAN y inputs están bloqueados
-    final safeLang = (lang == 'TSPL' || lang == 'ZPL') ? lang : 'TSPL';
-    final safeType = (btType == PrinterState.PRINTER_TYPE_BLUETOOTH_BLE ||
-        btType == PrinterState.PRINTER_TYPE_BLUETOOTH_NO_BLE)
-        ? btType
-        : PrinterState.PRINTER_TYPE_BLUETOOTH_NO_BLE;
-
-    final p = PrinterConnConfig(
-      id: 'bt_$mac',
-      type: PrinterConnType.bluetooth,
-      name: name.isEmpty ? 'BT Printer' : name,
-      btAddress: mac,
-      lang: safeLang,
-      typeText: safeType,
-    );
-
-    _addOrUpdatePrinter(p);
-  }
-
   Future<void> _showMsg(String title, String msg) async {
     if (!mounted) return;
     await showDialog(
@@ -415,7 +342,7 @@ class _PrinterSelectPageState extends ConsumerState<PrinterSelectPage>
 
                   // Defaults seguros (si estabas en SCAN y no podías editar)
                   final lang = _btLang.text.trim().toUpperCase();
-                  if (lang != 'TSPL' && lang != 'ZPL') _btLang.text = 'TSPL';
+                  if (lang != 'TSPL' && lang != 'ZPL' && lang != 'NIIMBOT') _btLang.text = 'TSPL';
 
                   final btType = _btType.text.trim().toUpperCase();
                   if (btType != PrinterState.PRINTER_TYPE_BLUETOOTH_BLE &&
@@ -586,7 +513,10 @@ class _PrinterSelectPageState extends ConsumerState<PrinterSelectPage>
                             spacing: 4,
                             runSpacing: 4,
                             children: [
-                              _actionIcon(Icons.link, () => testConnection(p)),
+                              _actionIcon(Icons.link, () async {
+                                final b =await testConnectionPrinter(context,p);
+                                ref.read(printerConnectedProvider.notifier).state = b;
+                              }),
                               _actionIcon(Icons.edit, () => _fillFormForEdit(p)),
                               _actionIcon(Icons.delete, () => _removePrinter(p.id),
                                   color: Colors.red),
@@ -741,7 +671,7 @@ class _PrinterSelectPageState extends ConsumerState<PrinterSelectPage>
                   final lang = _wifiLang.text.trim().toUpperCase();
 
                   if (name.isEmpty || ip.isEmpty) return;
-                  if (lang != 'TSPL' && lang != 'ZPL') return;
+                  if (lang != 'TSPL' && lang != 'ZPL' && lang != 'NIIMBOT') return;
 
                   final p = PrinterConnConfig(
                     id: 'wifi_${ip}_$port',
@@ -817,7 +747,7 @@ class _PrinterSelectPageState extends ConsumerState<PrinterSelectPage>
                   final btType = _btType.text.trim().toUpperCase();
 
                   if (name.isEmpty || address.isEmpty) return;
-                  if (lang != 'TSPL' && lang != 'ZPL') return;
+                  if (lang != 'TSPL' && lang != 'ZPL' && lang != 'NIIMBOT') return;
 
                   if (btType != PrinterState.PRINTER_TYPE_BLUETOOTH_BLE &&
                       btType != PrinterState.PRINTER_TYPE_BLUETOOTH_NO_BLE) {
@@ -844,4 +774,162 @@ class _PrinterSelectPageState extends ConsumerState<PrinterSelectPage>
     );
   }
 
+}
+
+Future<bool> testConnectionPrinter(
+    BuildContext context,
+    PrinterConnConfig p, {
+      PosUniversalPrinter? pos,
+    }) async {
+  Future<void> showMsg(String title, String msg) async {
+    if (!context.mounted) return;
+    await showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: Text(title),
+        content: Text(msg),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+    );
+  }
+  // si es NIIMBOT:
+
+  if ((p.lang ?? '').toUpperCase() == 'NIIMBOT') {
+    debugPrint('testConnectionPrinter: NIIMBOT');
+    final mac = (p.btAddress ?? '').trim();
+    final helper = NiimbotPrinterHelper();
+    final ok = await helper.testConnectionNiimbot(
+      context: context,
+      mac: mac,
+    );
+    debugPrint('testConnectionPrinter finish: NIIMBOT');
+    await showMsg('Connection', ok ? '✅ Niimbot OK: $mac' : '❌ Niimbot ERROR: $mac');
+    return ok;
+  }
+  try {
+    if (p.type == PrinterConnType.wifi) {
+      final ip = (p.ip ?? '').trim();
+      final port = p.port ?? 9100;
+
+      if (ip.isEmpty) {
+        await showMsg('Connection', '❌ IP vacío');
+        return false;
+      }
+
+      final socket = await Socket.connect(
+        ip,
+        port,
+        timeout: const Duration(seconds: 4),
+      );
+      socket.destroy();
+
+      await showMsg('Connection', '✅ WiFi OK: $ip:$port');
+      return false;
+    }
+
+    // Bluetooth (pos_universal_printer)
+    final mac = (p.btAddress ?? '').trim();
+    if (mac.isEmpty) {
+      await showMsg('Connection', '❌ BT address vacío');
+      return false;
+    }
+
+    final posInst = pos ?? PosUniversalPrinter.instance;
+
+    // Construir device (ajustá si tu versión tiene otros campos)
+    final device = PrinterDevice(
+      name: p.name.isEmpty ? 'BT Printer' : p.name,
+      address: mac,
+      id: p.id,
+      type: PrinterType.bluetooth,
+    );
+
+    await posInst.registerDevice(PosPrinterRole.sticker, device);
+
+    final connected = posInst.isRoleConnected(PosPrinterRole.sticker);
+    if (!connected) {
+      await showMsg('Connection', '❌ Bluetooth ERROR: $mac');
+      return false;
+    }
+    await Future.delayed(const Duration(milliseconds: 200));
+    try {
+      await posInst.unregisterDevice(PosPrinterRole.sticker);
+    } catch (_) {}
+
+    /*// Enviar un TSPL mínimo para “probar vida”
+    const tsplTest =
+        'SIZE 40 mm,25 mm\r\n'
+        'GAP 2 mm,0 mm\r\n'
+        'CLS\r\n'
+        'TEXT 20,20,"2",0,1,1,"TEST"\r\n'
+        'PRINT 1,1\r\n';
+
+    final bytes = latin1.encode(tsplTest);
+    posInst.printRaw(PosPrinterRole.sticker, bytes);
+
+    await Future.delayed(const Duration(milliseconds: 200));*/
+
+    await showMsg('Connection', '✅ Bluetooth OK: $mac');
+    return true;
+  } catch (e) {
+    await showMsg('Connection', '❌ Error: $e');
+    return false;
+  }
+}
+Future<bool> testConnectionPrinterSilence(
+    BuildContext context,
+    PrinterConnConfig p, {
+      PosUniversalPrinter? pos,
+    }) async {
+
+
+  try {
+    if (p.type == PrinterConnType.wifi) {
+      final ip = (p.ip ?? '').trim();
+      final port = p.port ?? 9100;
+
+      if (ip.isEmpty) {
+        return false;
+      }
+
+      final socket = await Socket.connect(
+        ip,
+        port,
+        timeout: const Duration(seconds: 4),
+      );
+      socket.destroy();
+      return false;
+    }
+
+    // Bluetooth (pos_universal_printer)
+    final mac = (p.btAddress ?? '').trim();
+    if (mac.isEmpty) {
+      return false;
+    }
+
+    final posInst = pos ?? PosUniversalPrinter.instance;
+
+    // Construir device (ajustá si tu versión tiene otros campos)
+    final device = PrinterDevice(
+      name: p.name.isEmpty ? 'BT Printer' : p.name,
+      address: mac,
+      id: p.id,
+      type: PrinterType.bluetooth,
+    );
+
+    await posInst.registerDevice(PosPrinterRole.sticker, device);
+
+    final connected = posInst.isRoleConnected(PosPrinterRole.sticker);
+    if (!connected) {
+      return false;
+    }
+    return true;
+  } catch (e) {
+    return false;
+  }
 }

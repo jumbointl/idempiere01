@@ -74,39 +74,6 @@ Future<ZplTemplate?> showZplTemplateEditorDialogMode({
     ref.read(exampleLoadCounterProvider.notifier).state++;
 
   }
-  /*void loadExampleForMode() {
-    final times = ref.watch(exampleLoadCounterProvider);
-    bool wantCategory = times.isEven;
-
-    final file = nameCtrl.text.trim().isEmpty
-        ? (mode == ZplTemplateMode.movement
-        ? times.isEven ? 'MOV_CAT1.ZPL' : 'MOV_PRD1.ZPL'
-        : 'TEMPLATE.ZPL')
-        : nameCtrl.text.trim();
-
-    ref.read(exampleLoadCounterProvider.notifier).state++;
-    if (nameCtrl.text.trim().isEmpty) {
-      nameCtrl.text = file;
-    }
-
-    if (initial == null && dfCtrl.text.trim().isEmpty) {
-      dfCtrl.text = templateModel(file,wantCategory);
-
-    }
-
-    if (initial == null && refCtrl.text.trim().isEmpty) {
-      refCtrl.text = times.isEven ? referenceTxtOfMovementByCategoryTxt
-          : referenceTxtOfMovementByProductTxt;
-
-    }
-
-    if (initial == null &&
-        rowPerpageCtrl.text.trim().isEmpty) {
-      rowPerpageCtrl.text =
-          (mode == ZplTemplateMode.movement ? 18 : 18)
-              .toString();
-    }
-  }*/
 
   void insertAtCursor(
       TextEditingController c, String text) {
@@ -533,17 +500,6 @@ Future<ZplTemplate?> showZplTemplateEditorDialogMode({
                         ),
 
                         const SizedBox(height: 12),
-                          /*isAdmin ? EditableFieldScreenInput(
-                          maxLines: 14,
-                          label: 'TEMPLATE (DF) (opcional)',
-                          controller: dfCtrl,
-                          history: false,
-                          title:  'TEMPLATE (DF) (opcional)',
-                          numberOnly: false,
-                          onChangedAfterDialog: (ref, newValue) {
-                          setState(() {}); // refresca preview
-                          },
-                          )*/
                         isAdmin ? TextField(
                           controller: dfCtrl,
                           minLines: 6,

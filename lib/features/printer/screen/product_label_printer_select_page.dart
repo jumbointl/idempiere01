@@ -5,6 +5,7 @@ import 'package:monalisa_app_001/features/products/domain/models/label_profile.d
 import 'package:monalisa_app_001/features/shared/data/memory.dart';
 
 import '../models/printer_select_models.dart';
+import '../niimbot/niimbot_printer_helper.dart';
 import 'label_printer_select_page.dart';
 
 class ProductLabelPrinterSelectPage extends LabelPrinterSelectPage {
@@ -77,5 +78,54 @@ class ProductLabelPrinterSelectPage extends LabelPrinterSelectPage {
         ),
       ],
     );
+  }
+  Widget buildNiimbotProductWidget({
+    required String name,
+    required String sku,
+    required String upc,
+  }) {
+    return Container(
+      color: Colors.white,
+      padding: const EdgeInsets.all(10),
+      child: DefaultTextStyle(
+        style: const TextStyle(color: Colors.black, fontSize: 22, height: 1.1),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(name, maxLines: 2, overflow: TextOverflow.ellipsis),
+            const SizedBox(height: 6),
+            Text('SKU: $sku'),
+            const SizedBox(height: 6),
+            Text('UPC: $upc'),
+            // Si querés barcode/QR REAL: lo metemos con `barcode_widget` o `qr_flutter`
+          ],
+        ),
+      ),
+    );
+  }
+  @override
+  Future<bool> printDataToNiimbot({
+    required BuildContext context,
+    required PrinterConnConfig printer,
+    required LabelProfile profile,
+    required dynamic data,
+  }) async {
+    final mac = (printer.btAddress ?? '').trim();
+    final upc = normalizeUpc(data.uPC ?? '');
+    final sku = (data.sKU ?? '').trim();
+    final name = (data.name ?? '').trim();
+
+    final widgetToPrint = buildNiimbotProductWidget(name: name, sku: sku, upc: upc);
+    final helper = NiimbotPrinterHelper();
+    final ok = await helper.printLabelFromWidget(
+      context: context,
+      mac: mac,
+      widthMm: profile.widthMm,
+      heightMm: profile.heightMm,
+      widget: widgetToPrint,
+      // opcional: density/labelType por perfil si los agregás
+    );
+
+    return ok;
   }
 }

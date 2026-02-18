@@ -396,53 +396,6 @@ class PrinterSetupScreen extends ConsumerStatefulWidget {
     final String qrData = '$ip:$port:$type:$name:END';
     ref.read(printerScanProvider.notifier).updateFromScan(qrData, ref);
 
-    /* AwesomeDialog(
-        context: ref.context,
-        headerAnimationLoop: false,
-        dialogType: DialogType.noHeader,
-        body: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 40),
-          child: Center(
-            child: Column(
-              spacing: 10,
-              children: [
-                Text(title, style: TextStyle(
-                    fontSize: 20, fontWeight: FontWeight.bold)),
-                Text(message, style: TextStyle(
-                    fontSize: 16, fontWeight: FontWeight.bold)),
-              ],
-            ),
-          ),
-        ),
-        title: title,
-        desc: message,
-        autoDismiss: true,
-        autoHide: Duration(seconds: 2),
-        btnCancelText: Messages.CANCEL,
-        btnOkText: Messages.OK,
-        btnOkOnPress: () {
-          directPrint = true;
-        },
-        btnCancelOnPress: () {
-          directPrint = false;
-          ref.read(directPrintWithLastPrinterProvider.notifier).state = false;
-          return;
-        }
-    ).show().then((value) {
-      if(!directPrint) return;
-      var printerState = ref.read(printerScanProvider);
-      String ip = printerState.ipController.text.trim();
-      String port = printerState.portController.text.trim();
-      String type = printerState.typeController.text.trim();
-      String name = printerState.nameController.text.trim();
-      if(ip.isEmpty || port.isEmpty || type.isEmpty || name.isEmpty){
-        showWarningMessage(context, ref, Messages.ERROR_SAVE_PRINTER);
-        return;
-      }
-
-      String qrData = '$ip:$port:$type:$name:END';
-      ref.read(printerScanProvider.notifier).updateFromScan(qrData, ref);
-    });*/
   }
   Widget editableField({
     required String label,

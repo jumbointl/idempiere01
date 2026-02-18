@@ -1,7 +1,7 @@
 
 
 
-enum ZplTemplateMode { movement , shipping /*... */ }
+enum ZplTemplateMode { movement , shipping }
 
 String zplTemplateModeToJson(ZplTemplateMode mode) => mode.name;
 

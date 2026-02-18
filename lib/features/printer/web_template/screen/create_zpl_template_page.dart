@@ -522,15 +522,6 @@ class _CreateZplTemplatePageState extends ConsumerState<CreateZplTemplatePage>
   }
 
   Future<void> _sendSelectedTemplateToPrinter(ZplTemplate t) async {
-    /*final ip = _printerIp.trim();
-    final port = _printerPort;
-
-    if (ip.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Configura IP de la impresora primero 🖨️')),
-      );
-      return;
-    }*/
 
     final zpl = t.zplTemplateDf.trim();
     if (zpl.isEmpty) {

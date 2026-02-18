@@ -395,21 +395,7 @@ Future<void> printPosTicket(WidgetRef ref, String ip, int port, List<int> ticket
   final act =ref.read(printTicketBySocketActionProvider);
   await act.setAndFire(ticketPrint);
 
-  /*final printer = PrinterNetworkManager(ip, port: port);
-  final connect = await printer.connect();
 
-  if (connect == PosPrintResult.success) {
-    await printer.printTicket(ticket);
-    if (ref.context.mounted) {
-      showSuccessMessage(ref.context, ref, Messages.PRINT_SUCCESS);
-    }
-    await Future.delayed(const Duration(seconds: 1));
-    printer.disconnect();
-  } else {
-    if (ref.context.mounted) {
-      showErrorMessage(ref.context, ref, Messages.ERROR_TIMEOUT);
-    }
-  }*/
 }
 
 Future<bool> printPosTicketNoRef(String ip, int port, List<int> ticket) async {

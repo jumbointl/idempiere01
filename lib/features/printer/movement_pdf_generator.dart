@@ -310,23 +310,6 @@ Future<Uint8List> generateMovementDocument(MovementAndLines data, Uint8List imag
           ],
         ),
 
-        /*// Fila con el mensaje de estado que ocupa todas las columnas.
-        pw.TableRow(
-          decoration: pw.BoxDecoration(color: PdfColors.teal100),
-          children: [
-            pw.Padding(
-              padding: pw.EdgeInsets.symmetric(vertical: 2, horizontal: 4),
-              child: pw.Align(
-                alignment: pw.Alignment.centerLeft, // Alinea el texto a la izquierda
-                child: pw.Text(
-                  'Document Status: Completo',
-                  style: pw.TextStyle(fontSize: defaultFontSize, fontWeight: pw.FontWeight.bold),
-                ),
-              ),
-            ),
-            ...List.generate(9, (index) => pw.Text('')), // Rellena las celdas restantes
-          ],
-        ),*/
 
       ],
     ),
@@ -351,14 +334,6 @@ Future<Uint8List> generateMovementDocument(MovementAndLines data, Uint8List imag
           ]
         )// Espacio después de la tabla
 
-        /*pw.SizedBox(height: 5),
-        pw.Align(
-          alignment: pw.Alignment.centerRight,
-          child: pw.Text(
-            '${Messages.DATE}: ${DateTime.now().toLocal().toString()}', // Formatear la fecha y hora actual
-            style: pw.TextStyle(fontSize: defaultFontSize),
-          ),
-        ),*/
       ],
     ),
   );

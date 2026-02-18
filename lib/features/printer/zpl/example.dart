@@ -309,8 +309,7 @@ Future<void> printReceiptWithQr(WidgetRef ref,String ip, int port,MovementAndLin
 
   bytes += generator.text(datetime,
       styles: const PosStyles(align: PosAlign.center));
-  /*bytes += generator.text('Código del documento', styles: const PosStyles(
-      align: PosAlign.center,codeTable: 'CP1252'));*/
+
   bytes += generator.feed(1);
 
 

@@ -8,6 +8,7 @@ import 'package:monalisa_app_001/features/shared/data/memory.dart';
 
 import '../../products/domain/idempiere/idempiere_locator.dart';
 import '../models/printer_select_models.dart';
+import '../niimbot/niimbot_printer_helper.dart';
 import '../tspl/tspl_printer_helper.dart';
 import 'label_printer_select_page.dart';
 
@@ -213,6 +214,46 @@ class LocatorLabelPrinterSelectPage extends LabelPrinterSelectPage {
   /// Heurística para elegir cellwidth para que el QR quepa.
   /// Devuelve un valor típico 3..8 (clamp).
 
+  Widget buildNiimbotLocatorWidget({required String locatorValue}) {
+    return Container(
+      color: Colors.white,
+      padding: const EdgeInsets.all(12),
+      child: Center(
+        child: FittedBox(
+          fit: BoxFit.scaleDown,
+          child: Text(
+            locatorValue,
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              color: Colors.black,
+              fontSize: 48,
+              fontWeight: FontWeight.w800,
+              letterSpacing: 1.0,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+  @override
+  Future<bool> printDataToNiimbot({
+    required BuildContext context,
+    required PrinterConnConfig printer,
+    required LabelProfile profile,
+    required dynamic data,
+  }) async {
+    final mac = (printer.btAddress ?? '').trim();
+    final helper = NiimbotPrinterHelper();
+    final ok = await helper.printLabelFromWidget(
+      context: context,
+      mac: mac,
+      widthMm: profile.widthMm,
+      heightMm: profile.heightMm,
+      widget: buildNiimbotLocatorWidget(locatorValue: data),
+    );
+    return ok ;
+
+  }
 
 
 

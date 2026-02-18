@@ -815,9 +815,6 @@ Future<void> printLabelMovementByProductTspl60x150NoLogo({
         sb.writeln('TEXT $colNoX,$y,"0",0,1,1,"$seq"');
 
         // ✅ productName en 2 líneas (alineado izquierda)
-        /*sb.writeln(
-        'BLOCK $colNameX,$y,${(colQtyX - 8) - colNameX},$nameBlockH,"0",0,1,1,0,0,"$name"',
-      );*/
         sb.writeln(
             'BLOCK $colNameX,$y,$nameW,$nameBlockH,"0",0,1,1,$nameLineSpacing,0,"$name"'
         );

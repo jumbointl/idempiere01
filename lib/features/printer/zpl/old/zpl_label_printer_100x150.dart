@@ -101,14 +101,6 @@ Future<void> sendZpl({
 /// COMBINAR LOGO+QR (tu función existe en tu proyecto)
 /// Pasa aquí tu import real o mueve esta firma a otro archivo.
 /// ===============================
-/*
-Future<Uint8List> combineLogoAndQrCode({
-  required String logo,
-  required String qrData,
-}) async {
-  throw UnimplementedError('Importa tu combineLogoAndQrCode real aquí.');
-}
-*/
 
 
 

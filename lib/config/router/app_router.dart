@@ -13,6 +13,7 @@ import 'package:monalisa_app_001/features/auth/presentation/providers/auth_provi
 import 'package:monalisa_app_001/features/home/presentation/screens/home_screen.dart';
 import 'package:monalisa_app_001/features/m_inout/presentation/screens/m_in_out_barcode_list_screen.dart';
 import 'package:monalisa_app_001/features/m_inout/presentation/screens/m_in_out_screen.dart';
+import 'package:monalisa_app_001/features/printer/screen/niimbot_test_page.dart';
 import 'package:monalisa_app_001/features/products/domain/idempiere/idempiere_product.dart';
 import 'package:monalisa_app_001/features/products/domain/idempiere/sales_order_and_lines.dart';
 import 'package:monalisa_app_001/features/products/presentation/screens/movement/edit_new/movement_barcode_list_screen.dart';
@@ -313,6 +314,12 @@ final goRouterProvider = Provider((ref) {
             return ProductLabelPrinterSelectPage(
                 dataToPrint: state.extra as IdempiereProduct,
                 );
+          }
+      ),
+      GoRoute(
+          path: '/test',
+          builder: (context, state){
+            return NiimbotTestPage( );
           }
       ),
       GoRoute(

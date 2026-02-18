@@ -101,25 +101,7 @@ class ZplTemplateStore {
     await box.remove(key);
   }
   /// ✅ Marca un template como default del mode (y quita default al resto del mismo mode)
-  /*Future<void> setDefaultForMode({
-    required String templateId,
-    required ZplTemplateMode mode,
-  }) async {
-    final list = loadAll();
 
-    for (int i = 0; i < list.length; i++) {
-      final t = list[i];
-      if (t.mode != mode) continue;
-
-      if (t.templateFileName == templateId) {
-        list[i] = t.copyWith(isDefault: true);
-      } else if (t.isDefault) {
-        list[i] = t.copyWith(isDefault: false);
-      }
-    }
-
-    await box.write(key, list.map((e) => e.toJson()).toList());
-  }*/
   Future<void> setDefaultForMode({
     required String templateId,
     required ZplTemplateMode mode,

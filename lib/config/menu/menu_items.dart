@@ -128,6 +128,14 @@ var appHomeOptionCol2Items = <MenuItem>[
       icon: Icons.move_up
       ,
     ),
+  MenuItem(
+    title: 'TEST',
+    subTitle: '',
+    link: '/test',
+    icon: Icons.question_answer
+    ,
+  ),
+
 ];
 
 final appHomeOptionCol3Items = <MenuItem>[

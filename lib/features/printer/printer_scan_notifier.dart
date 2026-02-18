@@ -49,6 +49,7 @@ class PrinterState {
   static const String PRINTER_TYPE_LASER = 'LASER';
   static const String PRINTER_TYPE_BLUETOOTH_BLE = 'BLE';
   static const String PRINTER_TYPE_BLUETOOTH_NO_BLE = 'NO_BLE';
+  static const String PRINTER_TYPE_NIIMBOT = 'NIIMBOT';
 
 
 
