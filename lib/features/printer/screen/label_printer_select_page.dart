@@ -8,7 +8,7 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:get_storage/get_storage.dart';
-import 'package:pos_universal_printer/pos_universal_printer.dart';
+import 'package:print_bluetooth_thermal/print_bluetooth_thermal.dart';
 
 import 'package:monalisa_app_001/config/config.dart';
 import 'package:monalisa_app_001/features/products/common/scan_button_by_action_fixed_short.dart';
@@ -18,8 +18,12 @@ import 'package:monalisa_app_001/features/products/presentation/providers/produc
 
 import '../models/printer_select_models.dart';
 import '../printer_scan_notifier.dart';
-import '../tspl/tspl_printer_helper.dart';
+import 'niimbot_test_page.dart';
 import 'printer_select_page.dart';
+import 'niimbot/niimbot_service.dart';
+
+
+// NIIMBOT (niim_blue_flutter)
 
 
 
@@ -65,12 +69,6 @@ abstract class LabelPrinterSelectPage extends ConsumerStatefulWidget {
     required LabelProfile profile,
     required bool printSimpleData,
     }) onPrint,
-  });
-  Future<bool> printDataToNiimbot({
-    required BuildContext context,
-    required PrinterConnConfig printer,
-    required LabelProfile profile,
-    required dynamic data,
   });
 
 }
@@ -256,7 +254,14 @@ class _LabelPrinterSelectPageState extends ConsumerState<LabelPrinterSelectPage>
         .firstWhere((e) => e != null, orElse: () => null);
   }
 
-
+  // ------------------------------------------------------------
+  // Printing helpers (WiFi/BT)
+  // ------------------------------------------------------------
+  Future<void> _disconnectSafe() async {
+    try {
+      await PrintBluetoothThermal.disconnect;
+    } catch (_) {}
+  }
 
   Future<void> sendTsplViaWifi({
     required String ip,
@@ -274,64 +279,30 @@ class _LabelPrinterSelectPageState extends ConsumerState<LabelPrinterSelectPage>
     required String btAddress,
     required String tspl,
   }) async {
-    final pos = PosUniversalPrinter.instance;
+    final mac = btAddress.trim();
+    if (mac.isEmpty) throw Exception('BT address vacío');
 
-    if (!pos.isRoleConnected(PosPrinterRole.sticker)) {
-      throw Exception('Bluetooth printer not connected');
+    final already = await PrintBluetoothThermal.connectionStatus;
+    if (already) {
+      await _disconnectSafe();
+      await Future.delayed(const Duration(milliseconds: 120));
     }
 
-    final bytes = latin1.encode(tspl);
-
-    try {
-      pos.printRaw(PosPrinterRole.sticker, bytes);
-
-      // Tiempo para que el buffer salga por Bluetooth
-      await Future.delayed(const Duration(milliseconds: 700));
-    } finally {
-      try {
-        await pos.unregisterDevice(PosPrinterRole.sticker);
-      } catch (_) {}
+    final connected =
+    await PrintBluetoothThermal.connect(macPrinterAddress: mac);
+    if (!connected) {
+      throw Exception('No se pudo conectar por Bluetooth: $mac');
     }
+
+    await Future.delayed(const Duration(milliseconds: 150));
+    final ok =
+    await PrintBluetoothThermal.writeBytes(tspl.codeUnits.toList());
+
+    await Future.delayed(const Duration(milliseconds: 120));
+    await _disconnectSafe();
+
+    if (!ok) throw Exception('Bluetooth writeBytes returned false');
   }
-
-
-  Future<void> _disconnectStickerRoleSafe(PosUniversalPrinter pos) async {
-    try {
-      final dynamic dyn = pos;
-
-      // Intento 1
-      try {
-        debugPrint('Disconnecting sticker role disconnect');
-        await dyn.disconnect(PosPrinterRole.sticker);
-        return;
-      } catch (_) {
-        debugPrint('Disconnecting sticker role disconnect failed');
-      }
-
-      // Intento 2 (algunas versiones usan unregisterDevice)
-      try {
-        debugPrint('Disconnecting sticker role unregisterDevice');
-        await dyn.unregisterDevice(PosPrinterRole.sticker);
-        return;
-      } catch (_) {
-        debugPrint('Disconnecting sticker role unregisterDevice failed');
-      }
-
-      // Intento 3 (otros nombres posibles)
-      try {
-        debugPrint('Disconnecting sticker role disconnectRole');
-        await dyn.disconnectRole(PosPrinterRole.sticker);
-        return;
-      } catch (_) {
-        debugPrint('Disconnecting sticker role disconnectRole failed');
-      }
-
-      // Si no existe ninguno, no hacemos nada (mejor no romper el flujo)
-    } catch (_) {
-      debugPrint('Disconnecting sticker role failed');
-    }
-  }
-
 
   Future<void> _showMsg(String title, String msg) async {
     if (!mounted) return;
@@ -368,32 +339,11 @@ class _LabelPrinterSelectPageState extends ConsumerState<LabelPrinterSelectPage>
       await _showMsg('Data', err);
       return;
     }
-    ref.read(isPrintingProvider.notifier).state = true;
-    if(printer.typeText== PrinterState.PRINTER_TYPE_NIIMBOT) {
-      final res = await widget.printDataToNiimbot(context: context, printer: printer,
-          profile: profile, data: widget.dataToPrint);
-      ref.read(isPrintingProvider.notifier).state = false;
-      if(res){
-        await _showMsg('Print', '✅ Printed via Niimbot');
-      } else {
-        await _showMsg('Print', '❌ Error: $res');
-      }
-      return ;
-    }
-
-
 
     final tspl = widget.buildTsplForData(
       profile: profile,
       printSimpleData: printSimpleData,
     );
-    final bool connected = await testConnectionPrinterSilence(context, printer);
-    if(!connected) {
-      ref.read(isPrintingProvider.notifier).state = false;
-      await _showMsg('Printer', 'Printer not connected');
-
-      return;
-    }
 
     try {
       if (printer.type == PrinterConnType.wifi) {
@@ -402,23 +352,16 @@ class _LabelPrinterSelectPageState extends ConsumerState<LabelPrinterSelectPage>
           port: printer.port ?? 9100,
           tspl: tspl,
         );
-        ref.read(isPrintingProvider.notifier).state = false;
         await _showMsg('Print', '✅ Printed via WiFi');
       } else {
         await sendTsplViaBluetooth(
           btAddress: printer.btAddress!,
           tspl: tspl,
         );
-        ref.read(isPrintingProvider.notifier).state = false;
         await _showMsg('Print', '✅ Printed via Bluetooth');
       }
     } catch (e) {
-      ref.read(isPrintingProvider.notifier).state = false;
       await _showMsg('Print', '❌ Error: $e');
-    } finally {
-      ref
-          .read(isPrintingProvider.notifier)
-          .state = false;
     }
   }
 
@@ -452,81 +395,60 @@ class _LabelPrinterSelectPageState extends ConsumerState<LabelPrinterSelectPage>
       topText: line,
       barcodeData: upc,
     );
-    ref.read(isPrintingProvider.notifier).state = true;
+
     try {
-      final connected = await testConnectionPrinterSilence(context, printer);
-      if(!connected) {
-        ref.read(isPrintingProvider.notifier).state = false;
-        await _showMsg('Printer', 'Printer not connected');
-        return;
-      }
       if (printer.type == PrinterConnType.wifi) {
         await sendTsplViaWifi(
           ip: printer.ip!,
           port: printer.port ?? 9100,
           tspl: tspl,
         );
-        ref.read(isPrintingProvider.notifier).state = false;
         await _showMsg('Print', '✅ Adjustment label printed via WiFi');
       } else {
         await sendTsplViaBluetooth(
           btAddress: printer.btAddress!,
           tspl: tspl,
         );
-        ref.read(isPrintingProvider.notifier).state = false;
         await _showMsg('Print', '✅ Adjustment label printed via Bluetooth');
       }
     } catch (e) {
       await _showMsg('Print', '❌ Error: $e');
-    } finally {
-      ref
-          .read(isPrintingProvider.notifier)
-          .state = false;
     }
   }
 
+  // Simple generic adjustment TSPL (kept inside base)
   String _buildGenericAdjustmentTspl({
     required LabelProfile profile,
     required String topText,
     required String barcodeData,
   }) {
-    const int dotsPerMm = 8;
+    // Minimal and safe TSPL. Use Code128 human=0 to avoid text under barcode.
+    // You can tune dots/mm based on your printer; here we assume existing
+    // buildTspl helpers elsewhere are tuned, but adjustment just needs "something".
+    //
+    // TIP: If you already have tuned builders, you can remove this and reuse them.
+    final int labelW = (profile.widthMm * 8).round();
+    final int labelH = (profile.heightMm * 8).round();
+    final int gap = (profile.gapMm * 8).round();
 
-    final int labelW = (profile.widthMm * dotsPerMm).round();
-    final int labelH = (profile.heightMm * dotsPerMm).round();
-
-    final int marginX = (profile.marginXmm * dotsPerMm).round();
-    final int marginY = (profile.marginYmm * dotsPerMm).round();
-
-    final int yText = marginY + 10;
-    final int yBar = yText + 40;
-
+    final int x = 20;
+    final int yText = 20;
+    final int yBar = 60;
     final int h = profile.barcodeHeight > 0 ? profile.barcodeHeight : 80;
     final int narrow = profile.barcodeNarrow > 0 ? profile.barcodeNarrow : 2;
     final int wide = profile.barcodeWidth > 0 ? profile.barcodeWidth : 3;
 
-    final int estBarcodeWidth =
-    estimateBarcodeWidthDots(barcodeData.length, narrow);
-
-    int xBarcode = ((labelW - estBarcodeWidth) / 2).round();
-
-    xBarcode = xBarcode.clamp(marginX, labelW - marginX - estBarcodeWidth);
-
-    final res = [
-      'SIZE ${profile.widthMm} mm,${profile.heightMm} mm',
-      'GAP ${profile.gapMm} mm,0 mm',
+    return [
+      'SIZE $labelW,$labelH',
+      'GAP $gap,0',
       'DIRECTION 1',
       'CLS',
-      'TEXT $marginX,$yText,"${profile.fontId}",0,1,1,"$topText"',
-      'BARCODE $xBarcode,$yBar,"128",$h,1,0,$narrow,$wide,"$barcodeData"',
+      'TEXT $x,$yText,"${profile.fontId}",0,1,1,"$topText"',
+      'BARCODE $x,$yBar,"128",$h,0,0,$narrow,$wide,"$barcodeData"',
       'PRINT ${profile.copies},1',
       '',
     ].join('\n');
-
-    debugPrint(res);
-    return res;
   }
-
 
   Future<void> _showPrintOptionsDialog() async {
     if (!mounted) return;
@@ -662,7 +584,6 @@ class _LabelPrinterSelectPageState extends ConsumerState<LabelPrinterSelectPage>
 
     final printers = ref.watch(printerListProvider);
     final selectedPrinterId = ref.watch(selectedPrinterIdProvider);
-    final isPrinting = ref.watch(isPrintingProvider) ;
 
     final selectedProfile = profiles.firstWhere(
           (p) => p.id == selectedProfileId,
@@ -708,7 +629,7 @@ class _LabelPrinterSelectPageState extends ConsumerState<LabelPrinterSelectPage>
           if (didPop) return;
           popScopeAction(context, ref);
         },
-        child: isPrinting ? LinearProgressIndicator() : TabBarView(
+        child: TabBarView(
           controller: _tab,
           children: [
             _buildHomeTab(
@@ -731,8 +652,6 @@ class _LabelPrinterSelectPageState extends ConsumerState<LabelPrinterSelectPage>
     final selectedPrinterId = ref.watch(selectedPrinterIdProvider);
     final profile40 = selectedProfileOrDefault40();
     final profile60 = selectedProfileOrDefault60();
-    final printerConnected = ref.watch(printerConnectedProvider);
-
 
     return SafeArea(
       child: ListView(
@@ -745,22 +664,24 @@ class _LabelPrinterSelectPageState extends ConsumerState<LabelPrinterSelectPage>
           const SizedBox(height: 8),
 
           Card(
-
             child: ListTile(
               title: Text('Profile: ${selectedProfile.name}'),
               subtitle: Text(
                 '${selectedProfile.widthMm}x${selectedProfile.heightMm}mm  copies:${selectedProfile.copies}',
               ),
-              trailing: IconButton(onPressed: null, icon: Icon(Icons.tune)),
+              trailing: const Icon(Icons.tune),
               onTap: () => _tab.index = 1,
             ),
           ),
 
+          // ------------------------------
+          // NIIMBOT connect panel (niim_blue_flutter)
+          // ------------------------------
+          if (selectedPrinter != null && (selectedPrinter.lang ?? '').toUpperCase() == 'NIIMBOT')
+            buildNiimbotConnectCard(ref,selectedPrinter),
+
           Card(
             child: ListTile(
-              trailing: IconButton(onPressed: (){
-                 testConnectionSelectPrinterPage(selectedPrinter: selectedPrinter);
-              }, icon:Icon(Icons.link),color: printerConnected? Colors.green : Colors.grey,),
               title: Text(
                 selectedPrinter == null
                     ? 'Printer: (none selected)'
@@ -773,6 +694,7 @@ class _LabelPrinterSelectPageState extends ConsumerState<LabelPrinterSelectPage>
                     ? 'WiFi: ${selectedPrinter.ip}:${selectedPrinter.port}  lang:${selectedPrinter.lang ?? "-"}'
                     : 'BT: ${selectedPrinter.btAddress}  lang:${selectedPrinter.lang ?? "-"}  type:${selectedPrinter.typeText ?? "-"}',
               ),
+              trailing: const Icon(Icons.print),
               onTap: () => _tab.index = 2,
             ),
           ),
@@ -835,7 +757,7 @@ class _LabelPrinterSelectPageState extends ConsumerState<LabelPrinterSelectPage>
                       _savePrintersToStorageFromHere();
                     },
                   );
-                }),
+                }).toList(),
             ],
           ),
         ],
@@ -909,18 +831,112 @@ class _LabelPrinterSelectPageState extends ConsumerState<LabelPrinterSelectPage>
     );
   }
 
-  void testConnectionSelectPrinterPage({PrinterConnConfig? selectedPrinter}) async {
-    if (selectedPrinter == null) {
-      await _showMsg('Printer', 'No hay impresora seleccionada.');
-      return;
+  Widget buildNiimbotConnectCard(WidgetRef ref,PrinterConnConfig selectedPrinter) {
+    final niimState = ref.watch(niimbotTestControllerProvider);
+    final niimCtrl = ref.read(niimbotTestControllerProvider.notifier);
+    final addr = (selectedPrinter.btAddress ?? '').trim();
+
+    Future<void> connectAuto() async {
+      if (addr.isEmpty) {
+        if (!mounted) return;
+        await showDialog(
+          context: context,
+          builder: (_) => const AlertDialog(
+            title: Text('NIIMBOT'),
+            content: Text('❌ Falta BT address (MAC / remoteId) en la impresora seleccionada.'),
+          ),
+        );
+        return;
+      }
+
+      final ok = await niimCtrl.connectToAddressSilence(context, address: addr);
+      if (ok) return;
+
+      // Si no encontró match exacto, hacemos scan UI y dejamos elegir.
+      if (!mounted) return;
+      await niimCtrl.handleConnectScan(context);
+      if (!mounted) return;
+      await _showNiimbotDevicePicker(ref);
     }
 
-    // Reusa el helper del otro archivo
-    bool res = await testConnectionPrinter(context, selectedPrinter);
-    ref.read(printerConnectedProvider.notifier).state = res;
-
-
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('NIIMBOT', style: TextStyle(fontWeight: FontWeight.bold)),
+            const SizedBox(height: 6),
+            Text('Status: ${niimState.status}', style: const TextStyle(fontSize: 12)),
+            if (addr.isNotEmpty) Text('Address: $addr', style: const TextStyle(fontSize: 12)),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                ElevatedButton.icon(
+                  onPressed: connectAuto,
+                  icon: const Icon(Icons.bluetooth_searching),
+                  label: const Text('Conectar (scan+auto)'),
+                ),
+                OutlinedButton.icon(
+                  onPressed: () async {
+                    await niimCtrl.handleConnectScan(context);
+                    if (!mounted) return;
+                    await _showNiimbotDevicePicker(ref);
+                  },
+                  icon: const Icon(Icons.list),
+                  label: const Text('Elegir dispositivo'),
+                ),
+                OutlinedButton.icon(
+                  onPressed: niimCtrl.isConnected() ? () => niimCtrl.handleDisconnect(context) : null,
+                  icon: const Icon(Icons.link_off),
+                  label: const Text('Desconectar'),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
   }
+
+  Future<void> _showNiimbotDevicePicker(WidgetRef ref) async {
+    final niimState = ref.read(niimbotTestControllerProvider);
+    final niimCtrl = ref.read(niimbotTestControllerProvider.notifier);
+    final devices = niimState.devices;
+    if (devices.isEmpty) return;
+
+    if (!mounted) return;
+    await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder: (ctx) {
+        return SafeArea(
+          child: ListView.separated(
+            shrinkWrap: true,
+            itemCount: devices.length,
+            separatorBuilder: (_, __) => const Divider(height: 1),
+            itemBuilder: (_, i) {
+              final d = devices[i];
+              final name = d.platformName.isEmpty ? 'NIIMBOT' : d.platformName;
+              final id = d.remoteId.str;
+              return ListTile(
+                leading: const Icon(Icons.print),
+                title: Text(name),
+                subtitle: Text(id),
+                onTap: () async {
+                  Navigator.pop(ctx);
+                  await niimCtrl.connectToDevice(context, d);
+                },
+              );
+            },
+          ),
+        );
+      },
+    );
+  }
+
 
 
 
@@ -945,7 +961,7 @@ Future<LabelProfile?> showLabelConfigBottomSheet({
 
 class _LabelConfigSheet extends StatefulWidget {
   final LabelProfile? initial;
-  const _LabelConfigSheet({this.initial});
+  const _LabelConfigSheet({super.key, this.initial});
 
   @override
   State<_LabelConfigSheet> createState() => _LabelConfigSheetState();
@@ -1116,4 +1132,6 @@ class _LabelConfigSheetState extends State<_LabelConfigSheet> {
       ),
     );
   }
+
+
 }

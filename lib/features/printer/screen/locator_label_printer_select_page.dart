@@ -5,12 +5,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:monalisa_app_001/features/products/domain/models/label_profile.dart';
 import 'package:monalisa_app_001/features/shared/data/memory.dart';
+import 'package:niim_blue_flutter/niim_blue_flutter.dart';
 
 import '../../products/domain/idempiere/idempiere_locator.dart';
 import '../models/printer_select_models.dart';
-import '../niimbot/niimbot_printer_helper.dart';
 import '../tspl/tspl_printer_helper.dart';
 import 'label_printer_select_page.dart';
+import 'niimbot/niimbot_print_payload.dart';
 
 
 
@@ -78,6 +79,38 @@ class LocatorLabelPrinterSelectPage extends LabelPrinterSelectPage {
 
   }
 
+  @override
+  NiimbotPrintPayload? buildNiimbotPayload({
+    required LabelProfile profile,
+    required bool printSimpleData,
+  }) {
+    final data = dataToPrint as IdempiereLocator;
+    final value = (data.value ?? '').trim();
+    if (value.isEmpty) return null;
+    final widthPx = (profile.widthMm * 8).round();
+    final heightPx = (profile.heightMm * 8).round();
+    final config = NiimbotPrintConfig.default1PageGap();
+
+    // simple => barcode, complete => QR
+    if (printSimpleData) {
+      return NiimbotPrintPayload.textBarcode(
+        text: value,
+        barcode: value,
+        widthPx: widthPx,
+        heightPx: heightPx,
+        config: config,
+      );
+    }
+
+    return NiimbotPrintPayload(
+      type: NiimbotPayloadType.qr,
+      text: value,
+      qrData: value, widthPx: (profile.widthMm * 8).round(),
+      heightPx: (profile.heightMm * 8).round(),
+      config: config,
+    );
+  }
+
   // ----------------------------------------------------------------------------
   // Locator label TSPL:
   // - prints locator value as text above
@@ -118,7 +151,10 @@ class LocatorLabelPrinterSelectPage extends LabelPrinterSelectPage {
     final int narrow = dims.narrow;
     final int wide = dims.wide;
 
-
+    int estimateBarcodeWidthDots(int length, int n) {
+      final modules = (length * 11) + 35;
+      return modules * n;
+    }
 
     final int estW = estimateBarcodeWidthDots(v.length, narrow);
 
@@ -214,46 +250,6 @@ class LocatorLabelPrinterSelectPage extends LabelPrinterSelectPage {
   /// Heurística para elegir cellwidth para que el QR quepa.
   /// Devuelve un valor típico 3..8 (clamp).
 
-  Widget buildNiimbotLocatorWidget({required String locatorValue}) {
-    return Container(
-      color: Colors.white,
-      padding: const EdgeInsets.all(12),
-      child: Center(
-        child: FittedBox(
-          fit: BoxFit.scaleDown,
-          child: Text(
-            locatorValue,
-            textAlign: TextAlign.center,
-            style: const TextStyle(
-              color: Colors.black,
-              fontSize: 48,
-              fontWeight: FontWeight.w800,
-              letterSpacing: 1.0,
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-  @override
-  Future<bool> printDataToNiimbot({
-    required BuildContext context,
-    required PrinterConnConfig printer,
-    required LabelProfile profile,
-    required dynamic data,
-  }) async {
-    final mac = (printer.btAddress ?? '').trim();
-    final helper = NiimbotPrinterHelper();
-    final ok = await helper.printLabelFromWidget(
-      context: context,
-      mac: mac,
-      widthMm: profile.widthMm,
-      heightMm: profile.heightMm,
-      widget: buildNiimbotLocatorWidget(locatorValue: data),
-    );
-    return ok ;
-
-  }
 
 
 

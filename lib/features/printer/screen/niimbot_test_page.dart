@@ -81,6 +81,23 @@ class NiimbotTestState {
 class NiimbotTestController extends StateNotifier<NiimbotTestState> {
   NiimbotTestController() : super(NiimbotTestState.initial());
 
+  // Normaliza ids/MAC para comparar: quita ':' y cualquier cosa no-hex, uppercase.
+  String _normId(String s) => s.toUpperCase().replaceAll(RegExp(r'[^0-9A-F]'), '');
+
+  Future<List<BluetoothDevice>> _scanNiimbotDevices({Duration timeout = const Duration(seconds: 3)}) async {
+    final foundDevices = await NiimbotBluetoothClient.listDevices(timeout: timeout);
+    final connectedDevices = FlutterBluePlus.connectedDevices;
+
+    final allDevices = [...foundDevices, ...connectedDevices];
+    final unique = <BluetoothDevice>[];
+    final seen = <String>{};
+    for (final d in allDevices) {
+      final id = d.remoteId.str;
+      if (seen.add(id)) unique.add(d);
+    }
+    return unique;
+  }
+
   Future<bool> _requestPermissions() async {
     if (Platform.isIOS) return true;
 
@@ -110,15 +127,9 @@ class NiimbotTestController extends StateNotifier<NiimbotTestState> {
     try {
       state = state.copyWith(status: 'Scanning for devices...');
 
-      // Encontrados por niim_blue_flutter
-      final foundDevices = await NiimbotBluetoothClient.listDevices(
-        timeout: const Duration(seconds: 3),
-      );
+      final devices = await _scanNiimbotDevices(timeout: const Duration(seconds: 3));
 
-      // Conectados por FlutterBluePlus
-      final connectedDevices = FlutterBluePlus.connectedDevices;
-
-      if (foundDevices.isEmpty && connectedDevices.isEmpty) {
+      if (devices.isEmpty) {
         _showAlert(
           context,
           'No Devices Found',
@@ -128,17 +139,8 @@ class NiimbotTestController extends StateNotifier<NiimbotTestState> {
         return;
       }
 
-      final allDevices = [...foundDevices, ...connectedDevices];
-      final unique = <BluetoothDevice>[];
-      final seen = <String>{};
-
-      for (final d in allDevices) {
-        final id = d.remoteId.str;
-        if (seen.add(id)) unique.add(d);
-      }
-
       state = state.copyWith(
-        devices: unique,
+        devices: devices,
         showDeviceList: true,
         status: 'Select a device',
       );
@@ -153,6 +155,50 @@ class NiimbotTestController extends StateNotifier<NiimbotTestState> {
         _showAlert(context, 'Error', e.toString());
       }
       state = state.copyWith(status: 'Scan failed');
+    }
+  }
+
+  /// Conecta a una impresora Niimbot usando el address guardado (remoteId.str / MAC),
+  /// haciendo scan como en handleConnectScan, pero SIN mostrar modal/lista.
+  /// Devuelve true si conecta.
+  Future<bool> connectToAddressSilence(
+    BuildContext context, {
+    required String address,
+    Duration scanTimeout = const Duration(seconds: 3),
+  }) async {
+    final hasPermission = await _requestPermissions();
+    if (!hasPermission) return false;
+
+    final target = _normId(address);
+    if (target.isEmpty) return false;
+
+    try {
+      state = state.copyWith(status: 'Scanning Niimbot...');
+      final devices = await _scanNiimbotDevices(timeout: scanTimeout);
+      if (devices.isEmpty) {
+        state = state.copyWith(status: 'No devices found');
+        return false;
+      }
+
+      BluetoothDevice? match;
+      for (final d in devices) {
+        if (_normId(d.remoteId.str) == target) {
+          match = d;
+          break;
+        }
+      }
+
+      if (match == null) {
+        // No match exacto: guardamos lista para que el usuario elija si hace falta.
+        state = state.copyWith(devices: devices, showDeviceList: true, status: 'Select a device');
+        return false;
+      }
+
+      await connectToDevice(context, match);
+      return isConnected();
+    } catch (_) {
+      state = state.copyWith(status: 'Connection failed', client: null);
+      return false;
     }
   }
 
