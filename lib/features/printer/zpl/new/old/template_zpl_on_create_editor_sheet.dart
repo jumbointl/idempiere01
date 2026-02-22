@@ -98,7 +98,7 @@ Future<ZplTemplate?> showZplTemplateEditorDialogMode({
       return;
     }
 
-    final printerState = ref.read(printerScanProvider);
+    final printerState = ref.read(printerScanNotifierProvider);
     final ip = printerState.ipController.text.trim();
     final port = int.tryParse(printerState.portController.text.trim()) ?? 0;
     final type = printerState.typeController.text.trim();
@@ -121,7 +121,7 @@ Future<ZplTemplate?> showZplTemplateEditorDialogMode({
     required ZplTemplateMode m,
     required int rows,
   }) async {
-    final printerState = ref.read(printerScanProvider);
+    final printerState = ref.read(printerScanNotifierProvider);
     final ip = printerState.ipController.text.trim();
     final port = int.tryParse(printerState.portController.text.trim()) ?? 0;
 
@@ -208,16 +208,16 @@ Future<ZplTemplate?> showZplTemplateEditorDialogMode({
     );
 
     final filledFirst =
-    buildFilledPreviewFirstPage(
+    buildFilledMovementAndLinesPreviewFirstPage(
       template: temp,
       movementAndLines: movementAndLines,
     );
     final filledAll =
-    buildFilledPreviewAllPages(
+    buildFilledMovementPreviewAllPages(
       template: temp,
       movementAndLines: movementAndLines,
     );
-    final filledAllToPdf = buildFilledPreviewAllPages(
+    final filledAllToPdf = buildFilledMovementPreviewAllPages(
       hidePageLine: true,
       template: temp,
       movementAndLines: movementAndLines,
@@ -855,4 +855,15 @@ String applyMarginAddY(String zpl, int marginAddY) {
     final y = int.parse(m.group(2)!);
     return '^FO$x,${y + marginAddY}';
   });
+}
+
+String getReferenceTxtOfLocatorTxt(String fileName,String locatorValue,int copies) {
+  return """
+^XA
+^CI28
+^XFE:$fileName^FS
+^FN1^FD$locatorValue^FS
+^PQ$copies
+^XZ
+""".trim();
 }

@@ -119,7 +119,7 @@ FutureProvider.autoDispose<ZplPrintingTemplate?>((ref) async {
     ZplPrintingTemplate result;
     switch (mode) {
       case ZplTemplateMode.movement:
-      case ZplTemplateMode.shipping:
+      case ZplTemplateMode.locator:
         result = ZplPrintingTemplateMovement(
           directory: remoteDir,
           templateFilesToPrinter: printerTemplates,

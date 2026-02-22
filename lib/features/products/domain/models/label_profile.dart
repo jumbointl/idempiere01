@@ -82,5 +82,39 @@ class LabelProfile {
 
     );
   }
-
+  LabelProfile copyWith({
+    String? id,
+    String? name,
+    int? copies,
+    double? widthMm,
+    double? heightMm,
+    double? marginXmm,
+    double? marginYmm,
+    int? barcodeHeightMm,
+    int? charactersToPrint,
+    int? maxCharsPerLine,
+    int? barcodeHeight,
+    int? barcodeWidth,
+    int? barcodeNarrow,
+    int? fontId,
+    int? gapMm,
+  }) {
+    return LabelProfile(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      copies: copies ?? this.copies,
+      widthMm: widthMm ?? this.widthMm,
+      heightMm: heightMm ?? this.heightMm,
+      marginXmm: marginXmm ?? this.marginXmm,
+      marginYmm: marginYmm ?? this.marginYmm,
+      barcodeHeightMm: barcodeHeightMm ?? this.barcodeHeightMm,
+      charactersToPrint: charactersToPrint ?? this.charactersToPrint,
+      maxCharsPerLine: maxCharsPerLine ?? this.maxCharsPerLine,
+      barcodeHeight: barcodeHeight ?? this.barcodeHeight,
+      barcodeWidth: barcodeWidth ?? this.barcodeWidth,
+      barcodeNarrow: barcodeNarrow ?? this.barcodeNarrow,
+      fontId: fontId ?? this.fontId,
+      gapMm: gapMm ?? this.gapMm,
+    );
+  }
 }

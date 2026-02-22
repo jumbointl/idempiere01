@@ -595,6 +595,7 @@ class MInOutNotifier extends StateNotifier<MInOutStatus> {
 
         final mInOut = await mInOutNotifier.getMInOutAndLine(ref);
         if (mInOut.id == null) {
+          debugPrint('[loadMInOutAndLine] route=CONFIRM ${mInOut.id ?? 'id null'}');
           state = state.copyWith(
               isLoading: false
           );
@@ -608,11 +609,11 @@ class MInOutNotifier extends StateNotifier<MInOutStatus> {
           return;
         }
 
+
         if(savedConfirmId>0){
           MInOutConfirm m = await mInOutNotifier.getMInOutConfirmAndLine(savedConfirmId, ref);
           state = state.copyWith(mInOutConfirm: m,mInOut: mInOut,isLoading: false,viewMInOut: true);
         } else {
-
             final confirmList = await mInOutNotifier.getMInOutConfirmList(mInOut.id!, ref);
             state = state.copyWith(mInOutConfirmList: confirmList,isLoading: false);
             if (!context.mounted) return;
@@ -719,11 +720,13 @@ class MInOutNotifier extends StateNotifier<MInOutStatus> {
       final isPickConfirm = stateNow.mInOutType == MInOutType.pickConfirm;
       final isQaConfirm = stateNow.mInOutType == MInOutType.qaConfirm;
       final isShipmentConfirm = stateNow.mInOutType == MInOutType.shipmentConfirm;
+      final isReceiptConfirm = stateNow.mInOutType == MInOutType.receiptConfirm;
 
       // Capability flags from backend
       final canCreatePickConfirm = mInOut.canCreatePickConfirm;
       final canCreateShipmentConfirm = mInOut.canCreateShipmentConfirm;
       final canCreateQaConfirm = mInOut.canCreateQaConfirm;
+      final canCreateReceiptConfirm = mInOut.canCreateReceiptConfirm;
 
       debugPrint('[loadMInOutAndLine] auto-create confirm flow');
 
@@ -750,6 +753,20 @@ class MInOutNotifier extends StateNotifier<MInOutStatus> {
           documentNo: doc,
           mInOutId: mInOut.id?.toString() ?? '',
           type: MInOutType.shipmentConfirm,
+          onResultSuccess: () async {
+            if (!context.mounted) return;
+            await loadMInOutAndLine(context, ref);
+          },
+        );
+        return;
+      }
+
+      if (isReceiptConfirm && canCreateReceiptConfirm) {
+        await showCreateReceiptConfirmModalBottomSheet(
+          ref: ref,
+          documentNo: doc,
+          mInOutId: mInOut.id?.toString() ?? '',
+          type: MInOutType.receiptConfirm,
           onResultSuccess: () async {
             if (!context.mounted) return;
             await loadMInOutAndLine(context, ref);
@@ -1623,61 +1640,7 @@ class MInOutNotifier extends StateNotifier<MInOutStatus> {
         false;
   }
 
-  /*Future<void> setDocAction(WidgetRef ref) async {
-    print('setDocAction init');
-    state = state.copyWith(isLoading: true, errorMessage: '');
-    if (state.mInOut?.id == null) {
-      state = state.copyWith(
-        errorMessage: '${state.title} ID is null',
-        isLoading: false,
-      );
-      return;
-    }
-    try {
-      for (final line in state.mInOut!.lines) {
-        if (line.editLocator != null) {
-          final update = await mInOutRepository.updateLocator(line, ref);
-          print(
-            'update  mInOutRepository ${line.id} ${update ? 'true' : 'no true'}',
-          );
-          if (!update) {
-            state = state.copyWith(
-              errorMessage:
-              'Error al actualizar la ubicación: ${line.mLocatorId!.identifier}',
-              isLoading: false,
-            );
-            return;
-          }
-        }
-      }
-      final mInOutResponse = await mInOutRepository.setDocAction(ref);
-      print('setDocAction showMInOutResultModalBottomSheet');
 
-      showMInOutResultModalBottomSheet(
-        ref: ref,
-        data: mInOutResponse,
-        type: MInOutType.move,
-        text: '',
-        onOk: () async {
-
-        },
-      );
-      state = state.copyWith(
-        mInOut: mInOutResponse.copyWith(lines: state.mInOut!.lines),
-        isLoading: false,
-        isComplete: true,
-
-      );
-      print(
-        'update  mInOutRepository ${mInOutResponse.documentNo?.toString() ?? '--'}',
-      );
-    } catch (e) {
-      state = state.copyWith(
-        errorMessage: e.toString().replaceAll('Exception: ', ''),
-        isLoading: false,
-      );
-    }
-  }*/
   Future<void> setDocAction(WidgetRef ref) async {
     final messageConfirm = '${Messages.COMFIRM} ${state.title}?';
     final bool? ok = await showConfirmationDialog(ref.context, ref, messageConfirm);

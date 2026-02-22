@@ -13,7 +13,10 @@ import 'package:monalisa_app_001/features/auth/presentation/providers/auth_provi
 import 'package:monalisa_app_001/features/home/presentation/screens/home_screen.dart';
 import 'package:monalisa_app_001/features/m_inout/presentation/screens/m_in_out_barcode_list_screen.dart';
 import 'package:monalisa_app_001/features/m_inout/presentation/screens/m_in_out_screen.dart';
-import 'package:monalisa_app_001/features/printer/screen/niimbot_test_page.dart';
+import 'package:monalisa_app_001/features/printer/movement_print_screen.dart';
+import 'package:monalisa_app_001/features/printer/printer_setup_screen.dart';
+import 'package:monalisa_app_001/features/printer/screen/niimbot_page.dart';
+import 'package:monalisa_app_001/features/printer/screen/niimbot_silence_page.dart';
 import 'package:monalisa_app_001/features/products/domain/idempiere/idempiere_product.dart';
 import 'package:monalisa_app_001/features/products/domain/idempiere/sales_order_and_lines.dart';
 import 'package:monalisa_app_001/features/products/presentation/screens/movement/edit_new/movement_barcode_list_screen.dart';
@@ -26,12 +29,17 @@ import '../../features/auth/presentation/screens/auth_data_screen.dart';
 import '../../features/m_inout/domain/entities/line.dart';
 import '../../features/m_inout/domain/entities/m_in_out.dart';
 import '../../features/m_inout/presentation/screens/product_store_on_hand_screen_for_minout_line.dart';
-import '../../features/printer/printer_setup_screen.dart';
+import '../../features/printer/locator_print_screen.dart';
+import '../../features/printer/locator_zpl_sentence_editor_screen.dart';
+import '../../features/printer/mo_printer_editor_screen.dart';
+import '../../features/printer/models/mo_printer.dart';
+import '../../features/printer/models/printer_select_models.dart';
 import '../../features/printer/screen/locator_label_printer_select_page.dart';
 import '../../features/printer/screen/product_label_printer_select_page.dart';
 import '../../features/printer/web_template/screen/create_zpl_template_page.dart';
 import '../../features/products/domain/idempiere/idempiere_locator.dart';
 import '../../features/products/domain/idempiere/movement_and_lines.dart';
+import '../../features/products/domain/models/label_profile.dart';
 import '../../features/products/presentation/screens/locator/search_locator_screen.dart';
 import '../../features/products/presentation/screens/movement/edit_new/movement_cancel_screen.dart';
 import '../../features/products/presentation/screens/movement/edit_new/movement_confirm_screen.dart';
@@ -77,6 +85,8 @@ class AppRouter {
   static const String PAGE_UNSORTED_STORAGE_ON_HAND_FOR_LINE = '/unsorted_store_on_hand_for_line';
 
   static String PAGE_MOVEMENT_PRINTER_SETUP='/movement_printer_set_up';
+  static String PAGE_LOCATOR_PRINTER_SETUP='/locator_printer_set_up';
+  static String PAGE_PRINTER_SETUP='/printer_set_up';
   static String PAGE_MOVEMENT_PRINT_POS='/movement_print_pos';
   static String PAGE_UNSORTED_STORAGE_ON_HAND_FOR_LINE_SELECT_LOCATOR = '/unsorted_store_on_hand_select_locator';
 
@@ -100,6 +110,10 @@ class AppRouter {
 
   static String PAGE_PRODUCT_LABEL_PRINTER_SELECT_PAGE='/product_label_printer';
   static String PAGE_LOCATOR_LABEL_PRINTER_SELECT_PAGE='/locator_label_printer';
+
+  static String PAGE_MO_PRINTER_EDITOR ='/mo_printer_editor';
+
+  static String PAGE_LOCATOR_SENTENCE_EDITOR='/locator_zpl_sentence_editor';
 
 
 
@@ -319,9 +333,101 @@ final goRouterProvider = Provider((ref) {
       GoRoute(
           path: '/test',
           builder: (context, state){
-            return NiimbotTestPage( );
+            return NiimbotPage( );
           }
       ),
+      GoRoute(
+          path: '/niimbot_page',
+
+          builder: (context, state){
+            return NiimbotPage( );
+          }
+      ),
+      GoRoute(
+        path: '/niimbot_page/locator',
+        builder: (context, state) {
+          final extra = state.extra as Map<String, dynamic>;
+          final locator = extra['dataToPrint'] as IdempiereLocator;
+          final profile = extra['profile'] as LabelProfile?;
+          final bluetoothAddress = extra['bluetoothAddress'] as String;
+
+
+          return NiimbotPage(
+            dataToPrint: locator,
+            profile: profile,
+            autoDisconnectAfterPrint: true,
+            bluetoothAddress: bluetoothAddress,
+          );
+        },
+      ),
+      GoRoute(
+        path: '/niimbot_print_silence_page/locator',
+        builder: (context, state) {
+          final extra = state.extra as Map<String, dynamic>;
+          final locator = extra['dataToPrint'] as IdempiereLocator;
+          final profile = extra['profile'] as LabelProfile?;
+          final bluetoothAddress = extra['bluetoothAddress'] as String;
+
+
+          return NiimbotPrintSilencePage(
+            dataToPrint: locator,
+            profile: profile,
+            bluetoothAddress: bluetoothAddress,
+          );
+        },
+      ),
+      GoRoute(
+        path: '/niimbot_print_silence_page/thermal_printer',
+        builder: (context, state) {
+          final extra = state.extra as Map<String, dynamic>;
+          final locator = extra['dataToPrint'] as PrinterConnConfig;
+          final profile = extra['profile'] as LabelProfile?;
+          final bluetoothAddress = extra['bluetoothAddress'] as String;
+
+
+          return NiimbotPrintSilencePage(
+            dataToPrint: locator,
+            profile: profile,
+            bluetoothAddress: bluetoothAddress,
+          );
+        },
+      ),
+
+
+      GoRoute(
+        path: '/niimbot_page/product',
+        builder: (context, state) {
+          final extra = state.extra as Map<String, dynamic>;
+          final product = extra['dataToPrint'] as IdempiereProduct;
+          final profile = extra['profile'] as LabelProfile?;
+          final bluetoothAddress = extra['bluetoothAddress'] as String;
+
+
+          return NiimbotPage(
+            dataToPrint: product,
+            profile: profile,
+            autoDisconnectAfterPrint: true,
+            bluetoothAddress: bluetoothAddress,
+          );
+        },
+      ),
+      GoRoute(
+        path: '/niimbot_print_silence_page/product',
+        builder: (context, state) {
+          final extra = state.extra as Map<String, dynamic>;
+          final product = extra['dataToPrint'] as IdempiereProduct;
+          final profile = extra['profile'] as LabelProfile?;
+          final bluetoothAddress = extra['bluetoothAddress'] as String;
+
+
+          return NiimbotPrintSilencePage(
+            dataToPrint: product,
+            profile: profile,
+            bluetoothAddress: bluetoothAddress,
+          );
+        },
+      ),
+
       GoRoute(
           path: AppRouter.PAGE_LOCATOR_LABEL_PRINTER_SELECT_PAGE,
           builder: (context, state){
@@ -331,18 +437,64 @@ final goRouterProvider = Provider((ref) {
             );
           }
       ),
+      GoRoute(
+        path: AppRouter.PAGE_LOCATOR_PRINTER_SETUP,
+        builder: (context, state) {
+          final extra = state.extra as Map<String, dynamic>;
+          final List<IdempiereLocator> list = (extra['data'] as List).cast<IdempiereLocator>();
+          final int oldAction = extra['oldAction'] as int;
 
+          return LocatorPrintScreen(
+            dataToPrint: list,
+            oldAction: oldAction,
+          );
+        },
+      ),
+      GoRoute(
+          path: AppRouter.PAGE_PRINTER_SETUP,
+          builder: (context, state){
+            return PrinterSetupScreen(
+              oldAction: 0,
+            );
+
+          }
+
+
+      ),
+      GoRoute(
+        path: AppRouter.PAGE_MO_PRINTER_EDITOR,
+        builder: (context, state) {
+          final extra = (state.extra as Map<String, dynamic>? ?? {});
+          final FocusNode focusNode = extra['focusNode'] as FocusNode;
+          final MOPrinter? initial = extra['initial'] as MOPrinter?;
+          return MoPrinterEditorScreen(
+            focusNode: focusNode,
+            initial: initial,
+          );
+        },
+      ),
+      GoRoute(
+        path: AppRouter.PAGE_LOCATOR_SENTENCE_EDITOR,
+        builder: (context, state) {
+          final extra = state.extra as Map<String, dynamic>;
+          return LocatorZplSentenceEditorScreen(
+            sentence: (extra['sentence'] as String?) ?? '',
+            focusNode: extra['focusNode'] as FocusNode,
+          );
+        },
+      ),
 
       GoRoute(
           path: AppRouter.PAGE_MOVEMENT_PRINTER_SETUP,
           builder: (context, state){
             if( RolesApp.hasStockPrivilege){
-              MovementAndLines movementAndLines = state.extra as MovementAndLines;
+              final extra = state.extra as Map<String, dynamic>;
+              final MovementAndLines movementAndLines = extra['data'] as MovementAndLines;
+              final int oldAction = extra['oldAction'] as int;
 
-              String argument = jsonEncode(movementAndLines.toJson());
-              return PrinterSetupScreen(
-                movementAndLines: movementAndLines,
-                argument: argument
+              return MovementPrintScreen(
+                dataToPrint: movementAndLines,
+                oldAction: oldAction,
               );
 
             } else{

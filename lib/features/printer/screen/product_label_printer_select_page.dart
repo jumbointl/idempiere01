@@ -4,10 +4,8 @@ import 'package:monalisa_app_001/features/products/domain/idempiere/idempiere_pr
 import 'package:monalisa_app_001/features/products/domain/models/label_profile.dart';
 import 'package:monalisa_app_001/features/shared/data/memory.dart';
 
-import '../../products/domain/idempiere/idempiere_locator.dart';
 import '../models/printer_select_models.dart';
 import 'label_printer_select_page.dart';
-import 'niimbot/niimbot_print_payload.dart';
 
 class ProductLabelPrinterSelectPage extends LabelPrinterSelectPage {
   const ProductLabelPrinterSelectPage({super.key, required super.dataToPrint});
@@ -46,40 +44,6 @@ class ProductLabelPrinterSelectPage extends LabelPrinterSelectPage {
     return buildTsplProductLabel(upc: upc, sku: sku, name: name, profile: profile);
   }
 
-  @override
-  NiimbotPrintPayload? buildNiimbotPayload({
-    required LabelProfile profile,
-    required bool printSimpleData,
-  }) {
-    final data = dataToPrint as IdempiereLocator;
-    final value = (data.value ?? '').trim();
-    if (value.isEmpty) return null;
-
-    final widthPx = (profile.widthMm * 8).round();
-    final heightPx = (profile.heightMm * 8).round();
-    final config = NiimbotPrintConfig.default1PageGap();
-
-    if (printSimpleData) {
-      return NiimbotPrintPayload(
-        type: NiimbotPayloadType.barcode,
-        text: value,
-        barcodeData: value,
-        widthPx: widthPx,
-        heightPx: heightPx,
-        config: config, // si tu payload acepta LabelProfile
-      );
-    }
-
-    return NiimbotPrintPayload(
-      type: NiimbotPayloadType.qr,
-      text: value,
-      qrData: value,
-      widthPx: widthPx,
-      heightPx: heightPx,
-      config: config,
-    );
-  }
-
 
   @override
   Widget buildPrintingPanel({
@@ -93,6 +57,7 @@ class ProductLabelPrinterSelectPage extends LabelPrinterSelectPage {
     required bool printSimpleData,
     }) onPrint,
   }) {
+
     return Row(
       children: [
         Expanded(

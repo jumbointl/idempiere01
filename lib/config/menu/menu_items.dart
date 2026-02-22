@@ -129,13 +129,19 @@ var appHomeOptionCol2Items = <MenuItem>[
       ,
     ),
   MenuItem(
-    title: 'TEST',
+    title: 'NIIMBOT config',
     subTitle: '',
-    link: '/test',
-    icon: Icons.question_answer
+    link: '/niimbot_page',
+    icon: Icons.print
     ,
   ),
-
+  MenuItem(
+    title: 'Printer config',
+    subTitle: '',
+    link: AppRouter.PAGE_PRINTER_SETUP,
+    icon: Icons.print
+    ,
+  ),
 ];
 
 final appHomeOptionCol3Items = <MenuItem>[

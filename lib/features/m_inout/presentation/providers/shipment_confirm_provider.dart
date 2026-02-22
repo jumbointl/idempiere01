@@ -9,11 +9,17 @@ import '../../../../config/http/dio_client.dart';
 import '../../../auth/presentation/providers/auth_provider.dart';
 import '../../../products/domain/idempiere/response_async_value.dart';
 
+final fireCreateShipmentConfirmProvider = StateProvider.autoDispose<int>((ref) {
+  return 0;
+});
+
 final idForCreateShipmentConfirmProvider = StateProvider.autoDispose<String>((ref) {
   return '';
 });
 final createShipmentConfirmProvider = FutureProvider.autoDispose<ResponseAsyncValue?>((ref) async {
-  final String mInOutId = ref.watch(idForCreateShipmentConfirmProvider).toUpperCase();
+  final int count = ref.watch(fireCreateShipmentConfirmProvider);
+  if(count==0) return null;
+  final String mInOutId = ref.read(idForCreateShipmentConfirmProvider).toUpperCase();
 
   ResponseAsyncValue responseAsyncValue = ResponseAsyncValue();
   if(mInOutId=='') {

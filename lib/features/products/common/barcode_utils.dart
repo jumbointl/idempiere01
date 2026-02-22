@@ -1,30 +1,39 @@
+
+
+import 'package:flutter/material.dart';
+import 'package:mofilo_barcode_verifier/mofilo_barcode_verifier.dart';
+bool isAllDigits(String s) => RegExp(r'^\d+$').hasMatch(s);
 bool isValidEAN13(String ean) {
   // 1. Validar longitud
+  debugPrint('isValidEAN13: $ean');
   if (ean.length != 13 || !RegExp(r'^[0-9]+$').hasMatch(ean)) {
     return false;
   }
-
-  int sumOdd = 0;
-  int sumEven = 0;
-
-  for (int i = 0; i < ean.length; i++) {
-    int digit = int.parse(ean[i]);
-    if ((i + 1) % 2 != 0) { // Posición impar (1-based index)
-      sumOdd += digit;
-    } else { // Posición par
-      sumEven += digit;
-    }
+  final verifier = BarcodeVerifier();
+  final result = verifier.verify(ean);
+  if(result.isValid && result.barcodeType ==  BarcodeType.ean13){
+    debugPrint('isValidEAN13: true => $ean');
+    return true;
   }
 
-  // 3. Calcular dígito de control
-  int total = sumOdd + (sumEven * 3);
-  int checksum = 10 - (total % 10);
-  if (checksum == 10) {
-    checksum = 0;
+
+  return false;
+}
+bool isValidEAN8(String ean) {
+  if (ean.length != 8 || !isAllDigits(ean)) return false;
+  debugPrint('isValidEAN8: $ean');
+  if (ean.length != 13 || !RegExp(r'^[0-9]+$').hasMatch(ean)) {
+    return false;
   }
-  // 4. Comparar con el último dígito
-  int lastDigit = int.parse(ean[12]);
-  return checksum == lastDigit;
+  final verifier = BarcodeVerifier();
+  final result = verifier.verify(ean);
+  if(result.isValid && result.barcodeType ==  BarcodeType.ean8){
+    debugPrint('isValidEAN8: true => $ean');
+    return true;
+  }
+
+
+  return false;
 }
 
 List<String> getTypeOfBarcodeTspl(String barcodesToPrint) {

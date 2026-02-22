@@ -649,7 +649,7 @@ packages:
     source: hosted
     version: "1.0.2"
   image:
-    dependency: "direct overridden"
+    dependency: "direct main"
     description:
       name: image
       sha256: "492bd52f6c4fbb6ee41f781ff27765ce5f627910e1e0cbecfa3d9add5562604c"
@@ -840,6 +840,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "7.1.2"
+  mofilo_barcode_verifier:
+    dependency: "direct main"
+    description:
+      name: mofilo_barcode_verifier
+      sha256: "80adb2b988e3e7c8304ba7ec44b6be96b312c40aed6621e09b66a04f20fa7583"
+      url: "https://pub.dev"
+    source: hosted
+    version: "1.0.1"
   network_info_plus:
     dependency: transitive
     description:

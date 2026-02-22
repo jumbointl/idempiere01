@@ -63,6 +63,8 @@ dependencies:
   niim_blue_flutter: ^1.0.1
   flutter_blue_plus: ^1.36.8
   print_bluetooth_thermal: ^1.1.9
+  mofilo_barcode_verifier: ^1.0.1
+  image: any
 dependency_overrides:
   image: ^4.6.0
 dev_dependencies:

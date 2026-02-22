@@ -227,3 +227,49 @@ final findDefaultLocatorOfWarehouseByWarehouseNameProvider = FutureProvider.auto
   }
 
 });
+
+
+// ✅ Selección múltiple de locators (para modo readOnly)
+final selectedLocatorsProvider =
+StateNotifierProvider<SelectedLocatorsNotifier, Set<String>>(
+      (ref) => SelectedLocatorsNotifier(),
+);
+
+class SelectedLocatorsNotifier extends StateNotifier<Set<String>> {
+  SelectedLocatorsNotifier() : super(<String>{});
+
+  static String keyOf(dynamic locator) {
+    // esperamos IdempiereLocator, pero lo dejamos seguro
+    if (locator is IdempiereLocator) {
+      final id = locator.id?.toString() ?? '';
+      if (id.isNotEmpty) return 'id:$id';
+      final v = (locator.value ?? locator.identifier ?? '').toString().trim();
+      if (v.isNotEmpty) return 'v:$v';
+    }
+    return '';
+  }
+
+  void toggle(dynamic locator) {
+    final k = keyOf(locator);
+    if (k.isEmpty) return;
+
+    final next = {...state};
+    if (next.contains(k)) {
+      next.remove(k);
+    } else {
+      next.add(k);
+    }
+    state = next;
+  }
+
+  void clear() => state = <String>{};
+
+  void selectAllFromList(List<dynamic> locators) {
+    final next = <String>{};
+    for (final it in locators) {
+      final k = keyOf(it);
+      if (k.isNotEmpty) next.add(k);
+    }
+    state = next;
+  }
+}

@@ -19,6 +19,7 @@ import '../../products/domain/idempiere/movement_and_lines.dart';
 import '../../products/presentation/providers/common_provider.dart';
 import '../../products/presentation/providers/product_provider_common.dart';
 import '../../shared/data/memory.dart';
+import '../printer_scan_notifier.dart';
 import 'PosTicket.dart';
 import 'bematech_escpos.dart';
 import 'pos_adjustment_selector_sheet.dart';
@@ -33,14 +34,16 @@ const int maxCharacterBarcodeOneRow = 17;
 /// - Usa selector de perfiles (GetStorage)
 /// - Aplica CP850 via ESC t 2 (más confiable en Bematech)
 /// - Ajusta ancho de imágenes con perfil (576 + adj)
-Future<void> printReceiptWithQrWithBematech(
+Future<void> printMovementReceiptWithQr(
     WidgetRef ref,
-    String ip,
-    int port,
     MovementAndLines movementAndLines,
     ) async {
+  final state = ref.read(printerScanNotifierProvider);
+  final port = int.tryParse(state.portController.text) ?? 9100;
+  final ip = state.ipController.text.trim();
   if (ip.isEmpty || port == 0) return;
   debugPrint('printReceiptWithQrWithBematech');
+
   ref.read(isDialogShowedProvider.notifier).state = true ;
   ref.read(enableScannerKeyboardProvider.notifier).state = false ;
   final actual = ref.read(actionScanProvider);

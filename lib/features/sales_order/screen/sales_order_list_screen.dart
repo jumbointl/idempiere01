@@ -17,6 +17,8 @@ import '../../shared/data/memory.dart';
 import '../../shared/data/messages.dart';
 import '../provider/priority_color.dart';
 import '../provider/sales_order_provider.dart';
+import '../provider/shipment_action_result.dart';
+import '../provider/shipment_create_provider.dart';
 
 class SalesOrderListScreen extends ConsumerStatefulWidget {
   const SalesOrderListScreen({super.key});
@@ -728,6 +730,7 @@ class _SalesOrderListScreenState
       builder: (ctx) {
         final actions = SalesOrderAction.values;
         final selectedActions = <SalesOrderAction>{};
+        final createShipment = ref.read(createShipmentProvider);
 
         return FractionallySizedBox(
           heightFactor: 0.9,
@@ -771,24 +774,39 @@ class _SalesOrderListScreenState
                             Text(Messages.AVAILABLE_ACTIONS),
                             const SizedBox(height: 8),
 
-                            ...actions.map(
-                                  (a) => CheckboxListTile(
-                                dense: true,
-                                contentPadding: EdgeInsets.zero,
-                                value: selectedActions.contains(a),
-                                title: Text(
-                                  actionLabel(a),
-                                  style: TextStyle(color: themeColorPrimary),
+
+                            ...actions.map((a) => Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                CheckboxListTile(
+                                  dense: true,
+                                  contentPadding: EdgeInsets.zero,
+                                  value: selectedActions.contains(a),
+                                  title: Text(
+                                    actionLabel(a),
+                                    style: TextStyle(color: themeColorPrimary),
+                                  ),
+                                  onChanged: (v) {
+                                    setState(() {
+                                      v == true ? selectedActions.add(a) : selectedActions.remove(a);
+                                    });
+                                  },
                                 ),
-                                onChanged: (v) {
-                                  setState(() {
-                                    v == true
-                                        ? selectedActions.add(a)
-                                        : selectedActions.remove(a);
-                                  });
-                                },
-                              ),
-                            ),
+
+                                // 👇 Resultado async debajo del checkbox
+                                Padding(
+                                  padding: const EdgeInsets.only(left: 48, right: 8, bottom: 8),
+                                  child: Consumer(
+                                    builder: (context, ref2, _) {
+                                      final async = _watchActionResult(ref2, a);
+                                      return _actionResultWidget(async);
+                                    },
+                                  ),
+                                ),
+                              ],
+                            )),
+
+
                           ],
                         ),
                       ),
@@ -817,7 +835,7 @@ class _SalesOrderListScreenState
                               foregroundColor: Colors.white,
                             ),
                             onPressed: () {
-                              Navigator.pop(ctx);
+                              //Navigator.pop(ctx);
 
                               doSalesOrderActions(ref, selectedOrders, selectedActions);
 
@@ -832,6 +850,112 @@ class _SalesOrderListScreenState
               );
             },
           ),
+        );
+      },
+    );
+  }
+
+  AsyncValue<ResponseAsyncValue?> _watchActionResult(WidgetRef ref, SalesOrderAction action) {
+    switch (action) {
+      case SalesOrderAction.createShipping:
+        return ref.watch(createShipmentProvider);
+    }
+  }
+
+  Widget _actionResultWidget(AsyncValue<ResponseAsyncValue?> async) {
+    return async.when(
+      loading: () => const LinearProgressIndicator(minHeight: 2),
+      error: (e, _) => Text(
+        '❌ Error: $e',
+        style: const TextStyle(fontSize: 12, color: Colors.red),
+      ),
+      data: (res) {
+        if (res == null || res.isInitiated != true) {
+          return const SizedBox.shrink();
+        }
+
+        final overallOk = res.success == true;
+        final headerMsg = (res.message ?? '').trim();
+
+        // 👇 data esperado: List<ShipmentActionItemResult>
+        final data = res.data;
+        final items = (data is List)
+            ? data.whereType<ShipmentActionItemResult>().toList()
+            : <ShipmentActionItemResult>[];
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Header global
+            Row(
+              children: [
+                Icon(
+                  overallOk ? Icons.check_circle : Icons.error,
+                  size: 16,
+                  color: overallOk ? Colors.green : Colors.red,
+                ),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(
+                    headerMsg.isEmpty
+                        ? (overallOk ? 'OK' : 'Falló')
+                        : headerMsg,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: overallOk ? Colors.green : Colors.red,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+
+            if (items.isEmpty) ...[
+              const SizedBox(height: 4),
+              Text(
+                '(Sin detalle)',
+                style: const TextStyle(fontSize: 12, color: Colors.black54),
+              ),
+            ] else ...[
+              const SizedBox(height: 6),
+              // Detalle por orden
+              ...items.map((r) {
+                final ok = r.success;
+                final txt = ok ? (r.summary ?? 'OK') : (r.error ?? 'Error');
+
+                return Padding(
+                  padding: const EdgeInsets.only(top: 4),
+                  child: Row(
+                    children: [
+                      Icon(
+                        ok ? Icons.check : Icons.close,
+                        size: 14,
+                        color: ok ? Colors.green : Colors.red,
+                      ),
+                      const SizedBox(width: 6),
+                      SizedBox(
+                        width: 90,
+                        child: Text(
+                          r.orderId ?? '',
+                          style: const TextStyle(fontSize: 11, color: Colors.black54),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Text(
+                          txt,
+                          style: TextStyle(fontSize: 12, color: ok ? Colors.green : Colors.red),
+                          maxLines: 3,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }),
+            ],
+          ],
         );
       },
     );
@@ -944,11 +1068,11 @@ class _SalesOrderListScreenState
   // TODO: implement mainNotifier
   CodeAndFireActionNotifier get mainNotifier => throw UnimplementedError();
 
-  void doSalesOrderActions(
+  Future<void> doSalesOrderActions(
       WidgetRef ref,
       List<SalesOrderAndLines> selectedOrders,
       Set<SalesOrderAction> selectedActions,
-      ) {
+      ) async {
     if (selectedOrders.isEmpty) {
       _showSnack(ref, 'No hay órdenes seleccionadas.');
       return;
@@ -957,40 +1081,19 @@ class _SalesOrderListScreenState
       _showSnack(ref, 'No seleccionaste ninguna acción.');
       return;
     }
-
-    // Execute actions in a deterministic order (enum order)
     final actions = SalesOrderAction.values.where(selectedActions.contains).toList();
-
-    final logs = <String>[];
-    for (final order in selectedOrders) {
-      for (final action in actions) {
-        // Dispatch each action to its corresponding handler
-        switch (action) {
-          case SalesOrderAction.createShipping:
-            logs.addAll(_createShipping(ref, order));
-            break;
-          /*case SalesOrderAction.createShippingConfirm:
-            logs.addAll(_createShippingConfirm(ref, order));
-            break;
-          case SalesOrderAction.createPickConfirm:
-            logs.addAll(_createPickConfirm(ref, order));
-            break;
-          case SalesOrderAction.completeShipment:
-            logs.addAll(_completeShipment(ref, order));
-            break;
-          case SalesOrderAction.cancelOrder:
-            logs.addAll(_cancelOrder(ref, order));
-            break;*/
-        }
+    for (final action in actions) {
+      switch (action) {
+        case SalesOrderAction.createShipping:
+          _createShipping(ref, selectedOrders);
+          break;
       }
     }
 
-    // Show a single feedback message (avoids dialog spam)
-    _showSnack(ref, logs.join('\n'));
   }
 
   /// Shows a SnackBar with the given message.
-  void _showSnack(WidgetRef ref, String message) {
+  void _showSnack(WidgetRef ref, String message) async {
     final ctx = ref.context;
     if (!ctx.mounted) return;
 
@@ -1003,17 +1106,13 @@ class _SalesOrderListScreenState
     );
   }
 
-  String _orderLabel(SalesOrderAndLines o) {
-    final doc = o.documentNo ?? '—';
-    final id = o.id?.toString() ?? '—';
-    return 'Doc:$doc / ID:$id';
-  }
 
   /// ===== Action handlers (simulated for now) =====
 
-  List<String> _createShipping(WidgetRef ref, SalesOrderAndLines order) {
-    // Simulate: create shipment document for this order
-    return ['Acción realizada: createShipping (${_orderLabel(order)})'];
+  void _createShipping(WidgetRef ref, List<SalesOrderAndLines> orders) {
+    ref.read(ordersForCreateShipmentProvider.notifier).state = orders;
+    ref.read(fireCreateShipmentProvider.notifier).state++;
+
   }
 
 }

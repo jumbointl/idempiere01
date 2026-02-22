@@ -321,6 +321,10 @@ void showGenerateJobsSheet({
           final bool showPickConfirm = recordsSoTrxTrue > 0;
           final bool showShipConfirm = recordsSoTrxTrue > 0;
           final bool showReceiveConfirm = recordsSoTrxFalse > 0;
+          debugPrint('showPickConfirm: $showPickConfirm');
+          debugPrint('showShipConfirm: $showShipConfirm');
+          debugPrint('showReceiveConfirm: $showReceiveConfirm');
+
 
           return FractionallySizedBox(
             heightFactor: 0.9,
@@ -358,7 +362,7 @@ void showGenerateJobsSheet({
                     CheckboxListTile(
                       value: selectedJobs.contains(mInOutJobs.createPickConfirm),
                       title: Text(
-                        '${mInOutJobs.createPickConfirm.label} ($recordsSoTrxTrue)',
+                        '${mInOutJobs.createPickConfirm.label} P ($recordsSoTrxTrue)',
                       ),
                       onChanged: (v) {
                         final set = {...ref.read(selectedMInOutJobsProvider)};
@@ -373,7 +377,7 @@ void showGenerateJobsSheet({
                     CheckboxListTile(
                       value: selectedJobs.contains(mInOutJobs.createShipConfirm),
                       title: Text(
-                        '${mInOutJobs.createShipConfirm.label} ($recordsSoTrxTrue)',
+                        '${mInOutJobs.createShipConfirm.label} S ($recordsSoTrxTrue)',
                       ),
                       onChanged: (v) {
                         final set = {...ref.read(selectedMInOutJobsProvider)};
@@ -388,7 +392,7 @@ void showGenerateJobsSheet({
                     CheckboxListTile(
                       value: selectedJobs.contains(mInOutJobs.createReceiveConfirm),
                       title: Text(
-                        '${mInOutJobs.createReceiveConfirm.label} ($recordsSoTrxFalse)',
+                        '${mInOutJobs.createReceiveConfirm.label} R($recordsSoTrxFalse)',
                       ),
                       onChanged: (v) {
                         final set = {...ref.read(selectedMInOutJobsProvider)};

@@ -1,5 +1,6 @@
 
 import 'package:dio/dio.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
@@ -11,7 +12,7 @@ import 'package:monalisa_app_001/features/shared/data/messages.dart';
 import '../products/presentation/providers/common_provider.dart';
 import 'lite_ipp_print.dart';
 
-Future<void> sendPdfToNode(WidgetRef ref, Uint8List pdfBytes, String cupsServiceUrl,String printerName) async {
+Future<bool> sendPdfToNode(WidgetRef ref, Uint8List pdfBytes, String cupsServiceUrl,String printerName) async {
 
   print('Enviando archivo PDF a $cupsServiceUrl');
 
@@ -32,26 +33,20 @@ Future<void> sendPdfToNode(WidgetRef ref, Uint8List pdfBytes, String cupsService
   );
 
   try {
-    print('Enviando archivo PDF a $cupsServiceUrl');
+    debugPrint('Enviando archivo PDF a $cupsServiceUrl');
     var response = await request.send().timeout(const Duration(seconds: 60));
     if (response.statusCode == 200) {
-      if(ref.context.mounted) {
-        showSuccessMessage(ref.context, ref, '${Messages.PRINT_SUCCESS} $cupsServiceUrl $printerName');
-      }
-      print('Archivo PDF enviado exitosamente al servicio de impresión.');
+      debugPrint('Archivo PDF enviado exitosamente al servicio de impresión.');
+      return true;
     } else {
-      if(ref.context.mounted) {
-        showErrorMessage(ref.context, ref, '${Messages.PRINT_FAILED} $cupsServiceUrl $printerName');
-      }
-      print('Error al enviar el archivo: ${response.statusCode}');
+
+      debugPrint('Error al enviar el archivo: ${response.statusCode}');
+      return false;
     }
   } catch (e) {
-    if(ref.context.mounted) {
-      showErrorMessage(ref.context, ref, '${Messages.NETWORK_ERROR} $cupsServiceUrl $printerName');
-    }
-    print('Error de red: $e');
-  } finally {
-    ref.read(isPrintingProvider.notifier).state = false;
+
+    debugPrint('Error de red: $e');
+    return false;
   }
 }
 Future<Uint8List> get imageLogo async {
@@ -114,7 +109,7 @@ Future<void> sendPdfToNodeDio(WidgetRef ref, Uint8List pdfBytes, String cupsServ
   }
 }
 
-Future<void> printPdfToCUPSDirect(WidgetRef ref, Uint8List pdfBytes, String cupsServiceUrl
+Future<bool> printPdfToCUPSDirect(WidgetRef ref, Uint8List pdfBytes, String cupsServiceUrl
     ,String documentNo,int orientation) async {
   //final cups = Uri.parse('http://192.168.188.108:631/printers/HL1200');
   print('cupsServiceUrl: $cupsServiceUrl');
@@ -122,33 +117,31 @@ Future<void> printPdfToCUPSDirect(WidgetRef ref, Uint8List pdfBytes, String cups
   try {
 
 
-  await LiteIppClient.printPdf(
-    cupsUri: cups,
-    pdfData: Uint8List.fromList(pdfBytes),
-    // username: 'cupsuser',
-    // password: 'cupspass',
-    options: LiteIppPrintOptions(
-      jobName: documentNo,
-      media: 'iso_a4_210x297mm',
-      sides: 'one-sided',
-      printQuality: 5,           // High
-      orientationRequested: orientation,   // landscape
-      fitToPage: true,
-    ),
-    // 測試 HTTPS 自簽時才打開：
-    // allowSelfSigned: true,
-  );
-  if (ref.context.mounted) {
-    showSuccessMessage(ref.context, ref, '${Messages.PRINT_SUCCESS} $cupsServiceUrl');
-  }
-  } catch (e) {
-    print('Error al imprimir directamente: $e');
-    if (ref.context.mounted) {
-      showErrorMessage(ref.context, ref, 'Error de red : ${e.toString()}');
-    }
+    await LiteIppClient.printPdf(
+      cupsUri: cups,
+      pdfData: Uint8List.fromList(pdfBytes),
+      // username: 'cupsuser',
+      // password: 'cupspass',
+      options: LiteIppPrintOptions(
+        jobName: documentNo,
+        media: 'iso_a4_210x297mm',
+        sides: 'one-sided',
+        printQuality: 5,           // High
+        orientationRequested: orientation,   // landscape
+        fitToPage: true,
+      ),
+      // 測試 HTTPS 自簽時才打開：
+      // allowSelfSigned: true,
+    );
 
-  } finally {
     ref.read(isPrintingProvider.notifier).state = false;
+    debugPrint('end cupsServiceUrl');
+    return true;
+  } catch (e) {
+    debugPrint('Error al imprimir directamente: $e');
+
+    return false;
+
   }
 
 }

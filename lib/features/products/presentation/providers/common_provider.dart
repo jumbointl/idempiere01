@@ -10,6 +10,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../m_inout/presentation/providers/m_in_out_providers.dart';
 import '../../../printer/models/mo_printer.dart';
+import '../../../printer/models/printer_select_models.dart';
 import '../../../shared/data/memory.dart';
 import '../../../shared/data/messages.dart';
 import '../../domain/idempiere/idempiere_locator.dart';
@@ -66,6 +67,10 @@ final directPrintWithLastPrinterProvider = StateProvider<bool>((ref) {
 });
 
 final isPrintingProvider = StateProvider.autoDispose<bool>((ref) {
+  return false;
+});
+
+final isCupsPrintingProvider = StateProvider.autoDispose<bool>((ref) {
   return false;
 });
 
@@ -294,3 +299,5 @@ StateProvider<PrinterInputMode>((ref) => PrinterInputMode.scan);
 
 final locatorScreenInputModeProvider =
 StateProvider<PrinterInputMode>((ref) => PrinterInputMode.manual);
+
+final selectedPrinterConfigProvider = StateProvider<PrinterConnConfig?>((ref) => null);

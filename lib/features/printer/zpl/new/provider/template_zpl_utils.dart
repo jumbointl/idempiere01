@@ -1,7 +1,9 @@
+import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:monalisa_app_001/features/shared/data/messages.dart';
 import 'package:path/path.dart' as p;
+import '../../../../products/domain/idempiere/idempiere_locator.dart';
 import '../../../../products/domain/idempiere/idempiere_movement_line.dart';
 import '../../../../products/domain/idempiere/movement_and_lines.dart';
 import '../../../../products/domain/models/zpl_printing_template.dart';
@@ -21,6 +23,7 @@ const String ADDRESS__ = '__ADDRESS';
 const String WAREHOUSE_FROM__ = '__WAREHOUSE_FROM';
 const String WAREHOUSE_TO__ = '__WAREHOUSE_TO';
 const String GENERATED_BY__ = '__GENERATED_BY';
+const String LOCATOR_VALUE__ = '__LOCATOR_VALUE';
 
 String CATEGORY_SEQUENCE__(int i) => '__CATEGORY_SEQUENCE$i';
 String CATEGORY_NAME__(int i)     => '__CATEGORY_NAME$i';
@@ -96,36 +99,47 @@ String replaceAllTokens(String template, Map<String, String> tokens) {
 /// ========= Socket =========
 /// Sends ZPL to printer by TCP socket.
 /// Returns true on success, throws Exception on error.
+
 Future<bool> sendZplBySocket({
   required String ip,
   required int port,
   required String zpl,
+  Duration timeout = const Duration(seconds: 5),
 }) async {
   Socket? socket;
-
   try {
-    // English comment: "Connect with timeout"
-    socket = await Socket.connect(ip, port, timeout: const Duration(seconds: 5));
+    socket = await Socket.connect(ip, port, timeout: timeout);
+    // ✅ CRLF por línea + CRLF final
+    final payload = '${zpl.trim().replaceAll('\n', '\r\n')}\r\n\r\n';
+    debugPrint('zpl send:');
+    debugPrint(payload);
+    debugPrint('zpl send: to $ip $port');
 
-    // English comment: "Write and flush ZPL"
-    socket.add(zpl.codeUnits);
+    // Zebra suele ir bien con latin1 (ASCII extendido); UTF-8 a veces mete bytes raros
+    socket.add(latin1.encode(payload));
+
     await socket.flush();
-
-    // English comment: "Close socket gracefully"
+    // ✅ importante: cerrar para que el printer “suelte” el job
     await socket.close();
+
     return true;
   } catch (e) {
-    try {
-      socket?.destroy();
-    } catch (_) {}
-
-    throw Exception('Error al enviar ZPL a $ip:$port -> $e');
+    try { socket?.destroy(); } catch (_) {}
+    return false;
   }
 }
 
+Map<String, String> buildLocatorCommonTokens({
+  required IdempiereLocator locator,
+}) {
+  String value = locator.value ?? locator.identifier ?? '';
+  return {
 
+    LOCATOR_VALUE__ : zplText(value),
+  };
+}
 // ========= Tokens comunes =========
-Map<String, String> buildCommonTokens({
+Map<String, String> buildMovementAndLinesCommonTokens({
   required MovementAndLines movementAndLines,
   required String totalQty,
   required String pageInfo,
@@ -188,7 +202,7 @@ Map<String, String> buildByMovementLineProductTokensPage({
 }
 
 // ========= Preview filled 1ra página =========
-String buildFilledPreviewFirstPage({
+String buildFilledMovementAndLinesPreviewFirstPage({
   required ZplTemplate template,
   required MovementAndLines movementAndLines,
 }) {
@@ -203,7 +217,7 @@ String buildFilledPreviewFirstPage({
       refTxt.contains('__MOVEMENT_LINE') || refTxt.contains('__PRODUCT_');
 
   final tokens = <String, String>{}
-    ..addAll(buildCommonTokens(
+    ..addAll(buildMovementAndLinesCommonTokens(
       movementAndLines: movementAndLines,
       totalQty: totalQty,
       pageInfo: pageInfo,
@@ -244,7 +258,7 @@ Future<bool?> printReferenceBySocket({
   if (template.mode == ZplTemplateMode.movement) {
     // ✅ Prioridad: PRODUCT > CATEGORY
 
-    String result = buildFilledPreviewAllPages(
+    String result = buildFilledMovementPreviewAllPages(
       hidePageLine: true,
       template: template,
       movementAndLines: movementAndLines,
@@ -331,7 +345,7 @@ List<String> validateMissingTokens({
   final missing = used.difference(available).toList()..sort();
   return missing;
 }
-String buildFilledPreviewAllPages({
+String buildFilledMovementPreviewAllPages({
   bool? hidePageLine,
   required ZplTemplate template,
   required MovementAndLines movementAndLines,
@@ -356,7 +370,7 @@ String buildFilledPreviewAllPages({
 
       if (pages.isEmpty) {
         final tokens = <String, String>{}
-          ..addAll(buildCommonTokens(
+          ..addAll(buildMovementAndLinesCommonTokens(
             movementAndLines: movementAndLines,
             totalQty: totalQty,
             pageInfo: '1/1',
@@ -371,7 +385,7 @@ String buildFilledPreviewAllPages({
       for (int p = 0; p < pages.length; p++) {
         final pageInfo = '${p + 1}/$totalPages';
         final tokens = <String, String>{}
-          ..addAll(buildCommonTokens(
+          ..addAll(buildMovementAndLinesCommonTokens(
             movementAndLines: movementAndLines,
             totalQty: totalQty,
             pageInfo: pageInfo,
@@ -396,7 +410,7 @@ String buildFilledPreviewAllPages({
 
       if (pages.isEmpty) {
         final tokens = <String, String>{}
-          ..addAll(buildCommonTokens(
+          ..addAll(buildMovementAndLinesCommonTokens(
             movementAndLines: movementAndLines,
             totalQty: totalQty,
             pageInfo: '1/1',
@@ -411,7 +425,7 @@ String buildFilledPreviewAllPages({
       for (int p = 0; p < pages.length; p++) {
         final pageInfo = '${p + 1}/$totalPages';
         final tokens = <String, String>{}
-          ..addAll(buildCommonTokens(
+          ..addAll(buildMovementAndLinesCommonTokens(
             movementAndLines: movementAndLines,
             totalQty: totalQty,
             pageInfo: pageInfo,
@@ -431,7 +445,7 @@ String buildFilledPreviewAllPages({
 
     // ✅ movement pero sin tokens reconocibles: solo common tokens
     final tokens = <String, String>{}
-      ..addAll(buildCommonTokens(
+      ..addAll(buildMovementAndLinesCommonTokens(
         movementAndLines: movementAndLines,
         totalQty: totalQty,
         pageInfo: '1/1',
@@ -444,7 +458,7 @@ String buildFilledPreviewAllPages({
 
   // Otros modos futuros (shipping, etc.)
   final tokens = <String, String>{}
-    ..addAll(buildCommonTokens(
+    ..addAll(buildMovementAndLinesCommonTokens(
       movementAndLines: movementAndLines,
       totalQty: totalQty,
       pageInfo: '1/1',
@@ -453,6 +467,25 @@ String buildFilledPreviewAllPages({
   if(!noDisplayPageLine)out.writeln('----- PAGE 1/1 -----');
   out.writeln(replaceAllTokens(refTxt, tokens));
   return out.toString().trim();
+}
+
+String buildFilledLocatorPreviewAllPages({
+  bool? hidePageLine,
+  required ZplTemplate template,
+  required IdempiereLocator locator,
+}) {
+  final refTxt = template.zplReferenceTxt;
+
+  final out = StringBuffer();
+  final tokens = <String, String>{}
+    ..addAll(buildLocatorCommonTokens(
+      locator: locator,
+    ));
+  out.writeln(replaceAllTokens(refTxt, tokens));
+  return out.toString().trim();
+
+
+
 }
 
 /// Try to fill DF content from locally downloaded templates using the Reference (^XFE/^DF).

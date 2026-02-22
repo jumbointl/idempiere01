@@ -57,7 +57,6 @@ class NiimbotPrinterHelper {
     final repaintKey = GlobalKey();
 
     final overlay = Overlay.of(context, rootOverlay: true);
-    if (overlay == null) throw Exception('No Overlay found');
 
     late final OverlayEntry entry;
 
@@ -145,9 +144,6 @@ class NiimbotPrinterHelper {
     final repaintKey = GlobalKey();
 
     final overlay = Overlay.of(context, rootOverlay: true);
-    if (overlay == null) {
-      throw Exception('No Overlay found');
-    }
 
     late final OverlayEntry entry;
 

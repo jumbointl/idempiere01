@@ -79,7 +79,7 @@ class MInOutDataSourceImpl implements MInOutDataSource {
       int mInOutId, WidgetRef ref) async {
     await _dioInitialized;
     final mInOutState = ref.read(mInOutProvider);
-
+    debugPrint('getMInOutConfirmList start');
     final String confirmType =
         mInOutState.mInOutType == MInOutType.receiptConfirm ||
                 mInOutState.mInOutType == MInOutType.shipmentConfirm
@@ -95,7 +95,7 @@ class MInOutDataSourceImpl implements MInOutDataSource {
           "/api/v1/models/m_inoutConfirm?\$filter=M_InOut_ID%20eq%20$mInOutId$confirmType";
       final response = await dio.get(url);
       debugPrint('url $url');
-
+      debugPrint('getMInOutConfirmList response ${response.statusCode}');
       if (response.statusCode == 200) {
         final responseApi = ResponseApi<MInOutConfirm>.fromJson(
             response.data, MInOutConfirm.fromJson);
@@ -103,18 +103,25 @@ class MInOutDataSourceImpl implements MInOutDataSource {
         if (responseApi.records != null && responseApi.records!.isNotEmpty) {
           final mInOutConfirmList = responseApi.records!;
           mInOutState.copyWith(mInOutConfirmList: mInOutConfirmList);
+          debugPrint('getMInOutConfirmList return');
           return mInOutConfirmList;
+
         } else {
+          debugPrint('getMInOutConfirmList return empty');
           return [];
         }
       } else {
+        debugPrint(
+            'Error al obtener la lista de ${mInOutState.title}: ${response.statusCode}');
         throw Exception(
             'Error al obtener la lista de ${mInOutState.title}: ${response.statusCode}');
       }
     } on DioException catch (e) {
+      debugPrint('Error al obtener la lista de ${mInOutState.title}: $e');
       final authDataNotifier = ref.read(authProvider.notifier);
       throw CustomErrorDioException(e, authDataNotifier);
     } catch (e) {
+      debugPrint('Error al obtener la lista de ${mInOutState.title}: $e');
       throw Exception(e.toString());
     }
   }

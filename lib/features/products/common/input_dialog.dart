@@ -991,7 +991,7 @@ Widget numberButtonsNoProcessor(
     {required BuildContext context,required WidgetRef ref,
       required TextEditingController textController,
       bool? numberOnly =false }) {
-  final double keyboardWidth = MediaQuery.of(context).size.width * 0.55;
+  final double keyboardWidth = MediaQuery.of(context).size.width * 0.65;
   final double buttonWidth = keyboardWidth/5.5;
 
 
@@ -1127,7 +1127,7 @@ Widget numberButtonsNoProcessor(
               // CLEAR (ocupa más ancho)
               SizedBox(
                 height: buttonWidth,
-                width: buttonWidth*2,
+                width: buttonWidth*1.8,
                 child: TextButton(
                   onPressed: () =>
                       addQuantityText(context, ref, textController, -1),
@@ -1154,173 +1154,11 @@ Widget numberButtonsNoProcessor(
     ),
   );
 }
-/*Future<void> getDoubleDialog({
-  required WidgetRef ref,
-  required double quantity,
-  required StateProvider<double> targetProvider,   // 👈 NUEVO
-}) async {
-  final TextEditingController quantityController = TextEditingController();
-  final double qtyOnHand = quantity;
-  BuildContext context = ref.context;
 
-  quantityController.text = quantity.toStringAsFixed(0);
-  final int actualAction = ref.read(actionScanProvider);
-  ref.read(actionScanProvider.notifier).state = Memory.ACTION_NO_SCAN_ACTION;
-  ref.read(isDialogShowedProvider.notifier).state = true;
-  final useScreenKeyBoard = ref.watch(useScreenKeyboardProvider);
-
-
-  await showModalBottomSheet(
-    isDismissible: false,
-    enableDrag: false,
-    context: context,
-    isScrollControlled: true,
-    backgroundColor: Colors.white,
-    shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-    ),
-    builder: (ctx) {
-      return FractionallySizedBox(
-        heightFactor: 0.9,
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: SingleChildScrollView(
-            child: Column(
-              spacing: 5,
-              children: [
-                Text(
-                  Messages.QUANTITY_TO_MOVE,
-                  style: TextStyle(
-                    fontSize: fontSizeLarge,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 10.0),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: TextField(
-                          controller: quantityController,
-                          textAlign: TextAlign.end,
-                          keyboardType: TextInputType.number,
-                          style: TextStyle(
-                            fontSize: fontSizeLarge,
-                            color: Colors.purple,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                      SizedBox(
-                        width: 60,
-                        child: IconButton(
-                          onPressed: () {
-                            final oldValue =
-                            ref.read(useScreenKeyboardProvider);
-                            ref
-                                .read(useScreenKeyboardProvider.notifier)
-                                .state = !oldValue;
-
-
-                          },
-
-                          icon: Icon(
-                            useScreenKeyBoard
-                                ? Symbols.keyboard_off_rounded
-                                : Symbols.keyboard_rounded,
-                            color: Colors.purple,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-
-                numberButtonsNoProcessor(
-                  ref: ref,
-                  textController: quantityController,
-                  context: ctx,
-                  numberOnly: true,
-                ),
-
-
-                Row(
-                  children: [
-                    Expanded(
-                      child: OutlinedButton(
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: Colors.red,
-                        ),
-                        onPressed: () {
-                          ref.read(targetProvider.notifier).state = 0;
-                          ref.read(actionScanProvider.notifier).state = actualAction;
-                          ref.read(isDialogShowedProvider.notifier).state = false;
-                          Navigator.of(ctx).pop();
-                        },
-                        child: Text(Messages.CANCEL),
-                      ),
-                    ),
-                    SizedBox(width: 12),
-                    Expanded(
-                      child: ElevatedButton(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.green,
-                          foregroundColor: Colors.white,
-                        ),
-                        onPressed: () {
-                          final txt = quantityController.text.trim();
-
-                          if (txt.isEmpty) {
-                            showErrorMessage(ctx, ref,
-                                '${Messages.ERROR_QUANTITY} ${Messages.EMPTY}');
-                            return;
-                          }
-
-                          final double? aux = double.tryParse(txt);
-
-                          if (aux != null && aux > 0) {
-                            if (aux <= qtyOnHand) {
-                              ref.read(targetProvider.notifier).state = aux;
-                              ref.read(actionScanProvider.notifier).state = actualAction;
-                              ref.read(isDialogShowedProvider.notifier).state = false;
-                              Navigator.of(ctx).pop();
-                            } else {
-                              final msg =
-                                  '${Messages.ERROR_QUANTITY} ${Memory.numberFormatter0Digit.format(aux)} > ${Memory.numberFormatter0Digit.format(qtyOnHand)}';
-
-                              showErrorMessage(ctx, ref, msg);
-
-                              quantityController.text =
-                                  Memory.numberFormatter0Digit.format(qtyOnHand);
-                              return;
-                            }
-                          } else {
-                            showErrorMessage(
-                                ctx,
-                                ref,
-                                '${Messages.ERROR_QUANTITY} '
-                                    '${aux == null ? Messages.EMPTY : txt}');
-                            return;
-                          }
-                        },
-                        child: Text(Messages.OK),
-                      ),
-                    ),
-                  ],
-                ),
-
-                //SizedBox(height: Memory.BOTTOM_BAR_HEIGHT),
-              ],
-            ),
-          ),
-        ),
-      );
-    },
-  );
-}*/
 
 Future<void> getDoubleDialog({
+  double? maxValue,
+  double? minValue,
   required WidgetRef ref,
   required double quantity,
   required StateProvider<double> targetProvider,
@@ -1401,11 +1239,30 @@ Future<void> getDoubleDialog({
                                     // English: same logic as OK button
                                     final txt = quantityController.text.trim();
                                     final aux = double.tryParse(txt);
-                                    if (aux != null && aux > 0 && aux <= qtyOnHand) {
-                                      ref2.read(targetProvider.notifier).state = aux;
+
+                                    bool success = true ;
+                                    if(aux==null){
+                                      success = false;
+                                    } else {
+                                      if(maxValue!=null){
+                                        if (aux > maxValue) {
+                                          success = false ;
+                                        }
+                                      }
+                                      if(minValue!=null){
+                                        if (aux <minValue) {
+                                          success = false ;
+                                        }
+                                      }
+                                    }
+                                    if (success) {
+                                      ref2.read(targetProvider.notifier).state = aux!;
                                       ref2.read(actionScanProvider.notifier).state = actualAction;
                                       ref2.read(isDialogShowedProvider.notifier).state = false;
                                       Navigator.of(ctx).pop();
+                                    } else {
+                                      String message = '${Messages.ERROR} $aux';
+                                      showErrorCenterToast(context, message);
                                     }
                                   },
                                 ),
@@ -1463,7 +1320,6 @@ Future<void> getDoubleDialog({
                                 onPressed: () {
                                   isClosing = true;
                                   FocusScope.of(ctx).unfocus();
-                                  ref2.read(targetProvider.notifier).state = 0;
                                   ref2.read(actionScanProvider.notifier).state =
                                       actualAction;
                                   ref2
@@ -1493,36 +1349,52 @@ Future<void> getDoubleDialog({
                                   }
 
                                   final aux = double.tryParse(txt);
-                                  if (aux != null && aux > 0) {
-                                    if (aux <= qtyOnHand) {
-                                      isClosing = true;
-                                      FocusScope.of(ctx).unfocus();
-                                      ref2
-                                          .read(targetProvider.notifier)
-                                          .state = aux;
-                                      ref2
-                                          .read(actionScanProvider.notifier)
-                                          .state = actualAction;
-                                      ref2
-                                          .read(isDialogShowedProvider.notifier)
-                                          .state = false;
-                                      Navigator.of(ctx).pop();
-                                    } else {
-                                      final msg =
-                                          '${Messages.ERROR_QUANTITY} ${Memory.numberFormatter0Digit.format(aux)} > ${Memory.numberFormatter0Digit.format(qtyOnHand)}';
-                                      showErrorMessage(ctx, ref2, msg);
-                                      quantityController.text =
-                                          Memory.numberFormatter0Digit
-                                              .format(qtyOnHand);
-                                    }
-                                  } else {
+                                  bool success = true ;
+                                  if(aux==null){
                                     showErrorMessage(
                                       ctx,
                                       ref2,
                                       '${Messages.ERROR_QUANTITY} '
                                           '${aux == null ? Messages.EMPTY : txt}',
                                     );
+                                    success = false;
+                                    return;
+                                  } else {
+                                    if(maxValue!=null){
+                                      if (aux > maxValue) {
+                                        success = false ;
+                                      }
+                                    }
+                                    if(minValue!=null){
+                                      if (aux <minValue) {
+                                        success = false ;
+                                      }
+                                    }
                                   }
+                                  if (success) {
+                                    isClosing = true;
+                                    FocusScope.of(ctx).unfocus();
+                                    ref2
+                                        .read(targetProvider.notifier)
+                                        .state = aux;
+                                    ref2
+                                        .read(actionScanProvider.notifier)
+                                        .state = actualAction;
+                                    ref2
+                                        .read(isDialogShowedProvider.notifier)
+                                        .state = false;
+                                    Navigator.of(ctx).pop();
+                                  } else {
+
+                                    final msg =
+                                        '${Messages.ERROR_QUANTITY} ${Memory.numberFormatter0Digit.format(aux)} >'
+                                        ' ${Memory.numberFormatter0Digit.format(maxValue)} \no < ${Memory.numberFormatter0Digit.format(minValue)}';
+                                    showErrorMessage(ctx, ref2, msg);
+                                    quantityController.text =
+                                        Memory.numberFormatter0Digit
+                                            .format(qtyOnHand);
+                                  }
+
                                 },
                                 child: Text(Messages.OK),
                               ),
@@ -1531,6 +1403,272 @@ Future<void> getDoubleDialog({
                         ),
                       ],
                     ),
+                  ),
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  } finally {
+    await Future.delayed(const Duration(milliseconds: 500));
+    focusNodeQty.dispose();
+    quantityController.dispose();
+  }
+}
+Future<void> getIntDialog({
+  required WidgetRef ref,
+  int? maxValue,
+  int? minValue,
+  bool? useScreenKeyboardOnly,
+  required int quantity,
+  required StateProvider<int> targetProvider,
+}) async {
+  final quantityController = TextEditingController();
+  final focusNodeQty = FocusNode();
+
+  final int qtyOnHand = quantity;
+  final context = ref.context;
+
+  quantityController.text = quantity.toStringAsFixed(0);
+
+  final int actualAction = ref.read(actionScanProvider);
+  ref.read(actionScanProvider.notifier).state = Memory.ACTION_NO_SCAN_ACTION;
+  ref.read(isDialogShowedProvider.notifier).state = true;
+  if(useScreenKeyboardOnly==true){
+    ref.read(useScreenKeyboardProvider.notifier).state = true;
+  }
+
+  bool focusRequested = false;
+  bool isClosing = false;
+  try {
+    await showModalBottomSheet(
+      isDismissible: false,
+      enableDrag: false,
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (ctx) {
+        // ✅ Consumer para que ref2.watch reactive el UI del bottomsheet
+        return Consumer(
+          builder: (context, ref2, _) {
+            late final bool useScreenKeyBoard;
+            if(useScreenKeyboardOnly==true){
+              useScreenKeyBoard = ref2.read(useScreenKeyboardProvider);
+            } else {
+              useScreenKeyBoard = ref2.watch(useScreenKeyboardProvider);
+            }
+
+            // ✅ Pedir foco solo cuando se usa teclado del sistema
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (isClosing) return;
+              if (!ctx.mounted) return;
+              if (!focusNodeQty.canRequestFocus) return;
+              if (!focusNodeQty.context!.mounted ?? true) return;
+              if (!useScreenKeyBoard &&
+                  !focusRequested &&
+                  focusNodeQty.canRequestFocus) {
+                focusNodeQty.requestFocus();
+                focusRequested = true;
+              }
+            });
+            final bottomInset = MediaQuery.of(ctx).viewInsets.bottom;
+            return FractionallySizedBox(
+              heightFactor: 0.9,
+              child: Padding(
+                padding: const EdgeInsets.all(10.0),
+                child: SingleChildScrollView(
+                  child: Column(
+                    spacing: 5,
+                    children: [
+                      Text(
+                        Messages.QUANTITY_TO_MOVE,
+                        style: TextStyle(
+                          fontSize: fontSizeLarge,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: TextField(
+                              enabled: useScreenKeyboardOnly==true ? false :true,
+
+                              focusNode: focusNodeQty,
+                              controller: quantityController,
+                              textAlign: TextAlign.end,
+                              keyboardType: TextInputType.number,
+                              textInputAction: TextInputAction.done,
+                              onSubmitted: (_) {
+                                // English: same logic as OK button
+                                final txt = quantityController.text.trim();
+                                final aux = int.tryParse(txt);
+                                bool success = true ;
+                                if(aux==null){
+                                  success = false;
+                                } else {
+                                  if(maxValue!=null){
+                                    if (aux > maxValue) {
+                                      success = false ;
+                                    }
+                                  }
+                                  if(minValue!=null){
+                                    if (aux <minValue) {
+                                      success = false ;
+                                    }
+                                  }
+                                }
+
+                                if (success) {
+                                  ref2.read(targetProvider.notifier).state = aux!;
+                                  ref2.read(actionScanProvider.notifier).state = actualAction;
+                                  ref2.read(isDialogShowedProvider.notifier).state = false;
+                                  Navigator.of(ctx).pop();
+                                } else {
+                                  String message = '${Messages.ERROR} $aux';
+                                  showErrorCenterToast(context, message);
+                                }
+                              },
+                            ),
+                          ),
+                          if(useScreenKeyboardOnly!=true)SizedBox(
+                            width: 60,
+                            child: IconButton(
+                              onPressed: () {
+                                final oldValue =
+                                ref2.read(useScreenKeyboardProvider);
+
+                                // Si se va a activar el teclado en pantalla,
+                                // quitamos foco para esconder el teclado del sistema.
+                                final newValue = !oldValue;
+                                ref2
+                                    .read(useScreenKeyboardProvider.notifier)
+                                    .state = newValue;
+
+                                if (newValue) {
+                                  FocusScope.of(ctx).unfocus();
+                                  focusRequested = false; // 👈 importante
+                                } else {
+                                  // volveremos a pedir foco en el postFrame
+                                  focusRequested = false;
+                                }
+                              },
+                              icon: Icon(
+                                useScreenKeyBoard
+                                    ? Symbols.keyboard_off_rounded
+                                    : Symbols.keyboard_rounded,
+                                color: Colors.purple,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+
+                      // ✅ Solo mostrar tu teclado “en pantalla” cuando está activo
+                      if (useScreenKeyBoard)
+                        numberButtonsNoProcessor(
+                          ref: ref2,
+                          textController: quantityController,
+                          context: ctx,
+                          numberOnly: true,
+                        ),
+
+                      Row(
+                        children: [
+                          Expanded(
+                            child: OutlinedButton(
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: Colors.red,
+                              ),
+                              onPressed: () {
+                                isClosing = true;
+                                FocusScope.of(ctx).unfocus();
+                                ref2.read(actionScanProvider.notifier).state =
+                                    actualAction;
+                                ref2
+                                    .read(isDialogShowedProvider.notifier)
+                                    .state = false;
+                                Navigator.of(ctx).pop();
+                              },
+                              child: Text(Messages.CANCEL),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: ElevatedButton(
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.green,
+                                foregroundColor: Colors.white,
+                              ),
+                              onPressed: () {
+                                final txt = quantityController.text.trim();
+                                if (txt.isEmpty) {
+                                  showErrorMessage(
+                                    ctx,
+                                    ref2,
+                                    '${Messages.ERROR_QUANTITY} ${Messages.EMPTY}',
+                                  );
+                                  return;
+                                }
+
+                                final aux = int.tryParse(txt);
+                                bool success = true ;
+                                if(aux==null){
+                                  showErrorMessage(
+                                    ctx,
+                                    ref2,
+                                    '${Messages.ERROR_QUANTITY} '
+                                        '${aux == null ? Messages.EMPTY : txt}',
+                                  );
+                                  success = false;
+                                  return;
+                                } else {
+                                  if(maxValue!=null){
+                                    if (aux > maxValue) {
+                                      success = false ;
+                                    }
+                                  }
+                                  if(minValue!=null){
+                                    if (aux <minValue) {
+                                      success = false ;
+                                    }
+                                  }
+                                }
+                                if (success) {
+                                  isClosing = true;
+                                  FocusScope.of(ctx).unfocus();
+                                  ref2
+                                      .read(targetProvider.notifier)
+                                      .state = aux;
+                                  ref2
+                                      .read(actionScanProvider.notifier)
+                                      .state = actualAction;
+                                  ref2
+                                      .read(isDialogShowedProvider.notifier)
+                                      .state = false;
+                                  Navigator.of(ctx).pop();
+                                } else {
+
+                                  final msg =
+                                      '${Messages.ERROR_QUANTITY} ${Memory.numberFormatter0Digit.format(aux)} >'
+                                      ' ${Memory.numberFormatter0Digit.format(maxValue)} o < ${Memory.numberFormatter0Digit.format(minValue)}';
+                                  showErrorMessage(ctx, ref2, msg);
+                                  quantityController.text =
+                                      Memory.numberFormatter0Digit
+                                          .format(qtyOnHand);
+                                }
+
+                              },
+                              child: Text(Messages.OK),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
                   ),
                 ),
               ),

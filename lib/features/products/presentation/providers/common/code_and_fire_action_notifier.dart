@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
 
@@ -58,6 +59,8 @@ abstract class CodeAndFireActionNotifier extends AppActionNotifier<void> {
     }
 
     if (value.isEmpty) return;
+    debugPrint('handleInputString to search: $value');
+
 
     if (enableScanningFlag) setScanning(true);
     if (saveLastSearch) setLastSearch(value);

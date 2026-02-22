@@ -4,7 +4,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:niim_blue_flutter/niim_blue_flutter.dart';
 
-import '../../../products/domain/models/label_profile.dart';
 
 /// Qué tipo de etiqueta vas a imprimir con NIIMBOT.
 enum NiimbotPayloadType {

@@ -254,16 +254,16 @@ class _ManageTemplatesSheetState extends ConsumerState<_ManageTemplatesSheet> {
                                 final movementAndLines =
                                 widget.ref.read(movementAndLinesProvider);
 
-                                final filled = buildFilledPreviewFirstPage(
+                                final filled = buildFilledMovementAndLinesPreviewFirstPage(
                                   template: t,
                                   movementAndLines: movementAndLines,
                                 );
 
-                                final filledAll = buildFilledPreviewAllPages(
+                                final filledAll = buildFilledMovementPreviewAllPages(
                                   template: t,
                                   movementAndLines: movementAndLines,
                                 );
-                                final filledAllToPdf = buildFilledPreviewAllPages(
+                                final filledAllToPdf = buildFilledMovementPreviewAllPages(
                                   hidePageLine: true,
                                   template: t,
                                   movementAndLines: movementAndLines,
@@ -289,7 +289,7 @@ class _ManageTemplatesSheetState extends ConsumerState<_ManageTemplatesSheet> {
                               icon: Icons.upload,
                               onTap: () async {
                                 final printerState =
-                                widget.ref.read(printerScanProvider);
+                                widget.ref.read(printerScanNotifierProvider);
                                 final ip = printerState.ipController.text.trim();
                                 final port = int.tryParse(
                                   printerState.portController.text.trim(),
@@ -319,7 +319,7 @@ class _ManageTemplatesSheetState extends ConsumerState<_ManageTemplatesSheet> {
                               icon: Icons.print,
                               onTap: () async {
                                 final printerState =
-                                widget.ref.read(printerScanProvider);
+                                widget.ref.read(printerScanNotifierProvider);
                                 final ip = printerState.ipController.text.trim();
                                 final port = int.tryParse(
                                   printerState.portController.text.trim(),

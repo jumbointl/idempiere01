@@ -1,8 +1,12 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/legacy.dart';
 
+import '../../products/common/barcode_utils.dart';
 import '../../products/domain/models/label_profile.dart';
+
+final copiesTempProvider = StateProvider<int>((ref) => 1);
 
 enum PrinterConnType { bluetooth, wifi }
 
@@ -57,6 +61,37 @@ class PrinterConnConfig {
       typeText: json['typeText']?.toString() ?? '',
     );
   }
+
+  String get printerInformationName {
+
+    switch (type) {
+      case PrinterConnType.bluetooth:
+        return name.isEmpty ? 'No name' : name;
+      case PrinterConnType.wifi:
+        return name.isEmpty ? '${ip ?? 'No ip'}:${port ?? 'No port'}' : name;
+    }
+  }
+
+  String get printerInformationAddress {
+    switch (type) {
+      case PrinterConnType.bluetooth:
+        return btAddress ?? '';
+      case PrinterConnType.wifi:
+        return '${ip ?? 'No ip'}:${port ?? 'No port'}';
+    }
+
+
+  }
+  String getPrinterInfoQRString(){
+
+    switch (type) {
+      case PrinterConnType.bluetooth:
+        return 'BLUETOOTH*${name.isEmpty ? 'No name' : name}*${btAddress ?? 'No address'}*${lang ?? 'No lang'}*${typeText ?? 'No type'}';
+      case PrinterConnType.wifi:
+        return '${ip ?? 'No ip'}:${port ?? 'No port'}:${lang ?? 'No lang'}';
+    '}';
+    }
+  }
 }
 
 
@@ -71,35 +106,18 @@ class PrinterSelectStorageKeys {
 /// English: Basic string normalize for barcode
 String normalizeUpc(String v) => v.trim().replaceAll(RegExp(r'\s+'), '');
 
-bool isAllDigits(String s) => RegExp(r'^\d+$').hasMatch(s);
 
-bool isValidEAN13(String s) {
-  if (s.length != 13 || !isAllDigits(s)) return false;
-  int sum = 0;
-  for (int i = 0; i < 12; i++) {
-    final d = int.parse(s[i]);
-    sum += (i % 2 == 0) ? d : (d * 3);
-  }
-  final check = (10 - (sum % 10)) % 10;
-  return check == int.parse(s[12]);
-}
 
-bool isValidEAN8(String s) {
-  if (s.length != 8 || !isAllDigits(s)) return false;
-  int sum = 0;
-  for (int i = 0; i < 7; i++) {
-    final d = int.parse(s[i]);
-    sum += (i % 2 == 0) ? (d * 3) : d;
-  }
-  final check = (10 - (sum % 10)) % 10;
-  return check == int.parse(s[7]);
-}
+
+
+
 
 enum BarcodeSymbology { ean13, ean8, code128 }
 
 BarcodeSymbology pickBarcodeType(String upc) {
   final v = normalizeUpc(upc);
   if (isValidEAN13(v)) return BarcodeSymbology.ean13;
+  //at this moment no ean8 support
   if (isValidEAN8(v)) return BarcodeSymbology.ean8;
   return BarcodeSymbology.code128;
 }
@@ -399,6 +417,24 @@ LabelProfile defaultLabel60x40() => const LabelProfile(
   barcodeWidth: 3,
   barcodeNarrow: 2,
   fontId: 1,
+  gapMm: 3,
+
+);
+LabelProfile defaultLabel50x30() => const LabelProfile(
+  id: 'default_50x30',
+  name: 'Default 50x30',
+  copies: 1,
+  widthMm: 50,
+  heightMm: 30,
+  marginXmm: 2,
+  marginYmm: 2,
+  barcodeHeightMm: 18,
+  charactersToPrint: 0,
+  maxCharsPerLine: 26,
+  barcodeHeight: 50,
+  barcodeWidth: 3,
+  barcodeNarrow: 2,
+  fontId: 2,
   gapMm: 3,
 
 );

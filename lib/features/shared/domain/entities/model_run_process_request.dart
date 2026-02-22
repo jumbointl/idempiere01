@@ -1,9 +1,11 @@
+import 'package:monalisa_app_001/features/products/domain/idempiere/sales_order_and_lines.dart';
 import 'package:monalisa_app_001/features/shared/domain/entities/model_create_pick_confirm_run_process_action.dart';
 import 'package:monalisa_app_001/features/shared/domain/entities/model_run_process_action.dart';
 
 import 'ad_login_request.dart';
 import 'auth_data.dart';
 import 'model_create_shipment_confirm_run_process_action.dart';
+import 'model_create_shipment_run_process_action.dart';
 
 class ModelRunProcessRequest {
   ModelRunProcessAction? modelRunProcessAction;
@@ -58,17 +60,6 @@ class ModelRunProcessRequest {
 
     return request;
 
-
-    /*return {
-      'ModelRunProcessRequest': ModelRunProcessRequest(
-        modelRunProcessAction: ModelCreatePickConfirmRunProcessAction(
-          //serviceType: serviceType,
-          columnValue: columnValue,
-        ),
-        adLoginRequest: ModelRunProcessRequest.loginFromAuth(authData),
-
-      ).toJson(),
-    };*/
   }
   static Map<String, dynamic> runProcessCreateShipmentConfirmRequestJson({
     //required String serviceType,
@@ -111,5 +102,31 @@ class ModelRunProcessRequest {
      );
   }
 
+  static Map<String, dynamic> runProcessCreateShipmentRequestJson({
+    required dynamic columnValue,
+    required AuthData authData, required SalesOrderAndLines salesOrder,
+  }) {
+    final action  =ModelCreateShipmentRunProcessAction(
+      salesOrder: salesOrder,
+      columnValue: columnValue,
+    );
+    final request = {
+      "ModelRunProcessRequest": {
+        "ModelRunProcess": action.toJson(),
+        "ADLoginRequest": {
+          "user": authData.userName,
+          "pass": authData.password,
+          "lang": "es_PY",
+          "ClientID": authData.selectedClient.id,
+          "RoleID": authData.selectedRole.id,
+          "OrgID": authData.selectedOrganization.id,
+          "WarehouseID": authData.selectedWarehouse.id,
+          "stage": 9,
+        }
+      }
+    };
 
+    return request;
+
+  }
 }

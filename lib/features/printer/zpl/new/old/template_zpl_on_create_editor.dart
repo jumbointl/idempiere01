@@ -227,7 +227,7 @@ Future<ZplTemplate?> showZplTemplateEditorDialogMode({
   }
 
   Future<void> doSendDf() async {
-    final printerState = ref.read(printerScanProvider);
+    final printerState = ref.read(printerScanNotifierProvider);
     final ip = printerState.ipController.text.trim();
     final port = int.tryParse(printerState.portController.text.trim()) ?? 0;
 
@@ -243,7 +243,7 @@ Future<ZplTemplate?> showZplTemplateEditorDialogMode({
     required ZplTemplateMode m,
     required int rows,
   }) async {
-    final printerState = ref.read(printerScanProvider);
+    final printerState = ref.read(printerScanNotifierProvider);
     final ip = printerState.ipController.text.trim();
     final port = int.tryParse(printerState.portController.text.trim()) ?? 0;
 
@@ -314,16 +314,16 @@ Future<ZplTemplate?> showZplTemplateEditorDialogMode({
       rowPerpage: rows, // ✅ IMPORTANTE
     );
 
-    final filledFirst = buildFilledPreviewFirstPage(
+    final filledFirst = buildFilledMovementAndLinesPreviewFirstPage(
       template: temp,
       movementAndLines: movementAndLines,
     );
 
-    final filledAll = buildFilledPreviewAllPages(
+    final filledAll = buildFilledMovementPreviewAllPages(
       template: temp,
       movementAndLines: movementAndLines,
     );
-    final filledAllToPdf = buildFilledPreviewAllPages(
+    final filledAllToPdf = buildFilledMovementPreviewAllPages(
       hidePageLine: true,
       template: temp,
       movementAndLines: movementAndLines,
@@ -339,7 +339,7 @@ Future<ZplTemplate?> showZplTemplateEditorDialogMode({
       filledPreviewAllPages: filledAll,
       missingTokens: missing,
       onSendDf: () async {
-        final printerState = ref.read(printerScanProvider);
+        final printerState = ref.read(printerScanNotifierProvider);
         final ip = printerState.ipController.text.trim();
         final port =
             int.tryParse(printerState.portController.text.trim()) ?? 0;

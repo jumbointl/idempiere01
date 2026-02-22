@@ -62,6 +62,7 @@ class CompactEditableField extends ConsumerWidget {
   final String label;
   final TextEditingController controller;
   final TextInputType keyboardType;
+  int? maxLines;
 
   final void Function(WidgetRef ref)? onTapAction;
   final void Function(WidgetRef ref)? onEditingCompleteAction;
@@ -75,6 +76,7 @@ class CompactEditableField extends ConsumerWidget {
     this.onTapAction,
     this.onEditingCompleteAction,
     this.oldAction,
+    this.maxLines,
   });
 
   @override
@@ -84,6 +86,7 @@ class CompactEditableField extends ConsumerWidget {
     return TextField(
       controller: controller,
       keyboardType: keyboardType,
+      maxLines: maxLines ?? 1,
       style: const TextStyle(fontSize: 14), // texto menor
 
       onTap: () {

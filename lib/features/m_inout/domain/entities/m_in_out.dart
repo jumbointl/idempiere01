@@ -128,6 +128,9 @@ class MInOut {
   bool get canCreateQaConfirm  {
     return docStatus.id == 'DR';
   }
+  bool get canCreateReceiptConfirm  {
+    return docStatus.id == 'DR';
+  }
 
 
 }

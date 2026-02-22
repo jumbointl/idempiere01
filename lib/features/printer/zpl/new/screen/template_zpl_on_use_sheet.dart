@@ -116,7 +116,7 @@ class _UseZplTemplateSheetState
     switch (m) {
       case ZplTemplateMode.movement:
         return 'Movement';
-      case ZplTemplateMode.shipping:
+      case ZplTemplateMode.locator:
         return 'Shipping';
     }
   }

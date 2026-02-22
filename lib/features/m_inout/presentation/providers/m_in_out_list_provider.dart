@@ -93,6 +93,7 @@ enum mInOutJobs {
   createPickConfirm,
   createShipConfirm,
   createReceiveConfirm,
+  createShipment,
 }
 
 extension mInOutJobsX on mInOutJobs {
@@ -104,6 +105,9 @@ extension mInOutJobsX on mInOutJobs {
         return 'createShipConfirm';
       case mInOutJobs.createReceiveConfirm:
         return 'createReceiveConfirm';
+      case mInOutJobs.createShipment:
+        return 'createShipment';
+
     }
   }
 }

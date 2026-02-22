@@ -145,7 +145,7 @@ class _CreateZplTemplatePageState extends ConsumerState<CreateZplTemplatePage>
                         // English comment: "Re-trigger fetch for current mode"
                         var mode = ZplTemplateMode.movement;
                         if(count.isEven){
-                            mode = ZplTemplateMode.shipping;
+                            mode = ZplTemplateMode.locator;
                         } else {
                             mode = ZplTemplateMode.movement;
                         }

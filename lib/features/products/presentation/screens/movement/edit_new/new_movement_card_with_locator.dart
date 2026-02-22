@@ -21,6 +21,7 @@ import '../provider/new_movement_provider.dart';
 class NewMovementCardWithLocator extends ConsumerStatefulWidget {
   Color bgColor;
   final MovementAndLines movementAndLines;
+
   final String argument;
   //double height = 180.0;
   double width = double.infinity;
@@ -44,6 +45,14 @@ class NewMovementCardWithLocator extends ConsumerStatefulWidget {
 
 
 class MovementHeaderCardWithLocatorState extends ConsumerState<NewMovementCardWithLocator> {
+  late final MovementAndLines movementAndLinesSaved;
+
+  @override
+  void initState() {
+    super.initState();
+    movementAndLinesSaved = widget.movementAndLines;
+  }
+
   Widget get getActionCompleteMessage {
     if(widget.movementAndLines.canCompleteMovement){
       return GestureDetector(
@@ -119,7 +128,7 @@ class MovementHeaderCardWithLocatorState extends ConsumerState<NewMovementCardWi
             onConfirm: ({required BuildContext context, required WidgetRef ref}) async {
               GoRouterHelper(context).go(
                   AppRouter.PAGE_MOVEMENTS_CANCEL_SCREEN,
-                  extra: widget.movementAndLines);
+                  extra: movementAndLinesSaved);
             }
 
           );
@@ -222,11 +231,17 @@ class MovementHeaderCardWithLocatorState extends ConsumerState<NewMovementCardWi
                       backgroundColor: Colors.green, // Changed to transparent for IconButton
                     ),
                     onPressed: () {
+                      int oldAction = Memory.ACTION_FIND_MOVEMENT_BY_ID;
                       ref.read(actionScanProvider.notifier).state = Memory.ACTION_FIND_MOVEMENT_BY_ID;
                       ref.read(selectedZplTemplateModeProvider.notifier).state = ZplTemplateMode.movement;
                       ref.read(movementAndLinesProvider.notifier).state = widget.movementAndLines;
+
+
                       GoRouterHelper(ref.context).go(AppRouter.PAGE_MOVEMENT_PRINTER_SETUP,
-                          extra: widget.movementAndLines);
+                          extra:  {
+                        'data': movementAndLinesSaved,
+                        'oldAction': oldAction,
+                        },);
 
                     },
                     icon: Icon(Icons.print, color: Colors.white,)), // Cha// Changed to Icon for IconButton

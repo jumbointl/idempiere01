@@ -33,14 +33,21 @@ class SearchLocatorScreenState extends ConsumerState<SearchLocatorScreen> {
   late final int oldAction;
   @override
   void initState() {
-    // TODO: implement initState
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       oldAction = ref.read(actionScanProvider);
       ref.read(actionScanProvider.notifier).state = Memory.ACTION_GET_LOCATOR_VALUE;
       ref.read(locatorScreenInputModeProvider.notifier).state = PrinterInputMode.manual;
+      if (widget.readOnly) {
+        ref.read(selectedLocatorsProvider.notifier).clear();
+      }
 
     });
+
+  }
+  @override
+  void dispose() {
+    super.dispose();
 
   }
   @override

@@ -19,7 +19,9 @@ abstract class AppActionNotifier<T>
   String normalizeUPC(String value) {
     if (value.length == 12) {
       final aux = '0$value';
-      if (isValidEAN13(aux)) return aux;
+      if (isValidEAN13(aux)){
+        return aux;
+      }
     }
     return value;
   }
@@ -49,5 +51,7 @@ abstract class AppActionNotifier<T>
     required String inputData,
     required int actionScan,
   });
+
+
 }
 

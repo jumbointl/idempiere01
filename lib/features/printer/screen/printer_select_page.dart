@@ -24,10 +24,17 @@ import '../printer_scan_notifier.dart';
 final printerListProvider = StateProvider<List<PrinterConnConfig>>((ref) => []);
 final selectedPrinterIdProvider = StateProvider<String?>((ref) => null);
 final printerConnectedProvider = StateProvider<bool>((ref) => false);
-
+enum ScanAction { scan, stop }
 class PrinterSelectPage extends ConsumerStatefulWidget {
   final dynamic dataToPrint;
-  const PrinterSelectPage({super.key, required this.dataToPrint});
+  /// Optional: if you want to auto-close returning printer after selection
+  final bool popOnSelect;
+
+  const PrinterSelectPage({
+    super.key,
+    required this.dataToPrint,
+    this.popOnSelect = true,
+  });
 
   @override
   ConsumerState<PrinterSelectPage> createState() => _PrinterSelectPageState();
@@ -50,16 +57,33 @@ class _PrinterSelectPageState extends ConsumerState<PrinterSelectPage>
   final _btType = TextEditingController(text: PrinterState.PRINTER_TYPE_BLUETOOTH_NO_BLE);
 
   final box = GetStorage();
+
+  // pos_universal_printer
+  final PosUniversalPrinter _pos = PosUniversalPrinter.instance;
+
+  // --- SCAN TAB STATE ---
   StreamSubscription<PrinterDevice>? _btScanSub;
   final List<PrinterDevice> _btScanDevices = <PrinterDevice>[];
+  bool _isScanning = false;
+  Timer? _scanTimer;
+
+  int _scanTimeoutSec = 12; // default 12, max 60
+
+  // Optional: remember last used lang/type in scan tab
+  String _scanLang = 'TSPL'; // TSPL/ZPL/NIIMBOT
+  String _scanBtType = PrinterState.PRINTER_TYPE_BLUETOOTH_NO_BLE; // BLE/NO_BLE
 
   @override
   void initState() {
     super.initState();
-    _tab = TabController(length: 2, vsync: this);
+    // 3 tabs now: Bluetooth, WiFi, Scan
+    _tab = TabController(length: 3, vsync: this);
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _loadPrinters();
+      if(widget.popOnSelect){
+        ref.read(printerInputModeProvider.notifier).state = PrinterInputMode.manual;
+      }
     });
   }
 
@@ -76,6 +100,8 @@ class _PrinterSelectPageState extends ConsumerState<PrinterSelectPage>
     _wifiLang.dispose();
     _btLang.dispose();
     _btType.dispose();
+
+    _stopScanSilence();
 
     super.dispose();
   }
@@ -150,71 +176,6 @@ class _PrinterSelectPageState extends ConsumerState<PrinterSelectPage>
     }
   }
 
-
-
-  final PosUniversalPrinter _pos = PosUniversalPrinter.instance;
-
-  Future<bool> _testBluetoothTsplConnection(String mac) async {
-    const String tsplTest =
-        'SIZE 40 mm,25 mm\r\n'
-        'GAP 2 mm,0 mm\r\n'
-        'CLS\r\n'
-        'TEXT 20,20,"2",0,1,1,"TEST"\r\n'
-        'PRINT 1,1\r\n';
-
-    const int maxAttempts = 3;
-    const Duration backoffBase = Duration(milliseconds: 250);
-
-    bool isValidMac(String s) {
-      final t = s.trim().toUpperCase();
-      final macRegex = RegExp(r'^([0-9A-F]{2}:){5}[0-9A-F]{2}$');
-      return macRegex.hasMatch(t);
-    }
-
-    final macTrim = mac.trim();
-    if (macTrim.isEmpty || !isValidMac(macTrim)) {
-      debugPrint('POS BT test: invalid MAC: "$mac"');
-      return false;
-    }
-
-    for (int attempt = 1; attempt <= maxAttempts; attempt++) {
-      try {
-        // Create device (adjust fields if your plugin differs)
-        final device = PrinterDevice(
-          id: macTrim,
-          name: 'BT Printer $macTrim',
-          address: macTrim,
-          type: PrinterType.bluetooth,
-        );
-
-        await _pos.registerDevice(PosPrinterRole.sticker, device);
-
-        final connected = _pos.isRoleConnected(PosPrinterRole.sticker);
-        if (!connected) {
-          debugPrint('POS BT test: not connected (attempt $attempt/$maxAttempts)');
-          await Future.delayed(backoffBase + Duration(milliseconds: attempt * 150));
-          continue;
-        }
-
-        final bytes = latin1.encode(tsplTest);
-        _pos.printRaw(PosPrinterRole.sticker, bytes);
-
-        await Future.delayed(const Duration(milliseconds: 200));
-        debugPrint('POS BT test: OK (attempt $attempt/$maxAttempts)');
-        return true;
-      } catch (e) {
-        debugPrint('POS BT test: exception (attempt $attempt/$maxAttempts): $e');
-        await Future.delayed(backoffBase + Duration(milliseconds: attempt * 200));
-      }
-    }
-
-    return false;
-  }
-
-
-
-
-
   Future<void> _showMsg(String title, String msg) async {
     if (!mounted) return;
     await showDialog(
@@ -232,15 +193,140 @@ class _PrinterSelectPageState extends ConsumerState<PrinterSelectPage>
     );
   }
 
-  // BT picker (paired devices) -> fill form
+  // ------------------------------------------------------------
+  // Selection + return (disconnect and return printer)
+  // ------------------------------------------------------------
+  Future<void> _selectAndReturnPrinter(PrinterConnConfig p) async {
+    ref.read(selectedPrinterIdProvider.notifier).state = p.id;
+    _savePrintersToStorage();
+
+    if (!mounted) return;
+    if (widget.popOnSelect) {
+      Navigator.pop(context, p);
+    }
+  }
+
+  Future<void> _testSelectReturn(PrinterConnConfig p) async {
+    // Test connection (it already disconnects internally for pos_universal_printer).
+    final ok = await testConnectionPrinter(context, p);
+    ref.read(printerConnectedProvider.notifier).state = ok;
+
+    if (!ok) return;
+
+    // Select + return printer (and ensure no lingering connection)
+    try {
+      await _pos.unregisterDevice(PosPrinterRole.sticker);
+    } catch (_) {}
+
+    await _selectAndReturnPrinter(p);
+  }
+
+  // ------------------------------------------------------------
+  // SCAN TAB: start/stop scan, adjustable timeout (12..60)
+  // ------------------------------------------------------------
+  Future<bool> _ensureBtPermissions() async {
+    final ok = await ensureBluetoothPermissions();
+    if (!ok) {
+      if (!mounted) return false;
+      showErrorMessage(context, ref, 'Permisos requeridos');
+      return false;
+    }
+    return true;
+  }
+
+  Future<void> _stopScanSilence() async {
+    _scanTimer?.cancel();
+    _scanTimer = null;
+
+    try {
+      await _btScanSub?.cancel();
+    } catch (_) {}
+    _btScanSub = null;
+
+    if (mounted) {
+      setState(() {
+        _isScanning = false;
+      });
+    } else {
+      _isScanning = false;
+    }
+  }
+
+  Future<void> _startScan() async {
+    final ok = await _ensureBtPermissions();
+    if (!ok) return;
+
+    await _stopScanSilence();
+
+    if (!mounted) return;
+    setState(() {
+      _btScanDevices.clear();
+      _isScanning = true;
+    });
+
+    // Auto-stop after timeout
+    _scanTimer = Timer(Duration(seconds: _scanTimeoutSec), () async {
+      await _stopScanSilence();
+    });
+
+    try {
+      _btScanSub = _pos.scanBluetooth().listen((device) {
+        final addr = (device.address)?.trim() ?? '';
+        if (addr.isEmpty) return;
+
+        final exists = _btScanDevices.any((d) => (d.address?.trim() ?? '') == addr);
+        if (!exists) {
+          if (mounted) {
+            setState(() => _btScanDevices.add(device));
+          } else {
+            _btScanDevices.add(device);
+          }
+        }
+      }, onDone: () async {
+        await _stopScanSilence();
+      }, onError: (_) async {
+        await _stopScanSilence();
+      });
+    } catch (e) {
+      await _stopScanSilence();
+      await _showMsg('Bluetooth', '❌ Error al iniciar scan: $e');
+    }
+  }
+  Future<void> _selectFromScanAndReturn(PrinterDevice d) async {
+    final name = (d.name.trim().isEmpty) ? 'BT Printer' : d.name.trim();
+    final mac = d.address?.trim() ?? '';
+
+    if (mac.isEmpty) {
+      await _showMsg('Bluetooth', '❌ Dirección inválida');
+      return;
+    }
+
+    // Solo construir objeto, SIN conectar
+    final cfg = PrinterConnConfig(
+      btAddress: mac,
+      id: 'bt_$mac',
+      type: PrinterConnType.bluetooth,
+      name: name,
+      lang: _scanLang.toUpperCase(),   // si lo estás usando
+      typeText: _scanBtType.toUpperCase(),
+    );
+
+    // Retornar directamente
+    if (!mounted) return;
+    Navigator.pop(context, cfg);
+  }
+
+
+
+
+  // ------------------------------------------------------------
+  // Old dialog picker (paired devices) - keep it for manual tab
+  // ------------------------------------------------------------
   Future<void> _openBluetoothPickerDialog() async {
     if (!mounted) return;
 
-    final ok = await ensureBluetoothPermissions();
-    if (!ok) {
-      showErrorMessage(context, ref, 'Permisos requeridos');
-      return;
-    }
+    final ok = await _ensureBtPermissions();
+    if (!ok) return;
 
     // Clean previous scan if any
     await _btScanSub?.cancel();
@@ -253,10 +339,10 @@ class _PrinterSelectPageState extends ConsumerState<PrinterSelectPage>
     try {
       _btScanSub = _pos.scanBluetooth().listen((device) {
         // Deduplicate by address
-        final addr = (device.address)?.trim() ??'';
+        final addr = (device.address)?.trim() ?? '';
         if (addr.isEmpty) return;
 
-        final exists = _btScanDevices.any((d) => (d.address?.trim()??'') == addr);
+        final exists = _btScanDevices.any((d) => (d.address?.trim() ?? '') == addr);
         if (!exists) {
           _btScanDevices.add(device);
         }
@@ -277,8 +363,6 @@ class _PrinterSelectPageState extends ConsumerState<PrinterSelectPage>
       builder: (ctx) {
         return StatefulBuilder(
           builder: (ctx, setState) {
-            // Small timer to refresh UI while scanning
-            // (no heavy stuff; just redraw)
             Future.microtask(() {
               if (ctx.mounted) setState(() {});
             });
@@ -299,10 +383,10 @@ class _PrinterSelectPageState extends ConsumerState<PrinterSelectPage>
 
               try {
                 _btScanSub = _pos.scanBluetooth().listen((device) {
-                  final addr = device.address?.trim() ??'';
+                  final addr = device.address?.trim() ?? '';
                   if (addr.isEmpty) return;
 
-                  final exists = _btScanDevices.any((d) => (d.address?.trim() ?? '')== addr);
+                  final exists = _btScanDevices.any((d) => (d.address?.trim() ?? '') == addr);
                   if (!exists) {
                     _btScanDevices.add(device);
                     if (ctx.mounted) setState(() {});
@@ -322,7 +406,6 @@ class _PrinterSelectPageState extends ConsumerState<PrinterSelectPage>
             }
 
             Future<void> connectAndFill(PrinterDevice d) async {
-              // Stop scan to avoid radio conflicts on some devices
               await stopScan();
 
               try {
@@ -335,12 +418,10 @@ class _PrinterSelectPageState extends ConsumerState<PrinterSelectPage>
                   return;
                 }
 
-                // Fill form (even if inputs disabled, we can set text)
                 if (mounted) {
                   _btName.text = (d.name.trim().isEmpty) ? 'BT Printer' : d.name.trim();
-                  _btAddress.text = d.address?.trim() ??'';
+                  _btAddress.text = d.address?.trim() ?? '';
 
-                  // Defaults seguros (si estabas en SCAN y no podías editar)
                   final lang = _btLang.text.trim().toUpperCase();
                   if (lang != 'TSPL' && lang != 'ZPL' && lang != 'NIIMBOT') _btLang.text = 'TSPL';
 
@@ -351,7 +432,6 @@ class _PrinterSelectPageState extends ConsumerState<PrinterSelectPage>
                   }
                 }
 
-                // Save immediately (recommended, because SCAN disables manual inputs)
                 final p = PrinterConnConfig(
                   id: 'bt_${d.address?.trim() ?? ''}',
                   type: PrinterConnType.bluetooth,
@@ -361,6 +441,12 @@ class _PrinterSelectPageState extends ConsumerState<PrinterSelectPage>
                   typeText: _btType.text.trim().toUpperCase(),
                 );
                 _addOrUpdatePrinter(p);
+
+                // Disconnect (safe)
+                try {
+                  await Future.delayed(const Duration(milliseconds: 150));
+                  await _pos.unregisterDevice(PosPrinterRole.sticker);
+                } catch (_) {}
 
                 if (ctx.mounted) Navigator.pop(ctx);
               } catch (e) {
@@ -376,16 +462,18 @@ class _PrinterSelectPageState extends ConsumerState<PrinterSelectPage>
                   if (scanning)
                     const Padding(
                       padding: EdgeInsets.only(left: 8),
-                      child: SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2)),
+                      child: SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      ),
                     ),
                 ],
               ),
               content: SizedBox(
                 width: double.maxFinite,
                 child: _btScanDevices.isEmpty
-                    ? Text(scanning
-                    ? 'Buscando dispositivos...'
-                    : 'No se encontraron dispositivos.')
+                    ? Text(scanning ? 'Buscando dispositivos...' : 'No se encontraron dispositivos.')
                     : ListView.separated(
                   shrinkWrap: true,
                   itemCount: _btScanDevices.length,
@@ -427,20 +515,22 @@ class _PrinterSelectPageState extends ConsumerState<PrinterSelectPage>
       },
     );
 
-    // Safety: stop scan when dialog closed
     try {
       await _btScanSub?.cancel();
     } catch (_) {}
     _btScanSub = null;
   }
 
-
+  // ------------------------------------------------------------
+  // UI
+  // ------------------------------------------------------------
   @override
   Widget build(BuildContext context) {
-    final list = ref.watch(printerListProvider);
-    final selectedId = ref.watch(selectedPrinterIdProvider);
-    final inputMode = ref.watch(printerInputModeProvider);
-    final bool enableInputs = inputMode == PrinterInputMode.manual;
+    late final PrinterInputMode inputMode;
+    inputMode = ref.watch(printerInputModeProvider);
+
+
+
     return Scaffold(
       appBar: AppBar(
         automaticallyImplyLeading: false,
@@ -450,157 +540,206 @@ class _PrinterSelectPageState extends ConsumerState<PrinterSelectPage>
           tabs: const [
             Tab(text: 'Bluetooth'),
             Tab(text: 'WiFi'),
+            Tab(text: 'Scan'),
           ],
         ),
+
       ),
-      body: SafeArea(
-        child: ListView(
-          padding: const EdgeInsets.all(12),
-          children: [
-            const Text(
-              'Saved printers',
-              style: TextStyle(fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 8),
-        
-            if (list.isEmpty)
-              const Text('No printers saved yet.')
-            else
-              ...list.map((p) {
-                final subtitle = (p.type == PrinterConnType.wifi)
-                    ? 'WiFi: ${p.ip}:${p.port}  lang:${p.lang ?? "-"}'
-                    : 'BT: ${p.btAddress}  lang:${p.lang ?? "-"}  type:${p.typeText ?? "-"}';
-        
-                return Card(
-                  child: Padding(
-                    padding: const EdgeInsets.all(12),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Radio<String>(
-                          value: p.id,
-                          groupValue: selectedId,
-                          onChanged: (v) {
-                            ref.read(selectedPrinterIdProvider.notifier).state = v;
-                            _savePrintersToStorage();
-                          },
-                        ),
-        
-                        const SizedBox(width: 8),
-        
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                p.name,
-                                style: const TextStyle(fontWeight: FontWeight.w600),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                subtitle,
-                                style: const TextStyle(fontSize: 12),
-                              ),
-                            ],
-                          ),
-                        ),
-        
-                        const SizedBox(width: 8),
-        
-                        SizedBox(
-                          width: 90,
-                          child: Wrap(
-                            spacing: 4,
-                            runSpacing: 4,
-                            children: [
-                              _actionIcon(Icons.link, () async {
-                                final b =await testConnectionPrinter(context,p);
-                                ref.read(printerConnectedProvider.notifier).state = b;
-                              }),
-                              _actionIcon(Icons.edit, () => _fillFormForEdit(p)),
-                              _actionIcon(Icons.delete, () => _removePrinter(p.id),
-                                  color: Colors.red),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                );
-        
-        
-              }),
-        
-            const SizedBox(height: 12),
-            const Divider(),
-            const SizedBox(height: 8),
-        
-            Row(
-              children: [
-                const Text(
-                  'Add / Update printer',
-                  style: TextStyle(fontWeight: FontWeight.bold),
-                ),
-                Spacer(),
-                SegmentedButton<PrinterInputMode>(
-                  segments: const [
-                    ButtonSegment(
-                      value: PrinterInputMode.scan,
-                      label: Text('SCAN'),
-                      icon: Icon(Icons.qr_code_scanner, size: 16),
-                    ),
-                    ButtonSegment(
-                      value: PrinterInputMode.manual,
-                      label: Text('MANUAL'),
-                      icon: Icon(Icons.edit, size: 16),
-                    ),
-                  ],
-                  selected: {inputMode},
-                  onSelectionChanged: (set) {
-                    final mode = set.first;
-
-                    ref.read(printerInputModeProvider.notifier).state = mode;
-
-                    ref.read(actionScanProvider.notifier).state =
-                    mode == PrinterInputMode.scan
-                        ? Memory.ACTION_FIND_PRINTER_BY_QR_WIFI_BLUETOOTH
-                        : Memory.ACTION_NO_SCAN_ACTION;
-                  },
-                  style: ButtonStyle(
-                    padding: WidgetStateProperty.all(
-                      const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-                    ),
-                    visualDensity: VisualDensity.compact,
-                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                    textStyle: WidgetStateProperty.all(
-                      const TextStyle(fontSize: 12),
-                    ),
-                  ),
-                )
-              ],
-            ),
-            const Text(
-              'switch scan/manual to disable/enable input',
-              style: TextStyle(fontSize: themeFontSizeNormal),
-            ),
-            const SizedBox(height: 8),
-        
-            SizedBox(
-              height: 360,
-              child: TabBarView(
-                controller: _tab,
-                physics: const NeverScrollableScrollPhysics(),
+      bottomNavigationBar: !widget.popOnSelect ? BottomAppBar(
+          height: 75,
+          //child: buttonConfirm(context, ref)
+          child: Column(
+            children: [
+              Row(
                 children: [
-                  _buildBluetoothForm(enableInputs),
-                  _buildWifiForm(enableInputs),
+                  const Text(
+                    'Add / Update printer',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  Spacer(),
+                  SegmentedButton<PrinterInputMode>(
+                    segments: const [
+                      ButtonSegment(
+                        value: PrinterInputMode.scan,
+                        label: Text('SCAN',style: TextStyle(fontSize: 12),),
+                        icon: Icon(Icons.qr_code_scanner, size: 12),
+                      ),
+                      ButtonSegment(
+                        value: PrinterInputMode.manual,
+                        label: Text('MANUAL',style: TextStyle(fontSize: 12)),
+                        icon: Icon(Icons.edit, size: 12),
+                      ),
+                    ],
+                    selected: {inputMode},
+                    onSelectionChanged: (set) {
+                      final mode = set.first;
+
+                      ref.read(printerInputModeProvider.notifier).state = mode;
+
+                      ref.read(actionScanProvider.notifier).state =
+                      mode == PrinterInputMode.scan
+                          ? Memory.ACTION_FIND_PRINTER_BY_QR_WIFI_BLUETOOTH
+                          : Memory.ACTION_NO_SCAN_ACTION;
+                    },
+                    style: ButtonStyle(
+                      padding: WidgetStateProperty.all(
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                      ),
+                      visualDensity: VisualDensity.compact,
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      textStyle: WidgetStateProperty.all(
+                        const TextStyle(fontSize: 12),
+                      ),
+                    ),
+                  )
                 ],
               ),
+              const Text(
+                'switch scan/manual to disable/enable input',
+                style: TextStyle(fontSize: themeFontSizeSmall),
+              ),
+            ],
+          )
+      ):null,
+      body: SafeArea(
+        child: TabBarView(
+          controller: _tab,
+          children: [
+            _buildBluetoothTab(),
+            _buildWifiTab(),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 10),
+              child: _buildScanTab(),
             ),
           ],
         ),
       ),
     );
   }
+  Widget _buildBluetoothTab() {
+    final list = ref.watch(printerListProvider);
+    final selectedId = ref.watch(selectedPrinterIdProvider);
+    final inputMode = ref.watch(printerInputModeProvider);
+    final bool enableInputs = inputMode == PrinterInputMode.manual;
+
+    return ListView(
+      padding: const EdgeInsets.all(12),
+      children: [
+
+        const Text(
+          'Saved printers',
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
+        const SizedBox(height: 8),
+
+        if (list.isEmpty)
+          const Text('No printers saved yet.')
+        else
+          ...list.map((p) {
+            if (p.type != PrinterConnType.bluetooth) {
+              return const SizedBox.shrink();
+            }
+
+            final subtitle =
+                'BT: ${p.btAddress}  lang:${p.lang ?? "-"}  type:${p.typeText ?? "-"}';
+
+            return Card(
+              child: ListTile(
+                title: Text(p.name),
+                subtitle: Text(subtitle),
+                leading: Radio<String>(
+                  value: p.id,
+                  groupValue: selectedId,
+                  onChanged: (v) async {
+                    ref.read(selectedPrinterIdProvider.notifier).state = v;
+                    _savePrintersToStorage();
+                    await _selectAndReturnPrinter(p);
+                  },
+                ),
+                trailing: Wrap(
+                  spacing: 4,
+                  children: [
+                    _actionIcon(Icons.link, () => _testSelectReturn(p)),
+                    _actionIcon(Icons.edit, () => _fillFormForEdit(p)),
+                    _actionIcon(Icons.delete, () => _removePrinter(p.id),
+                        color: Colors.red),
+                  ],
+                ),
+              ),
+            );
+          }),
+
+        const SizedBox(height: 12),
+        const Divider(),
+        const SizedBox(height: 12),
+
+        _buildBluetoothForm(enableInputs),
+      ],
+    );
+  }
+  Widget _buildWifiTab() {
+    final list = ref.watch(printerListProvider);
+    final selectedId = ref.watch(selectedPrinterIdProvider);
+    final inputMode = ref.watch(printerInputModeProvider);
+    final bool enableInputs = inputMode == PrinterInputMode.manual;
+
+    return ListView(
+      padding: const EdgeInsets.all(12),
+      children: [
+
+        const Text(
+          'Saved WiFi printers',
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
+        const SizedBox(height: 8),
+
+        if (list.isEmpty)
+          const Text('No printers saved yet.')
+        else
+          ...list.map((p) {
+            if (p.type != PrinterConnType.wifi) {
+              return const SizedBox.shrink();
+            }
+
+            final subtitle =
+                'WiFi: ${p.ip}:${p.port}  lang:${p.lang ?? "-"}';
+
+            return Card(
+              child: ListTile(
+                title: Text(p.name),
+                subtitle: Text(subtitle),
+                leading: Radio<String>(
+                  value: p.id,
+                  groupValue: selectedId,
+                  onChanged: (v) async {
+                    ref.read(selectedPrinterIdProvider.notifier).state = v;
+                    _savePrintersToStorage();
+                    await _selectAndReturnPrinter(p);
+                  },
+                ),
+                trailing: Wrap(
+                  spacing: 4,
+                  children: [
+                    _actionIcon(Icons.link, () => _testSelectReturn(p)),
+                    _actionIcon(Icons.edit, () => _fillFormForEdit(p)),
+                    _actionIcon(Icons.delete, () => _removePrinter(p.id),
+                        color: Colors.red),
+                  ],
+                ),
+              ),
+            );
+          }),
+
+        const SizedBox(height: 12),
+        const Divider(),
+        const SizedBox(height: 12),
+
+        _buildWifiForm(enableInputs),
+      ],
+    );
+  }
+
+
   Widget _tf({
     required TextEditingController controller,
     required String label,
@@ -610,7 +749,7 @@ class _PrinterSelectPageState extends ConsumerState<PrinterSelectPage>
     return TextField(
       controller: controller,
       enabled: enabled,
-      readOnly: !enabled, // permite copiar
+      readOnly: !enabled, // allow copy
       keyboardType: keyboardType,
       decoration: InputDecoration(
         labelText: label,
@@ -619,8 +758,8 @@ class _PrinterSelectPageState extends ConsumerState<PrinterSelectPage>
       ),
     );
   }
-  Widget _actionIcon(IconData icon, VoidCallback onTap,
-      {Color? color}) {
+
+  Widget _actionIcon(IconData icon, VoidCallback onTap, {Color? color}) {
     return SizedBox(
       width: 36,
       height: 36,
@@ -652,7 +791,7 @@ class _PrinterSelectPageState extends ConsumerState<PrinterSelectPage>
             Expanded(
               child: _tf(
                 controller: _wifiLang,
-                label: 'Language (TSPL/ZPL)',
+                label: 'Language (TSPL/ZPL/NIIMBOT)',
                 enabled: enableInputs,
               ),
             ),
@@ -694,7 +833,6 @@ class _PrinterSelectPageState extends ConsumerState<PrinterSelectPage>
     );
   }
 
-
   Widget _buildBluetoothForm(bool enableInputs) {
     return Column(
       children: [
@@ -702,7 +840,7 @@ class _PrinterSelectPageState extends ConsumerState<PrinterSelectPage>
           children: [
             Expanded(
               child: ElevatedButton.icon(
-                onPressed: _openBluetoothPickerDialog, // esto sí puede quedar habilitado en SCAN
+                onPressed: _openBluetoothPickerDialog, // allowed in SCAN
                 icon: const Icon(Icons.search),
                 label: const Text('Buscar BT (paired)'),
               ),
@@ -710,16 +848,14 @@ class _PrinterSelectPageState extends ConsumerState<PrinterSelectPage>
           ],
         ),
         const SizedBox(height: 10),
-
         _tf(controller: _btName, label: 'Printer name', enabled: enableInputs),
         _tf(controller: _btAddress, label: 'BT address (MAC)', enabled: enableInputs),
-
         Row(
           children: [
             Expanded(
               child: _tf(
                 controller: _btLang,
-                label: 'Language (TSPL/ZPL)',
+                label: 'Language (TSPL/ZPL/NIIMBOT)',
                 enabled: enableInputs,
               ),
             ),
@@ -733,7 +869,6 @@ class _PrinterSelectPageState extends ConsumerState<PrinterSelectPage>
             ),
           ],
         ),
-
         const SizedBox(height: 10),
         Row(
           children: [
@@ -773,8 +908,137 @@ class _PrinterSelectPageState extends ConsumerState<PrinterSelectPage>
       ],
     );
   }
+  final ScanAction _currentBluetoothScanAction = ScanAction.scan;
+  // ------------------------------------------------------------
+  // NEW: Scan Tab UI
+  // ------------------------------------------------------------
+  Widget _buildScanTab() {
+    final timeoutItems = List.generate(49, (i) => 12 + i); // 12..60
 
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            const Icon(Icons.radar),
+            const SizedBox(width: 8),
+            Expanded( child: _isScanning ? LinearProgressIndicator()
+                : Text(
+                'Scan Bluetooth devices (Classic)',
+                style: TextStyle(fontWeight: FontWeight.w600),
+              ),
+            ),
+
+          ],
+        ),
+
+        // Timeout spinner
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const SizedBox(width: 120, child: Text('Timeout (sec):')),
+            DropdownButton<int>(
+              value: _scanTimeoutSec,
+              items: timeoutItems
+                  .map((v) => DropdownMenuItem<int>(value: v, child: Text('$v')))
+                  .toList(),
+              onChanged: (v) {
+                if (v == null) return;
+                setState(() => _scanTimeoutSec = v.clamp(12, 60));
+              },
+            ),
+            const SizedBox(width: 10),
+            ElevatedButton.icon(
+              onPressed: _isScanning ? _stopScanSilence : _startScan,
+              icon: Icon(_isScanning ? Icons.stop : Icons.search),
+              label: Text(_isScanning ? 'Stop' : 'Scan'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: _isScanning ? Colors.red : themeColorPrimary,
+                foregroundColor: Colors.white,
+              ),
+            )
+
+          ],
+        ),
+        const SizedBox(height: 10),
+
+        // Lang + Type
+        Row(
+          children: [
+            Expanded(
+              child: DropdownButtonFormField<String>(
+                initialValue: _scanLang,
+                decoration: const InputDecoration(labelText: 'Language'),
+                items: const [
+                  DropdownMenuItem(value: 'TSPL', child: Text('TSPL')),
+                  DropdownMenuItem(value: 'ZPL', child: Text('ZPL')),
+                  DropdownMenuItem(value: 'NIIMBOT', child: Text('NIIMBOT')),
+                ],
+                onChanged: (v) {
+                  if (v == null) return;
+                  setState(() => _scanLang = v);
+                },
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: DropdownButtonFormField<String>(
+                initialValue: _scanBtType,
+                decoration: const InputDecoration(labelText: 'Bluetooth type'),
+                items: const [
+                  DropdownMenuItem(
+                    value: PrinterState.PRINTER_TYPE_BLUETOOTH_NO_BLE,
+                    child: Text('NO_BLE'),
+                  ),
+                  DropdownMenuItem(
+                    value: PrinterState.PRINTER_TYPE_BLUETOOTH_BLE,
+                    child: Text('BLE'),
+                  ),
+                ],
+                onChanged: (v) {
+                  if (v == null) return;
+                  setState(() => _scanBtType = v);
+                },
+              ),
+            ),
+          ],
+        ),
+
+        const SizedBox(height: 10),
+        const Divider(),
+
+        Expanded(
+          child: _btScanDevices.isEmpty
+              ? Text(_isScanning ? 'Buscando dispositivos...' : 'Sin resultados.')
+              : ListView.separated(
+            itemCount: _btScanDevices.length,
+            separatorBuilder: (_, _) => const Divider(height: 1),
+            itemBuilder: (_, i) {
+              final d = _btScanDevices[i];
+              final name = d.name.trim().isEmpty ? 'Unknown' : d.name.trim();
+              final mac = d.address?.trim() ?? '';
+
+              return ListTile(
+                leading: const Icon(Icons.print),
+                title: Text(name),
+                subtitle: Text(mac),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () async {
+                  // Tap -> connect, save/select, disconnect, return
+                  await _selectFromScanAndReturn(d);
+                },
+              );
+            },
+          ),
+        ),
+      ],
+    );
+  }
 }
+
+// ============================================================
+// Test connection helpers
+// ============================================================
 
 Future<bool> testConnectionPrinter(
     BuildContext context,
@@ -797,8 +1061,8 @@ Future<bool> testConnectionPrinter(
       ),
     );
   }
-  // si es NIIMBOT:
 
+  // NIIMBOT
   if ((p.lang ?? '').toUpperCase() == 'NIIMBOT') {
     debugPrint('testConnectionPrinter: NIIMBOT');
     final mac = (p.btAddress ?? '').trim();
@@ -811,6 +1075,7 @@ Future<bool> testConnectionPrinter(
     await showMsg('Connection', ok ? '✅ Niimbot OK: $mac' : '❌ Niimbot ERROR: $mac');
     return ok;
   }
+
   try {
     if (p.type == PrinterConnType.wifi) {
       final ip = (p.ip ?? '').trim();
@@ -829,7 +1094,7 @@ Future<bool> testConnectionPrinter(
       socket.destroy();
 
       await showMsg('Connection', '✅ WiFi OK: $ip:$port');
-      return false;
+      return true;
     }
 
     // Bluetooth (pos_universal_printer)
@@ -841,13 +1106,18 @@ Future<bool> testConnectionPrinter(
 
     final posInst = pos ?? PosUniversalPrinter.instance;
 
-    // Construir device (ajustá si tu versión tiene otros campos)
+    // Build device
     final device = PrinterDevice(
       name: p.name.isEmpty ? 'BT Printer' : p.name,
       address: mac,
       id: p.id,
       type: PrinterType.bluetooth,
     );
+
+    // Ensure disconnected first
+    try {
+      await posInst.unregisterDevice(PosPrinterRole.sticker);
+    } catch (_) {}
 
     await posInst.registerDevice(PosPrinterRole.sticker, device);
 
@@ -856,38 +1126,29 @@ Future<bool> testConnectionPrinter(
       await showMsg('Connection', '❌ Bluetooth ERROR: $mac');
       return false;
     }
+
     await Future.delayed(const Duration(milliseconds: 200));
     try {
       await posInst.unregisterDevice(PosPrinterRole.sticker);
     } catch (_) {}
 
-    /*// Enviar un TSPL mínimo para “probar vida”
-    const tsplTest =
-        'SIZE 40 mm,25 mm\r\n'
-        'GAP 2 mm,0 mm\r\n'
-        'CLS\r\n'
-        'TEXT 20,20,"2",0,1,1,"TEST"\r\n'
-        'PRINT 1,1\r\n';
-
-    final bytes = latin1.encode(tsplTest);
-    posInst.printRaw(PosPrinterRole.sticker, bytes);
-
-    await Future.delayed(const Duration(milliseconds: 200));*/
-
     await showMsg('Connection', '✅ Bluetooth OK: $mac');
     return true;
   } catch (e) {
     await showMsg('Connection', '❌ Error: $e');
+    try {
+      final posInst = pos ?? PosUniversalPrinter.instance;
+      await posInst.unregisterDevice(PosPrinterRole.sticker);
+    } catch (_) {}
     return false;
   }
 }
+
 Future<bool> testConnectionPrinterSilence(
     BuildContext context,
     PrinterConnConfig p, {
       PosUniversalPrinter? pos,
     }) async {
-
-
   try {
     if (p.type == PrinterConnType.wifi) {
       final ip = (p.ip ?? '').trim();
@@ -903,7 +1164,7 @@ Future<bool> testConnectionPrinterSilence(
         timeout: const Duration(seconds: 4),
       );
       socket.destroy();
-      return false;
+      return true;
     }
 
     // Bluetooth (pos_universal_printer)
@@ -914,7 +1175,6 @@ Future<bool> testConnectionPrinterSilence(
 
     final posInst = pos ?? PosUniversalPrinter.instance;
 
-    // Construir device (ajustá si tu versión tiene otros campos)
     final device = PrinterDevice(
       name: p.name.isEmpty ? 'BT Printer' : p.name,
       address: mac,
@@ -922,14 +1182,29 @@ Future<bool> testConnectionPrinterSilence(
       type: PrinterType.bluetooth,
     );
 
+    try {
+      await posInst.unregisterDevice(PosPrinterRole.sticker);
+    } catch (_) {}
+
     await posInst.registerDevice(PosPrinterRole.sticker, device);
 
     final connected = posInst.isRoleConnected(PosPrinterRole.sticker);
     if (!connected) {
       return false;
     }
+
+    // Disconnect after test
+    try {
+      await Future.delayed(const Duration(milliseconds: 120));
+      await posInst.unregisterDevice(PosPrinterRole.sticker);
+    } catch (_) {}
+
     return true;
-  } catch (e) {
+  } catch (_) {
+    try {
+      final posInst = pos ?? PosUniversalPrinter.instance;
+      await posInst.unregisterDevice(PosPrinterRole.sticker);
+    } catch (_) {}
     return false;
   }
 }

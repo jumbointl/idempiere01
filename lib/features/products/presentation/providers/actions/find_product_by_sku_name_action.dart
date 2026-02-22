@@ -16,7 +16,7 @@ class FindProductBySkuNameAction extends CodeAndFireActionNotifier {
     saveLastSearch: true,
     enableScanningFlag: true,
     trimAndUppercase: true,
-    enableNormalizeUpc: false,
+    enableNormalizeUpc: true,
     extraSetting: (ref, value) {
       ref.read(isScanningProvider.notifier).state = true;
       ref.invalidate(productStoreOnHandCacheProvider);

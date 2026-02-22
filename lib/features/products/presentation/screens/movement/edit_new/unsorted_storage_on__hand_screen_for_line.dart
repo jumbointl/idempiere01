@@ -471,6 +471,8 @@ class UnsortedStorageOnHandScreenForLineState
 
         getDoubleDialog(
           ref: ref,
+          minValue: 1,
+          maxValue: qtyOnHand,
           quantity: qtyOnHand,
           targetProvider: quantityToMoveProvider,
         );

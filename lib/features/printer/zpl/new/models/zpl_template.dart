@@ -1,7 +1,7 @@
 
 
 
-enum ZplTemplateMode { movement , shipping }
+enum ZplTemplateMode { movement , locator }
 
 String zplTemplateModeToJson(ZplTemplateMode mode) => mode.name;
 
@@ -9,8 +9,8 @@ ZplTemplateMode zplTemplateModeFromJson(dynamic v) {
   if(v == null || v =='movement') {
     return ZplTemplateMode.movement;
   } else {
-    if(v == 'shipping') {
-      return ZplTemplateMode.shipping;
+    if(v == 'locator') {
+      return ZplTemplateMode.locator;
     }
 
   }
@@ -82,7 +82,7 @@ class ZplTemplate {
         parsedMode = ZplTemplateMode.movement;
         break;
       case 'shipping':
-        parsedMode = ZplTemplateMode.shipping;
+        parsedMode = ZplTemplateMode.locator;
         break;
       case 'category':
       case 'product':
