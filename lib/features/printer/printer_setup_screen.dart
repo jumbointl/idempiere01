@@ -1139,22 +1139,7 @@ class PrinterSetupScreen extends ConsumerStatefulWidget {
             label: Messages.CREATE_ZPL_TEMPLATE,
             backgroundColor: Colors.cyan.shade800,
             onPressed: () async {
-              String zpl = LocatorZplTemplate
-                  .getDefaultTemplate()
-                  .sentenceToSendToPrinter;
-              final newZpl = await context.push<String>(
-                AppRouter.PAGE_LOCATOR_SENTENCE_EDITOR,
-                extra: {
-                  'sentence': zpl,
-                  'focusNode': focusNode,
-                },
-              );
-              if (newZpl == null || newZpl.isEmpty) {
-                if (context.mounted) {
-                  showWarningMessage(context, ref, 'No template created');
-                }
-                return;
-              }
+
 
               final state = ref.read(printerScanNotifierProvider);
               String ip = state.ipController.text;
@@ -1173,13 +1158,21 @@ class PrinterSetupScreen extends ConsumerStatefulWidget {
                 }
                 return;
               }
-              if (zpl.isEmpty) {
+              String zpl = '';
+              final newZpl = await context.push<String>(
+                AppRouter.PAGE_LOCATOR_SENTENCE_EDITOR,
+                extra: {
+                  'sentence': zpl,
+                  'focusNode': focusNode,
+                },
+              );
+              if (newZpl == null || newZpl.isEmpty) {
                 if (context.mounted) {
-                  showWarningMessage(
-                      context, ref, 'Template is empty');
+                  showWarningMessage(context, ref, 'No template created');
                 }
                 return;
               }
+
 
               bool res = await sendZplBySocket(
                   ip: ip, port: port, zpl: newZpl);
