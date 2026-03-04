@@ -30,6 +30,9 @@ final scannedCodeTimesProvider = StateProvider.autoDispose<int>((ref) {
 final isScanningProvider = StateProvider.autoDispose<bool>((ref) {
   return false;
 });
+final printingMessageProvider = StateProvider.autoDispose<String>((ref) {
+  return '';
+});
 final isScanningForLineProvider = StateProvider.autoDispose<bool>((ref) {
   return false;
 });

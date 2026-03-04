@@ -381,6 +381,47 @@ String buildTsplProductLabelSimple({
 
 
 /// English: Get default profiles
+LabelProfile defaultLabel30x20() => const LabelProfile(
+  id: 'default_30x20',
+  name: 'Default 30x20',
+  copies: 1,
+  widthMm: 30,
+  heightMm: 20,
+  marginXmm: 2,
+  marginYmm: 2,
+  barcodeHeightMm: 12,
+  charactersToPrint: 0,
+  maxCharsPerLine:  16,
+  barcodeHeight: 50,
+  barcodeNarrow: 2,
+  barcodeWidth: 3,
+  fontId: 1,
+  gapMm: 3,
+
+
+
+);
+LabelProfile defaultLabel40x15() => const LabelProfile(
+  id: 'default_40x15',
+  name: 'Default 40x15',
+  copies: 1,
+  widthMm: 40,
+  heightMm: 15,
+  marginXmm: 2,
+  marginYmm: 2,
+  barcodeHeightMm: 12,
+  charactersToPrint: 0,
+  maxCharsPerLine:  18,
+  barcodeHeight: 50,
+  barcodeNarrow: 2,
+  barcodeWidth: 3,
+  fontId: 1,
+  gapMm: 3,
+
+
+
+);
+
 LabelProfile defaultLabel40x25() => const LabelProfile(
   id: 'default_40x25',
   name: 'Default 40x25',

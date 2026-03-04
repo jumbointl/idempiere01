@@ -16,6 +16,7 @@ import '../../../shared/data/messages.dart';
 import '../../domain/idempiere/idempiere_locator.dart';
 import '../../domain/idempiere/movement_and_lines.dart';
 import '../../domain/idempiere/response_async_value.dart';
+import '../../domain/models/ftpconfig.dart';
 import '../../domain/models/label_profile.dart';
 import '../screens/movement/provider/new_movement_provider.dart';
 import 'actions/find_locator_to_action_provider.dart';
@@ -301,3 +302,14 @@ final locatorScreenInputModeProvider =
 StateProvider<PrinterInputMode>((ref) => PrinterInputMode.manual);
 
 final selectedPrinterConfigProvider = StateProvider<PrinterConnConfig?>((ref) => null);
+// Importa tu clase Memory aquí
+
+final ftpConfigProvider = Provider<FtpConfig>((ref) {
+  // Accedemos a tus variables estáticas de Memory
+  return FtpConfig(
+    host: Memory.printerFileFtpServer,
+    user: Memory.printerFileFtpServerUserName,
+    pass: Memory.printerFileFtpServerPassword,
+    port: Memory.printerFileFtpServerPort,
+  );
+});

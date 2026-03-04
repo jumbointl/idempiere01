@@ -64,6 +64,7 @@ FutureProvider.autoDispose<ZplPrintingTemplate?>((ref) async {
   try {
     final connected = await ftp.connect();
     if (!connected) return null;
+    await ftp.sendCustomCommand("TYPE I");
 
     // Change to mode directory (e.g. /movement)
     await ftp.changeDirectory(remoteDir);

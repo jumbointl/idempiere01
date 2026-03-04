@@ -1143,7 +1143,7 @@ class PrinterSetupScreen extends ConsumerStatefulWidget {
 
               final state = ref.read(printerScanNotifierProvider);
               String ip = state.ipController.text;
-              int port = int.parse(state.portController.text);
+              int port = int.tryParse(state.portController.text) ?? 0;
               if (ip.isEmpty) {
                 if (context.mounted) {
                   showWarningMessage(

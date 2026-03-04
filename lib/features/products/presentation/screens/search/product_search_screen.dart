@@ -18,6 +18,8 @@ import '../../../../shared/data/memory.dart';
 import '../../../../shared/data/messages.dart';
 
 import '../../../domain/idempiere/idempiere_product.dart';
+import '../../providers/ai/gallery_provider.dart';
+import '../../providers/ai/global_providers.dart';
 import '../../providers/common_provider.dart';
 import '../../providers/product_provider_common.dart';
 import '../../providers/product_search_provider.dart';
@@ -25,6 +27,7 @@ import '../../widget/no_data_card.dart';
 import '../../widget/no_records_card.dart';
 import '../../widget/product_search_mode_button.dart';
 import '../store_on_hand/product_detail_card.dart';
+import 'ai_dashboard.dart';
 
 
 class ProductSearchScreen extends ConsumerStatefulWidget  {
@@ -46,7 +49,7 @@ class ProductSearchScreen extends ConsumerStatefulWidget  {
 
 class _ProductSearchScreenState
     extends CommonConsumerWithTabBarState<ProductSearchScreen> {
-
+  bool _loadImagen = false ;
   @override
   int get tabLength => 2;
   @override
@@ -58,6 +61,7 @@ class _ProductSearchScreenState
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(actionScanProvider.notifier).update((state) => Memory.ACTION_FIND_BY_UPC_SKU);
+
     });
 
   }
@@ -97,14 +101,9 @@ class _ProductSearchScreenState
   List<Widget> buildTabViews() => [
     _buildFindTab(),
     UpdateProductUpcView(),
+
   ];
 
-  @override
-  void onBackPressed() {
-    // English: Keep original behavior to return home
-    unfocus();
-    context.go(AppRouter.PAGE_HOME);
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -166,7 +165,17 @@ class _ProductSearchScreenState
             ),
             child: productAsync.when(
               data: (products) {
-                WidgetsBinding.instance.addPostFrameCallback((_) => stopScanning());
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  stopScanning();
+                  if(!_loadImagen && products.isNotEmpty && products.length == 1){
+                    _loadImagen = true ;
+                    String productId = products[0].id?.toString() ?? '';
+                    if(productId.isNotEmpty){
+                      ref.read(productGalleryProvider(productId).notifier).fetchRemoteImages();
+                    }
+
+                  }
+                });
                 resultProducts = products;
 
                 if (products.isEmpty) return NoDataCard();
@@ -174,17 +183,28 @@ class _ProductSearchScreenState
                 if (products.length == 1) {
                   final p = products[0];
                   return (p.id != null && p.id! > 0)
-                      ? ProductDetailWithPhotoCard(
-                    product: p.copyWith(imageURL: imageUrl, uPC: null),
-                    actionTypeInt: widget.actionScanType,
-                  )
+                      ? Column(
+                        children: [
+                          ProductDetailWithPhotoCard(
+                                              product: p.copyWith(imageURL: imageUrl, uPC: null),
+                                              actionTypeInt: widget.actionScanType,
+                                            ),
+                          const Divider(height: 1, color: Colors.grey),
+                          ConstrainedBox(
+                            constraints: const BoxConstraints(maxHeight: 500),
+                            child: AiDashboardScreen(productId: p.id.toString()),
+                          ),
+                        ],
+                      )
                       : NoDataCard();
                 }
 
                 // ✅ When more than one, we render list below (as sliver), so return a placeholder here
                 return const SizedBox.shrink();
               },
-              loading: () => const LinearProgressIndicator(),
+              loading: () {
+                _loadImagen = false ;
+                return const LinearProgressIndicator();},
               error: (e, _) => Text('Error: $e'),
             ),
           ),
@@ -274,7 +294,8 @@ class _ProductSearchScreenState
   }
   @override
   Future<void> handleInputString({required WidgetRef ref, required String inputData, required int actionScan}) async {
-
+    if(inputData.isEmpty) return ;
+    _loadImagen = false ;
     await ref.read(searchByUpcOrSkuActionProvider).handleInputString(
       ref: ref,
       inputData: inputData,
@@ -323,5 +344,18 @@ class _ProductSearchScreenState
       inputData: upc,
       actionScan: widget.actionScanType,
     );
+  }
+
+  @override
+  void popScopeAction(BuildContext context, WidgetRef ref) {
+    final isLoafing = ref.read(aiLoadingProvider);
+    if(isLoafing.isLoading){
+      return;
+    }
+    unfocus();
+    ref.invalidate(actionScanProvider);
+    ref.invalidate(fireSearchByUPCOrSKUProvider);
+    ref.read(scannedCodeForSearchByUPCOrSKUProvider.notifier).state='';
+    Navigator.of(context).pop();
   }
 }

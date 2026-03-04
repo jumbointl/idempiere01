@@ -29,6 +29,7 @@
     <uses-permission android:name="android.permission.READ_MEDIA_IMAGES"/>
     <!-- Android 12L o menor -->
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32"/>
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="28" />
 
     <application
         android:label="Monalisa"
@@ -58,6 +59,11 @@
             </intent-filter>
 
         </activity>
+        <activity
+            android:name="com.yalantis.ucrop.UCropActivity"
+            android:screenOrientation="portrait"
+            android:theme="@style/Theme.AppCompat.Light.NoActionBar"/>
+
 
         <meta-data android:name="flutterEmbedding" android:value="2" />
 

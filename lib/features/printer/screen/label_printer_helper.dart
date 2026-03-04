@@ -102,7 +102,12 @@ class _PrinterPickerSheetState extends ConsumerState<_PrinterPickerSheet> {
 
     // If already connected: disconnect first (as requested)
     if (ctrl.isConnected()) {
-      await ctrl.handleDisconnect(context);
+      try{
+        await ctrl.handleDisconnect(context);
+      }catch(_){
+
+      }
+
     }
 
     // Connect using BluetoothDevice if provided, else use silent address
@@ -134,6 +139,7 @@ class _PrinterPickerSheetState extends ConsumerState<_PrinterPickerSheet> {
     final ctrl = widget.controller;
 
     return SafeArea(
+
       child: Padding(
         padding: EdgeInsets.only(
           left: 12,

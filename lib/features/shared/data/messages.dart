@@ -1427,6 +1427,12 @@ class Messages{
 
   static String PRINTER_LABEL='ETIQUETA DE IMPRESORA';
 
+  static String STORAGE='ALMACEN';
+
+  static String ERROR_STORAGE='ERROR ALMACEN';
+
+  static String AND='Y';
+
 
 
 

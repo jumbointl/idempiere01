@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../shared/data/memory.dart';
 import '../../../../shared/data/messages.dart';
 import '../../../domain/idempiere/idempiere_product.dart';
+import '../../providers/ai/gallery_provider.dart';
 import '../../providers/product_provider_common.dart';
 class ProductDetailWithPhotoCard extends ConsumerStatefulWidget {
   final IdempiereProduct product;
@@ -26,27 +27,64 @@ class _ProductDetailWithPhotoCardState extends ConsumerState<ProductDetailWithPh
 
   @override
   Widget build(BuildContext context) {
-    Color backGroundColor = widget.product.id !=null && widget.product.id! >0 ? Colors.white : Colors.red[200]!;
-    Memory.setImageSize(context);
+    final productId = widget.product.id?.toString() ?? '';
+    ref.listen(productGalleryProvider(productId), (prev, next) {
+      if (next.isNotEmpty) {
+        ref.read(selectedImageIndexProvider.notifier).state = 0;
+      }
+    });
     String att = widget.product.mAttributeSetInstanceID?.identifier  ?? '';
     if(att==''){
       att = '${Messages.ATTRIBUET_INSTANCE}: ${widget.product.mAttributeSetInstanceID?.identifier  ?? '--'}';
     }
-    String category = widget.product.mProductCategoryID?.identifier  ?? '--';
-    String imageUrl = widget.product.imageURL ?? '' ;
-    if(Memory.isTestMode){
-      imageUrl = Memory.IMAGE_HTTP_SAMPLE_1; // Example image URL
+    final images = ref.watch(productGalleryProvider(productId));
+    final selectedIndex = ref.watch(selectedImageIndexProvider);
+
+    String imageUrl = widget.product.imageURL ?? '';
+    final rawCategory = widget.product.mProductCategoryID?.identifier ?? '--';
+    final category =  '${Messages.CATEGORY}: $rawCategory' ;
+
+
+    if (Memory.isTestMode) {
+      imageUrl = Memory.IMAGE_HTTP_SAMPLE_1;
       int countScannedCamera = ref.watch(scannedCodeTimesProvider);
-      if(countScannedCamera.isEven){
-        imageUrl = Memory.IMAGE_HTTP_SAMPLE_2;
-      } else {
-        imageUrl = Memory.IMAGE_HTTP_SAMPLE_1;
-      }
+      imageUrl = countScannedCamera.isEven
+          ? Memory.IMAGE_HTTP_SAMPLE_2
+          : Memory.IMAGE_HTTP_SAMPLE_1;
     }
+
+    Widget imageWidget;
+
+    if (images.isEmpty) {
+      // 🔹 Modo actual (Network)
+      imageWidget = FadeInImage(
+        placeholder: AssetImage(Memory.IMAGE_LOADING),
+        image: NetworkImage(imageUrl),
+        fit: BoxFit.contain,
+        imageErrorBuilder: (_, __, ___) =>
+            Image.asset(Memory.IMAGE_NO_IMAGE, fit: BoxFit.cover),
+      );
+    } else {
+      // 🔹 Modo galería local (FTP/S3)
+      final safeIndex =
+      selectedIndex < images.length ? selectedIndex : 0;
+
+      final selectedImage = images[safeIndex];
+
+      imageWidget = Image.memory(
+        selectedImage.bytes,
+        fit: BoxFit.contain,
+        errorBuilder: (_, __, ___) =>
+            Image.asset(Memory.IMAGE_NO_IMAGE, fit: BoxFit.contain),
+      );
+    }
+
     return SingleChildScrollView(
       child: Container(
         decoration: BoxDecoration(
-          color: backGroundColor,
+          color: widget.product.id != null && widget.product.id! > 0
+              ? Colors.white
+              : Colors.red[200]!,
           borderRadius: BorderRadius.circular(10),
         ),
         padding: const EdgeInsets.all(10),
@@ -54,22 +92,26 @@ class _ProductDetailWithPhotoCardState extends ConsumerState<ProductDetailWithPh
           crossAxisAlignment: CrossAxisAlignment.start,
           spacing: 5,
           children: [
-      
-            Center(
-              child: SizedBox(
-                width: Memory.SIZE_PRODUCT_IMAGE_WIDTH,
-                height: Memory.SIZE_PRODUCT_IMAGE_HEIGHT,
-                child: FadeInImage(
-                  placeholder: AssetImage(Memory.IMAGE_LOADING), // Placeholder for loading
-                  image:NetworkImage(imageUrl),
-      
-                  fit: BoxFit.cover, // Adjust as needed
-                  imageErrorBuilder: (context, error, stackTrace) {
-                    return Image.asset(Memory.IMAGE_NO_IMAGE, fit: BoxFit.cover); // Display on error
-                  },
+            Container(
+              // Importante: El color se mueve dentro del BoxDecoration
+              decoration: BoxDecoration(
+                color: Colors.grey[200],
+                borderRadius: BorderRadius.circular(20), // Ajusta el radio del borde aquí
+                border: Border.all(color: Colors.grey[400]!), // Opcional: añade un borde sutil
+              ),
+              child: Center(
+                child: SizedBox(
+                  width: Memory.SIZE_PRODUCT_IMAGE_WIDTH,
+                  height: Memory.SIZE_PRODUCT_IMAGE_HEIGHT,
+                  child: ClipRRect(
+                    // Aplicamos el mismo redondeo a la imagen para que no sobresalga en las esquinas
+                    borderRadius: BorderRadius.circular(15),
+                    child: imageWidget,
+                  ),
                 ),
               ),
             ),
+
             Text(
               widget.product.name ?? '${Messages.NAME}--',
               style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
@@ -93,12 +135,10 @@ class _ProductDetailWithPhotoCardState extends ConsumerState<ProductDetailWithPh
               category,
               style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
             ),
-
           ],
         ),
       ),
     );
-
   }
 
 

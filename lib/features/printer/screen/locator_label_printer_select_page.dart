@@ -15,7 +15,8 @@ import 'label_printer_select_page.dart';
 
 class LocatorLabelPrinterSelectPage extends LabelPrinterSelectPage {
   const LocatorLabelPrinterSelectPage({super.key, required super.dataToPrint});
-
+  int get minProfileWidth => 40;
+  int get minProfileHeight => 30;
   @override
   int get actionScanType => Memory.ACTION_FIND_PRINTER_BY_QR_WIFI_BLUETOOTH;
 
@@ -47,7 +48,9 @@ class LocatorLabelPrinterSelectPage extends LabelPrinterSelectPage {
           child: ElevatedButton(
             onPressed: selectedPrinter == null
                 ? null
-                : () => onPrint(profile: profile40, printSimpleData: true),
+                : () {
+
+              onPrint(profile: profile40, printSimpleData: true);},
             child: const Text('Locator barcode'),
           ),
         ),
@@ -213,6 +216,15 @@ class LocatorLabelPrinterSelectPage extends LabelPrinterSelectPage {
 
     debugPrint('Locator label TSPL (QR):\n$result');
     return result;
+  }
+
+  @override
+  String checkLabelSize(WidgetRef ref, LabelProfile profile, {required bool printSimpleData}){
+    if(profile.heightMm<minProfileHeight || profile.widthMm<minProfileWidth){
+      String msg = 'Profile, Profile size is too small. Minimum: ${minProfileWidth}x${minProfileHeight}mm';
+      return msg;
+    }
+    return '';
   }
 
   /// Heurística para elegir cellwidth para que el QR quepa.

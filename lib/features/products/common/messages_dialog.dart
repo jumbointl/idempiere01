@@ -19,7 +19,7 @@ Future<void> showSuccessMessage(
     if (!context.mounted) return;
   }
 
-  showSuccessCenterToast(
+  await showSuccessCenterToast(
     context,
     message,
     durationSeconds: durationSeconds,
@@ -37,7 +37,7 @@ Future<void> showWarningMessage(
     if (!context.mounted) return;
   }
 
-  showWarningCenterToast(
+  await showWarningCenterToast(
     context,
     message,
     durationSeconds: durationSeconds,
@@ -158,7 +158,7 @@ Future<void> showErrorMessage(
     if (!context.mounted) return;
   }
 
-  showErrorCenterToast(
+  await showErrorCenterToast(
     context,
     message,
     durationSeconds: durationSeconds,
@@ -170,21 +170,24 @@ OverlayEntry? _centerToastEntry;
 /// Shows a centered toast using Overlay.
 /// - durationSeconds: default 3
 /// - durationSeconds == 0: manual close (tap or X button)
-void _showCenterToast(
+Future<void> _showCenterToast(
     BuildContext context, {
       required String message,
       required IconData icon,
       required Color accentColor,
       int durationSeconds = 3,
-    }) {
-  // Close any existing toast
+    }) async {
   _dismissCenterToast();
 
   final overlay = Overlay.of(context);
 
   late final OverlayEntry entry;
+  final completer = Completer<void>();
 
   void close() {
+    if (!completer.isCompleted) {
+      completer.complete();
+    }
     if (_centerToastEntry == entry) {
       _dismissCenterToast();
     }
@@ -197,7 +200,6 @@ void _showCenterToast(
         child: SafeArea(
           child: Center(
             child: GestureDetector(
-              // Manual close on tap when duration=0
               onTap: durationSeconds == 0 ? close : null,
               child: Container(
                 constraints: const BoxConstraints(maxWidth: 420),
@@ -223,7 +225,6 @@ void _showCenterToast(
                     Flexible(
                       child: Text(
                         message,
-                        textAlign: TextAlign.left,
                         style: const TextStyle(
                           color: Colors.white,
                           fontSize: 14,
@@ -233,7 +234,6 @@ void _showCenterToast(
                       ),
                     ),
                     const SizedBox(width: 8),
-                    // Always allow manual close via X
                     InkWell(
                       borderRadius: BorderRadius.circular(999),
                       onTap: close,
@@ -255,24 +255,24 @@ void _showCenterToast(
   _centerToastEntry = entry;
   overlay.insert(entry);
 
-  // Auto dismiss if durationSeconds > 0
   if (durationSeconds > 0) {
     Future.delayed(Duration(seconds: durationSeconds), close);
   }
-}
 
+  await completer.future;
+}
 void _dismissCenterToast() {
   _centerToastEntry?.remove();
   _centerToastEntry = null;
 }
 
 /// Success toast (green)
-void showSuccessCenterToast(
+Future<void> showSuccessCenterToast(
     BuildContext context,
     String message, {
       int durationSeconds = 3,
-    }) {
-  _showCenterToast(
+    }) async {
+  await _showCenterToast(
     context,
     message: message,
     icon: Icons.check_circle_rounded,
@@ -282,12 +282,12 @@ void showSuccessCenterToast(
 }
 
 /// Error toast (red)
-void showErrorCenterToast(
+Future<void> showErrorCenterToast(
     BuildContext context,
     String message, {
       int durationSeconds = 3,
-    }) {
-  _showCenterToast(
+    }) async {
+  await _showCenterToast(
     context,
     message: message,
     icon: Icons.error_rounded,
@@ -297,12 +297,12 @@ void showErrorCenterToast(
 }
 
 /// Warning toast (yellow)
-void showWarningCenterToast(
+Future<void> showWarningCenterToast(
     BuildContext context,
     String message, {
       int durationSeconds = 3,
-    }) {
-  _showCenterToast(
+    }) async {
+  await _showCenterToast(
     context,
     message: message,
     icon: Icons.warning_amber_rounded,

@@ -70,8 +70,8 @@ class MOPrinter{
     if(zplQrData.isNotEmpty) {
      final sentence = '''
       ^XA
-      ^CI28
       ^XF$zplTemplateNameAutoSelect^FS
+      ^CI28
       ^FN1^FD$zplQrData^FS
       ^XZ
       ''';
@@ -85,28 +85,22 @@ class MOPrinter{
     if(zplQrData.isNotEmpty) {
      final sentence = '''
       ^XA
-^CI28
-^MD15
 ^PW800
 ^LL320
+^CI28
 ^LH0,0
-
 ^FO30,30
 ^A0N,25,25
 ^FD$zplQrData^FS
-
 ^FO30,90
 ^BQN,2,6
 ^FDLA,$zplQrData^FS
-
 ^FO300,90
 ^BQN,2,6
 ^FDLA,$zplQrData^FS
-
 ^FO570,90
 ^BQN,2,6
 ^FDLA,$zplQrData^FS
-
 ^PQ1
 ^XZ
       ''';
@@ -119,12 +113,11 @@ class MOPrinter{
   static String get zplTemplate6FieldsCreateTemplateSentence {
     String defaultSentence = '''
 ^XA
-^CI28
-^MD15
+^DFE:$zplTemplate6FieldName^FS
 ^PW800
 ^LL320
+^CI28
 ^LH0,0
-^DFR:$zplTemplate6FieldName^FS
 ^FO30,30^A0N,25,25^FN1^FS
 ^FO30,80^BQN,2,6^FN1^FS
 ^FO300,80^BQN,2,6^FN1^FS
@@ -138,12 +131,11 @@ return defaultSentence;
   static String get zplTemplate3FieldsCreateTemplateSentence {
     String defaultSentence = '''
 ^XA
-^CI28
-^MD15
+^DFR:$zplTemplate3FieldName^FS
 ^PW800
 ^LL320
+^CI28
 ^LH0,0
-^DFR:$zplTemplate3FieldName^FS
 ^FO30,30^A0N,25,25^FN1^FS
 ^FO30,80^BQN,2,8^FN1^FS
 ^FO300,80^BQN,2,8^FN1^FS

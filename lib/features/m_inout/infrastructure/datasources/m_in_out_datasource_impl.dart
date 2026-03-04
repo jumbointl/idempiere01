@@ -934,6 +934,7 @@ class MInOutDataSourceImpl implements MInOutDataSource {
       qtyColumn: (line.confirmedQty ?? 0.0),
       if(!isMovement) qtyEnteredColumn: (line.confirmedQty ?? 0.0),
       if(!isConfirmFlow) 'ConfirmedQty' :(line.confirmedQty ?? 0),
+      if(!isMovement && (mInOutState.mInOut?.docStatus.id =='DR')) 'M_Locator_ID' :(line.mLocatorId?.id ?? 0)
     };
 
     // Optional locator update

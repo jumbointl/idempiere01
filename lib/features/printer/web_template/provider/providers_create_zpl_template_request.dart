@@ -76,7 +76,7 @@ Future<bool> ftpFileExists({
   try {
     final connected = await ftp.connect();
     if (!connected) return false;
-
+    await ftp.sendCustomCommand("TYPE I");
     await ftp.changeDirectory(remoteDir);
 
     // English comment: "List directory and check file names"
@@ -154,6 +154,7 @@ Future<bool> _uploadJsonToFtp({
   try {
     final connected = await ftp.connect();
     if (!connected) return false;
+    await ftp.sendCustomCommand("TYPE I");
 
     try {
       await ftp.changeDirectory(remoteDir);
@@ -204,7 +205,7 @@ Future<void> deleteTemplateJsonFromFtp({
   try {
     final connected = await ftp.connect();
     if (!connected) throw Exception('No se pudo conectar al FTP');
-
+    await ftp.sendCustomCommand("TYPE I");
     await ftp.changeDirectory(remoteDir);
 
     // English comment: "Try delete; ignore if not found"

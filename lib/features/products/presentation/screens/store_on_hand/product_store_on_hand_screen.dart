@@ -145,26 +145,33 @@ class _ProductStoreOnHandScreenState
 
     switch (searchMode) {
       case ProductSearchMode.upc:
-        message = Messages.FIND_PRODUCT_BY_UPC_SKU;
+        title = Messages.FIND_PRODUCT_BY_UPC_SKU;
+        message = result.message ??'';
+        borderColor = Colors.cyan.shade800;
         break;
       case ProductSearchMode.sku:
-        message = Messages.FIND_PRODUCT_BY_SKU;
+        title= Messages.FIND_PRODUCT_BY_SKU;
+        message = result.message ??'';
         borderColor = Colors.cyan.shade800;
         break;
       case ProductSearchMode.name:
-        message = Messages.FIND_PRODUCT_BY_NAME;
+        title = Messages.FIND_PRODUCT_BY_NAME;
+        message = result.message ??'';
         borderColor = Colors.blue.shade800;
         break;
     }
 
-    final uiModel = mapResponseAsyncValueToUi(
-      result: result,
-      title: Messages.PRODUCT,
-      subtitle: message,
+    final ui = ResponseAsyncValueUiModel(
+      state: ResponseUiState.error,
+      title: Messages.ERROR,
+      subtitle: Messages.NO_DATA_FOUND,
+      message: message,
+      backgroundColor: Colors.red[200]!,
       borderColor: borderColor,
+      icon: Icons.error,
     );
+    return ResponseAsyncValueMessagesCardAnimated(ui: ui);
 
-    return ResponseAsyncValueMessagesCardAnimated(ui: uiModel);
   }
 
   @override

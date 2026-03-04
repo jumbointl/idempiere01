@@ -44,6 +44,7 @@ FutureProvider.autoDispose<List<ZplTemplate>>((ref) async {
     final connected = await ftp.connect();
     if (!connected) return out;
       // English comment: "Enter mode directory if it exists"
+    await ftp.sendCustomCommand("TYPE I");
       try {
         await ftp.changeDirectory(dirName);
       } catch (_) {

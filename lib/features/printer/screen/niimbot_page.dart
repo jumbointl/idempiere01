@@ -4,6 +4,7 @@ import 'dart:typed_data';
 
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_addons/flutter_addons.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
@@ -11,6 +12,7 @@ import 'package:get_storage/get_storage.dart';
 import 'package:monalisa_app_001/config/config.dart';
 import 'package:monalisa_app_001/features/products/common/messages_dialog.dart';
 import 'package:monalisa_app_001/features/products/domain/idempiere/response_async_value.dart';
+import 'package:monalisa_app_001/features/products/presentation/providers/product_provider_common.dart';
 import 'package:niim_blue_flutter/niim_blue_flutter.dart';
 import 'package:permission_handler/permission_handler.dart';
 
@@ -25,6 +27,7 @@ import '../models/printer_select_models.dart';
 
 import 'label_config_page.dart';
 import 'label_profiles_storage_helper.dart';
+import 'niimbot_page_helper.dart';
 import 'niimbot_silence_page_provider.dart';
 import 'printer_select_page.dart';
 
@@ -39,9 +42,7 @@ StateNotifierProvider<NiimbotController, NiimbotState>(
 final resultStatusProvider = StateProvider.autoDispose<bool?>((ref) {
   return null; // valor inicial
 });
-final packetIntervalMsProvider = StateProvider<int>((ref) {
-  return 0; // valor inicial
-});
+
 // ------------------------------
 // State
 // ------------------------------
@@ -60,9 +61,9 @@ class NiimbotState {
   final bool showPreview;
   final PendingJob? pendingJob;
   final int marginXOffSet; // 0..10
-  final int copiesTemp;
   final bool isPrinting;
   final bool autoDisconnectAfterPrint;
+  final LabelProfile profile;
 
   const NiimbotState({
     required this.client,
@@ -73,23 +74,41 @@ class NiimbotState {
     required this.showPreview,
     required this.pendingJob,
     required this.marginXOffSet,
-    required this.copiesTemp,
     required this.isPrinting,
     required this.autoDisconnectAfterPrint,
+    required this.profile,
+
   });
 
-  factory NiimbotState.initial() => const NiimbotState(
+  factory NiimbotState.initial() => NiimbotState(
     client: null,
     status: 'Disconnected',
-    devices: <BluetoothDevice>[],
+    devices: const <BluetoothDevice>[],
     showDeviceList: false,
     previewImage: null,
     showPreview: false,
     pendingJob: null,
     marginXOffSet: 4,
-    copiesTemp: 1,
     isPrinting: false,
     autoDisconnectAfterPrint: true,
+
+    profile: const LabelProfile(
+      id: 'default',
+      name: 'Default',
+      copies: 1,
+      widthMm: 50,
+      heightMm: 30,
+      marginXmm: 2,
+      marginYmm: 2,
+      barcodeHeightMm: 12,
+      charactersToPrint: 0,
+      maxCharsPerLine: 22,
+      barcodeHeight: 96,
+      barcodeWidth: 3,
+      barcodeNarrow: 2,
+      fontId: 2,
+      gapMm: 2,
+    ),
   );
 
   NiimbotState copyWith({
@@ -103,9 +122,9 @@ class NiimbotState {
     bool clearPreviewImage = false,
     bool clearPendingJob = false,
     int? marginXOffSet,
-    int? copiesTemp,
     bool? isPrinting,
     bool? autoDisconnectAfterPrint,
+    LabelProfile? profile,
   }) {
     return NiimbotState(
       client: client ?? this.client,
@@ -116,10 +135,10 @@ class NiimbotState {
       showPreview: showPreview ?? this.showPreview,
       pendingJob: clearPendingJob ? null : (pendingJob ?? this.pendingJob),
       marginXOffSet: marginXOffSet ?? this.marginXOffSet,
-      copiesTemp: copiesTemp ?? this.copiesTemp,
       isPrinting: isPrinting ?? this.isPrinting,
       autoDisconnectAfterPrint:
       autoDisconnectAfterPrint ?? this.autoDisconnectAfterPrint,
+      profile: profile ?? this.profile,
     );
   }
 }
@@ -133,34 +152,124 @@ class NiimbotPrintController
   final Ref ref;
   NiimbotPrintController(this.ref) : super(const AsyncValue.data(null));
 
-  Future<void> print({LabelProfile? profile}) async {
+  Future<void> print({LabelProfile? profile,
+    required bool autoDisconnectAfterPrint,required BuildContext context}) async {
     state = const AsyncValue.loading();
     ref.read(resultStatusProvider.notifier).state = null ;
     final ctrl = ref.read(niimbotControllerProvider.notifier);
+    final client = ctrl.state.client!;
+    bool success = false;
     try {
 
-      debugPrint('executePrintSilence started');
-      final res = await ctrl.executePrintSilence(ref, profile: profile,
-          overrideCopies: true); // ✅ Ref estable
+
+      int? saved = ref.read(niimbotPacketIntervalSavedProvider);
+
+      int packageInterval = 0;
+      if (saved != null) {
+        packageInterval =  saved;
+
+      } else {
+        if (Platform.isAndroid) {
+          final androidInfo = await DeviceInfoPlugin().androidInfo;
+          final sdk = androidInfo.version.sdkInt;
+
+          if (sdk < 32) {
+            packageInterval = 30;
+            debugPrint('[NIIMBOT] Android < 13 detected (sdk=$sdk) → base interval 20ms');
+          } else if(sdk<28){
+            packageInterval = 40;
+          }
+          ref.read(niimbotPacketIntervalSavedProvider.notifier).state = packageInterval ;
+        }
+
+      }
+
+
+      client.packetIntervalMs = packageInterval;
+      client.packetIntervalMs = ctrl.getPacketIntervalMs(copies: profile?.copies ?? 1);
+      debugPrint('executePrintSilence packetIntervalMs ${client.packetIntervalMs}');
+
+      int poll = ctrl.getStatusPollIntervalMs();
+      int timeout = ctrl.getStatusTimeoutMs(copies: profile?.copies ??1);
+      String msg ='packet interval(ms) = ${client.packetIntervalMs},'
+          ' poll(ms) = $poll, timeout(ms) = $timeout , mtu = ${ctrl.savedMtu}';
+
+      if(!context.mounted) return;
+      final res = await ctrl.executePrintSilence(ref, profile: profile
+          ,overrideCopies: true,context: context); // ✅ Ref estable
       if (res.success == true) {
         ref.read(resultStatusProvider.notifier).state = true;
       } else {
         ref.read(resultStatusProvider.notifier).state = false;
       }
+      //res.message = '${res.message} , $msg';
+      ctrl.state = ctrl.state.copyWith(status: msg, isPrinting: false);
       state = AsyncValue.data(res);
+      success = true;
+      autoDisconnectAfterPrint = false ;
     } catch (e, st) {
+      autoDisconnectAfterPrint = true;
       ref.read(resultStatusProvider.notifier).state = false;
       state = AsyncValue.error(e, st);
     } finally {
-      ctrl.handleDisconnectSilence();
+      if(showPrintingResultMessage) {
+        String msg = ref.read(printingMessageProvider);
+        if (showPrintingResultMessage) {
+          if (success) {
+            if (context.mounted) {
+              await showSuccessCenterToast(context, 'OK: $msg');
+            }
+          } else {
+            if (context.mounted) {
+              await showErrorCenterToast(context, 'Error: $msg');
+            }
+          }
+        }
+      }
+      /*if (autoDisconnectAfterPrint) {
+        await ctrl.handleDisconnectSilence();
+      }*/
+
     }
   }
 }
 // ------------------------------
 // Controller
 // ------------------------------
+
+// ------------------------------------------------------------
+// BLE mutex (Fix4): serialize BLE operations to avoid races
+// ------------------------------------------------------------
+class _BleMutex {
+  Future<void> _tail = Future.value();
+
+  Future<T> synchronized<T>(Future<T> Function() action) {
+    final completer = Completer<T>();
+
+    // Ensure chain continues even if previous step failed.
+    _tail = _tail.catchError((_) {}).then((_) async {
+      try {
+        final res = await action();
+        completer.complete(res);
+      } catch (e, st) {
+        completer.completeError(e, st);
+      }
+    });
+
+    return completer.future;
+  }
+}
+
 class NiimbotController extends StateNotifier<NiimbotState> {
   NiimbotController() : super(NiimbotState.initial());
+
+
+  final _BleMutex _bleMutex = _BleMutex();
+  int savedMtu = 240;
+
+  Future<T> _ble<T>(Future<T> Function() action) {
+    return _bleMutex.synchronized(action);
+  }
 
   // ------------------------------------------------------------
   // Profile helpers
@@ -181,24 +290,6 @@ class NiimbotController extends StateNotifier<NiimbotState> {
     if (state.autoDisconnectAfterPrint == v) return;
     state = state.copyWith(autoDisconnectAfterPrint: v);
   }
-  /// Crea el PrintPage según el tipo de data y deja listo state.pendingJob.
-  /// (Silencioso: no abre preview modal ni dialogs)
-  void _setPacketIntervalMs(Ref ref, int value) {
-    final v = value < 0 ? 0 : value;
-
-    // 1) actualizar el cliente si existe
-    final client = state.client;
-    if (client != null && client.isConnected()) {
-      client.packetIntervalMs = v;
-    }
-
-    // 2) publicar a provider para UI
-    ref.read(packetIntervalMsProvider.notifier).state = v;
-
-    debugPrint('[NIIMBOT] packetIntervalMs => $v');
-  }
-
-
   Future<void> queuePendingJobForDataSilence({
     required dynamic data,
     required LabelProfile profile,
@@ -206,10 +297,11 @@ class NiimbotController extends StateNotifier<NiimbotState> {
     // decidir layout por tipo
     if (data is IdempiereProduct) {
       // Elegí complete o simple como default. Acá uso "complete".
+
       final page = await _buildPageForProduct(
         product: data,
         profile: profile,
-        isComplete: true,
+        isComplete: profile.heightMm>=30,
       );
 
       state = state.copyWith(
@@ -240,7 +332,7 @@ class NiimbotController extends StateNotifier<NiimbotState> {
     if (data is PrinterConnConfig) {
       // Elegí barcode o QR como default. Acá uso barcode.
       final page = await _buildPageForPrinterConfigQr(
-        profile: profile, printer: data,
+        profile: profile, cfg: data,
       );
 
       state = state.copyWith(
@@ -294,41 +386,87 @@ class NiimbotController extends StateNotifier<NiimbotState> {
     setMarginXOffSet(state.marginXOffSet + 1);
   }
 
-  void setCopiesTemp(int v) {
-    final c = v < 1 ? 1 : v;
-    state = state.copyWith(copiesTemp: c);
-  }
-  Future<void> handleDisconnectSilence() async {
-    final client = state.client;
-    if (client == null) return;
-    if (!client.isConnected()) return;
-
+  Future<String> runBleProbeAdvanced(BluetoothDevice device) async {
     try {
-      client.stopHeartbeat();
-      await client.abstraction.printEnd();
-      await client.disconnect();
+      return await _ble(() async {
+        if (state.isPrinting) {
+          return 'Device is currently printing. Advanced probe skipped.';
+        }
 
-      state = state.copyWith(
-        status: 'Disconnected',
-        client: null,
-        clearPreviewImage: true,
-        clearPendingJob: true,
-        showPreview: false,
-        showDeviceList: false,
+        // ✅ solo 0x1801/0x2A05
+        final log = await BleExplorer.probeAdvancedGenericAttributeToString(
+          device: device,
+          notifyWindow: const Duration(seconds: 6),
+          discoverTimeout: const Duration(seconds: 6),
+          disableNotifyAtEnd: true,
+        );
+
+        return log;
+      }).timeout(
+        const Duration(seconds: 15),
+        onTimeout: () => 'Advanced probe timeout (global 15s)',
       );
-    } catch (_) {
-      // silence
+    } catch (e, st) {
+      debugPrint('[NIIMBOT][ADV_PROBE] ERROR: $e');
+      debugPrint('$st');
+      return 'ERROR running advanced probe:\n$e';
     }
+  }
+  Future<void> handleDisconnectSilence({int? waitForExit}) async {
+    return _ble(() async {
+      final client = state.client;
+      if (client == null) return;
+      if (!client.isConnected()) return;
+      if(waitForExit==null){
+        final copies = state.profile.copies;
+        final base = 500; // ms
+        final extra = (client.packetIntervalMs * 25) + (copies * 250); // tuneable
+        waitForExit = base + extra;
+      }
+      if(waitForExit!= null && waitForExit!>0){
+        await Future.delayed(Duration(milliseconds: waitForExit!));
+      }
+
+
+      try {
+        client.stopHeartbeat();
+        await client.abstraction.printEnd();
+        await client.disconnect();
+
+        debugPrint('Disconnected status 1, ${state.status}');
+        String msg ='Disconnected';
+        if(state.status.toLowerCase().contains('mtu') || state.status.toLowerCase().contains('error')
+            || state.status.toLowerCase().contains('success')){
+          msg ='Disconnected , ${state.status}';
+        }
+
+        state = state.copyWith(
+          status: msg,
+          client: null,
+          clearPreviewImage: true,
+          clearPendingJob: true,
+          showPreview: false,
+          showDeviceList: false,
+        );
+      } catch (_) {
+        // silence
+      }
+
+    });
   }
 
   Future<ResponseAsyncValue> executePrintSilence(
       Ref ref, {
-        LabelProfile? profile,
-        bool overrideCopies = true,
+        LabelProfile? profile, required bool overrideCopies,
+        required BuildContext context,
       }) async {
+
+
     state = state.copyWith(showPreview: false);
 
     final copiesTemp = ref.read(copiesTempProvider);
+    bool success= false;
+    String msg ='';
 
     if (!isConnected()) {
       debugPrint('executePrintSilence Not connected');
@@ -351,10 +489,13 @@ class NiimbotController extends StateNotifier<NiimbotState> {
     }
 
     final p0 = profile ?? defaultProfile();
+    debugPrint('executePrintSilence profile=${p0.copies}');
+
+
     final p = LabelProfile(
       id: p0.id,
       name: p0.name,
-      copies: copiesTemp,
+      copies: (overrideCopies) ? copiesTemp : p0.copies,
       widthMm: p0.widthMm,
       heightMm: p0.heightMm,
       marginXmm: p0.marginXmm,
@@ -369,13 +510,13 @@ class NiimbotController extends StateNotifier<NiimbotState> {
       gapMm: p0.gapMm,
     );
 
-    state = state.copyWith(isPrinting: true);
+    state = state.copyWith(isPrinting: true,profile: p);
 
     try {
       debugPrint('_executePrintTask started');
-      await _executePrintTask(ref: ref,page: job.page, profile: overrideCopies ? p : p0);
-      state = state.copyWith(clearPendingJob: true, isPrinting: false);
-
+      await _executePrintTask(page: job.page);
+      state = state.copyWith(clearPendingJob: true);
+      success = true;
       return ResponseAsyncValue(
         isInitiated: true,
         success: true,
@@ -391,11 +532,21 @@ class NiimbotController extends StateNotifier<NiimbotState> {
         message: 'Print failed: $e',
       );
     } finally {
-      /*await Future.delayed(const Duration(milliseconds: 200));
-      if (success && state.autoDisconnectAfterPrint) {
-        await _handleDisconnectSilence();
-      }*/
       debugPrint('Print done finally');
+      if(showPrintingResultMessage) {
+        if (success) {
+          String msg = ref.read(printingMessageProvider);
+          if (context.mounted) {
+            await showSuccessCenterToast(
+                context, 'OK: $msg', durationSeconds: 5);
+          }
+        } else {
+          if (context.mounted) {
+            await showErrorCenterToast(
+                context, 'Error: $msg', durationSeconds: 0);
+          }
+        }
+      }
 
     }
   }
@@ -423,10 +574,10 @@ class NiimbotController extends StateNotifier<NiimbotState> {
   PrintOptions _optionsFromProfile(LabelProfile profile, {required int totalPages}) {
     return PrintOptions(
       totalPages: totalPages,
-      density: 3,
+      density: 2,
       labelType: LabelType.withGaps,
       statusPollIntervalMs: 150,
-      statusTimeoutMs: 12000,
+      statusTimeoutMs: 20000,
     );
   }
 
@@ -453,137 +604,147 @@ class NiimbotController extends StateNotifier<NiimbotState> {
       return statuses.values.every((s) => s.isGranted);
     }
   }
-  Future<void> connectToDevice(BuildContext context, BluetoothDevice device) async {
-    _log('Connect: begin name="${device.platformName}" id="${device.remoteId.str}"');
+  Future<void> reconnect({required BuildContext context, required String address, required NiimbotState state
+    }) async {
+    state = state.copyWith(status: 'Re-connecting, 1- disconnecting... ');
+    await handleDisconnect(context);
+    if(address.isNotEmpty) {
+      state = state.copyWith(status: 'Re-connecting, 2- connecting... ');
+      await Future.delayed(Duration(milliseconds: 1000));
+      if(!context.mounted) return;
+      await connectToAddressSilence(
+          context, address: address);
+    }
+  }
+  Future<void> connectToDevice(
+      BuildContext context,
+      BluetoothDevice device, {
+        Duration connectTimeout = const Duration(seconds: 12),
+      }) {
+    return _ble(() => _connectToDeviceInternal(
+      context,
+      device,
+      connectTimeout: connectTimeout,
+    ));
+  }
 
-    state = state.copyWith(showDeviceList: false, status: 'Connecting...');
+  Future<void> _connectToDeviceInternal(
+      BuildContext context,
+      BluetoothDevice device, {
+        Duration connectTimeout = const Duration(seconds: 12),
+      }) async {
+    final req = DateTime.now().microsecondsSinceEpoch;
+    _log('[$req] Connect: begin name="${device.platformName}" id="${device.remoteId.str}"');
 
-    // 1) Stop scans to avoid GATT 133
-    try {
-      await FlutterBluePlus.stopScan();
-    } catch (_) {}
+    state = state.copyWith(
+      showDeviceList: false,
+      status: 'Connecting...',
+      isPrinting: true,
+    );
 
-    // 2) Best-effort: ensure device is disconnected before new connect attempt
-    Future<void> forceDisconnect(BluetoothDevice d) async {
-      try {
-        await d.disconnect();
-      } catch (_) {}
-      // pequeño delay para que Android "asiente" el cambio de estado
+    try { await FlutterBluePlus.stopScan(); } catch (_) {}
+
+    const int maxAttempts = 3;
+
+    Future<void> hardDisconnect(NiimbotBluetoothClient c) async {
+      try { await c.disconnect(); } catch (_) {}
+      try { await device.disconnect(); } catch (_) {}
       await Future.delayed(const Duration(milliseconds: 250));
     }
 
-    const int maxAttempts = 3;
-    const Duration baseDelay = Duration(milliseconds: 400);
-
     for (int attempt = 1; attempt <= maxAttempts; attempt++) {
+      NiimbotBluetoothClient? client;
+
       try {
-        _log('Connect: attempt $attempt/$maxAttempts');
+        _log('[$req] Connect: attempt $attempt/$maxAttempts');
 
-        // Asegurar estado limpio
-        await forceDisconnect(device);
-
-        final client = NiimbotBluetoothClient();
+        client = NiimbotBluetoothClient();
         client.setDevice(device);
 
-        _log('Connect: calling client.connect()...');
-        // Opcional: timeout defensivo para no quedar colgado
-        final result = await client.connect().timeout(const Duration(seconds: 10));
-        _log('Connect: connected result.deviceName="${result.deviceName}"');
+        await Future.delayed(const Duration(milliseconds: 300));
+        await client.connect().timeout(connectTimeout);
+        await Future.delayed(const Duration(milliseconds: 600));
 
+        // ✅ leer info + metadata
+        final info = client.getPrinterInfo();
+        final metaData = client.getModelMetadata();
+
+        final modelId = info.modelId;
+        final batteryCharge = info.charge;
+
+        _log('[$req] Connect: printerInfo modelId=$modelId charge=$batteryCharge');
+        _log('[$req] Connect: metaData=${metaData?.model ?? "null"}');
+
+        // ✅ si handshake incompleto: desconectar y reintentar
+        final bool handshakeIncomplete = (modelId == null || metaData == null);
+
+        if (handshakeIncomplete) {
+          final msg = 'Handshake incompleto (modelId=$modelId meta=${metaData?.model}). Reintentando...';
+          state = state.copyWith(status: msg);
+
+          await hardDisconnect(client);
+
+          if (attempt < maxAttempts) {
+            await Future.delayed(Duration(milliseconds: 500 + attempt * 350));
+            continue;
+          } else {
+            // último intento falló -> desconectar y abortar
+            final finalMsg = 'Connection failed: $msg';
+            state = state.copyWith(status: finalMsg, client: null, isPrinting: false);
+            throw StateError(finalMsg);
+          }
+        }
+
+        // ✅ a partir de acá: conexión válida
         state = state.copyWith(
           client: client,
-          status: 'Connected to ${result.deviceName}',
+          status: 'Connected to $modelId / ${metaData.model}',
+          isPrinting: false,
         );
 
-        _log('Connect: startHeartbeat()');
+
+        // ✅ MTU (NO return si savedMtu <= 0)
+        final int? mtuNow = client.getDevice()?.mtuNow;
+        if (savedMtu > 0 && mtuNow != null && savedMtu != mtuNow) {
+          try {
+            final negotiated = await device.requestMtu(savedMtu);
+            debugPrint('[NIIMBOT] requestMtu($savedMtu) => negotiated=$negotiated');
+          } catch (e) {
+            debugPrint('[NIIMBOT] requestMtu($savedMtu) failed: $e');
+          }
+        } else {
+          debugPrint('[NIIMBOT] MTU: skip (savedMtu=$savedMtu mtuNow=$mtuNow)');
+        }
+
         client.startHeartbeat();
 
-        _log('Connect: DONE isConnected=${client.isConnected()}');
-        return; // ✅ success => salir
-      } catch (e, st) {
-        final msg = e.toString();
-        _log('Connect: ERROR attempt $attempt => $msg');
-        _log('Connect: STACK $st');
-
-        final is133 = msg.contains('android-code: 133') ||
-            msg.contains('ANDROID_SPECIFIC_ERROR') ||
-            msg.contains('| connect | android-code: 133');
-
-        if (attempt < maxAttempts && is133) {
-          // backoff + extra limpieza
-          await forceDisconnect(device);
-          await Future.delayed(baseDelay + Duration(milliseconds: attempt * 350));
-          continue; // reintentar
-        }
-
-        // Último fallo (o no es 133)
-        if (!context.mounted) return;
-
-        if (msg.contains('Bluetooth is not powered on')) {
-          _showAlert(
-            context,
-            'Bluetooth Required',
-            'Please enable Bluetooth in your device settings and try connecting again.',
-          );
-        } else if (is133) {
-          _showAlert(
-            context,
-            'Bluetooth (GATT 133)',
-            'Android BLE error 133.\n\n'
-                'Tips:\n'
-                '• Turn Bluetooth OFF/ON\n'
-                '• Remove (unpair) the printer in Bluetooth settings and pair again\n'
-                '• Close the app completely and reopen\n',
-          );
-        } else {
-          _showAlert(context, 'Error', msg);
-        }
-
-        state = state.copyWith(status: 'Connection failed', client: null);
+        _log('[$req] Connect: DONE isConnected=${client.isConnected()}');
         return;
+      } catch (e, st) {
+        _log('[$req] Connect: ERROR attempt $attempt => $e');
+        debugPrint('$st');
+
+        // ✅ asegurar desconexión si algo quedó a medias
+        if (client != null) {
+          await hardDisconnect(client);
+        } else {
+          try { await device.disconnect(); } catch (_) {}
+        }
+
+        if (attempt < maxAttempts) {
+          await Future.delayed(Duration(milliseconds: 500 + attempt * 350));
+          continue;
+        }
+
+        final msg = '${state.status}, Connection failed: $e';
+        state = state.copyWith(status: msg, client: null, isPrinting: false);
+        rethrow;
       }
     }
+
+    state = state.copyWith(isPrinting: false);
   }
 
-  Future<dynamic /* PrintTask? */ > _createTaskWithWarmup(
-      Ref ref,
-      NiimbotBluetoothClient client,
-      PrintOptions options, {
-        Duration maxWait = const Duration(seconds: 8),
-        Duration step = const Duration(milliseconds: 500),
-      }) async {
-    final sw = Stopwatch()..start();
-    const interval = 10;
-    const maxInterval = 50;
-
-    dynamic task = client.createPrintTask(options);
-    int tries = 0;
-
-    // publicar valor inicial
-    ref.read(packetIntervalMsProvider.notifier).state = client.packetIntervalMs;
-
-    debugPrint('NIIMBOT: warmup packetIntervalMs ${client.packetIntervalMs}');
-
-    while (task == null && sw.elapsed < maxWait) {
-      tries++;
-
-      if (tries > 0 && client.packetIntervalMs < maxInterval) {
-        final next = (client.packetIntervalMs + tries * interval);
-        final clamped = next > maxInterval ? maxInterval : next;
-
-        // ✅ set client + provider
-        _setPacketIntervalMs(ref, clamped);
-      }
-
-      debugPrint('NIIMBOT: warmup createPrintTask try=$tries elapsed=${sw.elapsedMilliseconds}ms');
-      await Future.delayed(step);
-
-      task = client.createPrintTask(options);
-    }
-
-    debugPrint('NIIMBOT: warmup done task=${task == null ? 'null' : 'ok'} tries=$tries');
-    return task;
-  }
   Future<void> handleConnectScan(BuildContext context) async {
     final hasPermission = await _requestPermissions();
     if (!hasPermission) {
@@ -725,73 +886,75 @@ class NiimbotController extends StateNotifier<NiimbotState> {
       BuildContext context, {
         required String address,
         Duration scanTimeout = const Duration(seconds: 3),
-      }) async {
-    _log('connectToAddressSilence: input="$address"');
-    final hasPermission = await _requestPermissions();
-    _log('connectToAddressSilence: hasPermission=$hasPermission');
-    if (!hasPermission) return false;
+        Duration connectTimeout = const Duration(seconds: 12),
+      }) {
+    return _ble(() async {
+      final req = DateTime.now().microsecondsSinceEpoch;
+      final hasPermission = await _requestPermissions();
+      if (!hasPermission) return false;
+      state = state.copyWith(status: 'Scanning for devices...', isPrinting: true);
 
-    final target = _normId(address);
-    _log('connectToAddressSilence: targetNorm="$target"');
-    if (target.isEmpty) return false;
-
-    try {
-      state = state.copyWith(status: 'Scanning Niimbot...');
 
       final devices = await _scanNiimbotDevices(timeout: scanTimeout);
-      _log('connectToAddressSilence: devices=${devices.length}');
-
-      final match = _findDeviceByAddressSmart(devices, address);
-
-      if (match == null) {
-        _log('connectToAddressSilence: MATCH NOT FOUND for "${_normId(address)}"');
-        state = state.copyWith(status: 'Device not found');
+      if(devices.isEmpty) {
+        state = state.copyWith(status: 'No devices found');
         return false;
       }
 
-      _log(
-          'connectToAddressSilence: MATCH FOUND name="${match.platformName}" id="${match.remoteId.str}"');
-      await connectToDevice(context, match);
+      final match = _findDeviceByAddressSmart(devices, address);
+      if (match == null) {
+        state = state.copyWith(status: 'Device not found', isPrinting: false);
+        return false;
+      }
+      await Future.delayed(const Duration(milliseconds: 500));
+      // ✅ IMPORTANTE: NO llames al connectToDevice() (que usa _ble)
+      state = state.copyWith(status: 'Connecting...$match');
+      await _connectToDeviceInternal(context, match, connectTimeout: connectTimeout);
+
       final ok = isConnected();
-      _log('connectToAddressSilence: after connect ok=$ok');
+
+      state = state.copyWith(status: ok ? 'Connected: $match' : 'Connection failed', isPrinting: false);
       return ok;
-    } catch (e, st) {
-      _log('connectToAddressSilence: ERROR $e');
-      _log('connectToAddressSilence: STACK $st');
-      state = state.copyWith(status: 'Connection failed', client: null);
-      return false;
-    }
+    });
   }
 
   Future<void> handleDisconnect(BuildContext context) async {
-    final client = state.client;
-    if (client == null) return;
-    if (!client.isConnected()) return;
+    return _ble(() async {
+      final client = state.client;
+      if (client == null) return;
+      if (!client.isConnected()) return;
 
-    try {
-      client.stopHeartbeat();
       try {
-        await client.abstraction.printEnd();
-      } catch (e){
-        debugPrint('Failed to disconnect client.abstraction.printEnd(): $e');
+        client.stopHeartbeat();
+        try {
+          await client.abstraction.printEnd();
+        } catch (e){
+          debugPrint('Failed to disconnect client.abstraction.printEnd(): $e');
+        }
+
+        await client.disconnect();
+        String msg ='Disconnected';
+        if(state.status.toLowerCase().contains('mtu') || state.status.toLowerCase().contains('error')
+            || state.status.toLowerCase().contains('success')){
+          msg ='Disconnected , ${state.status}';
+        }
+        state = state.copyWith(
+          status: msg,
+          client: null,
+          clearPreviewImage: true,
+          clearPendingJob: true,
+          showPreview: false,
+          showDeviceList: false,
+          isPrinting: false,
+        );
+      } catch (e) {
+        debugPrint('Failed to disconnect: $e');
+        if (!context.mounted) return;
+        state = state.copyWith(status: 'Failed to disconnect: $e',isPrinting: false);
+        //_showAlert(context, 'Error', 'Failed to disconnect: $e');
       }
 
-      await client.disconnect();
-      
-
-      state = state.copyWith(
-        status: 'Disconnected',
-        client: null,
-        clearPreviewImage: true,
-        clearPendingJob: true,
-        showPreview: false,
-        showDeviceList: false,
-      );
-    } catch (e) {
-      debugPrint('Failed to disconnect: $e');
-      if (!context.mounted) return;
-      //_showAlert(context, 'Error', 'Failed to disconnect: $e');
-    }
+    });
   }
 
   bool isConnected() => state.client != null && state.client!.isConnected();
@@ -821,80 +984,82 @@ class NiimbotController extends StateNotifier<NiimbotState> {
 
 
   Future<void> _executePrintTask({
-    required Ref ref,
     required PrintPage page,
-    required LabelProfile profile,
   }) async {
-    final client = state.client;
-    if (client == null || !client.isConnected()) {
-      throw Exception('Not connected');
-    }
+    return _ble(() async {
+      final client = state.client;
+      if (client == null || !client.isConnected()) {
+        debugPrint('executePrintTask: Not connected');
 
-    client.stopHeartbeat();
+        throw Exception('Not connected');
+      }
+      final profile = state.profile;
+      final copies = profile.copies < 1 ? 1 : profile.copies;
 
-    // ----------------------------------------
-    // 1) Try load saved interval for this address
-    // ----------------------------------------
-    final box = GetStorage();
-    final device = client.getDevice();
-    if (device == null) {
-      throw Exception('Not connected device = null');
-    }
-    final String bluetoothAddress = client.getDevice()!.remoteId.str;
-    final saved = NiimbotPacketIntervalStorage.load(box, bluetoothAddress);
-    final intervalPackageMsAndroidOld = 20;
+      try {
+      state = state.copyWith(status: 'Starting print...',isPrinting: true);
 
-    if (saved != null) {
-      debugPrint('[NIIMBOT] Using SAVED packetIntervalMs=$saved for $bluetoothAddress');
-      _setPacketIntervalMs(ref, saved);
-    } else {
-      // ----------------------------------------
-      // 2) No saved value → apply base rules
-      // ----------------------------------------
-      _setPacketIntervalMs(ref, 0);
+      client.stopHeartbeat();
+      int poll = getStatusPollIntervalMs();
+      int timeout = getStatusTimeoutMs(copies:copies);
 
-      if (Platform.isAndroid) {
-        final androidInfo = await DeviceInfoPlugin().androidInfo;
-        final sdk = androidInfo.version.sdkInt;
 
-        if (sdk < 33) {
-          debugPrint('[NIIMBOT] Android < 13 detected (sdk=$sdk) → base interval 20ms');
-          _setPacketIntervalMs(ref, intervalPackageMsAndroidOld);
+      // ✅ ';
+      final task = client.createPrintTask(
+        PrintOptions(
+          totalPages: copies,
+          density: 3,
+          labelType: client.info.labelType,
+          statusPollIntervalMs: poll,
+          statusTimeoutMs: timeout,
+
+        ),
+      );
+      //final task = await _createTaskWithWarmup(client, options);
+      if (task == null) {
+        throw Exception('Failed to create print task - printer model not detected');
+      }
+
+
+        debugPrint('PRINT: before printInit');
+        await task.printInit().timeout(const Duration(seconds: 45));
+        debugPrint('PRINT: after printInit');
+
+        await Future.delayed(const Duration(milliseconds: 250));
+
+        final encoded = page.toEncodedImage();
+
+        for (int i = 1; i <= copies; i++) {
+          state = state.copyWith(status: 'Printing $i/$copies');
+          debugPrint('PRINT: before printPage page=$i/$copies');
+
+          // ✅ CLAVE: page index = i (no siempre 1)
+          await task.printPage(encoded, 1).timeout(const Duration(seconds: 45));
+
+          debugPrint('PRINT: after printPage page=$i/$copies');
+          await Future.delayed(const Duration(milliseconds: 300));
+        }
+
+        debugPrint('PRINT: before waitForFinished');
+        await task.waitForFinished().timeout(const Duration(seconds: 45));
+        debugPrint('PRINT: after waitForFinished');
+        state = state.copyWith(status: 'Printed $copies copies',isPrinting: false);
+      } catch (e) {
+
+        final msg = e.toString();
+        if (msg.contains('Future already completed')) {
+          debugPrint('NIIMBOT: ignore plugin double-complete: $msg');
+        } else {
+          debugPrint('NIIMBOT: ERROR: $msg');
+          state = state.copyWith(status: 'NIIMBOT: ERROR: $msg',isPrinting: false);
+          rethrow;
+        }
+      } finally {
+        try { client.startHeartbeat(); } catch (e) {
+          debugPrint('NIIMBOT: print task startHeartbeat() exception: $e');
         }
       }
-    }
-
-
-
-    final copies = profile.copies < 1 ? 1 : profile.copies;
-    final options = _optionsFromProfile(profile, totalPages: copies);
-
-    final task = await _createTaskWithWarmup(ref, client, options);
-    if (task == null) {
-      throw Exception('Failed to create print task - printer model not detected');
-    }
-
-    try {
-      await task.printInit().timeout(const Duration(seconds: 8));
-      final encoded = page.toEncodedImage();
-
-      for (int i = 1; i <= copies; i++) {
-        await task.printPage(encoded, 1).timeout(const Duration(seconds: 15));
-      }
-
-      await task.waitForFinished().timeout(const Duration(seconds: 15));
-    } catch (e) {
-      final msg = e.toString();
-      if (msg.contains('Future already completed')) {
-        debugPrint('NIIMBOT: ignore plugin double-complete: $msg');
-      } else {
-        rethrow;
-      }
-    } finally {
-      try {
-        client.startHeartbeat();
-      } catch (_) {}
-    }
+    });
   }
 
   // ------------------------------------------------------------
@@ -924,14 +1089,13 @@ class NiimbotController extends StateNotifier<NiimbotState> {
     page.addBarcode(
       '123456789012',
       const BarcodeOptions(
-        encoding: BarcodeEncoding.code128,
+        encoding: BarcodeEncoding.ean13,
         x: 300,
         y: 120,
         width: 150,
         height: 60,
         align: HAlignment.center,
         vAlign: VAlignment.middle,
-
       ),
     );
 
@@ -1005,7 +1169,7 @@ class NiimbotController extends StateNotifier<NiimbotState> {
     }
 
     final p = profile ?? defaultProfile();
-    final page = await _buildPageForPrinterConfigQr(printer: printer, profile: p);
+    final page = await _buildPageForPrinterConfigQr(cfg: printer, profile: p);
 
     await showPreviewAndQueueJob(
       context,
@@ -1229,6 +1393,7 @@ class NiimbotController extends StateNotifier<NiimbotState> {
       BarcodeSymbology.ean8 => BarcodeEncoding.code128,
       BarcodeSymbology.code128 => BarcodeEncoding.code128,
     };
+
     final barcodeData = (normalized.isNotEmpty)
         ? normalized
         : (safeSku.isNotEmpty ? safeSku : '');
@@ -1296,7 +1461,7 @@ class NiimbotController extends StateNotifier<NiimbotState> {
       );
       y += lineHName + gapPx;
     }
-
+    debugPrint('skuLine: $skuLine y ${y + (lineHSku ~/ 2)}');
     if (skuLine.isNotEmpty) {
       await page.addText(
         skuLine,
@@ -1312,46 +1477,48 @@ class NiimbotController extends StateNotifier<NiimbotState> {
       y += lineHSku + gapPx;
     }
 
-    final barcodeH = (profile.barcodeHeight > 0)
-        ? profile.barcodeHeight
-        : _pxFromMm(profile.barcodeHeightMm).clamp(40, heightPx - marginY * 2);
+
 
     final reservedBelow = lineHUpc + gapPx + 2;
 
-    final minBarcodeTop = y + gapPx;
-    final maxBarcodeTop =
-    (heightPx - marginY - barcodeH - reservedBelow).clamp(0, heightPx);
-
-    final barcodeTop = minBarcodeTop.clamp(marginY, maxBarcodeTop);
-    final barcodeCenterY = (barcodeTop + (barcodeH / 2)).round();
-
-    int barcodeMargen = 0;
-    if (sym == BarcodeSymbology.ean13) {
-      if (widthPx - 100 > 120) barcodeMargen = 100;
+    final maxBarcodeH =
+    (heightPx - marginY - y - reservedBelow );
+    final barcodeTop = y;
+    int barcodeH = (profile.barcodeHeight > 0)
+        ? profile.barcodeHeight
+        :maxBarcodeH;
+    if (barcodeH > maxBarcodeH || profile.barcodeHeight<=40) {
+      barcodeH = maxBarcodeH;
     }
+    final barcodeCenterY = (barcodeTop+ (barcodeH/ 2)).round();
 
+    int maxBarcodeSize =widthPx -marginX*2;
+    if (sym == BarcodeSymbology.ean13) {
+      maxBarcodeSize >35*8 ? maxBarcodeSize =35*8 : maxBarcodeSize;
+    }
     final barcodeWidth =
-    (widthPx - marginX * 2).clamp(120, widthPx - barcodeMargen).toInt();
-    final barcodeOption = BarcodeOptions(
-      encoding: encoding,
-      x: marginX,
-      y: barcodeCenterY,
-      width: barcodeWidth,
-      height: barcodeH,
-      align: HAlignment.left,
-      vAlign: VAlignment.middle,
-    );
-    debugPrint('NIIMBOT: barcodeOption=${barcodeOption.encoding}');
+    (widthPx - marginX * 2).clamp(120, maxBarcodeSize).toInt();
+
 
 
     if (barcodeData.isNotEmpty) {
       page.addBarcode(
         barcodeData,
-        barcodeOption,
+        BarcodeOptions(
+          encoding: encoding,
+          x: marginX,
+          y: barcodeCenterY,
+          width: barcodeWidth,
+          height: barcodeH,
+          align: HAlignment.left,
+          vAlign: VAlignment.middle,
+        ),
       );
 
       final upcTextY =
-      (barcodeTop + barcodeH + gapPx + (lineHUpc ~/ 2)).round();
+      (barcodeTop + barcodeH +  (lineHUpc ~/ 2)).round();
+      debugPrint('upcTextY: $upcTextY');
+
 
       await page.addText(
         belowText,
@@ -1495,7 +1662,7 @@ class NiimbotController extends StateNotifier<NiimbotState> {
   }
 
   Future<PrintPage> _buildPageForPrinterConfigQr({
-    required PrinterConnConfig printer,
+    required PrinterConnConfig cfg,
     required LabelProfile profile,
   }) async {
     final widthPx = _pxFromMm(profile.widthMm);
@@ -1504,12 +1671,12 @@ class NiimbotController extends StateNotifier<NiimbotState> {
     final marginX = _pxMarginXFromMm(profile.marginXmm);
     final marginY = _pxFromMm(profile.marginYmm);
 
-    final name = (printer.printerInformationName).replaceAll('\n', ' ').replaceAll('\r', ' ').trim();
-    final bt = (printer.printerInformationAddress.isEmpty ?
-    'No address' : printer.printerInformationAddress)
+    final name = (cfg.printerInformationName).replaceAll('\n', ' ').replaceAll('\r', ' ').trim();
+    final bt = (cfg.printerInformationAddress.isEmpty ?
+    'No address' : cfg.printerInformationAddress)
         .replaceAll('\n', ' ').replaceAll('\r', ' ').trim();
 
-    final qrValue  = printer.getPrinterInfoQRString();
+    final qrValue  = cfg.getPrinterInfoQRString();
 
     final page = PrintPage(widthPx, heightPx);
     final centerX = (widthPx / 2).round();
@@ -1678,25 +1845,40 @@ class NiimbotController extends StateNotifier<NiimbotState> {
     );
   }
 
-  @override
-  void dispose() {
-    final client = state.client;
 
-    if (client != null) {
-      unawaited(() async {
-        try {
-          try {
-            await client.abstraction.printEnd();
-          } catch (_) {}
 
-          client.stopHeartbeat();
-          await client.disconnect();
-        } catch (_) {}
-      }());
-    }
-
-    super.dispose();
+  void setMtu(int saved) {
+     savedMtu = saved ;
   }
+
+  int getStatusPollIntervalMs() {
+    final p = state.client!.packetIntervalMs < 0 ? 0 : state.client!.packetIntervalMs;
+    int poll = (p == 0) ? 120 : (p * 12).clamp(120, 1200).toInt();
+    return poll;
+
+  }
+  int getPacketIntervalMs({required int copies}) {
+    if(copies<=1) {
+      return state.client!.packetIntervalMs;
+    }
+    int newValue = (copies -1)* 3+state.client!.packetIntervalMs;
+    return newValue.clamp(20, maxPacketIntervalMs);
+  }
+
+  int getStatusTimeoutMs({required int copies}) {
+    final p = state.client!.packetIntervalMs < 0 ? 0 : state.client!.packetIntervalMs;
+    int timeout = (8000 + copies * 2500).clamp(8000, 60000);
+    timeout += (p * 250).clamp(0, 15000).toInt();
+    return timeout;
+  }
+
+  void setProfile(LabelProfile profile) {
+    state = state.copyWith(profile: profile);
+
+  }
+
+
+
 }
 
 // ------------------------------
@@ -1734,26 +1916,40 @@ class NiimbotPage extends ConsumerStatefulWidget {
 }
 
 class _NiimbotPageState extends ConsumerState<NiimbotPage> {
-  bool _autoConnectDone = false;
+  bool autoConnectDone = false;
   bool _copiesInitDone = false;
+
 
   // ✅ Local active profile (picked from LabelConfigPage)
   LabelProfile? _activeProfile;
   bool _labelInitDone = false;
+  late final NiimbotController _ctrl;
+  void dispose(){
+    debugPrint('[NIIMBOT] dispose');
+    _ctrl.handleDisconnectSilence(waitForExit: 0);
+    super.dispose();
 
+
+  }
   @override
   void initState() {
     super.initState();
 
     _activeProfile = widget.profile;
 
+
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       if (!mounted) return;
-      final ctrl = ref.read(niimbotControllerProvider.notifier);
-      ctrl.setAutoDisconnectAfterPrint(widget.autoDisconnectAfterPrint ?? true);
+      _ctrl = ref.read(niimbotControllerProvider.notifier);
+      _ctrl.setAutoDisconnectAfterPrint(widget.autoDisconnectAfterPrint ?? false);
       await _loadSavedLabelIfNeeded();
       _ensureCopiesInit();
-      await _autoConnectIfNeeded();
+      if (!mounted || widget.bluetoothAddress == null || widget.bluetoothAddress!.isEmpty) return;
+      await autoConnectIfNeeded(context, ref,
+          autoConnectDone: autoConnectDone,
+          bluetoothAddress: widget.bluetoothAddress!,
+      );
+
     });
   }
 
@@ -1826,23 +2022,7 @@ class _NiimbotPageState extends ConsumerState<NiimbotPage> {
     ref.read(copiesTempProvider.notifier).state = initial < 1 ? 1 : initial;
   }
 
-  Future<void> _autoConnectIfNeeded() async {
-    if (_autoConnectDone) return;
-    _autoConnectDone = true;
 
-    final addr = (widget.bluetoothAddress ?? '').trim();
-    if (addr.isEmpty) return;
-
-    final ctrl = ref.read(niimbotControllerProvider.notifier);
-    if (ctrl.isConnected()) return;
-
-    ref.read(isPrintingProvider.notifier).state = true;
-    await ctrl.connectToAddressSilence(
-      context,
-      address: addr,
-    );
-    ref.read(isPrintingProvider.notifier).state = false;
-  }
 
   // ✅ Open LabelConfigPage and get selected profile back
   Future<void> _openLabelConfig() async {
@@ -1913,10 +2093,11 @@ class _NiimbotPageState extends ConsumerState<NiimbotPage> {
   @override
   Widget build(BuildContext context) {
 
-    
+
 
 
     final state = ref.watch(niimbotControllerProvider);
+
     final ctrl = ref.read(niimbotControllerProvider.notifier);
     final printAsync = ref.watch(niimbotPrintControllerProvider);
     final isPrintLoading = printAsync.isLoading;
@@ -1931,7 +2112,7 @@ class _NiimbotPageState extends ConsumerState<NiimbotPage> {
               if (res == null) return;
               if (!context.mounted) return;
 
-              
+
             },
             error: (e, st) {
               if (!context.mounted) return;
@@ -1939,8 +2120,7 @@ class _NiimbotPageState extends ConsumerState<NiimbotPage> {
             },
           );
         });
-
-
+    final widthConnectButton = MediaQuery.of(context).size.width * 0.4;
     return Stack(
       children: [
         Scaffold(
@@ -1954,11 +2134,26 @@ class _NiimbotPageState extends ConsumerState<NiimbotPage> {
                 ? const Text('NIIMBOT PRINTER')
                 : getDataCard(widget.dataToPrint),
             actions: [
-               Padding(
-                 padding: const EdgeInsets.only(right: 10.0),
-                 child: getStatusIcon(context,ref),
-               ),
-              ],
+              if((state.client!=null && state.client!.isConnected()) &&
+                  (!isPrinting && !state.isPrinting && !isPrintLoading))IconButton(
+                tooltip: 'Settings',
+                icon: const Icon(Icons.settings),
+                onPressed: () {
+                  if(state.client==null || !state.client!.isConnected()){
+                    return ;
+                  }
+
+                  _openSettingsSheet(context, ref);
+                }
+              ),
+
+              if ((state.client!=null && state.client!.isConnected()) &&
+                  (!isPrinting && !state.isPrinting && !isPrintLoading))
+                printerInfoRefresh(context, ref, state),
+
+
+
+            ],
           ),
           body: PopScope(
             canPop: false,
@@ -1970,80 +2165,6 @@ class _NiimbotPageState extends ConsumerState<NiimbotPage> {
               child: ListView(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                 children: [
-                  // --- Status + progress (ARRIBA) ---
-                  Card(
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-
-                              const Expanded(
-                                child: Text(
-                                  'NIIMBOT PRINTER STATUS',
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 13,
-                                  ),
-                                ),
-                              ),
-                              if (!isPrinting && !state.isPrinting && !isPrintLoading)
-                                ElevatedButton(
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: isConnected ? Colors.green : themeColorPrimary,
-                                    foregroundColor: Colors.white,
-                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                    minimumSize: const Size(0, 34),
-                                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                                    visualDensity: const VisualDensity(horizontal: -3, vertical: -3),
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(6),
-                                    ),
-                                  ),
-                                  onPressed: () async {
-                                    if (!isConnected) {
-                                      ref.read(isPrintingProvider.notifier).state = true;
-                                      await ctrl.handleConnectScan(context);
-                                      ref.read(isPrintingProvider.notifier).state = false;
-                                    } else {
-                                      ref.read(resultStatusProvider.notifier).state = null;
-                                      await ctrl.handleDisconnect(context);
-                                      _autoConnectDone = false;
-                                    }
-                                  },
-                                  child: Text(
-                                    isConnected ? 'Disconnect' : 'Connect',
-                                    style: const TextStyle(
-                                      fontSize: 13,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                ),
-                            ],
-                          ),
-                          const SizedBox(height: 6),
-                          Row(
-                            children: [
-                              if (!isPrinting &&
-                                  !state.isPrinting && !isPrintLoading)
-                                getStatusIcon(context, ref),
-                              const SizedBox(width: 10),
-                              Expanded(child: Text(state.status)),
-                            ],
-                          ),
-                          const SizedBox(height: 15),
-                          if (isPrinting || state.isPrinting || isPrintLoading)
-                            const LinearProgressIndicator(minHeight: 6),
-
-                        ],
-                      ),
-                    ),
-                  ),
-
-                  const SizedBox(height: 6),
-
                   // --- Label summary button ---
                   _summaryButton(
                     context: context,
@@ -2064,121 +2185,135 @@ class _NiimbotPageState extends ConsumerState<NiimbotPage> {
                     ),
 
                   const SizedBox(height: 6),
-
+                  // --- Status + progress (ARRIBA) ---
                   Card(
                     child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Text(
-                            'Settings',
-                            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
-                          ),
-                          const SizedBox(height: 6),
 
-                          // marginXOffSet
                           Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              Expanded(
-                                child: Text(
-                                  'marginXOffSet: ${state.marginXOffSet}',
-                                  style: const TextStyle(fontSize: 12),
-                                ),
-                              ),
-                              OutlinedButton(
-                                style: OutlinedButton.styleFrom(
-                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                                  minimumSize: const Size(0, 30),
-                                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                                  visualDensity: const VisualDensity(horizontal: -3, vertical: -3),
-                                ),
-                                onPressed: () => ctrl.incMarginXOffSet(),
-                                child: const Text('+1', style: TextStyle(fontSize: 12)),
-                              ),
-                              const SizedBox(width: 8),
-                              DropdownButton<int>(
-                                value: state.marginXOffSet,
-                                isDense: true,
-                                iconSize: 18,
-                                items: List.generate(
-                                  11,
-                                      (i) => DropdownMenuItem(
-                                    value: i,
-                                    child: Text('$i', style: const TextStyle(fontSize: 12)),
-                                  ),
-                                ),
-                                onChanged: (v) {
-                                  if (v == null) return;
-                                  ctrl.setMarginXOffSet(v);
-                                },
-                              ),
-                            ],
-                          ),
+                              if((state.client!=null && state.client!.isConnected()) &&
+                                  (!isPrinting && !state.isPrinting && !isPrintLoading))
+                              batteryChip(ref,
+                                  isConnected: state.client?.isConnected() ?? false),
 
-                          const SizedBox(height: 6),
+                              if((state.client!=null && state.client!.isConnected()) &&
+                                  (!isPrinting && !state.isPrinting && !isPrintLoading))
+                                printerInfoIcon(context, ref, state),
 
-                          // copiesTemp (tu "textfield" visual)
-                          Row(
-                            children: [
-                              const SizedBox(
-                                width: 110,
-                                child: Text('Copies:', style: TextStyle(fontSize: 12)),
-                              ),
-                              Expanded(
-                                child: InkWell(
-                                  onTap: () async {
-                                    await getIntDialog(
-                                      useScreenKeyboardOnly: true,
-                                      ref: ref,
-                                      minValue: 1,
-                                      quantity: copiesTemp,
-                                      targetProvider: copiesTempProvider,
-                                    );
-                                  },
-                                  child: Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                                    decoration: BoxDecoration(
-                                      border: Border.all(color: Colors.grey),
-                                      borderRadius: BorderRadius.circular(6),
-                                    ),
-                                    child: Text(
-                                      '$copiesTemp',
-                                      textAlign: TextAlign.end,
-                                      style: const TextStyle(
-                                        fontSize: 14,
-                                        color: Colors.purple,
-                                        fontWeight: FontWeight.w600,
+
+                              if (!isPrinting && !state.isPrinting && !isPrintLoading)
+                                Expanded(
+                                  child: SizedBox(
+                                    width: widthConnectButton,
+                                    child: ElevatedButton(
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: isConnected ? Colors.green : themeColorPrimary,
+                                        foregroundColor: Colors.white,
+                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                        minimumSize: const Size(0, 34),
+                                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                        visualDensity: const VisualDensity(horizontal: -3, vertical: -3),
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(6),
+                                        ),
+                                      ),
+                                      onPressed: () async {
+                                        if (!isConnected) {
+                                          ref.invalidate(niimbotPacketIntervalSavedProvider);
+                                          ref.read(isPrintingProvider.notifier).state = true;
+                                          await ctrl.handleConnectScan(context);
+
+                                          ref.read(isPrintingProvider.notifier).state = false;
+
+                                        } else {
+                                          ref.read(resultStatusProvider.notifier).state = null;
+                                          try{
+                                            await ctrl.handleDisconnect(context);
+                                          }catch(_){
+
+                                          }
+                                          autoConnectDone = false;
+                                        }
+                                      },
+                                      child: Text(
+                                        isConnected ? 'Disconnect' : 'Connect',
+                                        style: const TextStyle(
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.w600,
+                                        ),
                                       ),
                                     ),
                                   ),
                                 ),
-                              ),
                             ],
                           ),
 
                           const SizedBox(height: 6),
-
-                          // auto-disconnect switch
                           Row(
                             children: [
-                              const Expanded(
-                                child: Text('Auto disconnect after print', style: TextStyle(fontSize: 12)),
-                              ),
-                              Transform.scale(
-                                scale: 0.9,
-                                child: Switch(
-                                  value: state.autoDisconnectAfterPrint,
-                                  onChanged: (v) => ctrl.setAutoDisconnectAfterPrint(v),
-                                ),
-                              ),
+                              getBluetoothIndicatorPanel(state),
+                              const SizedBox(width: 10),
+                              Expanded(child: Text(state.status,
+                                  maxLines: 3,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(fontSize: 12,)),),
                             ],
                           ),
+                          const SizedBox(height: 15),
+                          if (isPrinting || state.isPrinting || isPrintLoading)
+                            const LinearProgressIndicator(minHeight: 6),
+
                         ],
                       ),
                     ),
                   ),
 
+                  const SizedBox(height: 6),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 10),
+                    child: Row(
+                      children: [
+                        const SizedBox(
+                          width: 110,
+                          child: Text('Copies:', style: TextStyle(fontSize: 14,fontWeight: FontWeight.w600)),
+                        ),
+                        Expanded(
+                          child: InkWell(
+                            onTap: () async {
+                              await getIntDialog(
+                                useScreenKeyboardOnly: true,
+                                ref: ref,
+                                minValue: 1,
+                                quantity: copiesTemp,
+                                targetProvider: copiesTempProvider,
+                              );
+                            },
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                              decoration: BoxDecoration(
+                                border: Border.all(color: Colors.grey),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: Text(
+                                '$copiesTemp',
+                                textAlign: TextAlign.end,
+                                style: const TextStyle(
+                                  fontSize: 14,
+                                  color: Colors.purple,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                   const SizedBox(height: 6),
 
                   // --- Actions ---
@@ -2206,6 +2341,7 @@ class _NiimbotPageState extends ConsumerState<NiimbotPage> {
       ],
     );
   }
+
 
   Widget _summaryButton({
     required BuildContext context,
@@ -2246,10 +2382,212 @@ class _NiimbotPageState extends ConsumerState<NiimbotPage> {
       ),
     );
   }
+  void _openSettingsSheet(BuildContext context, WidgetRef ref) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      backgroundColor: Colors.transparent, // para borde redondeado lindo
+      builder: (_) {
+        return Consumer(
+          builder: (context, ref, __) {
+            final state = ref.watch(niimbotControllerProvider);
+            final ctrl = ref.read(niimbotControllerProvider.notifier);
 
+            final printAsync = ref.watch(niimbotPrintControllerProvider);
+            final isPrintLoading = printAsync.isLoading;
+            final isPrinting = ref.watch(isPrintingProvider);
+
+            final savedInterval = ref.watch(niimbotPacketIntervalSavedProvider) ?? 0;
+            final editInterval = ref.watch(niimbotPacketIntervalEditProvider);
+            final savedMtu = ref.watch(niimbotMtuSavedProvider) ?? 0;
+            final editMtu = ref.watch(niimbotMtuEditProvider);
+
+            final hasAddr = state.client?.getDevice()?.remoteId.str.isNotEmpty == true;
+            final disabled = !hasAddr || isPrinting || state.isPrinting || isPrintLoading;
+
+            return DraggableScrollableSheet(
+              expand: false,
+              initialChildSize: 0.62,
+              minChildSize: 0.35,
+              maxChildSize: 0.92,
+              builder: (context, scrollController) {
+                return Container(
+                  decoration: const BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+                  ),
+                  child: SingleChildScrollView(
+                    controller: scrollController,
+                    padding: const EdgeInsets.fromLTRB(12, 8, 12, 16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            const Expanded(
+                              child: Text(
+                                'Settings',
+                                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                              ),
+                            ),
+                            IconButton(
+                              tooltip: 'Close',
+                              icon: const Icon(Icons.close),
+                              onPressed: () => Navigator.pop(context),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+
+                        // --- Card settings (tu mismo contenido) ---
+                        Card(
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                // marginXOffSet
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: Text(
+                                        'marginXOffSet: ${state.marginXOffSet}',
+                                        style: const TextStyle(fontSize: 12),
+                                      ),
+                                    ),
+                                    OutlinedButton(
+                                      style: OutlinedButton.styleFrom(
+                                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                        minimumSize: const Size(0, 30),
+                                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                        visualDensity: const VisualDensity(horizontal: -3, vertical: -3),
+                                      ),
+                                      onPressed: disabled ? null : () => ctrl.incMarginXOffSet(),
+                                      child: const Text('+1', style: TextStyle(fontSize: 12)),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    DropdownButton<int>(
+                                      value: state.marginXOffSet,
+                                      isDense: true,
+                                      iconSize: 18,
+                                      items: List.generate(
+                                        11,
+                                            (i) => DropdownMenuItem(
+                                          value: i,
+                                          child: Text('$i', style: const TextStyle(fontSize: 12)),
+                                        ),
+                                      ),
+                                      onChanged: disabled
+                                          ? null
+                                          : (v) {
+                                        if (v == null) return;
+                                        ctrl.setMarginXOffSet(v);
+                                      },
+                                    ),
+                                  ],
+                                ),
+
+                                const SizedBox(height: 10),
+
+                                // packet interval
+                                packetIntervalEditor(
+                                  paddingHorizontal: 0,
+                                  ref: ref,
+                                  disabled: disabled,
+                                  saved: savedInterval,
+                                  edit: editInterval,
+                                  onSave: () async {
+
+                                    final addr = state.client?.getDevice()?.remoteId.str ?? '';
+                                    debugPrint('Saving packet interval: $addr');
+                                    if (addr.isEmpty) return;
+                                    final box = GetStorage();
+                                    debugPrint('Saving packet interval success: $addr');
+                                    await savePacketIntervalForAddress(
+                                      ref: ref,
+                                      bluetoothAddress: addr,
+                                      box: box,
+                                    );
+                                    debugPrint('Saving packet interval success: ${ref.read(niimbotPacketIntervalSavedProvider)}');
+                                    if (context.mounted) {
+                                      showSuccessCenterToast(context, 'Packet Interval(ms) saved');
+                                    }
+                                  },
+                                  onDec: () {
+                                    final v = ref.read(niimbotPacketIntervalEditProvider);
+                                    ref.read(niimbotPacketIntervalEditProvider.notifier).state =
+                                        (v - 1).clamp(minPacketIntervalMs, maxPacketIntervalMs);
+                                  },
+                                  onInc: () {
+                                    final v = ref.read(niimbotPacketIntervalEditProvider);
+                                    ref.read(niimbotPacketIntervalEditProvider.notifier).state =
+                                        (v + 1).clamp(minPacketIntervalMs, maxPacketIntervalMs);
+                                  },
+                                ),
+
+                                const SizedBox(height: 10),
+
+                                // mtu
+                                mtuEditor(
+                                  paddingHorizontal: 0,
+                                  disabled: disabled,
+                                  saved: savedMtu,
+                                  edit: editMtu,
+                                  onChanged: (v) {
+                                    if (v == null) return;
+                                    ref.read(niimbotMtuEditProvider.notifier).state = v;
+                                  },
+                                  onSave: () async {
+                                    final addr = state.client?.getDevice()?.remoteId.str ?? '';
+                                    if (addr.isEmpty) return;
+                                    final box = GetStorage();
+                                    await saveMtuForAddress(
+                                      ref: ref,
+                                      bluetoothAddress: addr,
+                                      box: box,
+                                    );
+                                    if (context.mounted) {
+                                      showSuccessCenterToast(context, 'MTU saved');
+                                    }
+                                  },
+                                ),
+
+                                const SizedBox(height: 10),
+
+                                //autoDisconnectPanel(ref: ref),
+                              ],
+                            ),
+                          ),
+                        ),
+
+                        const SizedBox(height: 10),
+
+                        // Acciones abajo (opcional)
+                        Row(
+                          children: [
+                            Expanded(
+                              child: OutlinedButton(
+                                onPressed: () => Navigator.pop(context),
+                                child: const Text('Close'),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            );
+          },
+        );
+      },
+    );
+  }
   String _printerSummary(PrinterConnConfig? p) {
     if (p == null) return 'None';
-    final name = (p.name ?? '').trim().isEmpty ? 'Printer' : p.name;
+    final name = (p.name ?? '').trim().isEmpty ? 'Printer' : p.name!;
     final addr = (p.printerInformationAddress).trim();
     final lang = (p.lang ?? '').trim();
     final type = (p.typeText ?? '').trim();
@@ -2317,24 +2655,6 @@ class _NiimbotPageState extends ConsumerState<NiimbotPage> {
       return [
         btn(
           context,
-          label: 'Bold Text Demo',
-          icon: Icons.text_fields,
-          onPressed: isConnected ? () => ctrl.handlePrintBoldText(context) : null,
-        ),
-        btn(
-          context,
-          label: 'Simple Demo (QR + EAN13)',
-          icon: Icons.qr_code,
-          onPressed: isConnected ? () => ctrl.handlePrintSimple(context) : null,
-        ),
-        btn(
-          context,
-          label: 'Quick Print Test',
-          icon: Icons.speed,
-          onPressed: isConnected ? () => ctrl.handleQuickPrintTest(context, profile: profile) : null,
-        ),
-        btn(
-          context,
           label: '🖨️ Printer Information QR(Actual)',
           onPressed: isConnected
               ? () {
@@ -2358,6 +2678,25 @@ class _NiimbotPageState extends ConsumerState<NiimbotPage> {
           label: '🖨️ Printer Information QR(Selected)',
           onPressed: isConnected ? _printSelectedPrinterInfo : null,
         ),
+        btn(
+          context,
+          label: 'Bold Text Demo',
+          icon: Icons.text_fields,
+          onPressed: isConnected ? () => ctrl.handlePrintBoldText(context) : null,
+        ),
+        btn(
+          context,
+          label: 'Simple Demo (QR + EAN13)',
+          icon: Icons.qr_code,
+          onPressed: isConnected ? () => ctrl.handlePrintSimple(context) : null,
+        ),
+        btn(
+          context,
+          label: 'Quick Print Test',
+          icon: Icons.speed,
+          onPressed: isConnected ? () => ctrl.handleQuickPrintTest(context, profile: profile) : null,
+        ),
+
       ];
     }
 
@@ -2515,11 +2854,13 @@ class _NiimbotPageState extends ConsumerState<NiimbotPage> {
 
   Future<void> popScopAction(BuildContext context, WidgetRef ref) async {
     final ctrl = ref.read(niimbotControllerProvider.notifier);
+    try{
+      await ctrl.handleDisconnect(context);
+    }catch(_){
 
-    await ctrl.handleDisconnect(context);
-    debugPrint('popScopAction begin');
+    }
+
     if (!context.mounted) return;
-    debugPrint('popScopAction end');
     Navigator.pop(context);
   }
 
@@ -2561,56 +2902,193 @@ class _DeviceSelectionModal extends ConsumerWidget {
   const _DeviceSelectionModal({required this.state});
 
   @override
+  @override
   Widget build(BuildContext context, WidgetRef ref) {
     final ctrl = ref.read(niimbotControllerProvider.notifier);
 
     return Container(
-      color: Colors.black.withValues(alpha: 0.5),
+      color: Colors.black.withOpacity(0.4),
       child: Center(
         child: Container(
-          margin: const EdgeInsets.symmetric(vertical: 6, horizontal: 10),
+          margin: const EdgeInsets.symmetric(horizontal: 14, vertical: 20),
           decoration: BoxDecoration(
             color: Colors.white,
-            borderRadius: BorderRadius.circular(10),
+            borderRadius: BorderRadius.circular(14),
+            boxShadow: const [
+              BoxShadow(
+                blurRadius: 20,
+                offset: Offset(0, 10),
+                color: Colors.black26,
+              )
+            ],
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                child: Text(
-                  'Select a Device',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+
+              // 🔵 HEADER estilo Niimbot
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                decoration: const BoxDecoration(
+                  color: themeColorPrimary,
+                  borderRadius: BorderRadius.vertical(top: Radius.circular(14)),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.bluetooth, color: Colors.white, size: 18),
+                    const SizedBox(width: 8),
+                    const Expanded(
+                      child: Text(
+                        'Select a Device',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
-              const Divider(height: 1),
+
+              // 📜 DEVICE LIST
               ConstrainedBox(
                 constraints: BoxConstraints(
                   maxHeight: MediaQuery.of(context).size.height * 0.5,
                 ),
-                child: Material(
-                  color: Colors.transparent,
-                  child: ListView.builder(
-                    shrinkWrap: true,
-                    itemCount: state.devices.length,
-                    itemBuilder: (_, i) {
-                      final d = state.devices[i];
-                      final name = d.platformName;
-                      final id = d.remoteId.str;
+                child: ListView.builder(
+                  shrinkWrap: true,
+                  padding: const EdgeInsets.symmetric(vertical: 6),
+                  itemCount: state.devices.length,
+                  itemBuilder: (_, i) {
+                    final d = state.devices[i];
+                    final name = d.platformName;
+                    final id = d.remoteId.str;
 
-                      return ListTile(
-                        title: Text(name.isEmpty ? 'NIIMBOT' : name),
-                        subtitle: Text(id),
-                        onTap: () => ctrl.connectToDevice(context, d),
-                      );
-                    },
-                  ),
+                    return Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      child: Material(
+                        color: Colors.grey.shade100,
+                        borderRadius: BorderRadius.circular(10),
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(10),
+                          onTap: () {
+                            final container = ProviderScope.containerOf(context, listen: false);
+                            ctrl.hideDeviceList();
+
+                            unawaited(() async {
+                              try {
+                                await ctrl.connectToDevice(context, d)
+                                    .timeout(const Duration(seconds: 12));
+                                debugPrint('[NIIMBOT] connect flow OK');
+                                await Future.delayed(const Duration(milliseconds: 200));
+                                final st = container.read(niimbotControllerProvider);
+                                final client = st.client;
+
+                                if (client != null && client.isConnected()) {
+
+                                  debugPrint('[NIIMBOT] client connected');
+                                  final box = GetStorage();
+                                  final bluetoothAddress =
+                                      client.getDevice()?.remoteId.str ?? '';
+
+                                  if (bluetoothAddress.isNotEmpty) {
+                                    debugPrint('[NIIMBOT] initPacketIntervalForAddressContainer');
+
+                                    initPacketIntervalForAddressContainer(
+                                      container: container,
+                                      bluetoothAddress: bluetoothAddress,
+                                      box: box,
+                                    );
+
+                                    debugPrint('[NIIMBOT] initMtuForAddressContainer');
+
+
+                                    initMtuForAddressContainer(
+                                      container: container,
+                                      bluetoothAddress: bluetoothAddress,
+                                      box: box,
+                                    );
+
+                                    debugPrint('[NIIMBOT] refreshPrinterInfoFromClientContainer');
+
+
+                                    await refreshPrinterInfoFromClientContainer(
+                                        container, client);
+                                    debugPrint('[NIIMBOT] refreshPrinterInfoFromClientContainer end');
+
+
+                                  }
+                                }
+                              } catch (e, st) {
+                                debugPrint('[NIIMBOT] connect flow ERROR: $e');
+                                debugPrint('$st');
+                                if (context.mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(content: Text('Connection failed: $e')),
+                                  );
+                                }
+                              }
+                            }());
+                          },
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 12, vertical: 10),
+                            child: Row(
+                              children: [
+                                const Icon(Icons.print,
+                                    size: 18, color: themeColorPrimary),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                    CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        name.isEmpty ? 'NIIMBOT' : name,
+                                        style: const TextStyle(
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                      Text(
+                                        id,
+                                        style: const TextStyle(
+                                          fontSize: 11,
+                                          color: Colors.black54,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                const Icon(Icons.chevron_right,
+                                    size: 18, color: Colors.black45),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    );
+                  },
                 ),
               ),
+
               const Divider(height: 1),
-              TextButton(
-                onPressed: ctrl.hideDeviceList,
-                child: const Text('Cancel', style: TextStyle(color: Colors.red, fontSize: 16)),
+
+              // 🔴 CANCEL BUTTON estilo Niimbot
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                child: TextButton(
+                  onPressed: ctrl.hideDeviceList,
+                  style: TextButton.styleFrom(
+                    foregroundColor: Colors.red,
+                  ),
+                  child: const Text(
+                    'Cancel',
+                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+                  ),
+                ),
               ),
             ],
           ),
@@ -2635,6 +3113,7 @@ class _PreviewModal extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final ctrl = ref.read(niimbotControllerProvider.notifier);
+
 
     return Material(
       color: Colors.transparent,
@@ -2667,7 +3146,7 @@ class _PreviewModal extends ConsumerWidget {
                         child: Image.memory(
                           state.previewImage!,
                           fit: BoxFit.contain,
-                          width: MediaQuery.of(context).size.width * 0.8,
+                          height: MediaQuery.of(context).size.height * 0.4,
                         ),
                       ),
                     ),
@@ -2688,7 +3167,9 @@ class _PreviewModal extends ConsumerWidget {
                     ElevatedButton(
                       onPressed:  () {
                         ref.read(niimbotPrintControllerProvider.notifier)
-                            .print(profile: profile);
+                            .print(profile: profile
+                            ,autoDisconnectAfterPrint: state.autoDisconnectAfterPrint,
+                        context: context);
                       },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFF34C759),

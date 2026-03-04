@@ -84,12 +84,11 @@ class LocatorZplTemplate {
     // - ^BCN,100,N,N,N => NO imprime texto humano debajo del barcode
     const defaultSentence = '''
 ^XA
-^CI28
-^MD15
+^DFE:$defaultFileName^FS
 ^PW800
 ^LL320
+^CI28
 ^LH0,0
-^DFE:$defaultFileName^FS
 ^FO30,90
 ^A0N,50,50
 ^FN1^FS
@@ -160,8 +159,8 @@ class LocatorZplTemplate {
 
     final sentence = '''
 ^XA
-^CI28
 ^XF$xfRef^FS
+^CI28
 ^FN1^FD$locatorValue^FS
 ^XZ
 ''';

@@ -138,10 +138,11 @@ class ProductStoreOnHandScreenForLineState
       WidgetRef ref, {
         required ResponseAsyncValue result,
       }) {
+    String message = result.message ??'';
     final uiModel = mapResponseAsyncValueToUi(
       result: result,
       title: Messages.PRODUCT,
-      subtitle: Messages.FIND_PRODUCT_BY_UPC_SKU,
+      subtitle: message,
     );
 
     return ResponseAsyncValueMessagesCardAnimated(ui: uiModel);
@@ -155,10 +156,12 @@ class ProductStoreOnHandScreenForLineState
     if (!result.isInitiated ||
         (result.success == true && result.data == null) ||
         (result.success != true)) {
+      String message = result.message ?? Messages.ERROR;
       final ui = mapResponseAsyncValueToUi(
         result: result,
         title: Messages.STORE_ON_HAND,
-        subtitle: Messages.SCAN_PRODUCT,
+        subtitle: message,
+
       );
 
       return ResponseAsyncValueMessagesCardAnimated(ui: ui);

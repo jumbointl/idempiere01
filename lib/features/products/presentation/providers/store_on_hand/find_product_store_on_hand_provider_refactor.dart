@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
 
@@ -43,7 +44,7 @@ Future<ResponseAsyncValue> findProductWithStorageOnHand({
 
     final productResp = await dio.get(url);
     if (productResp.statusCode != 200) {
-      responseValue.message = withValue(Messages.NO_DATA_FOUND);
+      responseValue.message = withValue('${Messages.ERROR} ${Messages.STOCK}');
       return responseValue;
     }
 
@@ -54,7 +55,8 @@ Future<ResponseAsyncValue> findProductWithStorageOnHand({
 
     if (productApi.records == null || productApi.records!.isEmpty) {
       responseValue.success = true;
-      responseValue.message = withValue(Messages.NO_DATA_FOUND);
+      responseValue.message = withValue('${Messages.NO_RECORDS_FOUND} : ${Messages.STOCK} : $scannedCode');
+      debugPrint(responseValue.message);
       return responseValue;
     }
 
@@ -85,7 +87,7 @@ Future<ResponseAsyncValue> findProductWithStorageOnHand({
 
     if (allStorage.isEmpty) {
       responseValue.success = true;
-      responseValue.message = withValue(Messages.NO_DATA_FOUND);
+      responseValue.message = withValue('${Messages.NO_DATA_FOUND}, ${Messages.FIND} $scannedCode ${Messages.AND} ${Messages.STOCK} <> 0');
       return responseValue;
     }
 

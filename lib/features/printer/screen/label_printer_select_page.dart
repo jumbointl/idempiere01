@@ -38,6 +38,8 @@ import 'printer_select_page.dart';
 // -----------------------------------------------------------------------------
 abstract class LabelPrinterSelectPage extends ConsumerStatefulWidget {
   final dynamic dataToPrint;
+
+
   const LabelPrinterSelectPage({super.key, required this.dataToPrint});
 
 
@@ -112,6 +114,7 @@ abstract class LabelPrinterSelectPage extends ConsumerStatefulWidget {
       await popScopeAction();
     }
   }
+  String checkLabelSize(WidgetRef ref, LabelProfile profile, {required bool printSimpleData});
 
 
 }
@@ -121,7 +124,8 @@ class _LabelPrinterSelectPageState extends ConsumerState<LabelPrinterSelectPage>
   final box = GetStorage();
 
   late final int oldAction;
-  late final TabController _tab; // Home / Profiles / Printers
+  late final TabController _tab;
+
 
   @override
   void initState() {
@@ -173,9 +177,15 @@ class _LabelPrinterSelectPageState extends ConsumerState<LabelPrinterSelectPage>
           .map((e) => LabelProfile.fromJson(Map<String, dynamic>.from(e)))
           .toList();
     }
+    if (list.where((e) => e.id == 'default_30x20').isEmpty) {
+      list.add(defaultLabel30x20());
+    }
 
     if (list.where((e) => e.id == 'default_40x25').isEmpty) {
       list.add(defaultLabel40x25());
+    }
+    if (list.where((e) => e.id == 'default_40x15').isEmpty) {
+      list.add(defaultLabel40x15());
     }
     if (list.where((e) => e.id == 'default_60x40').isEmpty) {
       list.add(defaultLabel60x40());
@@ -377,7 +387,7 @@ class _LabelPrinterSelectPageState extends ConsumerState<LabelPrinterSelectPage>
     if (!ok) throw Exception('Bluetooth writeBytes returned false');
   }
 
-  Future<void> _showMsg(String title, String msg) async {
+  Future<void> showMsg(String title, String msg) async {
     if (!mounted) return;
     await showDialog(
       context: context,
@@ -404,13 +414,14 @@ class _LabelPrinterSelectPageState extends ConsumerState<LabelPrinterSelectPage>
   }) async {
     final printer = _selectedPrinter();
     if (printer == null) {
-      await _showMsg('Printer', 'Select a printer first.');
+      await showMsg('Printer', 'Select a printer first.');
       return;
     }
 
+
     final err = widget.validateDataToPrint();
     if (err != null) {
-      await _showMsg('Data', err);
+      await showMsg('Data', err);
       return;
     }
     final p0 = profile ;
@@ -432,6 +443,14 @@ class _LabelPrinterSelectPageState extends ConsumerState<LabelPrinterSelectPage>
       gapMm: p0.gapMm,
     );
     ref.read(isPrintingProvider.notifier).state = true;
+    String errorMessage = await widget.checkLabelSize(ref,p,printSimpleData:printSimpleData);
+    if(errorMessage.isNotEmpty) {
+      await showMsg('Profile', await widget.checkLabelSize(ref,p,printSimpleData: printSimpleData));
+      return ;
+    }
+
+
+
     final tspl = widget.buildTsplForData(
       profile: p,
       printSimpleData: printSimpleData,
@@ -445,16 +464,16 @@ class _LabelPrinterSelectPageState extends ConsumerState<LabelPrinterSelectPage>
           tspl: tspl,
         );
 
-        await _showMsg('Print', '✅ Printed via WiFi');
+        await showMsg('Print', '✅ Printed via WiFi');
       } else {
         await sendTsplViaBluetooth(
           btAddress: printer.btAddress!,
           tspl: tspl,
         );
-        await _showMsg('Print', '✅ Printed via Bluetooth');
+        await showMsg('Print', '✅ Printed via Bluetooth');
       }
     } catch (e) {
-      await _showMsg('Print', '❌ Error: $e');
+      await showMsg('Print', '❌ Error: $e');
     } finally {
       ref
           .read(isPrintingProvider.notifier)
@@ -479,7 +498,7 @@ class _LabelPrinterSelectPageState extends ConsumerState<LabelPrinterSelectPage>
   Future<void> printAdjustmentSticker({required LabelProfile profile}) async {
     final printer = _selectedPrinter();
     if (printer == null) {
-      await _showMsg('Printer', 'Select a printer first.');
+      await showMsg('Printer', 'Select a printer first.');
       return;
     }
 
@@ -500,16 +519,16 @@ class _LabelPrinterSelectPageState extends ConsumerState<LabelPrinterSelectPage>
           port: printer.port ?? 9100,
           tspl: tspl,
         );
-        await _showMsg('Print', '✅ Adjustment label printed via WiFi');
+        await showMsg('Print', '✅ Adjustment label printed via WiFi');
       } else {
         await sendTsplViaBluetooth(
           btAddress: printer.btAddress!,
           tspl: tspl,
         );
-        await _showMsg('Print', '✅ Adjustment label printed via Bluetooth');
+        await showMsg('Print', '✅ Adjustment label printed via Bluetooth');
       }
     } catch (e) {
-      await _showMsg('Print', '❌ Error: $e');
+      await showMsg('Print', '❌ Error: $e');
     } finally {
       ref
           .read(isPrintingProvider.notifier)
@@ -634,22 +653,22 @@ class _LabelPrinterSelectPageState extends ConsumerState<LabelPrinterSelectPage>
       //BLUETOOTH*NAME*BLUETOOTH_ADDRESS*LANGUAGE*BLUETOOTH_TYPE
       final parts = qrData.split('*');
       if (parts.length < 5) {
-        await _showMsg('QR', 'Invalid Bluetooth QR format.\n$qrData');
+        await showMsg('QR', 'Invalid Bluetooth QR format.\n$qrData');
         return;
       }
       final name = parts[1].trim();
       if (name.isEmpty) {
-        await _showMsg('QR', 'Invalid Bluetooth QR format. name\n$qrData');
+        await showMsg('QR', 'Invalid Bluetooth QR format. name\n$qrData');
         return;
       }
       final btAddress = parts[2].trim();
       if (btAddress.isEmpty) {
-        await _showMsg('QR', 'Invalid Bluetooth QR format. address\n$qrData');
+        await showMsg('QR', 'Invalid Bluetooth QR format. address\n$qrData');
         return;
       }
       final lang = parts[3].trim().toUpperCase();
       if (!isValidLang(lang)) {
-        await _showMsg('Printer', 'Tipo impresora invalido para configuración de impresora $lang\n$qrData');
+        await showMsg('Printer', 'Tipo impresora invalido para configuración de impresora $lang\n$qrData');
         return;
       }
       if(lang==PrinterState.PRINTER_TYPE_NIIMBOT){
@@ -657,7 +676,7 @@ class _LabelPrinterSelectPageState extends ConsumerState<LabelPrinterSelectPage>
       }
       final bluetoothType = parts[4].trim();
       if (bluetoothType.isEmpty || !normalizeBluetoothType(bluetoothType)) {
-        await _showMsg('QR', 'Invalid Bluetooth QR format.\n$qrData');
+        await showMsg('QR', 'Invalid Bluetooth QR format.\n$qrData');
         return;
       }
       scanedPrinter = PrinterConnConfig(
@@ -673,7 +692,7 @@ class _LabelPrinterSelectPageState extends ConsumerState<LabelPrinterSelectPage>
     } else {
       final parts = qrData.split(':');
       if (parts.length < 3) {
-        await _showMsg('QR', 'Invalid WiFi QR format.\n$qrData');
+        await showMsg('QR', 'Invalid WiFi QR format.\n$qrData');
         return;
       }
 
@@ -682,12 +701,12 @@ class _LabelPrinterSelectPageState extends ConsumerState<LabelPrinterSelectPage>
       final langRaw = parts[2].trim().toUpperCase();
 
       if (ip.isEmpty || port <= 0) {
-        await _showMsg('QR', 'Invalid IP or port.\n$qrData');
+        await showMsg('QR', 'Invalid IP or port.\n$qrData');
         return;
       }
 
       if (!isValidLang(langRaw)) {
-        await _showMsg('Printer', 'Tipo impresora invalido para configuración de impresora.\n$qrData');
+        await showMsg('Printer', 'Tipo impresora invalido para configuración de impresora.\n$qrData');
         return;
       }
 
@@ -1063,6 +1082,8 @@ class _LabelPrinterSelectPageState extends ConsumerState<LabelPrinterSelectPage>
       ),
     );
   }
+
+
 
 }
 

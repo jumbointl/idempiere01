@@ -47,8 +47,8 @@ class Memory {
   static String IMAGE_HTTP_SAMPLE_2='https://firebasestorage.googleapis.com/v0/b/girasol-udemy-delivery-01.firebasestorage.app/o/assets%2Fsample%2Fhttp_sample_2_512.jpg?alt=media&token=5b9a2190-ff34-4ae9-85ee-187a9ec4588a';
   static bool isTestMode = true;
 
-  static double SIZE_PRODUCT_IMAGE_WIDTH =140;
-  static double SIZE_PRODUCT_IMAGE_HEIGHT =140;
+  static double SIZE_PRODUCT_IMAGE_WIDTH =200;
+  static double SIZE_PRODUCT_IMAGE_HEIGHT =150;
   static const int SCAN_TO_FIND_BY_UPC =1;
   static const int SCAN_TO_INPUT_UPC =2;
 
@@ -133,7 +133,7 @@ class Memory {
 
   static String URL_CUPS_SERVER ='http://192.168.188.108:3100/print';
 
-  static String VERSIONS='1.01.121';
+  static String VERSIONS='1.01.131';
 
   static String getUrlCupsServerWithPrinter({required String ip,
     required String port,required String printerName}){
@@ -221,6 +221,8 @@ class Memory {
   static String printerFileFtpServer='ftp.sc-demo.masverdecde.com';
 
   static int printerFileFtpServerPort = 21;
+
+
 
   static const String FTP_SERVER_ZPL_TEMPLATES_DIR='zpl_template';
 

@@ -27,7 +27,7 @@ abstract class MInOutRepository {
   Future<MInOut> setDocAction(WidgetRef ref);
   Future<MInOutConfirm> setDocActionConfirm(WidgetRef ref);
   Future<LineConfirm> updateLineConfirm(Line line, WidgetRef ref);
-  Future<Line> updateMInOutLineMovementQty(Line line, WidgetRef ref);
+  Future<Line> updateMInOutLineMovementQtyAndLocator(Line line, WidgetRef ref);
   Future<int> getLocator(String value, WidgetRef ref);
   Future<bool> updateLocator(Line line, WidgetRef ref);
   Future<bool> updateMovementQty(Line line, WidgetRef ref);

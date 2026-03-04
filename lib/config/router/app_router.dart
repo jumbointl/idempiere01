@@ -40,6 +40,7 @@ import '../../features/printer/web_template/screen/create_zpl_template_page.dart
 import '../../features/products/domain/idempiere/idempiere_locator.dart';
 import '../../features/products/domain/idempiere/movement_and_lines.dart';
 import '../../features/products/domain/models/label_profile.dart';
+import '../../features/products/domain/models/product_image.dart';
 import '../../features/products/presentation/screens/locator/search_locator_screen.dart';
 import '../../features/products/presentation/screens/movement/edit_new/movement_cancel_screen.dart';
 import '../../features/products/presentation/screens/movement/edit_new/movement_confirm_screen.dart';
@@ -47,6 +48,8 @@ import '../../features/products/presentation/screens/movement/edit_new/new_movem
 import '../../features/products/presentation/screens/movement/edit_new/movement_lines_create_screen.dart';
 import '../../features/products/presentation/screens/movement/edit_new/unsorted_storage_on__hand_select_locator_screen.dart';
 import '../../features/products/presentation/screens/movement/pos/movement_pos_page.dart';
+import '../../features/products/presentation/screens/search/ai_dashboard.dart';
+import '../../features/products/presentation/screens/search/ai_processor_screen.dart';
 import '../../features/products/presentation/screens/search/product_search_screen.dart';
 import '../../features/products/presentation/screens/store_on_hand/product_store_on_hand_screen.dart';
 import '../../features/products/presentation/screens/movement/create/unsorted_storage_on__hand_screen.dart';
@@ -114,6 +117,8 @@ class AppRouter {
   static String PAGE_MO_PRINTER_EDITOR ='/mo_printer_editor';
 
   static String PAGE_LOCATOR_SENTENCE_EDITOR='/locator_zpl_sentence_editor';
+  static String PAGE_AI_PROCESSOR='/ai-processor';
+  static String PAGE_AI_DASHBOARD='/ai-dashboard';
 
 
 
@@ -471,6 +476,21 @@ final goRouterProvider = Provider((ref) {
             focusNode: focusNode,
             initial: initial,
           );
+        },
+      ),
+      GoRoute(
+        path: '${AppRouter.PAGE_AI_DASHBOARD}/:productId',
+
+        builder: (context, state) {
+          final id = state.pathParameters['productId']!;
+          return AiDashboardScreen(productId: id); }// TEST ID
+      ),
+      GoRoute(
+        path: '${AppRouter.PAGE_AI_PROCESSOR}/:id',
+        builder: (context, state) {
+          final id = state.pathParameters['id']!;
+          final extra = state.extra as ProductImage?;
+          return AiProcessorScreen(productId: id, initialImage: extra);
         },
       ),
       GoRoute(

@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:monalisa_app_001/features/products/presentation/providers/product_provider_common.dart';
 
 import '../../../config/theme/app_theme.dart';
+import '../presentation/providers/ai/global_providers.dart';
+import '../presentation/providers/product_search_provider.dart';
 import 'common_consumer_state.dart';
 
 // English: Base state for screens that share TabBar + AppBar + PopScope behavior.
@@ -18,7 +21,7 @@ abstract class CommonConsumerWithTabBarState<T extends ConsumerStatefulWidget>
   List<Widget> buildAppBarActions() => const [];
 
   // English: Default back behavior (can be overridden)
-  void onBackPressed() => goHome();
+  void onBackPressed() => popScopeAction(context, ref);
 
   // -------------------------
   // Tab layout standardization
@@ -97,17 +100,56 @@ abstract class CommonConsumerWithTabBarState<T extends ConsumerStatefulWidget>
 
   // English: Provides a scaffold with DefaultTabController + AppBar + PopScope
   Widget buildTabScaffold() {
+    final aiLoading = ref.watch(aiLoadingProvider);
+
     return DefaultTabController(
       length: tabLength,
-      child: Scaffold(
-        appBar: buildTabAppBar(),
-        body: PopScope(
-          onPopInvokedWithResult: (didPop, result) {
-            if (!didPop) onBackPressed();
-          },
-          child: TabBarView(children: buildWrappedTabViews()),
+      child: PopScope(
+        canPop: false,
+        onPopInvokedWithResult: (didPop, result) {
+          if (didPop) return;
+          popScopeAction(context, ref);
+        },
+        child: Stack(
+          children: [
+            Scaffold(
+              appBar: buildTabAppBar(),
+              body: PopScope(
+                canPop: !aiLoading.isLoading,
+                onPopInvokedWithResult: (didPop, result) {
+                  if (!didPop) onBackPressed();
+                },
+                child: TabBarView(children: buildWrappedTabViews()),
+              ),
+            ),
+            if (aiLoading.isLoading)
+              Container(
+                color: Colors.black54,
+                child: Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const CircularProgressIndicator(color: Colors.white),
+                      const SizedBox(height: 20),
+                      Text(
+                        aiLoading.message.toUpperCase(),
+                        style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+          ],
         ),
       ),
     );
   }
+
+  void popScopeAction(BuildContext context, WidgetRef ref) ;
+
+
 }
