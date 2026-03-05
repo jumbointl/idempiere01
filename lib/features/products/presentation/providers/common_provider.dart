@@ -14,6 +14,7 @@ import '../../../printer/models/printer_select_models.dart';
 import '../../../shared/data/memory.dart';
 import '../../../shared/data/messages.dart';
 import '../../domain/idempiere/idempiere_locator.dart';
+import '../../domain/idempiere/inventory_and_lines.dart';
 import '../../domain/idempiere/movement_and_lines.dart';
 import '../../domain/idempiere/response_async_value.dart';
 import '../../domain/models/ftpconfig.dart';
@@ -87,6 +88,23 @@ final allowScrollFabProvider = StateProvider.autoDispose<bool>((ref) {
   return false;
 });
 
+final canShowCreateLineBottomBarForInventoryProvider = Provider.autoDispose<bool>((ref) {
+  bool b = RolesApp.appInventoryComplete;
+  if(!b) return false;
+
+  final qty = ref.watch(quantityToMoveProvider);          // double
+
+  final isDialogShowed = ref.watch(isDialogShowedProvider);
+  final isScanning = ref.watch(isScanningProvider);
+
+  final hasQuantity = qty >= 0;
+  //final locatorTo = ref.watch(selectedLocatorToProvider); // IdempiereLocator
+  //final hasLocatorTo = locatorTo.id != null && locatorTo.id! > 0;
+  bool result = hasQuantity && !isDialogShowed && !isScanning; //&& hasLocatorTo
+  return result;
+  //return hasQuantity;
+});
+
 final canShowCreateLineBottomBarProvider = Provider.autoDispose<bool>((ref) {
   bool b = RolesApp.appMovementComplete || RolesApp.appMovementconfirmComplete;
   if(!b) return false;
@@ -123,6 +141,24 @@ final movementLinesProvider = StateProvider.autoDispose
 
   return result.toDouble();
 });
+
+final inventoryLinesProvider = StateProvider.autoDispose
+    .family<double, InventoryAndLines>((ref, inventory) {
+      final length = inventory.inventoryLines?.length ?? 0;
+      final base = (length + 1) * 10;
+      double base2 = (inventory.inventoryLines?.isNotEmpty ?? false)
+          ? inventory.inventoryLines!
+          .map((e) => e.line ?? 0)
+          .reduce((a, b) => a > b ? a : b)
+          : 0;
+      base2 = base2 + 10;
+      final result = base > base2 ? base : base2;
+      return result.toDouble();
+    });
+
+
+
+
 
 final quantityOfMovementAndScannedToAllowInputScannedQuantityProvider =
 StateProvider<int>((ref) {

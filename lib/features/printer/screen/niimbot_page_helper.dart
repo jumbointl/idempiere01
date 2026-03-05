@@ -7,9 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
 import 'package:get_storage/get_storage.dart';
-import 'package:material_symbols_icons/symbols.dart';
 import 'package:niim_blue_flutter/niim_blue_flutter.dart';
-import 'package:webview_flutter/webview_flutter.dart';
 
 import '../../../config/theme/app_theme.dart';
 import '../../products/presentation/providers/common_provider.dart';
@@ -190,7 +188,7 @@ class PrinterInfoSheet extends StatelessWidget {
   final int packageIntervalMs;
   final int savedMtu;
 
-  PrinterInfoSheet({required this.info, required this.packageIntervalMs, required this.savedMtu});
+  const PrinterInfoSheet({super.key, required this.info, required this.packageIntervalMs, required this.savedMtu});
 
   Widget _row(String k, String? v) {
     final value = (v == null || v.trim().isEmpty) ? '--' : v.trim();

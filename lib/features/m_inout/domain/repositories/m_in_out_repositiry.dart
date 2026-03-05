@@ -30,7 +30,6 @@ abstract class MInOutRepository {
   Future<Line> updateMInOutLineMovementQtyAndLocator(Line line, WidgetRef ref);
   Future<int> getLocator(String value, WidgetRef ref);
   Future<bool> updateLocator(Line line, WidgetRef ref);
-  Future<bool> updateMovementQty(Line line, WidgetRef ref);
   Future<bool> updateLineConfirmTargetQty(LineConfirm line, WidgetRef ref);
   Future<List<LineConfirm>> getLinesMInOutConfirmToUpdateTargetQty({
     required List<int> listConfirmsIds,

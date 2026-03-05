@@ -50,10 +50,10 @@ final uploadServiceProvider = Provider<UploadService>((ref) {
 // 4. HELPER FUNCTION TO DISMISS ERROR
 extension ErrorX on WidgetRef {
   void clearError() {
-    this.read(errorProvider.notifier).state = null;
+    read(errorProvider.notifier).state = null;
   }
 
   void setError(String message) {
-    this.read(errorProvider.notifier).state = message.toUpperCase();
+    read(errorProvider.notifier).state = message.toUpperCase();
   }
 }

@@ -112,7 +112,6 @@ class NewMovementEditScreenState extends MovementAndLinesConsumerState<NewMoveme
   Future<void> handleInputString({required WidgetRef ref,required  String inputData,required int actionScan}) async {
     asyncResultHandled = false;
 
-    debugPrint('handleInputString $inputData');
     ref.invalidate(movementAndLinesProvider);
     await Future.delayed(Duration(milliseconds: 100));
     mainNotifier.handleInputString(ref: ref, inputData: inputData,
@@ -274,7 +273,6 @@ class NewMovementEditScreenState extends MovementAndLinesConsumerState<NewMoveme
   }
 
   @override
-  // TODO: implement mainNotifier
   CodeAndFireActionNotifier get mainNotifier =>  ref.read(findMovementByIdActionProvider);
 
 

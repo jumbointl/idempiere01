@@ -3,6 +3,12 @@ plugins {
     id "kotlin-android"
     id "dev.flutter.flutter-gradle-plugin"
 }
+def keystoreProperties = new Properties()
+def keystorePropertiesFile = rootProject.file("key.properties")
+if (keystorePropertiesFile.exists()) {
+    keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
+}
+
 
 android {
     namespace = "org.compiere.monalisapy"
@@ -20,25 +26,30 @@ android {
 
     defaultConfig {
         applicationId = "org.compiere.monalisapy"
-
-        // ML Kit requires at least 21
         minSdkVersion flutter.minSdkVersion
-
         targetSdk = 35
         versionCode = flutter.versionCode
         versionName = flutter.versionName
     }
 
+    signingConfigs {
+        release {
+            keyAlias keystoreProperties["keyAlias"]
+            keyPassword keystoreProperties["keyPassword"]
+            storeFile keystoreProperties["storeFile"] ? file(keystoreProperties["storeFile"]) : null
+            storePassword keystoreProperties["storePassword"]
+        }
+    }
+
     buildTypes {
         release {
-            signingConfig signingConfigs.debug
+            signingConfig signingConfigs.release
 
-            // Enable R8 properly
             minifyEnabled true
             shrinkResources true
 
-            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'),
-                    'proguard-rules.pro'
+            proguardFiles getDefaultProguardFile("proguard-android-optimize.txt"),
+                    "proguard-rules.pro"
         }
 
         debug {
@@ -53,15 +64,10 @@ flutter {
 }
 
 dependencies {
-
-    // ML Kit base text recognition
     implementation "com.google.mlkit:text-recognition:16.0.0"
-
-    // Additional scripts required by google_mlkit_text_recognition plugin
     implementation "com.google.mlkit:text-recognition-chinese:16.0.0"
     implementation "com.google.mlkit:text-recognition-devanagari:16.0.0"
     implementation "com.google.mlkit:text-recognition-japanese:16.0.0"
     implementation "com.google.mlkit:text-recognition-korean:16.0.0"
     implementation "com.squareup.okhttp3:okhttp:4.12.0"
-
 }

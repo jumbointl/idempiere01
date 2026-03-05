@@ -3,6 +3,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
+import 'package:monalisa_app_001/features/m_inout/presentation/providers/m_in_out_providers.dart';
 import 'package:monalisa_app_001/features/products/domain/idempiere/idempiere_response_message.dart';
 import 'package:monalisa_app_001/features/products/domain/idempiere/put_away_movement.dart';
 import 'package:monalisa_app_001/features/products/domain/idempiere/response_async_value.dart';
@@ -144,14 +145,14 @@ FutureProvider.autoDispose.family<bool, DeleteRequest>((ref, request) async {
 
     if (respLine.statusCode != 200) return false;
     final resLine = IdempiereResponseMessage.fromJson(respLine.data);
-    if (request.movementIdToDelete ==null || request.movementIdToDelete!<=0){
+    if (request.headerIdToDelete ==null || request.headerIdToDelete!<=0){
       return resLine.deleted;
     }
 
     // =========================
     // 2) SI ES ÚLTIMA LINEA: BORRAR MOVEMENT (PUT docStatus=DELETE)
     // =========================
-    final movementId = request.movementIdToDelete ?? -1;
+    final movementId = request.headerIdToDelete ?? -1;
     if (movementId > 0) {
       final movement = SqlDataMovement(id: movementId);
       Memory.sqlUsersData.copyToSqlData(movement);
@@ -546,6 +547,10 @@ final newPutAwayMovementWithCompleteProvider = FutureProvider.autoDispose<Moveme
 
   PutAwayMovement? newMovement = ref.read(putAwayMovementCreateWithCompleteProvider);
   if(newMovement == null) return null;
+  final mInOut = ref.read(mInOutProvider).mInOut ;
+  if(mInOut == null) return null;
+  final line = ref.read(lineToUpdateLocatorProvider);
+  if(line == null || line.id == null || line.id! <=0) return null;
 
 
   Dio dio = await DioClient.create();
@@ -554,9 +559,11 @@ final newPutAwayMovementWithCompleteProvider = FutureProvider.autoDispose<Moveme
   debugPrint(step);
   int errorId = Memory.ERROR_DOCUMENT_NOT_CREATED_ID ;
   String createdMovementId ='';
+  String description = Memory.getDescriptionMoveBetweenFromApp(mInOut: mInOut, line: line);
   try {
     String url = newMovement.movementInsertUrl ??'';
-    final payLoad = newMovement.movementToCreate?.getInsertForSwitchBetweenLocatorJson() ;
+    final payLoad =
+    newMovement.movementToCreate?.getInsertForSwitchBetweenLocatorJson(description: description) ;
     if(url.isEmpty || payLoad == null) return null ;
 
     final response = await dio.post(url, data: payLoad);
@@ -569,10 +576,9 @@ final newPutAwayMovementWithCompleteProvider = FutureProvider.autoDispose<Moveme
       if (createdMovement.id != null && createdMovement.id! > 0) {
         MemoryProducts.movementAndLines.cloneMovement(createdMovement);
         newMovement.movementLineToCreate!.mMovementID = createdMovement;
-        var creteDataJsonEncode2 =  newMovement.movementLineInsertJson! ;
+
+        var creteDataJsonEncode2 =  newMovement.getInsertForSwitchBetweenLocatorJson(description: description) ;
         String url2 = newMovement.movementLineInsertUrl!;
-        debugPrint('url $url2');
-        debugPrint('payload $creteDataJsonEncode2');
         final responseLine = await dio.post(url2, data: creteDataJsonEncode2);
         if (responseLine.statusCode == 201) {
 
@@ -582,14 +588,10 @@ final newPutAwayMovementWithCompleteProvider = FutureProvider.autoDispose<Moveme
           MemoryProducts.movementAndLines.movementLines = [movementLine];
           SqlDataMovement newMovement = SqlDataMovement(id:createdMovement.id);
           Memory.sqlUsersData.copyToSqlData(newMovement);
-          print(newMovement.getUpdateDocStatusJson(CommonSqlData.DOC_COMPLETE_STATUS));
 
           String url =newMovement.getUpdateUrl();
-          print(url);
           errorId = Memory.ERROR_DOCUMENT_NOT_COMPLETE_ID ;
           final response = await dio.put(url, data: createdMovement.getUpdateDocStatusJson(CommonSqlData.DOC_COMPLETE_STATUS));
-          print(response);
-          print(response.statusCode);
 
 
           if (response.statusCode == 200) {

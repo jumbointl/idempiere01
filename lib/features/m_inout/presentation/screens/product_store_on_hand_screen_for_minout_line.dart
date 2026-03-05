@@ -130,7 +130,6 @@ class ProductStoreOnHandScreenForLineState
 
   @override
   Future<void> executeAfterShown() async {
-    debugPrint('ProductStoreOnHandScreenForLineState.executeAfterShown ${widget.productId}');
 
     if (widget.productId.isNotEmpty && widget.productId != '-1') {
       await handleInputString(

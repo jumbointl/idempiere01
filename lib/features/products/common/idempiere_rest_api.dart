@@ -37,6 +37,21 @@ Future<Response<dynamic>> updateDataByRESTAPI({
     throw Exception(e.toString());
   }
 }
+
+Future<Response<dynamic>> updateDocumentStatusByRESTAPI({
+  required String modelName,
+  required int id,
+  required WidgetRef ref,
+  required String status,
+}) async {
+  return updateDataByRESTAPI(
+    modelName: modelName,
+    id: id,
+    data: {"doc-action": status},
+    ref: ref,
+  );
+
+}
 /// Generic REST insert for iDempiere models.
 /// Uses POST /api/v1/models/{model}
 Future<Response<dynamic>> insertDataByRESTAPI({
@@ -82,17 +97,20 @@ Future<Response<dynamic>> deleteDataByRESTAPI({
     };
     debugPrint('deleteDataByRESTAPI $url');
     debugPrint('deleteDataByRESTAPI id $id');
+    debugPrint('deleteDataByRESTAPI data $data');
     final response = await dio.delete(url,data: data);
-
+    debugPrint('deleteDataByRESTAPI response $response');
     if (response.statusCode == 200 || response.statusCode == 204) {
       return response;
     }
 
     throw Exception('REST delete failed ($modelName/$id): ${response.statusCode}');
   } on DioException catch (e) {
+    debugPrint('deleteDataByRESTAPI DioException ${e.toString()}');
     final authDataNotifier = ref.read(authProvider.notifier);
     throw CustomErrorDioException(e, authDataNotifier);
   } catch (e) {
+    debugPrint('deleteDataByRESTAPI e ${e.toString()}');
     throw Exception(e.toString());
   }
 }
@@ -474,3 +492,48 @@ Future<ResponseAsyncValue> updateDataByRESTAPIBatchResponseAsyncValue({
     );
   }
 }
+
+
+Future<ResponseAsyncValue> executeBatchOpsResponseAsyncValue({
+  required List<Map<String, dynamic>> ops,
+  required WidgetRef ref,
+  String successMessage = 'Batch executed',
+}) async {
+  try {
+    // English comment: "Debug entire payload"
+    debugPrint('Batch total ops=${ops.length}');
+    debugPrint('Batch payload: $ops');
+
+    final response = await batchDataByRESTAPI(
+      operations: ops,
+      ref: ref,
+      transaction: true,
+    );
+
+    final code = response.statusCode;
+    if (code != null && code >= 200 && code < 300) {
+      return ResponseAsyncValue(
+        success: true,
+        isInitiated: true,
+        data: response.data,
+        message: successMessage,
+      );
+    }
+
+    return ResponseAsyncValue(
+      success: false,
+      isInitiated: true,
+      data: null,
+      message: 'Batch failed status=$code',
+    );
+  } catch (e) {
+    debugPrint('executeBatchOpsResponseAsyncValue error: $e');
+    return ResponseAsyncValue(
+      success: false,
+      isInitiated: true,
+      data: null,
+      message: e.toString(),
+    );
+  }
+}
+

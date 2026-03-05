@@ -53,8 +53,6 @@ class StoreOnHandNavigation {
     );
   }
 
-  /// English: Open UnsortedStorageOnHandSelectLocatorScreen as a bottom sheet
-  /// (replacing PAGE_UNSORTED_STORAGE_ON_HAND_FOR_LINE_SELECT_LOCATOR route).
   static Future<void> openSelectLocatorSheet({
     required BuildContext context,
     required WidgetRef ref,
@@ -68,30 +66,20 @@ class StoreOnHandNavigation {
       return;
     }
 
-    // English: Persist MemoryProducts values (same behavior as your flow)
     MemoryProducts.index = index;
     MemoryProducts.width = width;
     MemoryProducts.storage = storage;
     MemoryProducts.movementAndLines = movementAndLines;
 
-    final String upc = MemoryProducts.storage.mProductID?.uPC ?? '-1';
 
-    // English: Prepare providers/state exactly like your GoRoute.builder
     _prepareForSelectLocator(ref);
-
-    // English: If you want to ensure argument always matches movement state:
-    final String safeArgument = (argument.isNotEmpty && argument != '-1')
-        ? argument
-        : jsonEncode(movementAndLines.toJson());
 
     await _showSheet(
       context: context,
       child: UnsortedStorageOnHandSelectLocatorScreen(
-        argument: safeArgument,
         movementAndLines: movementAndLines,
         index: MemoryProducts.index,
         storage: MemoryProducts.storage,
-        productUPC: upc,
         width: MemoryProducts.width,
       ),
     );
@@ -191,7 +179,6 @@ Future<void> openMovementLinesCreateBottomSheet({
       return FractionallySizedBox(
         heightFactor: 0.95, // English: almost full-screen
         child: MovementLinesCreateScreen(
-          argument: argument,
           movementAndLines: movementAndLines,
           width: width,
         ),

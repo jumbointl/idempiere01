@@ -1,5 +1,4 @@
 
-import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -11,7 +10,6 @@ import 'package:monalisa_app_001/features/m_inout/domain/entities/m_in_out.dart'
 import 'package:monalisa_app_001/features/m_inout/domain/entities/m_in_out_confirm.dart';
 import 'package:monalisa_app_001/features/products/common/messages_dialog.dart';
 import 'package:monalisa_app_001/features/products/domain/idempiere/put_away_movement.dart';
-import 'package:monalisa_app_001/features/shared/domain/entities/ad_entity_id.dart';
 import 'package:monalisa_app_001/features/shared/shared.dart';
 import 'package:monalisa_app_001/features/m_inout/domain/entities/line.dart';
 import 'package:monalisa_app_001/features/m_inout/presentation/widgets/barcode_list.dart';
@@ -23,7 +21,12 @@ import '../../../shared/data/memory.dart';
 import '../../../shared/data/messages.dart';
 import '../../domain/entities/barcode.dart';
 import '../providers/line_provider.dart';
+import '../providers/m_in_ot_utils.dart';
+import '../providers/m_in_out_flow_ui.dart';
 import '../providers/m_in_out_providers.dart';
+import '../providers/m_in_out_status.dart' hide getMInOutHeaderColor;
+import '../providers/m_in_out_storage.dart';
+import '../providers/m_in_out_type.dart' hide parseMInOutTypeFromWidget;
 import '../widgets/enter_barcode_button.dart';
 
 class MInOutScreen extends ConsumerStatefulWidget {
@@ -84,7 +87,6 @@ class MInOutScreenState extends ConsumerState<MInOutScreen> {
 
 
 
-    debugPrint('showConfirmIcon : $showConfirmIcon');
     return PopScope(
       canPop: false,
       onPopInvokedWithResult: (didPop, result) async {
@@ -776,7 +778,8 @@ class _MInOutViewState extends ConsumerState<_MInOutView> {
       },
     );
   }
-  Future<void> _showEditLocatorWithDocStatusDR(
+
+  Future<void> _showEditLocator(
       BuildContext context,
       MInOutStatus mInOutState,
       Line item,
@@ -786,127 +789,7 @@ class _MInOutViewState extends ConsumerState<_MInOutView> {
     final locator = item.mLocatorId?.identifier?.split(' => ').first.trim() ?? '';
     final attSet = item.mAttributeSetInstanceID?.identifier ?? '';
     ref.invalidate(confirmMovementProvider);
-
-    return showDialog(
-      context: context,
-      builder: (dialogContext) {
-        return Consumer(
-          builder: (context, ref, _) {
-            // ✅ This will rebuild the dialog when the provider changes
-            final newLocator = ref.watch(selectedLocatorForMinOutProvider);
-            final newLocatorName = newLocator?.value ?? newLocator?.identifier ?? '';
-
-            return AlertDialog(
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(themeBorderRadius),
-              ),
-              title: const Text('Cambiar Estante'),
-              content: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min, // ✅ prevents overflow
-                  children: [
-                    OutlinedButton.icon(
-                      onPressed: () {
-                        context.push(
-                          '${AppRouter.PAGE_PRODUCT_STORE_ON_HAND_FOR_MINOUT_LINE}/$upc',
-                          extra: item,
-                        );
-                      },
-                      style: OutlinedButton.styleFrom(
-                        side: BorderSide(color: themeColorPrimary),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                      ),
-                      icon: const Icon(Icons.search),
-                      label: Text('Buscar stock por $upc'),
-                    ),
-
-                    const SizedBox(height: 10),
-                    const Text('Estante Anterior'),
-                    Text(locator),
-                    const SizedBox(height: 10),
-                    const Text('Att Set'),
-                    Text(attSet),
-                    const SizedBox(height: 10),
-                    const Text('Nuevo Estante'),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                      decoration: BoxDecoration(
-                        color: Colors.purple.withOpacity(0.08),
-                        border: Border.all(
-                          color: Colors.purple,
-                          width: 1.5,
-                        ),
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: Text(
-                        newLocatorName.isEmpty ? 'Sin estante seleccionado' : newLocatorName,
-                        style: const TextStyle(
-                          color: Colors.purple,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
-
-                  ],
-                ),
-              ),
-              actions: [
-                FilledButton.icon(
-                  onPressed: () {
-                    final selected = ref.read(selectedLocatorForMinOutProvider);
-                    final newLocatorName = newLocator?.value ?? newLocator?.identifier ?? '';
-                    final hasNewLocator =
-                        selected != null && (selected.id ?? 0) > 0;
-
-                    if (!hasNewLocator) {
-                      showErrorCenterToast(context, 'Debe ingresar un nuevo estante');
-                      return;
-                    }
-                    final newLocatorAd = AdEntityId(id: selected.id?.toString(), identifier: newLocatorName);
-                    mInOutNotifier.onEditLocatorChange(newLocatorName);
-                    mInOutNotifier.confirmEditLocatorWithDocDR(item, ref, newLocatorAd);
-
-                  },
-                  style: FilledButton.styleFrom(
-                    backgroundColor: themeColorPrimary,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                  ),
-                  icon: const Icon(Icons.check),
-                  label: const Text('Confirmar'),
-                ),
-
-                TextButton.icon(
-                  onPressed: () => Navigator.of(context).pop(),
-                  icon: const Icon(Icons.close_rounded),
-                  label: const Text('Cancelar'),
-                  style: TextButton.styleFrom(
-                    foregroundColor: themeColorGray,
-                  ),
-                ),
-
-              ],
-            );
-          },
-        );
-      },
-    );
-  }
-
-  Future<void> _showEditLocatorWithDocStatusNoDR(
-      BuildContext context,
-      MInOutStatus mInOutState,
-      Line item,
-      WidgetRef ref,
-      ) {
-    final upc = item.upc ?? '';
-    final locator = item.mLocatorId?.identifier?.split(' => ').first.trim() ?? '';
-    final attSet = item.mAttributeSetInstanceID?.identifier ?? '';
-    ref.invalidate(confirmMovementProvider);
+    ref.invalidate(lineToUpdateLocatorProvider);
 
     return showDialog(
       context: context,
@@ -981,7 +864,7 @@ class _MInOutViewState extends ConsumerState<_MInOutView> {
                             final name = selected?.value ?? selected?.identifier ?? '';
                             if(name.isEmpty) return;
                             mInOutNotifier.onEditLocatorChange(name);
-                            mInOutNotifier.confirmEditLocatorDocNoDR(item, ref);
+                            mInOutNotifier.confirmEditLocator(item, ref);
                             ref.read(selectedLocatorForMinOutProvider.notifier).state = null;
                             Navigator.of(context).pop();
                           }
@@ -1014,7 +897,7 @@ class _MInOutViewState extends ConsumerState<_MInOutView> {
                                         final name = selected?.value ?? selected?.identifier ?? '';
                                         if(name.isEmpty) return;
                                         mInOutNotifier.onEditLocatorChange(name);
-                                        mInOutNotifier.confirmEditLocatorDocNoDR(item, ref);
+                                        mInOutNotifier.confirmEditLocator(item, ref);
                                         ref.read(selectedLocatorForMinOutProvider.notifier).state = null;
                                         Navigator.of(context).pop();
                                       }
@@ -1121,6 +1004,8 @@ class _MInOutViewState extends ConsumerState<_MInOutView> {
 
                     ref.read(putAwayMovementCreateWithCompleteProvider.notifier)
                         .state = putAwayMovement;
+
+                    ref.read(lineToUpdateLocatorProvider.notifier).state = item;
 
                     ref.read(fireCreateMovementWithCompleteProvider.notifier)
                         .update((state) => state + 1);
@@ -1243,7 +1128,7 @@ class _MInOutViewState extends ConsumerState<_MInOutView> {
                             final name = selected?.value ?? selected?.identifier ?? '';
                             if(name.isEmpty) return;
                             mInOutNotifier.onEditLocatorChange(name);
-                            mInOutNotifier.confirmEditLocatorDocNoDR(item, ref);
+                            mInOutNotifier.confirmEditLocator(item, ref);
                             ref.read(selectedLocatorForMinOutProvider.notifier).state = null;
                             Navigator.of(context).pop();
                           }
@@ -1276,7 +1161,7 @@ class _MInOutViewState extends ConsumerState<_MInOutView> {
                                         final name = selected?.value ?? selected?.identifier ?? '';
                                         if(name.isEmpty) return;
                                         mInOutNotifier.onEditLocatorChange(name);
-                                        mInOutNotifier.confirmEditLocatorDocNoDR(item, ref);
+                                        mInOutNotifier.confirmEditLocator(item, ref);
                                         ref.read(selectedLocatorForMinOutProvider.notifier).state = null;
                                         Navigator.of(context).pop();
                                       }
@@ -1383,6 +1268,9 @@ class _MInOutViewState extends ConsumerState<_MInOutView> {
 
                     ref.read(putAwayMovementCreateWithCompleteProvider.notifier)
                         .state = putAwayMovement;
+
+                    ref.read(lineToUpdateLocatorProvider.notifier).state = item;
+
 
                     ref.read(fireCreateMovementWithCompleteProvider.notifier)
                         .update((state) => state + 1);
@@ -1966,6 +1854,22 @@ class _MInOutViewState extends ConsumerState<_MInOutView> {
       ),
     );
   }
+  Future<void> reloadMInOut(BuildContext context, WidgetRef ref) async {
+    debugPrint('mInOutNotifier.reload');
+    final mInOutState = ref.read(mInOutProvider);
+    if(mInOutState.doc.isEmpty){
+      String message = Messages.DOCUMENT_EMPTY ;
+      showErrorMessage(context,ref, message);
+      return ;
+    }
+    mInOutState.copyWith(isLoading: true);
+
+    ref.read(savedConfirmIdProvider.notifier).state = mInOutState.mInOutConfirm?.id ?? 0;
+    await loadMInOutAndLine(context, ref);
+    final canMerge = ref.watch(canMergeSavedProvider);
+    if(canMerge &&context.mounted)mergeMInOut(context, ref);
+  }
+
   Widget _buildOrderList({
     required IconData icon,
     required VoidCallback onPressed,
@@ -2021,9 +1925,6 @@ class _MInOutViewState extends ConsumerState<_MInOutView> {
             : item.verifiedStatus == 'minor' ||
             item.verifiedStatus == 'manually-minor'
             ? themeColorWarningLight : null;
-        debugPrint('Qty S:${item.scanningQty} M:${item.movementQty}');
-        debugPrint('Qty C:${item.confirmedQty} T:${item.targetQty}');
-
 
         return GestureDetector(
           onTap: () =>
@@ -2249,12 +2150,7 @@ class _MInOutViewState extends ConsumerState<_MInOutView> {
                 Navigator.of(context).pop();
                 debugPrint('showEditLocator');
                 ref.invalidate(selectedLocatorForMinOutProvider);
-                if(mInOutState.mInOut?.docStatus=='DR'){
-                  _showEditLocatorWithDocStatusDR(context, mInOutState, item, ref);
-                } else {
-                  _showEditLocatorWithDocStatusNoDR(context, mInOutState, item, ref);
-                }
-
+                _showEditLocator(context, mInOutState, item, ref);
               },
               label: 'Estante',
               icon: const Icon(Icons.view_in_ar),
@@ -2422,11 +2318,127 @@ class _MInOutViewState extends ConsumerState<_MInOutView> {
       },
     );
   }
-
   Future<void> loadMInOutAndLine(BuildContext context, WidgetRef ref) async {
+    // reset acá, antes del await
     ref.read(savedConfirmIdProvider.notifier).state = 0;
-    ref.read(mInOutProvider.notifier).loadMInOutAndLine(context, ref);
+
+    final notifier = ref.read(mInOutProvider.notifier);
+    final navCtx = Navigator.of(context, rootNavigator: true).context;
+    final result = await notifier.loadMInOutAndLine(ref);
+
+    if (!mounted) return; // <-- ahora sí, válido
+
+
+    if (!navCtx.mounted) return;
+    switch (result) {
+      case LoadOk():
+        return;
+
+      case LoadNotFound(:final message):
+        showErrorMessage( // tu helper
+          durationSeconds: 0,
+          navCtx,
+          ref,
+          message,
+        );
+        return;
+
+      case LoadNeedConfirmSelection(:final mInOut, :final confirmList):
+      // abrir selector bottomsheet
+        await notifier.showSelectMInOutConfirm(
+          navCtx,
+          notifier,
+          ref.read(mInOutProvider),
+          confirmList,
+          ref,
+        );
+        return;
+
+      case LoadNeedMoveConfirmSelection(:final mInOut, :final confirmList):
+        await notifier.showSelectMInOutConfirm(
+          navCtx,
+          notifier,
+          ref.read(mInOutProvider),
+          confirmList,
+          ref,
+        );
+        return;
+
+      case LoadNeedAutoCreateConfirm(:final mInOut, :final type):
+      // acá llamás tus bottomsheets create (pick/qa/shipment/receipt)
+      // EJEMPLO:
+        debugPrint('loadMInOutAndLine result LoadNeedAutoCreateConfirm');
+        final isPickConfirm = type == MInOutType.pickConfirm;
+        final isQaConfirm = type == MInOutType.qaConfirm;
+        final isShipmentConfirm = type == MInOutType.shipmentConfirm;
+        final isReceiptConfirm = type == MInOutType.receiptConfirm;
+
+        // Capability flags from backend
+        final canCreatePickConfirm = mInOut.canCreatePickConfirm;
+        final canCreateShipmentConfirm = mInOut.canCreateShipmentConfirm;
+        final canCreateQaConfirm = mInOut.canCreateQaConfirm;
+        final canCreateReceiptConfirm = mInOut.canCreateReceiptConfirm;
+        final doc = mInOut.documentNo ??'';
+
+        if (isPickConfirm && canCreatePickConfirm) {
+          await showCreatePickOrQaConfirmModalBottomSheet(
+            ref: ref,
+            isQaConfirm: false,
+            documentNo: doc,
+            mInOutId: mInOut.id?.toString() ?? '',
+            type: type,
+            onResultSuccess: () async {
+              await loadMInOutAndLine(navCtx, ref); // recargar desde el widget
+            },
+          );
+        }
+        if (isShipmentConfirm && canCreateShipmentConfirm) {
+          await showCreateShipmentConfirmModalBottomSheet(
+            ref: ref,
+            documentNo: doc,
+            mInOutId: mInOut.id?.toString() ?? '',
+            type: MInOutType.shipmentConfirm,
+            onResultSuccess: () async {
+              await loadMInOutAndLine(navCtx, ref);
+            },
+          );
+          return;
+        }
+
+        if (isReceiptConfirm && canCreateReceiptConfirm) {
+          await showCreateReceiptConfirmModalBottomSheet(
+            ref: ref,
+            documentNo: doc,
+            mInOutId: mInOut.id?.toString() ?? '',
+            type: MInOutType.receiptConfirm,
+            onResultSuccess: () async {
+              await loadMInOutAndLine(navCtx, ref);
+            },
+          );
+          return;
+        }
+
+        if (isQaConfirm && canCreateQaConfirm) {
+          await showCreatePickOrQaConfirmModalBottomSheet(
+            ref: ref,
+            isQaConfirm: true,
+            documentNo: doc,
+            mInOutId: mInOut.id?.toString() ?? '',
+            type: MInOutType.qaConfirm,
+            onResultSuccess: () async {
+              await loadMInOutAndLine(navCtx, ref);
+            },
+          );
+          return;
+        }
+        return;
+    }
   }
+
+ /* Future<void> loadMInOutAndLine(BuildContext context, WidgetRef ref) async {
+    ref.read(savedConfirmIdProvider.notifier).state = 0;
+    await ref.read(mInOutProvider.notifier).loadMInOutAndLine(context, ref);
+  }*/
 
   Future<void> loadSavedMInOut(BuildContext context, WidgetRef ref) async {
     final box = GetStorage();
@@ -2545,20 +2557,6 @@ class _MInOutViewState extends ConsumerState<_MInOutView> {
 
 }
 
-Future<void> reloadMInOut(BuildContext context, WidgetRef ref) async {
-  debugPrint('mInOutNotifier.reload');
-  final mInOutState = ref.read(mInOutProvider);
-  if(mInOutState.doc.isEmpty){
-    String message = Messages.DOCUMENT_EMPTY ;
-    showErrorMessage(context,ref, message);
-    return ;
-  }
-  mInOutState.copyWith(isLoading: true);
-  ref.read(savedConfirmIdProvider.notifier).state = mInOutState.mInOutConfirm?.id ?? 0;
-  await ref.read(mInOutProvider.notifier).loadMInOutAndLine(context, ref);
-  final canMerge = ref.watch(canMergeSavedProvider);
-  if(canMerge &&context.mounted)mergeMInOut(context, ref);
-}
 
 
 TableRow _buildTableRow(String label, String value, bool alignRight) {
@@ -2883,53 +2881,7 @@ class _ScanView extends ConsumerWidget {
     );
   }
 }
-void mergeMInOut(BuildContext context, WidgetRef ref) {
-  final notifier = ref.read(mInOutProvider.notifier);
 
-  final result = notifier.mergeFromStorage();
-
-  if (!result.ok) {
-    showErrorMessage(context, ref, result.message);
-    return;
-  }
-
-  if (!context.mounted) return;
-  showSuccessMessage(context, ref, result.message);
-
-}
-
-
-void saveMInOut(BuildContext context, WidgetRef ref) {
-  final box = GetStorage();
-  final stateNow = ref.read(mInOutProvider);
-
-  final payload = buildSaveMInOutPayload(stateNow);
-
-
-  if (payload == null) {
-    if (context.mounted) {
-      showWarningCenterToast(context, 'No hay datos para guardar.', durationSeconds: 3);
-
-    }
-    return;
-  }
-
-  try {
-    final jsonString = jsonEncode(payload);
-    box.write(KEY_SAVED_MINOUT_V1, jsonString);
-    box.write(KEY_SAVED_MINOUT_V1_TYPE, stateNow.mInOutType.name);
-
-    if (context.mounted) {
-      showSuccessCenterToast(context, 'Guardado local OK ✅', durationSeconds: 3);
-
-    }
-  } catch (e) {
-    if (context.mounted) {
-      showErrorCenterToast(context, 'Error al guardar: $e', durationSeconds: 5);
-
-    }
-  }
-}
 class _HdrLabel extends StatelessWidget {
   final String text;
   const _HdrLabel(this.text);

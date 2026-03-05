@@ -8,7 +8,7 @@ class IdempiereAttributeSetInstance extends IdempiereObject{
     super.active,
     super.propertyLabel,
     super.identifier,
-    super.modelName,
+    super.modelName = 'm_attributesetinstance',
   });
   factory IdempiereAttributeSetInstance.fromJson(Map<String, dynamic> json) => IdempiereAttributeSetInstance(
     active: json["active"],

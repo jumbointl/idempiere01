@@ -38,9 +38,17 @@ import '../../features/printer/screen/locator_label_printer_select_page.dart';
 import '../../features/printer/screen/product_label_printer_select_page.dart';
 import '../../features/printer/web_template/screen/create_zpl_template_page.dart';
 import '../../features/products/domain/idempiere/idempiere_locator.dart';
+import '../../features/products/domain/idempiere/inventory_and_lines.dart';
 import '../../features/products/domain/idempiere/movement_and_lines.dart';
 import '../../features/products/domain/models/label_profile.dart';
 import '../../features/products/domain/models/product_image.dart';
+import '../../features/products/presentation/screens/inventory/edit/inventory_cancel_screen.dart';
+import '../../features/products/presentation/screens/inventory/edit/inventory_confirm_screen.dart';
+import '../../features/products/presentation/screens/inventory/edit/inventory_edit_screen.dart';
+import '../../features/products/presentation/screens/inventory/edit/inventory_lines_create_screen.dart';
+import '../../features/products/presentation/screens/inventory/edit/product_store_on_hand_screen_for_inventory_line.dart';
+import '../../features/products/presentation/screens/inventory/edit/unsorted_storage_on_hand_screen_for_inventory_line.dart';
+import '../../features/products/presentation/screens/inventory/list/inventory_list_screen.dart';
 import '../../features/products/presentation/screens/locator/search_locator_screen.dart';
 import '../../features/products/presentation/screens/movement/edit_new/movement_cancel_screen.dart';
 import '../../features/products/presentation/screens/movement/edit_new/movement_confirm_screen.dart';
@@ -52,7 +60,6 @@ import '../../features/products/presentation/screens/search/ai_dashboard.dart';
 import '../../features/products/presentation/screens/search/ai_processor_screen.dart';
 import '../../features/products/presentation/screens/search/product_search_screen.dart';
 import '../../features/products/presentation/screens/store_on_hand/product_store_on_hand_screen.dart';
-import '../../features/products/presentation/screens/movement/create/unsorted_storage_on__hand_screen.dart';
 import '../../features/products/presentation/screens/movement/edit_new/unsorted_storage_on__hand_screen_for_line.dart';
 import '../../features/products/presentation/screens/search/update_product_upc_screen.dart';
 import '../../features/sales_order/screen/sales_order_list_screen.dart';
@@ -74,7 +81,6 @@ class AppRouter {
   static const String PAGE_M_IN_OUT_TRANSFER = '/mInOut/transfer';
   static const String PAGE_M_IN_OUT_PICKING = '/mInOut/picking';
   static const String PAGE_M_IN_OUT_INVENTORY = '/mInOut/inventory';
-  static const String PAGE_UNSORTED_STORAGE_ON_HAND = '/product/unsortedStorageOnHand';
 
   static const String PAGE_MOVEMENTS_EDIT = '/movement_search';
   static const String PAGE_MOVEMENTS_LIST = '/movement_list';
@@ -120,6 +126,23 @@ class AppRouter {
   static String PAGE_AI_PROCESSOR='/ai-processor';
   static String PAGE_AI_DASHBOARD='/ai-dashboard';
 
+  static String PAGE_INVENTORY_LIST='/inventory_list';
+
+  static String PAGE_INVENTORY_EDIT='/inventory_edit';
+
+  static String PAGE_INVENTORY_CREATE='/inventory_create';
+
+  static String PAGE_INVENTORY_CANCEL_SCREEN='/inventory_cancel';
+
+  static String PAGE_INVENTORY_CONFIRM_SCREEN='/inventory_confirm';
+  static String PAGE_PRODUCT_STORE_ON_HAND_FOR_INVENTORY_LINE =
+      '/product_store_on_hand_for_inventory_line';
+
+  static String PAGE_UNSORTED_STORAGE_ON_HAND_FOR_INVENTORY_LINE =
+      '/unsorted_store_on_hand_for_inventory_line';
+
+  static String PAGE_CREATE_INVENTORY_LINE =
+      '/create_inventory_line';
 
 
 }
@@ -136,6 +159,167 @@ final goRouterProvider = Provider((ref) {
     initialLocation: '/splash',
     refreshListenable: goRouterNotifier,
     routes: [
+      GoRoute(
+        path: AppRouter.PAGE_CREATE_INVENTORY_LINE,
+        builder: (context, state) {
+          if (!RolesApp.appInventoryComplete) {
+            return const HomeScreen();
+          }
+
+          final InventoryAndLines inventoryAndLines =
+          state.extra as InventoryAndLines;
+
+          final argument = jsonEncode(inventoryAndLines.toJson());
+
+          return InventoryLinesCreateScreen(
+            argument: argument,
+            inventoryAndLines: inventoryAndLines,
+            width: MemoryProducts.width,
+          );
+        },
+      ),
+      GoRoute(
+        path: AppRouter.PAGE_UNSORTED_STORAGE_ON_HAND_FOR_INVENTORY_LINE,
+        builder: (context, state) {
+          if (!RolesApp.appInventoryComplete) {
+            return const HomeScreen();
+          }
+
+          final InventoryAndLines inventoryAndLines =
+          state.extra as InventoryAndLines;
+
+
+          return UnsortedStorageOnHandScreenForInventoryLine(
+            inventoryAndLines: inventoryAndLines,
+            index: MemoryProducts.index,
+            storage: MemoryProducts.storage,
+            width: MemoryProducts.width,
+            isInventory: true,
+          );
+        },
+      ),
+      GoRoute(
+        path: '${AppRouter.PAGE_PRODUCT_STORE_ON_HAND_FOR_INVENTORY_LINE}/:productId',
+        builder: (context, state) {
+          if (!RolesApp.appInventoryComplete) {
+            return const HomeScreen();
+          }
+
+          final productId = state.pathParameters['productId'] ?? '';
+          final InventoryAndLines inventoryAndLines =
+          state.extra as InventoryAndLines;
+
+          final argument = jsonEncode(inventoryAndLines.toJson());
+
+          return ProductStoreOnHandScreenForInventoryLine(
+            productId: productId,
+            inventoryAndLines: inventoryAndLines,
+            argument: argument,
+            isInventory: true,
+          );
+        },
+      ),
+      GoRoute(
+        path: AppRouter.PAGE_INVENTORY_CANCEL_SCREEN,
+        builder: (context, state) {
+          if (!RolesApp.appInventoryComplete) {
+            return const HomeScreen();
+          }
+
+          final InventoryAndLines inventoryAndLines =
+          state.extra as InventoryAndLines;
+
+          final String argument = jsonEncode(inventoryAndLines.toJson());
+
+          return InventoryCancelScreen(
+            argument: argument,
+            inventoryAndLines: inventoryAndLines,
+          );
+        },
+      ),
+      GoRoute(
+        path: AppRouter.PAGE_INVENTORY_CONFIRM_SCREEN,
+        builder: (context, state) {
+          if (!RolesApp.appInventoryComplete) {
+            return const HomeScreen();
+          }
+
+          final InventoryAndLines inventoryAndLines =
+          state.extra as InventoryAndLines;
+
+          final String argument = jsonEncode(inventoryAndLines.toJson());
+
+          return InventoryConfirmScreen(
+            argument: argument,
+            inventoryAndLines: inventoryAndLines,
+          );
+        },
+      ),
+      GoRoute(
+        path: '${AppRouter.PAGE_INVENTORY_EDIT}/:inventoryId/:fromPage',
+        pageBuilder: (context, state) {
+          if (!RolesApp.appInventoryComplete) {
+            return const NoTransitionPage(child: HomeScreen());
+          }
+
+          final inventoryId = state.pathParameters['inventoryId'] ?? '-1';
+          final fromPage = state.pathParameters['fromPage'] ?? '-1';
+
+          return CustomTransitionPage(
+            key: state.pageKey,
+            child: InventoryEditScreen(
+              fromPage: fromPage,
+              inventoryId: inventoryId,
+            ),
+            transitionDuration:
+            Duration(milliseconds: transitionTimeMilliseconds2),
+            transitionsBuilder:
+                (context, animation, secondaryAnimation, child) {
+              const begin = Offset(1.0, 0.0);
+              const end = Offset.zero;
+              final tween = Tween(begin: begin, end: end)
+                  .chain(CurveTween(curve: Curves.easeInOut));
+              return SlideTransition(
+                position: animation.drive(tween),
+                child: child,
+              );
+            },
+          );
+        },
+      ),
+      GoRoute(
+        path: '${AppRouter.PAGE_INVENTORY_LIST}/:inventoryDateFilter',
+        pageBuilder: (context, state) {
+          final hasPrivilege = RolesApp.appInventoryComplete;
+
+          if (!hasPrivilege) {
+            return const NoTransitionPage(child: HomeScreen());
+          }
+
+          final inventoryDateFilter =
+              state.pathParameters['inventoryDateFilter'] ?? '-1';
+
+          return CustomTransitionPage(
+            key: state.pageKey,
+            child: InventoryListScreen(
+              inventoryDateFilter: inventoryDateFilter,
+            ),
+            transitionDuration:
+            Duration(milliseconds: transitionTimeMilliseconds2),
+            transitionsBuilder:
+                (context, animation, secondaryAnimation, child) {
+              const begin = Offset(-1.0, 0.0);
+              const end = Offset.zero;
+              final tween = Tween(begin: begin, end: end)
+                  .chain(CurveTween(curve: Curves.easeInOut));
+              return SlideTransition(
+                position: animation.drive(tween),
+                child: child,
+              );
+            },
+          );
+        },
+      ),
       ///* Primera pantalla
       GoRoute(
         path: '/splash',
@@ -743,9 +927,7 @@ final goRouterProvider = Provider((ref) {
         builder: (context, state) {
               if(RolesApp.appMovementComplete || RolesApp.appMovementconfirmComplete) {
                 MovementAndLines movementAndLines = state.extra as MovementAndLines;
-                String argument = jsonEncode(movementAndLines.toJson());
                 return MovementLinesCreateScreen(
-                    argument: argument,
                     movementAndLines: state.extra as MovementAndLines,
                     width: MemoryProducts.width,
                     );
@@ -810,42 +992,6 @@ final goRouterProvider = Provider((ref) {
 
 
       ),
-      GoRoute(
-        path: '${AppRouter.PAGE_UNSORTED_STORAGE_ON_HAND}/:productUPC',
-        pageBuilder: (context, state) {
-          final productUPC = state.pathParameters['productUPC'] ?? '';
-
-          final hasPrivilege =
-              RolesApp.appMovementComplete || RolesApp.appMovementconfirmComplete ||
-                  RolesApp.canSearchProductStock;
-
-          if (!hasPrivilege) {
-            return const NoTransitionPage(child: HomeScreen());
-          }
-
-          return CustomTransitionPage(
-            key: state.pageKey,
-            child:  UnsortedStorageOnHandScreen(
-            productUPC: productUPC,
-            index: MemoryProducts.index,
-            storage: MemoryProducts.storage,
-            width: MemoryProducts.width,
-          ),
-            transitionDuration: Duration(milliseconds: transitionTimeMilliseconds2),
-            transitionsBuilder: (context, animation, secondaryAnimation, child) {
-              // English: Slide from right to left
-              const begin = Offset(-1.0,0.0);
-              const end = Offset.zero;
-              final tween = Tween(begin: begin, end: end)
-                  .chain(CurveTween(curve: Curves.easeInOut));
-
-              return SlideTransition(position: animation.drive(tween), child: child);
-            },
-          );
-        },
-
-
-      ),
 
       GoRoute(
         path: '${AppRouter.PAGE_UNSORTED_STORAGE_ON_HAND_READ_ONLY}/:productUPC',
@@ -866,70 +1012,7 @@ final goRouterProvider = Provider((ref) {
       ),
 
 
-      /*GoRoute(
-        path: '${AppRouter.PAGE_PRODUCT_STORE_ON_HAND}/:productId',
-        pageBuilder: (context, state) {
-          final productId = state.pathParameters['productId'] ?? '';
 
-          final hasPrivilege =
-              RolesApp.canCreateMovementInSameOrganization ||
-                  RolesApp.canSearchProductStock;
-
-          if (!hasPrivilege) {
-            return const NoTransitionPage(child: HomeScreen());
-          }
-
-          return CustomTransitionPage(
-            key: state.pageKey,
-            child: ProductStoreOnHandScreen(productId: productId),
-            transitionDuration: Duration(milliseconds: transitionTimeMilliseconds2),
-            transitionsBuilder: (context, animation, secondaryAnimation, child) {
-              // English: Slide from right to left
-              const begin = Offset(1.0, 0.0);
-              const end = Offset.zero;
-              final tween =
-              Tween(begin: begin, end: end).chain(CurveTween(curve: Curves.easeInOut));
-
-              return SlideTransition(position: animation.drive(tween), child: child);
-            },
-          );
-        },
-      ),
-      GoRoute(
-        path: '${AppRouter.PAGE_UNSORTED_STORAGE_ON_HAND}/:productUPC',
-        builder: (context, state) {
-          {
-            if(!RolesApp.canCreateMovementInSameOrganization
-                && !RolesApp.canCreateDeliveryNote && !RolesApp.canSearchProductStock){
-              return const HomeScreen();
-            }
-            final productUPC = state.pathParameters['productUPC'] ?? '';
-
-            return UnsortedStorageOnHandScreen(
-              productUPC: productUPC,
-              index:MemoryProducts.index,
-              storage: MemoryProducts.storage,
-              width: MemoryProducts.width,);
-          }
-        },
-      ),
-      GoRoute(
-        path: '${AppRouter.PAGE_UNSORTED_STORAGE_ON_HAND_READ_ONLY}/:productUPC',
-        builder: (context, state) {
-          {
-            if(!RolesApp.canSearchProductStock){
-              return const HomeScreen();
-            }
-            final productUPC = state.pathParameters['productUPC'] ?? '';
-
-            return UnsortedStorageOnHandReadOnlyScreen(
-              productUPC: productUPC,
-              index:MemoryProducts.index,
-              storage: MemoryProducts.storage,
-              width: MemoryProducts.width,);
-          }
-        },
-      ),*/
       GoRoute(
         path: AppRouter.PAGE_UNSORTED_STORAGE_ON_HAND_FOR_LINE_SELECT_LOCATOR,
         builder: (context, state) {
@@ -938,16 +1021,12 @@ final goRouterProvider = Provider((ref) {
               return const HomeScreen();
             }
             MovementAndLines movementAndLines = state.extra as MovementAndLines;
-            String argument = jsonEncode(movementAndLines.toJson());
-            String upc = MemoryProducts.storage.mProductID?.uPC ?? '-1';
             MemoryProducts.movementAndLines = movementAndLines;
 
             return UnsortedStorageOnHandSelectLocatorScreen(
-              argument: argument,
               movementAndLines: movementAndLines,
               index:MemoryProducts.index,
               storage: MemoryProducts.storage,
-              productUPC: upc,
               width: MemoryProducts.width,);
           }
         },

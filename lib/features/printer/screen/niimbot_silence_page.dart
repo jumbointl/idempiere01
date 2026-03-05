@@ -167,7 +167,7 @@ class _NiimbotPrintSilencePageState
   }
 
 
-  bool _autoCloseFired = false;
+  final bool _autoCloseFired = false;
   @override
   Widget build(BuildContext context) {
     final savedInterval = ref.watch(niimbotPacketIntervalSavedProvider) ?? 0;

@@ -55,9 +55,9 @@ class SqlDataMovementLine extends IdempiereMovementLine implements SqlData {
 
 
   @override
-  Map<String, dynamic>  getInsertJson() {
+  Map<String, dynamic>  getInsertJson({String? description}) {
 
-      description = Memory.getDescriptionFromApp();
+      description ??= Memory.getDescriptionFromApp();
       isActive = true;
 
       final Map<String, dynamic> data =  <String, dynamic>{};
@@ -245,7 +245,7 @@ class SqlDataMovementLine extends IdempiereMovementLine implements SqlData {
   }
 
   @override
-  void setIdempiereDocumentStatus(int id) {
+  void setIdempiereDocumentStatus(String id) {
     // TODO: implement setIdempiereDocumentStatus
   }
 
@@ -321,4 +321,6 @@ class SqlDataMovementLine extends IdempiereMovementLine implements SqlData {
 
     return {"MovementQty": aux};
   }
+
+
 }

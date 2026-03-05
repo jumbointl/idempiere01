@@ -1,10 +1,12 @@
 
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:monalisa_app_001/features/m_inout/domain/entities/m_in_out.dart';
 import 'package:monalisa_app_001/features/products/domain/idempiere/idempiere_document_type.dart';
 import 'package:monalisa_app_001/features/products/domain/idempiere/idempiere_product.dart';
 import 'package:monalisa_app_001/features/products/domain/sql/sql_users_data.dart';
 
+import '../../m_inout/domain/entities/line.dart';
 import '../../products/domain/idempiere/idempiere_movement.dart';
 import 'messages.dart';
 
@@ -68,6 +70,7 @@ class Memory {
   static const int ACTION_GO_TO_MOVEMENT_EDIT_PAGE_WITH_ID=9;
   static const int ACTION_FIND_PRINTER_BY_QR = 10;
   static const int ACTION_FIND_PRINTER_BY_QR_WIFI_BLUETOOTH = 11;
+  static const int ACTION_FIND_INVENTORY_BY_ID = 12;
   static const int ACTION_NO_SCAN_ACTION =200;
 
   static const int UPC_EXITS = -1;
@@ -100,6 +103,7 @@ class Memory {
   static const int PAGE_INDEX_UPDATE_UPC_SCREEN = 18;
   // when no need to switch between page and dialog index ==0
   static const int PAGE_INDEX_MOVEMENTE_EDIT_SCREEN =20;
+  static const int PAGE_INDEX_INVENTORY_EDIT_SCREEN =20;
   static const int PAGE_INDEX_STORE_ON_HAND=22;
   static const int PAGE_INDEX_UNSORTED_STORAGE_ON_HAND=24;
   static const int PAGE_INDEX_MOVEMENTE_SCREEN=31;
@@ -133,7 +137,7 @@ class Memory {
 
   static String URL_CUPS_SERVER ='http://192.168.188.108:3100/print';
 
-  static String VERSIONS='1.01.131';
+  static String APP_NAME='MONALISA';
 
   static String getUrlCupsServerWithPrinter({required String ip,
     required String port,required String printerName}){
@@ -146,17 +150,6 @@ class Memory {
     // Si no comienza con 'http', agrega 'http://'
     return 'http://$ip:$port/printers';
   }
-
-
-
-
-
-
-
-
-
-
-
 
   static bool canConformMovement(IdempiereMovement movement){
     if(movement.docStatus!= null && movement.docStatus!.id !=null
@@ -184,13 +177,15 @@ class Memory {
     String description = '${Messages.APP_DESCRIPTION} $userName';
     return description;
   }
-  static String getDescriptionMoveBetweenFromApp(){
+  static String getDescriptionMoveBetweenFromApp({required MInOut mInOut, required Line line}){
     String description = '${Messages.MOVE_BETWEEN_LOCATORS} $userName';
+    description='$description Doc: ${mInOut.documentNo}, line = ${line.line} ';
     return description;
   }
   static const MATERIAL_MOVEMENT_ID = 1000022;
   static const MATERIAL_MOVEMENT_WITH_CONFIRM_ID = 1000064;
   static const MM_ELECTRONIC_DELIVERY_NOTE_ID = 1000047;
+  static const PHYSICAL_INVENTORY = 1000023;
 
 
   static final IdempiereDocumentType materialMovement = IdempiereDocumentType(
@@ -200,6 +195,15 @@ class Memory {
       id: MATERIAL_MOVEMENT_WITH_CONFIRM_ID, identifier: 'Material Movement w/Confirm', name: 'Material Movement w/Confirm'
   );
   static final IdempiereDocumentType electronicDeliveryNote = IdempiereDocumentType(
+      id: MM_ELECTRONIC_DELIVERY_NOTE_ID , identifier: 'MM Nota Remisión Electrónica',
+      name: 'MM Nota Remisión Electrónica'
+  );
+  static final IdempiereDocumentType physicalInventory= IdempiereDocumentType(
+      id: PHYSICAL_INVENTORY , identifier: 'Physical Inventory',
+      name: 'Physical Inventory'
+  );
+
+  static final IdempiereDocumentType inventory = IdempiereDocumentType(
       id: MM_ELECTRONIC_DELIVERY_NOTE_ID , identifier: 'MM Nota Remisión Electrónica',
       name: 'MM Nota Remisión Electrónica'
   );

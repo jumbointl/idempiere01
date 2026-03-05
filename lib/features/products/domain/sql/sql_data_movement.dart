@@ -57,9 +57,9 @@ class SqlDataMovement extends IdempiereMovement implements SqlData {
 
 
   @override
-  Map<String, dynamic>  getInsertJson() {
+  Map<String, dynamic>  getInsertJson({String? description}) {
 
-      description = Memory.getDescriptionFromApp();
+      description ??= Memory.getDescriptionFromApp();
       movementDate = DateTime.now().toIso8601String().split('T').first ;
       isActive = true;
 
@@ -87,35 +87,11 @@ class SqlDataMovement extends IdempiereMovement implements SqlData {
 
       return data;
   }
-  Map<String, dynamic>  getInsertForSwitchBetweenLocatorJson() {
+  Map<String, dynamic>  getInsertForSwitchBetweenLocatorJson({required String description}) {
 
-    description = Memory.getDescriptionMoveBetweenFromApp();
-    movementDate = DateTime.now().toIso8601String().split('T').first ;
-    isActive = true;
-
-    final Map<String, dynamic> data =  <String, dynamic>{};
-
-    if (aDOrgID != null) {
-      data['AD_Org_ID'] = aDOrgID!.toJsonForIdempiereSqlUse();
-    }
-    data['IsActive'] = isActive;
+    return getInsertJson(description: description);
 
 
-    if (mWarehouseID != null) {
-      data['M_Warehouse_ID'] = mWarehouseID!.toJsonForIdempiereSqlUse();
-    }
-    if (mWarehouseToID != null) {
-      data['M_WarehouseTo_ID'] = mWarehouseToID!.toJsonForIdempiereSqlUse();
-    }
-    data['Description'] = description ?? Memory.getDescriptionFromApp();
-    data['MovementDate'] = movementDate ?? DateTime.now().toIso8601String().split('T').first ;
-    data['model-name'] = modelName;
-    if (cDocTypeID != null) {
-      data['C_DocType_ID'] = cDocTypeID!.toJsonForIdempiereSqlUse();
-    }
-
-
-    return data;
   }
 
 
@@ -142,7 +118,7 @@ class SqlDataMovement extends IdempiereMovement implements SqlData {
   }
 
   @override
-  void setIdempiereDocumentStatus(int id) {
+  void setIdempiereDocumentStatus(String id) {
     // TODO: implement setIdempiereDocumentStatus
   }
 

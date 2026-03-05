@@ -443,9 +443,9 @@ class _LabelPrinterSelectPageState extends ConsumerState<LabelPrinterSelectPage>
       gapMm: p0.gapMm,
     );
     ref.read(isPrintingProvider.notifier).state = true;
-    String errorMessage = await widget.checkLabelSize(ref,p,printSimpleData:printSimpleData);
+    String errorMessage = widget.checkLabelSize(ref,p,printSimpleData:printSimpleData);
     if(errorMessage.isNotEmpty) {
-      await showMsg('Profile', await widget.checkLabelSize(ref,p,printSimpleData: printSimpleData));
+      await showMsg('Profile', widget.checkLabelSize(ref,p,printSimpleData: printSimpleData));
       return ;
     }
 

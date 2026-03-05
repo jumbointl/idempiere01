@@ -61,7 +61,7 @@ class _ProductDetailWithPhotoCardState extends ConsumerState<ProductDetailWithPh
         placeholder: AssetImage(Memory.IMAGE_LOADING),
         image: NetworkImage(imageUrl),
         fit: BoxFit.contain,
-        imageErrorBuilder: (_, __, ___) =>
+        imageErrorBuilder: (_, _, _) =>
             Image.asset(Memory.IMAGE_NO_IMAGE, fit: BoxFit.cover),
       );
     } else {
@@ -74,7 +74,7 @@ class _ProductDetailWithPhotoCardState extends ConsumerState<ProductDetailWithPh
       imageWidget = Image.memory(
         selectedImage.bytes,
         fit: BoxFit.contain,
-        errorBuilder: (_, __, ___) =>
+        errorBuilder: (_, _, _) =>
             Image.asset(Memory.IMAGE_NO_IMAGE, fit: BoxFit.contain),
       );
     }

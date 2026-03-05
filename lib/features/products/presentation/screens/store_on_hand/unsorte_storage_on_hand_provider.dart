@@ -5,7 +5,8 @@ import 'package:monalisa_app_001/features/products/presentation/screens/store_on
 import '../../../../shared/data/memory.dart';
 import '../../providers/locator_provider.dart';
 import '../../providers/product_provider_common.dart';
-import '../movement/create/unsorted_storage_on__hand_screen.dart';
+import '../inventory/create/unsorted_storage_on_hand_screen_for_inventory.dart';
+import '../movement/create/unsorted_storage_on_hand_screen_for_movement.dart';
 import 'memory_products.dart';
 
 Future<void> showUnsortedStorageSheet({
@@ -13,13 +14,12 @@ Future<void> showUnsortedStorageSheet({
   required WidgetRef ref,
   required String productUPC,
   required bool readStockOnly,
-  required dynamic notifier,
-   // replace with your notifier type if you have one
+  required bool isInventory,
 }) async {
-  // English: Prepare providers before opening the sheet
   WidgetsBinding.instance.addPostFrameCallback((_) {
     ref.read(isDialogShowedProvider.notifier).state = false;
-    ref.read(actionScanProvider.notifier).state = Memory.ACTION_GET_LOCATOR_TO_VALUE;
+    ref.read(actionScanProvider.notifier).state =
+        Memory.ACTION_GET_LOCATOR_TO_VALUE;
     ref.invalidate(selectedLocatorToProvider);
   });
 
@@ -32,12 +32,9 @@ Future<void> showUnsortedStorageSheet({
       borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
     ),
     builder: (sheetCtx) {
-      // English: Wrap with a PopScope to control system back inside the sheet
       return PopScope(
         canPop: true,
-        onPopInvokedWithResult: (didPop, result) {
-          // English: Optional cleanup when sheet closes
-        },
+        onPopInvokedWithResult: (didPop, result) {},
         child: FractionallySizedBox(
           heightFactor: Memory.FRACTIONNALLY_SIZE_SHEET_HEIGHT,
           child: readStockOnly
@@ -47,8 +44,13 @@ Future<void> showUnsortedStorageSheet({
             storage: MemoryProducts.storage,
             width: MemoryProducts.width,
           )
-              : UnsortedStorageOnHandScreen(
-            productUPC: productUPC,
+              : isInventory
+              ? UnsortedStorageOnHandScreenForInventory(
+            index: MemoryProducts.index,
+            storage: MemoryProducts.storage,
+            width: MemoryProducts.width,
+          )
+              : UnsortedStorageOnHandScreenForMovement(
             index: MemoryProducts.index,
             storage: MemoryProducts.storage,
             width: MemoryProducts.width,

@@ -27,13 +27,16 @@ class StorageOnHandCard extends ConsumerStatefulWidget {
   final double width;
   final double height = 120;
   final bool readStockOnly;
+  final bool isInventory;
   IdempiereLocator? locatorFilter;
 
 
 
   StorageOnHandCard(this.notifier, this.storage, this.index, this.listLength, {
 
-    required this.width,this.locatorFilter, required this.readStockOnly, super.key,});
+    required this.width,this.locatorFilter, required this.readStockOnly,
+    required this.isInventory,
+    super.key,});
 
 
   @override
@@ -161,7 +164,7 @@ class StorageOnHandCardState extends ConsumerState<StorageOnHandCard> {
           ref: ref,
           productUPC: productUPC,
           readStockOnly: readStockOnly,
-          notifier: widget.notifier,
+          isInventory: widget.isInventory,
         );
       }
 

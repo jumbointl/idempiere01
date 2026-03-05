@@ -6,27 +6,21 @@ import 'package:intl/intl.dart';
 import 'package:monalisa_app_001/features/m_inout/domain/entities/line_confirm.dart';
 import 'package:monalisa_app_001/features/m_inout/domain/entities/locate.dart';
 import 'package:monalisa_app_001/features/products/presentation/screens/movement/provider/new_movement_provider.dart';
-import 'package:monalisa_app_001/features/shared/domain/entities/model_crud.dart';
-import 'package:monalisa_app_001/features/shared/domain/entities/model_crud_request.dart';
 import 'package:monalisa_app_001/features/shared/domain/entities/response_api.dart';
 import 'package:monalisa_app_001/features/m_inout/domain/datasources/m_inout_datasource.dart';
 import 'package:monalisa_app_001/features/m_inout/domain/entities/m_in_out.dart';
-import 'package:monalisa_app_001/features/shared/domain/entities/standard_response.dart';
 
 import '../../../../config/config.dart';
 import '../../../auth/presentation/providers/auth_provider.dart';
 import '../../../products/common/idempiere_rest_api.dart';
 import '../../../products/domain/models/idempiere_query_page_utils.dart';
 import '../../../products/domain/models/m_in_out_list_type.dart';
-import '../../../shared/domain/entities/ad_login_request.dart';
-import '../../../shared/domain/entities/field_crud.dart';
-import '../../../shared/domain/entities/model_set_doc_action.dart';
-import '../../../shared/domain/entities/model_set_doc_action_request.dart';
 import '../../../shared/shared.dart';
 import '../../domain/entities/line.dart';
 import '../../domain/entities/m_in_out_confirm.dart';
 import '../../presentation/providers/line_provider.dart';
 import '../../presentation/providers/m_in_out_providers.dart';
+import '../../presentation/providers/m_in_out_type.dart';
 
 class MInOutDataSourceImpl implements MInOutDataSource {
   late final Dio dio;
@@ -721,31 +715,20 @@ class MInOutDataSourceImpl implements MInOutDataSource {
         ? mInOutState.mInOutConfirm?.docStatus.id?.toString() ?? 'DR'
         : mInOutState.mInOut?.docStatus.id?.toString() ?? 'DR';
 
-    var status = isConfirm
+    var docStatus = isConfirm
         ? 'CO'
         : (currentStatus == 'DR'
             ? 'PR'
             : (currentStatus == 'IP' ? 'CO' : 'DR'));
     if(mInOutState.mInOutType == MInOutType.move){
-      status ='CO';
+      docStatus ='CO';
     }
     if(mInOutState.mInOutType == MInOutType.shipmentPrepare){
-      status ='PR';
+      docStatus ='PR';
     }
-    print('-----status : $status currentStatus : $currentStatus isConfirm : $isConfirm');
+    print('-----status : $docStatus currentStatus : $currentStatus isConfirm : $isConfirm');
 
     try {
-      final String url =
-          "/ADInterface/services/rest/model_adservice/set_docaction";
-      final authData = ref.read(authProvider);
-
-      final serviceType = isConfirm
-          ? (mInOutState.mInOutType == MInOutType.moveConfirm
-              ? 'SetDocumentActionMovementConfirm'
-              : 'SetDocumentActionInOutConfirm')
-          : (mInOutState.mInOutType == MInOutType.move
-              ? 'SetDocumentActionMovement'
-              : 'SetDocumentActionShipment');
 
       final tableName = isConfirm
           ? (mInOutState.mInOutType == MInOutType.moveConfirm
@@ -759,34 +742,15 @@ class MInOutDataSourceImpl implements MInOutDataSource {
           ? mInOutState.mInOutConfirm?.id ?? 0
           : mInOutState.mInOut?.id ?? 0;
 
-      final request = {
-        'ModelSetDocActionRequest': ModelSetDocActionRequest(
-          modelSetDocAction: ModelSetDocAction(
-            serviceType: serviceType,
-            tableName: tableName,
-            recordId: recordId,
-            docAction: status,
-          ),
-          adLoginRequest: AdLoginRequest(
-            user: authData.userName,
-            pass: authData.password,
-            lang: "es_PY",
-            clientId: authData.selectedClient!.id,
-            roleId: authData.selectedRole!.id,
-            orgId: authData.selectedOrganization!.id,
-            warehouseId: authData.selectedWarehouse!.id,
-            stage: 9,
-          ),
-        ).toJson()
-      };
-      print(request);
-      print(url);
-
-      final response = await dio.post(url, data: request);
+      final response = await updateDocumentStatusByRESTAPI(
+          modelName: tableName, id: recordId, ref: ref, status: docStatus);
+      debugPrint('response doc action ${response.data} ${response.statusCode}');
       if (response.statusCode == 200) {
-        final standardResponse =
-            StandardResponse.fromJson(response.data['StandardResponse']);
-        if (standardResponse.isError == false) {
+
+
+
+        final movement =  MInOut.fromJson(response.data);
+        if (movement.id != null && movement.id! > 0) {
 
           int duration = 3;
           await Future.delayed(Duration(seconds: duration));
@@ -807,7 +771,7 @@ class MInOutDataSourceImpl implements MInOutDataSource {
             throw Exception('Error al confirmar el ${mInOutState.title}');
           }
         } else {
-          throw Exception(standardResponse.error ?? 'Unknown error');
+          throw Exception(response.statusMessage ?? 'Unknown error');
         }
       } else {
         throw Exception(
@@ -831,18 +795,11 @@ class MInOutDataSourceImpl implements MInOutDataSource {
     final currentStatus = mInOutState.mInOutConfirm?.docStatus.id?.toString() ?? 'DR';
 
 
-    var status = 'CO';
+    var docStatus = 'CO';
 
-    print('-----status : $status currentStatus : $currentStatus isConfirm');
+    print('-----status : $docStatus currentStatus : $currentStatus isConfirm');
 
     try {
-      final String url =
-          "/ADInterface/services/rest/model_adservice/set_docaction";
-      final authData = ref.read(authProvider);
-
-      final serviceType = mInOutState.mInOutType == MInOutType.moveConfirm
-          ? 'SetDocumentActionMovementConfirm'
-          : 'SetDocumentActionInOutConfirm';
 
       final tableName = mInOutState.mInOutType == MInOutType.moveConfirm
           ? 'M_MovementConfirm'
@@ -850,34 +807,12 @@ class MInOutDataSourceImpl implements MInOutDataSource {
 
       final recordId =  mInOutState.mInOutConfirm?.id ?? 0 ;
 
-      final request = {
-        'ModelSetDocActionRequest': ModelSetDocActionRequest(
-          modelSetDocAction: ModelSetDocAction(
-            serviceType: serviceType,
-            tableName: tableName,
-            recordId: recordId,
-            docAction: status,
-          ),
-          adLoginRequest: AdLoginRequest(
-            user: authData.userName,
-            pass: authData.password,
-            lang: "es_PY",
-            clientId: authData.selectedClient!.id,
-            roleId: authData.selectedRole!.id,
-            orgId: authData.selectedOrganization!.id,
-            warehouseId: authData.selectedWarehouse!.id,
-            stage: 9,
-          ),
-        ).toJson()
-      };
-      print(request);
-      print(url);
-
-      final response = await dio.post(url, data: request);
+      final response = await updateDocumentStatusByRESTAPI(
+          modelName: tableName, id: recordId, ref: ref, status: docStatus);
+      debugPrint('response doc action ${response.data} ${response.statusCode}');
       if (response.statusCode == 200) {
-        final standardResponse =
-        StandardResponse.fromJson(response.data['StandardResponse']);
-        if (standardResponse.isError == false) {
+        final movement =  MInOut.fromJson(response.data);
+        if (movement.id != null && movement.id! > 0) {
 
           int duration = 3;
           await Future.delayed(Duration(seconds: duration));
@@ -898,7 +833,7 @@ class MInOutDataSourceImpl implements MInOutDataSource {
             throw Exception('Error al confirmar el ${mInOutState.title}');
           }
         } else {
-          throw Exception(standardResponse.error ?? 'Unknown error');
+          throw Exception(response.statusMessage ?? 'Unknown error');
         }
       } else {
         throw Exception(
@@ -934,7 +869,6 @@ class MInOutDataSourceImpl implements MInOutDataSource {
       qtyColumn: (line.confirmedQty ?? 0.0),
       if(!isMovement) qtyEnteredColumn: (line.confirmedQty ?? 0.0),
       if(!isConfirmFlow) 'ConfirmedQty' :(line.confirmedQty ?? 0),
-      if(!isMovement && (mInOutState.mInOut?.docStatus.id =='DR')) 'M_Locator_ID' :(line.mLocatorId?.id ?? 0)
     };
 
     // Optional locator update
@@ -953,150 +887,40 @@ class MInOutDataSourceImpl implements MInOutDataSource {
     return Line(id: recordId);
   }
 
-  /*@override
-  Future<Line> updateMInOutLine(Line line, WidgetRef ref) async {
-    await _dioInitialized;
-    try {
-      final String url =
-          "/ADInterface/services/rest/model_adservice/update_data";
-      print(url);
-      final authData = ref.read(authProvider);
-      final mInOutData = ref.read(mInOutProvider);
-
-      String serviceType = 'UpdateInOutLine';
-      String tableName = 'M_InOutLine';
-      String columnToUpdate ='TargetQty';
-
-      if (mInOutData.mInOutType == MInOutType.moveConfirm) {
-        serviceType = 'UpdateMovementLine';
-        tableName = 'M_MovementLine';
-        columnToUpdate ='MovementQty';
-      }
-
-      final request = {
-        'ModelCRUDRequest': ModelCrudRequest(
-          modelCrud: ModelCrud(
-            serviceType: serviceType,
-            tableName: tableName,
-            recordId: line.id,
-            action: "Update",
-            dataRow: {
-              'field': [
-                FieldCrud(
-                    column: columnToUpdate, val: line.confirmedQty.toString()),
-
-              ].map((field) => field.toJson()).toList(),
-            },
-          ),
-          adLoginRequest: AdLoginRequest(
-            user: authData.userName,
-            pass: authData.password,
-            lang: "es_PY",
-            clientId: authData.selectedClient!.id,
-            roleId: authData.selectedRole!.id,
-            orgId: authData.selectedOrganization!.id,
-            warehouseId: authData.selectedWarehouse!.id,
-            stage: 9,
-          ),
-        ).toJson()
-      };
-      print(url);
-      print(request);
-
-      final response = await dio.post(url, data: request);
-
-      if (response.statusCode == 200) {
-        final standardResponse =
-        StandardResponse.fromJson(response.data['StandardResponse']);
-        print('StandardResponse ${standardResponse.toJson()}');
-        if (standardResponse.isError == null ||
-            standardResponse.isError == false) {
-          Line lineResponse = Line(
-            id: line.id,
-          );
-          return lineResponse;
-        } else {
-          throw Exception(standardResponse.error ?? 'Unknown error');
-        }
-      } else {
-        throw Exception(
-            'Error al cargar los datos de la línea ${line.line}: ${response.statusCode}');
-      }
-    } on DioException catch (e) {
-      final authDataNotifier = ref.read(authProvider.notifier);
-      throw CustomErrorDioException(e, authDataNotifier);
-    } catch (e) {
-      throw Exception(e.toString());
-    }
-  }*/
 
   @override
   Future<LineConfirm> updateLineConfirm(Line line, WidgetRef ref) async {
     await _dioInitialized;
     try {
-      final String url =
-          "/ADInterface/services/rest/model_adservice/update_data";
-      print(url);
       final authData = ref.read(authProvider);
       final mInOutData = ref.read(mInOutProvider);
 
-      String serviceType = 'UpdateInOutLineConfirm';
       String tableName = 'M_InOutLineConfirm';
 
       if (mInOutData.mInOutType == MInOutType.moveConfirm) {
-        serviceType = 'UpdateMovementLineConfirm';
         tableName = 'M_MovementLineConfirm';
       }
+
       final request = {
-        'ModelCRUDRequest': ModelCrudRequest(
-          modelCrud: ModelCrud(
-            serviceType: serviceType,
-            tableName: tableName,
-            recordId: line.confirmId,
-            action: "Update",
-            dataRow: {
-              'field': [
-
-                FieldCrud(
-                    column: 'ConfirmedQty', val: line.confirmedQty.toString()),
-                FieldCrud(
-                    column: 'ScrappedQty', val: line.scrappedQty.toString()),
-                FieldCrud(
-                    column: 'Description',
-                    val:
-                        '${DateFormat('dd/MM/yyyy HH:mm:ss').format(DateTime.now())} --> ${authData.userName} --> ${(line.manualQty ?? 0) > 0 ? 'Manual Confirm' : 'Scanner Confirm'} }'),
-              ].map((field) => field.toJson()).toList(),
-            },
-          ),
-          adLoginRequest: AdLoginRequest(
-            user: authData.userName,
-            pass: authData.password,
-            lang: "es_PY",
-            clientId: authData.selectedClient!.id,
-            roleId: authData.selectedRole!.id,
-            orgId: authData.selectedOrganization!.id,
-            warehouseId: authData.selectedWarehouse!.id,
-            stage: 9,
-          ),
-        ).toJson()
+            'ConfirmedQty': line.confirmedQty,
+            'ScrappedQty': line.scrappedQty,
+            'Description':
+            '${DateFormat('dd/MM/yyyy HH:mm:ss').format(DateTime.now())} --> ${authData.userName} --> ${(line.manualQty ?? 0) > 0 ? 'Manual Confirm' : 'Scanner Confirm'}'
       };
-      print(url);
-      print(request);
 
-      final response = await dio.post(url, data: request);
+      final response = await updateDataByRESTAPI(modelName: tableName,
+          id: line.confirmId ?? 0, data: request, ref: ref);
 
       if (response.statusCode == 200) {
-        final standardResponse =
-            StandardResponse.fromJson(response.data['StandardResponse']);
-        print('StandardResponse ${standardResponse.toJson()}');
-        if (standardResponse.isError == null ||
-            standardResponse.isError == false) {
-          LineConfirm lineResponse = LineConfirm(
+        final line =
+            LineConfirm.fromJson(response.data);
+        if (line.id != null && line.id! > 0) {
+          /*LineConfirm lineResponse = LineConfirm(
             id: line.confirmId,
-          );
-          return lineResponse;
+          );*/
+          return line;
         } else {
-          throw Exception(standardResponse.error ?? 'Unknown error');
+          throw Exception(response.statusMessage ?? 'Unknown error');
         }
       } else {
         throw Exception(
@@ -1145,64 +969,31 @@ class MInOutDataSourceImpl implements MInOutDataSource {
     print('update locator line : ${line.toJson()}');
     await _dioInitialized;
     try {
-      final String url =
-          "/ADInterface/services/rest/model_adservice/update_data";
-
       final authData = ref.read(authProvider);
       final mInOutData = ref.read(mInOutProvider);
 
-      String serviceType = 'UpdateInOutLine';
       String tableName = 'M_InOutLine';
       String locator = 'M_Locator_ID';
 
       if (mInOutData.mInOutType == MInOutType.move ||
           mInOutData.mInOutType == MInOutType.moveConfirm) {
-        serviceType = 'UpdateMovementLine';
         tableName = 'M_MovementLine';
         locator = 'M_Locator_ID';
       }
 
       final request = {
-        'ModelCRUDRequest': ModelCrudRequest(
-          modelCrud: ModelCrud(
-            serviceType: serviceType,
-            tableName: tableName,
-            recordId: line.id,
-            action: "Update",
-            dataRow: {
-              'field': [
-                FieldCrud(
-                    column: 'Description',
-                    val:
-                        '${DateFormat('dd/MM/yyyy HH:mm:ss').format(DateTime.now())} --> ${authData.userName} --> ${line.mLocatorId!.identifier} --> ${line.editLocator.toString()}'),
-                FieldCrud(column: locator, val: line.editLocator.toString()),
-              ].map((field) => field.toJson()).toList(),
-            },
-          ),
-          adLoginRequest: AdLoginRequest(
-            user: authData.userName,
-            pass: authData.password,
-            lang: "es_PY",
-            clientId: authData.selectedClient!.id,
-            roleId: authData.selectedRole!.id,
-            orgId: authData.selectedOrganization!.id,
-            warehouseId: authData.selectedWarehouse!.id,
-            stage: 9,
-          ),
-        ).toJson()
+        'Description':'${DateFormat('dd/MM/yyyy HH:mm:ss').format(DateTime.now())} --> ${authData.userName} --> ${line.mLocatorId!.identifier} --> ${line.editLocator.toString()}',
+         locator: line.editLocator ?? 0,
       };
-      print('update locator line : $url');
-      print('update locator line : $request');
-      final response = await dio.post(url, data: request);
+      final response = await updateDataByRESTAPI(modelName: tableName,
+          id: line.id ?? 0, data: request, ref: ref);
 
       if (response.statusCode == 200) {
-        final standardResponse =
-            StandardResponse.fromJson(response.data['StandardResponse']);
-        if (standardResponse.isError == null ||
-            standardResponse.isError == false) {
+        final line = Line.fromJson(response.data);
+        if (line.id != null && line.id! > 0) {
           return true;
         } else {
-          throw Exception(standardResponse.error ?? 'Unknown error');
+          throw Exception(response.statusMessage ?? 'Unknown error');
         }
       } else {
         throw Exception(
@@ -1215,81 +1006,7 @@ class MInOutDataSourceImpl implements MInOutDataSource {
       throw Exception(e.toString());
     }
   }
-  @override
-  Future<bool> updateMovementQty(Line line, WidgetRef ref) async {
-    print('update movementQty line : ${line.toJson()}');
-    await _dioInitialized;
-    try {
-      final String url =
-          "/ADInterface/services/rest/model_adservice/update_data";
 
-      final authData = ref.read(authProvider);
-      final mInOutData = ref.read(mInOutProvider);
-
-      String serviceType = 'UpdateInOutLine';
-      String tableName = 'M_InOutLine';
-      String columnToUpdate = 'MovementQty';
-
-      if (mInOutData.mInOutType == MInOutType.move ||
-          mInOutData.mInOutType == MInOutType.moveConfirm) {
-        serviceType = 'UpdateMovementLine';
-        tableName = 'M_MovementLine';
-        columnToUpdate = 'MovementQty';
-      }
-
-      final request = {
-        'ModelCRUDRequest': ModelCrudRequest(
-          modelCrud: ModelCrud(
-            serviceType: serviceType,
-            tableName: tableName,
-            recordId: line.id,
-            action: "Update",
-            dataRow: {
-              'field': [
-                FieldCrud(
-                    column: 'Description',
-                    val:
-                    '${DateFormat('dd/MM/yyyy HH:mm:ss').format(DateTime.now())} --> ${authData.userName} --> MovementQty --> ${line.movementQty.toString()}'),
-                FieldCrud(column: columnToUpdate, val: line.confirmedQty.toString()),
-              ].map((field) => field.toJson()).toList(),
-            },
-          ),
-          adLoginRequest: AdLoginRequest(
-            user: authData.userName,
-            pass: authData.password,
-            lang: "es_PY",
-            clientId: authData.selectedClient!.id,
-            roleId: authData.selectedRole!.id,
-            orgId: authData.selectedOrganization!.id,
-            warehouseId: authData.selectedWarehouse!.id,
-            stage: 9,
-          ),
-        ).toJson()
-      };
-      print('update movementQty line : $url');
-      print('update movementQty line : $request');
-      final response = await dio.post(url, data: request);
-
-      if (response.statusCode == 200) {
-        final standardResponse =
-        StandardResponse.fromJson(response.data['StandardResponse']);
-        if (standardResponse.isError == null ||
-            standardResponse.isError == false) {
-          return true;
-        } else {
-          throw Exception(standardResponse.error ?? 'Unknown error');
-        }
-      } else {
-        throw Exception(
-            'Error al cargar los datos de la línea ${line.line}: ${response.statusCode}');
-      }
-    } on DioException catch (e) {
-      final authDataNotifier = ref.read(authProvider.notifier);
-      throw CustomErrorDioException(e, authDataNotifier);
-    } catch (e) {
-      throw Exception(e.toString());
-    }
-  }
   @override
   Future<bool> updateLineConfirmConfirmQty(LineConfirm line, WidgetRef ref) async {
     await _dioInitialized;
@@ -1339,88 +1056,6 @@ class MInOutDataSourceImpl implements MInOutDataSource {
     }
   }
 
-  /* @override
-  Future<bool> updateLineConfirmTargetQty(LineConfirm line, WidgetRef ref) async {
-
-    print('update LineConfirm movementQty line : ${line.toJson()}');
-    //
-    await _dioInitialized;
-    try {
-      final String url =
-          "/ADInterface/services/rest/model_adservice/update_data";
-
-      final authData = ref.read(authProvider);
-      final mInOutData = ref.read(mInOutProvider);
-
-
-      String serviceType = 'UpdateInOutLineConfirm';
-      String tableName = 'M_InOutLineConfirm';
-
-      if (mInOutData.mInOutType == MInOutType.moveConfirm) {
-        serviceType = 'UpdateMovementLineConfirm';
-        tableName = 'M_MovementLineConfirm';
-      }
-
-
-      final request = {
-        'ModelCRUDRequest': ModelCrudRequest(
-          modelCrud: ModelCrud(
-            serviceType: serviceType,
-            tableName: tableName,
-            recordId: line.id,
-            action: "Update",
-            dataRow: {
-              'field': [
-                FieldCrud(
-                    column: 'TargetQty', val: line.confirmedQty.toString()),
-                FieldCrud(
-                    column: 'ConfirmedQty', val: line.confirmedQty.toString()),
-                FieldCrud(
-                    column: 'ScrappedQty', val: '0'),
-                FieldCrud(
-                    column: 'Description',
-                    val:
-                    '${DateFormat('dd/MM/yyyy HH:mm:ss').format(DateTime.now())} --> ${authData.userName} --> TargetQty --> ${line.confirmedQty}'),
-
-              ].map((field) => field.toJson()).toList(),
-            },
-          ),
-          adLoginRequest: AdLoginRequest(
-            user: authData.userName,
-            pass: authData.password,
-            lang: "es_PY",
-            clientId: authData.selectedClient!.id,
-            roleId: authData.selectedRole!.id,
-            orgId: authData.selectedOrganization!.id,
-            warehouseId: authData.selectedWarehouse!.id,
-            stage: 9,
-          ),
-        ).toJson()
-      };
-      print('update LineConfirm movementQty line : $url');
-      print('update LineConfirm movementQty line : $request');
-      final response = await dio.post(url, data: request);
-
-      if (response.statusCode == 200) {
-        final standardResponse =
-        StandardResponse.fromJson(response.data['StandardResponse']);
-        if (standardResponse.isError == null ||
-            standardResponse.isError == false) {
-          return true;
-        } else {
-          throw Exception(standardResponse.error ?? 'Unknown error');
-        }
-      } else {
-        throw Exception(
-            'Error al cargar los datos de la línea ${line.id}: ${response.statusCode}');
-      }
-    } on DioException catch (e) {
-      final authDataNotifier = ref.read(authProvider.notifier);
-      throw CustomErrorDioException(e, authDataNotifier);
-    } catch (e) {
-      throw Exception(e.toString());
-    }
-  }*/
 
 
   @override

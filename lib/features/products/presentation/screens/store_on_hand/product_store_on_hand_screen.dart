@@ -10,7 +10,7 @@ import '../../../../../config/router/app_router.dart';
 import '../../../../../config/theme/app_theme.dart';
 import '../../../../auth/presentation/providers/auth_provider.dart';
 import '../../../common/input_dialog.dart';
-import '../../../common/widget/async_value_consumer_product_state.dart';
+import '../common/async_value_consumer_product_state.dart';
 import '../../../domain/idempiere/idempiere_product.dart';
 import '../../../domain/idempiere/response_async_value.dart';
 import '../../../domain/idempiere/response_async_value_ui_model.dart';
@@ -22,36 +22,68 @@ import '../../providers/locator_provider.dart';
 import '../../providers/product_provider_common.dart';
 import '../../widget/product_search_mode_button.dart';
 import '../../widget/response_async_value_messages_card.dart';
+import 'memory_products.dart';
+import 'new_storage_on_hand_card.dart';
+import 'product_detail_card.dart';
+import 'product_resume_card.dart';
+
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+
+import '../../../../../config/router/app_router.dart';
+import '../../../../../config/theme/app_theme.dart';
+import '../../../../auth/presentation/providers/auth_provider.dart';
+import '../../../../shared/data/memory.dart';
+import '../../../../shared/data/messages.dart';
+import '../../../common/input_dialog.dart';
+import '../../../common/messages_dialog.dart';
+import '../../../domain/idempiere/idempiere_product.dart';
+import '../../../domain/idempiere/idempiere_storage_on_hande.dart';
+import '../../../domain/idempiere/product_with_stock.dart';
+import '../../../domain/idempiere/response_async_value.dart';
+import '../../providers/common_provider.dart';
+import '../../providers/product_provider_common.dart';
+import '../../widget/no_records_card.dart';
+import '../../widget/product_search_mode_button.dart';
 import 'new_storage_on_hand_card.dart';
 import 'product_detail_card.dart';
 import 'product_resume_card.dart';
 
 class ProductStoreOnHandScreen extends ConsumerStatefulWidget {
   String? productId;
+
   static const String MOVEMENT_DELIVERY_NOTE = 'remittance';
   static const String READ_STOCK_ONLY = 'read_stock_only';
   static const String MOVEMENT_OTHER = 'other';
   static const String MOVEMENT_IN_SAME_WAREHOUSE = 'movementInSameWarehouse';
+  static const String PHYSICAL_INVENTORY = 'physical_inventory';
 
-  ProductStoreOnHandScreen({super.key, this.productId});
-
-  int get actionScanTypeInt => Memory.ACTION_FIND_BY_UPC_SKU_FOR_STORE_ON_HAND;
+  ProductStoreOnHandScreen({
+    super.key,
+    this.productId,
+  });
 
   @override
   ConsumerState<ProductStoreOnHandScreen> createState() =>
       _ProductStoreOnHandScreenState();
-
 }
 
 class _ProductStoreOnHandScreenState
     extends AsyncValueConsumerProductState<ProductStoreOnHandScreen> {
   bool readStockOnly = false;
-  late String movementType = ProductStoreOnHandScreen.MOVEMENT_OTHER;
+  late String movementType;
   late String title;
-  bool _didInit = false;
+  bool isInventory = false;
+
+  @override
+  bool get showLeading => true;
 
   @override
   int get actionScanTypeInt => Memory.ACTION_FIND_BY_UPC_SKU_FOR_STORE_ON_HAND;
+
+  @override
+  String get initialProductId => canStartSearchAtInit ? (widget.productId ?? '') : '';
 
   @override
   Color? getAppBarBackgroundColor(BuildContext context, WidgetRef ref) {
@@ -63,15 +95,13 @@ class _ProductStoreOnHandScreenState
     return Row(
       children: [
         Text(
-          Messages.PRODUCT,
+          title,
           style: TextStyle(fontSize: themeFontSizeLarge),
         ),
         const SizedBox(width: 4),
         getSearchModeButton(
           context: context,
           onModeChanged: (mode) async {
-            // If switched to SKU/NAME, open input dialog (optional UX)
-            debugPrint('modeChange: $mode');
             WidgetsBinding.instance.addPostFrameCallback((_) async {
               await openInputDialogWithAction(
                 ref: ref,
@@ -86,164 +116,15 @@ class _ProductStoreOnHandScreenState
     );
   }
 
-
-
-  @override
-  Future<void> executeAfterShown() async {
-    if (!mounted || _didInit) return;
-    _didInit = true;
-
-    ref.read(isDialogShowedProvider.notifier).state = false;
-    ref.read(actionScanProvider.notifier).state =
-        Memory.ACTION_FIND_BY_UPC_SKU_FOR_STORE_ON_HAND;
-
-    switch (widget.productId) {
-      case ProductStoreOnHandScreen.MOVEMENT_IN_SAME_WAREHOUSE:
-        final userWarehouse = ref.read(authProvider).selectedWarehouse?.id ?? 0;
-        ref
-            .read(allowedWarehouseToProvider.notifier)
-            .update((state) => userWarehouse);
-        ref.read(excludedWarehouseToProvider.notifier).update((state) => 0);
-        break;
-
-      default:
-        final userWarehouse = ref.read(authProvider).selectedWarehouse?.id ?? 0;
-        ref.read(allowedWarehouseToProvider.notifier).state = 0;
-        ref.read(excludedWarehouseToProvider.notifier).state = userWarehouse;
-        break;
-    }
-
-    if (movementType == ProductStoreOnHandScreen.MOVEMENT_DELIVERY_NOTE) {
-      ref
-          .read(allowedMovementDocumentTypeProvider.notifier)
-          .update((state) => Memory.MM_ELECTRONIC_DELIVERY_NOTE_ID);
-    } else {
-      ref
-          .read(allowedMovementDocumentTypeProvider.notifier)
-          .update((state) => Memory.NO_MM_ELECTRONIC_DELIVERY_NOTE_ID);
-    }
-
-    if (canStartSearchAtInit) {
-      handleInputString(
-        ref: ref,
-        inputData: widget.productId!,
-        actionScan: actionScanTypeInt,
-      );
-    } else {
-      widget.productId = '-1';
-    }
-  }
-
-  @override
-  Widget asyncValueErrorHandle(
-      WidgetRef ref, {
-        required ResponseAsyncValue result,
-      }) {
-    final searchMode = ref.watch(productSearchModeProvider);
-    String message = '';
-    Color? borderColor;
-
-    switch (searchMode) {
-      case ProductSearchMode.upc:
-        title = Messages.FIND_PRODUCT_BY_UPC_SKU;
-        message = result.message ??'';
-        borderColor = Colors.cyan.shade800;
-        break;
-      case ProductSearchMode.sku:
-        title= Messages.FIND_PRODUCT_BY_SKU;
-        message = result.message ??'';
-        borderColor = Colors.cyan.shade800;
-        break;
-      case ProductSearchMode.name:
-        title = Messages.FIND_PRODUCT_BY_NAME;
-        message = result.message ??'';
-        borderColor = Colors.blue.shade800;
-        break;
-    }
-
-    final ui = ResponseAsyncValueUiModel(
-      state: ResponseUiState.error,
-      title: Messages.ERROR,
-      subtitle: Messages.NO_DATA_FOUND,
-      message: message,
-      backgroundColor: Colors.red[200]!,
-      borderColor: borderColor,
-      icon: Icons.error,
-    );
-    return ResponseAsyncValueMessagesCardAnimated(ui: ui);
-
-  }
-
-  @override
-  Widget asyncValueSuccessPanel(
-      WidgetRef ref, {
-        required ResponseAsyncValue result,
-      }) {
-    final isProductWithStock = result.data is ProductWithStock;
-    if (isProductWithStock) {
-      return asyncValueSuccessPanelUPC(ref, result: result);
-    } else {
-      return asyncValueSuccessPanelSkuOrName(ref, result: result);
-    }
-  }
-
-  Widget asyncValueSuccessPanelUPC(
-      WidgetRef ref, {
-        required ResponseAsyncValue result,
-      }) {
-    final product = result.data;
-
-    if (product == null) return const SizedBox.shrink();
-
-    final width = MediaQuery.of(context).size.width - 30;
-
-    return Column(
-      spacing: 10,
-      children: [
-        ProductDetailCard(
-           product: product,
-           onPrintTap: (){
-              context.push(AppRouter.PAGE_PRODUCT_LABEL_PRINTER_SELECT_PAGE,extra: product);
-           },
-        ),
-        if (product.hasListStorageOnHande)
-          _buildStorages(product.sortedStorageOnHande, width),
-      ],
-    );
-  }
-
-  Widget _buildStorages(
-      List<IdempiereStorageOnHande>? storages,
-      double width,
-      ) {
-    if (storages == null || storages.isEmpty) {
-      return NoRecordsCard(width: width);
-    }
-
-    return ListView.separated(
-      physics: const NeverScrollableScrollPhysics(),
-      shrinkWrap: true,
-      itemCount: storages.length + 1,
-      separatorBuilder: (_, _) => const SizedBox(height: 10),
-      itemBuilder: (context, index) {
-        if (index == 0) {
-          return ProductResumeCard(storages, width);
-        }
-        return NewStorageOnHandCard(
-          storages[index - 1],
-          index,
-          storages.length,
-          width: width - 10,
-          readStockOnly: readStockOnly,
-        );
-      },
-    );
-  }
-
   @override
   Future<void> setDefaultValuesOnInitState(
-      BuildContext context, WidgetRef ref) async {
+      BuildContext context,
+      WidgetRef ref,
+      ) async {
     title = Messages.PRODUCT;
+    movementType = ProductStoreOnHandScreen.MOVEMENT_OTHER;
+    isInventory = widget.productId == ProductStoreOnHandScreen.PHYSICAL_INVENTORY;
+
     if (widget.productId == ProductStoreOnHandScreen.MOVEMENT_DELIVERY_NOTE) {
       widget.productId = '-1';
       movementType = ProductStoreOnHandScreen.MOVEMENT_DELIVERY_NOTE;
@@ -252,18 +133,158 @@ class _ProductStoreOnHandScreenState
       widget.productId = '-1';
       movementType = ProductStoreOnHandScreen.READ_STOCK_ONLY;
       title = Messages.STOCK;
-      widget.productId = '-1';
       readStockOnly = true;
+    } else if (widget.productId == ProductStoreOnHandScreen.PHYSICAL_INVENTORY) {
+      title = Messages.PRODUCT;
     }
   }
 
   @override
-  double getWidth() {
-    throw UnimplementedError();
+  Future<void> resetScreenFlags(WidgetRef ref) async {
+    resetCommonSearchFlags(ref);
+
+    final userWarehouse = ref.read(authProvider).selectedWarehouse?.id ?? 0;
+
+    switch (widget.productId) {
+      case ProductStoreOnHandScreen.MOVEMENT_IN_SAME_WAREHOUSE:
+      case ProductStoreOnHandScreen.PHYSICAL_INVENTORY:
+        ref.read(allowedWarehouseToProvider.notifier).state = userWarehouse;
+        ref.read(excludedWarehouseToProvider.notifier).state = 0;
+        break;
+
+      default:
+        ref.read(allowedWarehouseToProvider.notifier).state = 0;
+        ref.read(excludedWarehouseToProvider.notifier).state = userWarehouse;
+        break;
+    }
+
+    if (movementType == ProductStoreOnHandScreen.MOVEMENT_DELIVERY_NOTE) {
+      ref.read(allowedMovementDocumentTypeProvider.notifier).state =
+          Memory.MM_ELECTRONIC_DELIVERY_NOTE_ID;
+    } else {
+      ref.read(allowedMovementDocumentTypeProvider.notifier).state =
+          Memory.NO_MM_ELECTRONIC_DELIVERY_NOTE_ID;
+    }
   }
 
   @override
-  bool get showLeading => true;
+  Widget asyncValueErrorHandle(
+      WidgetRef ref, {
+        required ResponseAsyncValue result,
+      }) {
+    return buildDefaultAsyncErrorCard(result);
+  }
+
+  @override
+  Widget asyncValueSuccessPanel(
+      WidgetRef ref, {
+        required ResponseAsyncValue result,
+      }) {
+    final width = MediaQuery.of(context).size.width - 30;
+    return buildDefaultSuccessPanel(
+      result: result,
+      width: width,
+    );
+  }
+
+  @override
+  Widget buildProductResumeCard(
+      List<IdempiereStorageOnHande> storages,
+      double width,
+      ) {
+    return ProductResumeCard(storages, width);
+  }
+
+  @override
+  Widget buildProductItem(
+      IdempiereProduct product,
+      double width,
+      ) {
+    return ProductDetailCard(
+      product: product,
+      onTap: () {
+        final productUPC = (product.uPC ?? '').trim();
+        if (productUPC.isEmpty) {
+          final message = '${Messages.ERROR_UPC}: $productUPC';
+          showErrorCenterToast(context, message);
+          return;
+        }
+        goToUpcSearch(productUPC);
+      },
+      onPrintTap: () {
+        context.go(
+          AppRouter.PAGE_PRODUCT_LABEL_PRINTER_SELECT_PAGE,
+          extra: product,
+        );
+      },
+    );
+  }
+
+  @override
+  Widget buildStorageItem(
+      IdempiereStorageOnHande storage,
+      int index,
+      int total,
+      double width,
+      ) {
+    return NewStorageOnHandCard(
+      storage,
+      index,
+      total,
+      width: width,
+      readStockOnly: readStockOnly,
+      isInventory: isInventory,
+    );
+  }
+
+  @override
+  Widget buildEmptyStoragesWidget(double width) {
+    return NoRecordsCard(width: width);
+  }
+
+  @override
+  Widget buildDefaultSuccessPanel({
+    required ResponseAsyncValue result,
+    required double width,
+  }) {
+    if (!result.isInitiated ||
+        (result.success == true && result.data == null) ||
+        (result.success != true)) {
+      return buildInvalidResultCard(result);
+    }
+
+    final raw = result.data;
+
+    if (raw is ProductWithStock && raw.hasProduct) {
+      final product = raw;
+      MemoryProducts.productWithStock = product;
+
+      return Column(
+        spacing: 10,
+        children: [
+          buildProductItem(product, width),
+          if (product.hasListStorageOnHande)
+            buildStorageSection(
+              storages: product.sortedStorageOnHande ?? const [],
+              width: width,
+              emptyWidget: buildEmptyStoragesWidget(width),
+              storageItemBuilder: (storage, index, total) =>
+                  buildStorageItem(storage, index, total, width - 10),
+            ),
+        ],
+      );
+    }
+
+    if (raw is List<IdempiereProduct>) {
+      return buildProductsList(
+        products: raw,
+        width: width,
+        itemBuilder: (p) => buildProductItem(p, width),
+      );
+    }
+
+    return buildFallbackNoDataCard(result);
+  }
 
   bool get canStartSearchAtInit {
     if (widget.productId == null ||
@@ -272,13 +293,12 @@ class _ProductStoreOnHandScreenState
         widget.productId == ProductStoreOnHandScreen.MOVEMENT_DELIVERY_NOTE ||
         widget.productId == ProductStoreOnHandScreen.READ_STOCK_ONLY ||
         widget.productId == ProductStoreOnHandScreen.MOVEMENT_IN_SAME_WAREHOUSE ||
-        widget.productId == ProductStoreOnHandScreen.MOVEMENT_OTHER) {
+        widget.productId == ProductStoreOnHandScreen.MOVEMENT_OTHER ||
+        widget.productId == ProductStoreOnHandScreen.PHYSICAL_INVENTORY) {
       return false;
     }
     return true;
   }
-
-
 
   @override
   void popScopeAction(BuildContext context, WidgetRef ref) async {
@@ -290,44 +310,8 @@ class _ProductStoreOnHandScreenState
     });
   }
 
-  Widget asyncValueSuccessPanelSkuOrName(
-      WidgetRef ref, {
-        required ResponseAsyncValue result,
-      }) {
-    final products = result.data;
-    if (products == null) return const SizedBox.shrink();
-
-    final width = MediaQuery.of(context).size.width - 30;
-    return _buildProducts(products, width);
-  }
-
-  Widget _buildProducts(List<IdempiereProduct>? products, double width) {
-    if (products == null || products.isEmpty) {
-      return NoRecordsCard(width: width);
-    }
-
-    return ListView.separated(
-      physics: const NeverScrollableScrollPhysics(),
-      shrinkWrap: true,
-      itemCount: products.length,
-      separatorBuilder: (_, _) => const SizedBox(height: 10),
-      itemBuilder: (context, index) {
-        return ProductDetailCard(
-          product: products[index],
-          onTap: () {
-            final productUPC = (products[index].uPC ?? '').trim();
-            if (productUPC.isEmpty) {
-              final message = '${Messages.ERROR_UPC}: $productUPC';
-              showErrorCenterToast(context, message);
-              return;
-            }
-            goToUpcSearch(productUPC);
-          },
-          onPrintTap: (){
-            context.go(AppRouter.PAGE_PRODUCT_LABEL_PRINTER_SELECT_PAGE,extra: products[index]);
-          },
-        );
-      },
-    );
+  @override
+  double getWidth() {
+    return MediaQuery.of(context).size.width;
   }
 }

@@ -239,7 +239,8 @@ class NewMovementLineCardState extends ConsumerState<NewMovementLineCard> {
 
     isScanning = ref.watch(editingMovementLineProvider(_lineId));
     quantityToMove = ref.watch(movementLineQuantityToMoveProvider(_lineId));
-
+    String att = '${widget.movementLine.mAttributeSetInstanceID?.identifier ?? '--'}'
+        ' (${widget.movementLine.mAttributeSetInstanceID?.id ??''})';
 
     String quantity = Memory.numberFormatter0Digit.format(
         widget.movementLine.movementQty ?? 0);
@@ -287,6 +288,7 @@ class NewMovementLineCardState extends ConsumerState<NewMovementLineCard> {
                       GestureDetector(
                         onTap: () async {
                           double qty = widget.movementLine.movementQty ?? 0;
+                          Memory.lastSearch = qty.toString();
                           String? quantity = await openInputDialogWithResult
                             (context, ref, false,
                               title: Messages.QUANTITY_TO_MOVE,
@@ -321,7 +323,7 @@ class NewMovementLineCardState extends ConsumerState<NewMovementLineCard> {
 
                                 final req = DeleteRequest(
                                   lineId: lineId,
-                                  movementIdToDelete: isLastLine ? movementId : null,
+                                  headerIdToDelete: isLastLine ? movementId : null,
                                 );
 
                                 ref.read(deleteRequestProvider.notifier).state = req;
@@ -362,6 +364,7 @@ class NewMovementLineCardState extends ConsumerState<NewMovementLineCard> {
                         Messages.FROM, style: textStyleTitle),
                     if(widget.showLocators ?? false)Text(
                         Messages.TO, style: textStyleTitle),
+                    Text(Messages.ATTRIBUET_INSTANCE, style: textStyleTitle),
                   ],
                 ),
               ),
@@ -406,6 +409,7 @@ class NewMovementLineCardState extends ConsumerState<NewMovementLineCard> {
                     if(widget.showLocators ?? false)Text(
                         widget.movementLine.mLocatorToID?.identifier ?? '--',
                         style: textStyleTitle),
+                    Text(att, style: textStyleTitle),
                   ],
                 ),
               ),

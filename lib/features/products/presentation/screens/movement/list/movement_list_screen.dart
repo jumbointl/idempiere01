@@ -13,7 +13,7 @@ import 'package:monalisa_app_001/features/products/presentation/screens/movement
 import 'package:monalisa_app_001/features/products/presentation/screens/movement/provider/new_movement_provider.dart';
 import 'package:monalisa_app_001/features/products/presentation/widget/no_data_card.dart';
 
-import '../../../../../m_inout/presentation/providers/m_in_out_providers.dart';
+import '../../../../../m_inout/presentation/providers/m_in_out_type.dart';
 import '../../../../../shared/data/memory.dart';
 import '../../../../../shared/data/messages.dart';
 import '../../../../common/async_value_consumer_simple_state.dart';

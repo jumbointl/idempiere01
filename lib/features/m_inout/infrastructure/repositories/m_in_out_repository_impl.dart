@@ -137,10 +137,10 @@ class MInOutRepositoryImpl implements MInOutRepository {
     return dataSource.updateLocator(line, ref);
   }
 
-  @override
+ /* @override
   Future<bool> updateMovementQty(Line line, WidgetRef ref) {
     return dataSource.updateMovementQty(line, ref);
-  }
+  }*/
 
   @override
   Future<bool> updateLineConfirmTargetQty(LineConfirm line, WidgetRef ref) {

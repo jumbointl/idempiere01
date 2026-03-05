@@ -4,7 +4,6 @@ import 'dart:typed_data';
 
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_addons/flutter_addons.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
@@ -1924,6 +1923,7 @@ class _NiimbotPageState extends ConsumerState<NiimbotPage> {
   LabelProfile? _activeProfile;
   bool _labelInitDone = false;
   late final NiimbotController _ctrl;
+  @override
   void dispose(){
     debugPrint('[NIIMBOT] dispose');
     _ctrl.handleDisconnectSilence(waitForExit: 0);
@@ -2390,7 +2390,7 @@ class _NiimbotPageState extends ConsumerState<NiimbotPage> {
       backgroundColor: Colors.transparent, // para borde redondeado lindo
       builder: (_) {
         return Consumer(
-          builder: (context, ref, __) {
+          builder: (context, ref, _) {
             final state = ref.watch(niimbotControllerProvider);
             final ctrl = ref.read(niimbotControllerProvider.notifier);
 
@@ -2587,7 +2587,7 @@ class _NiimbotPageState extends ConsumerState<NiimbotPage> {
   }
   String _printerSummary(PrinterConnConfig? p) {
     if (p == null) return 'None';
-    final name = (p.name ?? '').trim().isEmpty ? 'Printer' : p.name!;
+    final name = (p.name ?? '').trim().isEmpty ? 'Printer' : p.name;
     final addr = (p.printerInformationAddress).trim();
     final lang = (p.lang ?? '').trim();
     final type = (p.typeText ?? '').trim();

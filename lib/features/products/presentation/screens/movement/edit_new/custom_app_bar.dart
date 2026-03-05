@@ -5,6 +5,7 @@ import '../../../../../../config/theme/app_theme.dart';
 import '../../../../../m_inout/domain/entities/line.dart';
 import '../../../../../m_inout/domain/entities/m_in_out.dart';
 import '../../../../../shared/data/messages.dart';
+import '../../../../domain/idempiere/inventory_and_lines.dart';
 
 double? get fontSizeTitle =>themeFontSizeTitle;
 double? get fontSizeLarge =>themeFontSizeLarge;
@@ -225,6 +226,108 @@ Widget mInOutAppBarTitle({
     ],
   );
 }
+Widget inventoryAppBarTitle({
+  required VoidCallback onBack,
+  InventoryAndLines? inventoryAndLines,
+  showBackButton = true,
+  String subtitle = '',
+  Widget? button,
+}) {
+  TextStyle styleMain = TextStyle(fontSize: themeFontSizeLarge);
+  final m = inventoryAndLines;
+  if(subtitle.isEmpty) subtitle = '${m?.id ?? ''}   ${m?.docStatus?.id ?? ''}';
+
+
+  // Caso: ya hay movimiento
+  if (m?.hasInventory ?? false) {
+    styleMain = m!.documentNo != null && m.documentNo!.length > 20
+        ? textStyleTitleMore20C
+        : textStyleLarge;
+
+    return Row(
+      children: [
+        if(showBackButton)IconButton(
+          icon: const Icon(Icons.arrow_back),
+          padding: EdgeInsets.zero,
+          constraints: const BoxConstraints(
+            minWidth: 32,
+            minHeight: 32,
+          ),
+          onPressed: onBack,
+        ),
+        const SizedBox(width: 4),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                m.documentNo ?? '',
+                style: styleMain,
+                overflow: TextOverflow.ellipsis,
+                maxLines: 1,
+              ),
+              button == null ? Text(
+                subtitle,
+                style: textStyleSmallBold,
+                overflow: TextOverflow.ellipsis,
+              ) : Row(
+                children: [
+                  Text(
+                    subtitle,
+                    style: textStyleSmallBold,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(width: 4),
+                  button,
+                ],
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  // Caso: creando movimiento / sin movimiento todavía
+  return Row(
+    children: [
+      if(showBackButton) IconButton(
+        icon: const Icon(Icons.arrow_back),
+        padding: EdgeInsets.zero,
+        constraints: const BoxConstraints(
+          minWidth: 32,
+          minHeight: 32,
+        ),
+        onPressed: onBack,
+      ),
+      const SizedBox(width: 4),
+      Expanded(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              Messages.INVENTORY_CREATE,
+              style: styleMain,
+              overflow: TextOverflow.ellipsis,
+              maxLines: 1,
+            ),
+            Text(
+              '${m?.id ?? ''}   ${m?.docStatus?.id ?? ''}',
+              style: textStyleSmallBold,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ],
+        ),
+      ),
+    ],
+  );
+}
+
+
+
+
 
 Widget lineAppBarTitle({
   required VoidCallback onBack,

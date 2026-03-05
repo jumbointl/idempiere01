@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:material_symbols_icons/symbols.dart';
 
-import '../../features/m_inout/presentation/providers/m_in_out_providers.dart';
+import '../../features/m_inout/presentation/providers/m_in_out_type.dart';
 import '../../features/products/presentation/screens/store_on_hand/product_store_on_hand_screen.dart';
 import '../../features/shared/data/messages.dart';
 import '../constants/roles_app.dart';
@@ -191,7 +191,29 @@ final appHomeOptionCol3Items = <MenuItem>[
       icon: Icons.inventory,
     ),
 
-
+  if (RolesApp.appInventoryComplete)
+    MenuItem(
+      title: 'Inventory',
+      subTitle: '',
+      link: '${AppRouter.PAGE_PRODUCT_STORE_ON_HAND}/${ProductStoreOnHandScreen.PHYSICAL_INVENTORY}',
+      icon: Icons.inventory,
+    ),
+  if (RolesApp.appInventoryComplete)
+    MenuItem(
+      title: 'Inventory List',
+      subTitle: '',
+      link: '${AppRouter.PAGE_INVENTORY_LIST}/-1',
+      icon: Icons.inventory
+      ,
+    ),
+  if (RolesApp.appInventoryComplete)
+    MenuItem(
+      title: 'Inventory Edit',
+      subTitle: '',
+      link: '${AppRouter.PAGE_INVENTORY_EDIT}/-1/-1',
+      icon: Icons.inventory
+      ,
+    ),
 ];
 
 const appTemplateMenuItems = <MenuItem>[

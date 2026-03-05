@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
 
@@ -21,6 +22,7 @@ class SetAndFireActionNotifier<T> extends AppActionNotifier<void> {
   final bool extraSettingBeforeFire;
 
   Future<void> setAndFire(T value) async {
+    debugPrint('setAndFire executed');
     if (extraSettingBeforeFire) extraSetting?.call(ref, value);
 
     ref.read(payloadProvider.notifier).state = value;

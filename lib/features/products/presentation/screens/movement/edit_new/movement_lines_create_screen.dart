@@ -1,4 +1,3 @@
-import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -27,10 +26,9 @@ class MovementLinesCreateScreen extends ConsumerStatefulWidget {
   final int pageIndex = Memory.PAGE_INDEX_MOVEMENTE_CREATE_SCREEN;
   final MovementAndLines movementAndLines;
   final double width;
-  String argument;
-  MovementLinesCreateScreen({super.key,
+  const MovementLinesCreateScreen({super.key,
     required this.movementAndLines,
-    required this.width, required this.argument});
+    required this.width});
 
   @override
   ConsumerState<ConsumerStatefulWidget> createState() =>MovementLinesCreateScreenState();
@@ -45,7 +43,7 @@ class MovementLinesCreateScreenState extends ConsumerState<MovementLinesCreateSc
   @override
   void initState() {
     super.initState();
-    movementAndLines = MovementAndLines.fromJson(jsonDecode(widget.argument));
+    movementAndLines = widget.movementAndLines;
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       ref.read(isDialogShowedProvider.notifier).state = true;
       SqlDataMovementLine movementLine = movementAndLines.movementLineToCreate ??

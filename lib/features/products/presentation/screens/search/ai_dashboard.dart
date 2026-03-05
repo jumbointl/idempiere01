@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:monalisa_app_001/config/config.dart';
-import '../../../../../config/router/app_router.dart';
 import '../../providers/ai/gallery_provider.dart';
 import '../../providers/ai/global_providers.dart';
 

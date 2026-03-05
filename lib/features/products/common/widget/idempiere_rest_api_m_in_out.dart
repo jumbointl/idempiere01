@@ -12,6 +12,9 @@ import '../../../products/domain/idempiere/response_async_value.dart';
 // - batchDataByRESTAPI
 import '../idempiere_rest_api.dart';
 
+
+bool canEditLocatorInOutLine = false;
+
 Future<ResponseAsyncValue> confirmMInOutByRESTAPIBatch({
   required BuildContext context,
   required WidgetRef ref,
@@ -72,8 +75,8 @@ Future<ResponseAsyncValue> confirmMInOutByRESTAPIBatch({
       if (!isConfirmFlow) 'ConfirmedQty': (line.confirmedQty ?? 0),
 
       // Same logic you had (only if not movement and docStatus is DR)
-      if (!isMovement && (mInOut.docStatus.id == 'DR'))
-        'M_Locator_ID': (line.mLocatorId?.id ?? 0),
+      if (canEditLocatorInOutLine && line.editLocator!=null && line.editLocator!>0 )
+        'M_Locator_ID': line.editLocator!,
     };
 
     dataList.add(payload);

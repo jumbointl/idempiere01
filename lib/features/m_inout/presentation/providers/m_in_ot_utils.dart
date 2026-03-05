@@ -11,7 +11,7 @@ import '../../domain/entities/line.dart';
 import '../../domain/entities/line_confirm.dart';
 import '../../domain/entities/m_in_out.dart';
 import '../../domain/entities/m_in_out_confirm.dart';
-import 'm_in_out_providers.dart';
+import 'm_in_out_type.dart';
 import 'shipment_confirm_provider.dart';
 
 

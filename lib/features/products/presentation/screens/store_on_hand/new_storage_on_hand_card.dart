@@ -23,6 +23,7 @@ class NewStorageOnHandCard extends ConsumerStatefulWidget {
   final int listLength;
   final bool readStockOnly;
   final double width;
+  final isInventory ;
   /// English: Used to restrict warehouses in some flows
   final dynamic allowedWarehouseFrom;
 
@@ -34,6 +35,7 @@ class NewStorageOnHandCard extends ConsumerStatefulWidget {
         super.key,
         required this.width,
         this.allowedWarehouseFrom,
+        required this.isInventory,
       });
 
   @override
@@ -68,12 +70,13 @@ class _StorageOnHandCardForLineState
       String productUPC = widget.storage.mProductID?.identifier ?? '-1';
       productUPC = productUPC.split('_').first;
       if (ref.context.mounted) {
+        debugPrint('isInventory: ${widget.isInventory}');
         await showUnsortedStorageSheet(
           context: ref.context,
           ref: ref,
           productUPC: productUPC,
           readStockOnly: widget.readStockOnly,
-          notifier: ref.read(scanHandleProvider.notifier),
+          isInventory: widget.isInventory,
         );
       }
 

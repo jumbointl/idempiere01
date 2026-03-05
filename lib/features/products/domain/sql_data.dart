@@ -14,7 +14,7 @@ abstract class SqlData{
   void setIdempiereUpdateBy(int id);
   void setIdempiereTenant(int id);
   void setIdempiereDocumentType(int id);
-  void setIdempiereDocumentStatus(int id);
+  void setIdempiereDocumentStatus(String id);
   void setIdempierePriceList(int id);
   void setIdempiereMovementStatus(int id);
   void setIdempiereMovementType(int id);

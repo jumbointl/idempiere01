@@ -30,7 +30,6 @@ abstract class MInOutDataSource {
   Future<Line> updateMInOutLineMovementQtyAndLocator(Line line, WidgetRef ref);
   Future<int> getLocator(String value, WidgetRef ref);
   Future<bool> updateLocator(Line line, WidgetRef ref);
-  Future<bool> updateMovementQty(Line line, WidgetRef ref);
   Future<bool> updateLineConfirmConfirmQty(LineConfirm line, WidgetRef ref);
 
   Future getMInOutListByDateRange({required WidgetRef ref, required DateTimeRange<DateTime> dates

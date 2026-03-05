@@ -27,7 +27,7 @@ class DeleteMInOutLinePage extends DeleteDataPage {
     this.customOnDelete,
     required super.onResult,
   }) : super(
-    modelName: 'minoutline',
+    modelName: 'm_inoutline',
     id: line.id,
     canDelete: mInOut.docStatus.id == 'DR',
     notAllowedMessage: 'You can only delete lines when DocStatus = DR.',
@@ -40,7 +40,7 @@ class DeleteMInOutLinePage extends DeleteDataPage {
         return customOnDelete(ref, mInOut, line);
       }
       return deleteDataByRESTAPIResponseAsyncValue(
-        modelName: 'minoutline',
+        modelName: 'm_inoutline',
         id: line.id,
         ref: ref,
       );
@@ -50,7 +50,8 @@ class DeleteMInOutLinePage extends DeleteDataPage {
   static String _buildSubtitle(MInOut mInOut, Line line) {
     final docNo = mInOut.documentNo ?? '';
     final lineNo = line.line?.toString() ?? '';
-    return 'Doc: $docNo   Line: $lineNo';
+    final status = mInOut.docStatus.id ?? '' ;
+    return 'Doc: $docNo   Line: $lineNo Status: $status';
   }
 
   static String _buildMessage(Line line) {

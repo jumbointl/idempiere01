@@ -1,7 +1,5 @@
 import 'dart:io';
-import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_native_image_v2/flutter_native_image.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:dio/dio.dart';
@@ -45,7 +43,7 @@ class ProductGalleryNotifier extends StateNotifier<List<ProductImage>> {
       timeout: 60,
 
     );
-    bool _looksLikeImage(Uint8List b, String name) {
+    bool looksLikeImage(Uint8List b, String name) {
       if (b.length < 12) return false;
 
       final isPng = b[0] == 0x89 &&
@@ -112,7 +110,7 @@ class ProductGalleryNotifier extends StateNotifier<List<ProductImage>> {
         }
 
         final bytes = await tempFile.readAsBytes();
-        if (!_looksLikeImage(bytes, name)) {
+        if (!looksLikeImage(bytes, name)) {
           debugPrint("ERROR: $name IS NOT A VALID PNG/JPG. "
               "FIRST BYTES=${bytes.take(16).toList()} SIZE=$size");
           if (await tempFile.exists()) await tempFile.delete();

@@ -217,7 +217,7 @@ class MovementsCreateScreen extends ConsumerStatefulWidget {
 
   final int pageIndex = Memory.PAGE_INDEX_MOVEMENTE_CREATE_SCREEN;
   final PutAwayMovement? putAwayMovement;
-  MovementsCreateScreen({super.key, this.putAwayMovement});
+  const MovementsCreateScreen({super.key, this.putAwayMovement});
 
   @override
   ConsumerState<ConsumerStatefulWidget> createState() =>MovementsCreateScreenState();

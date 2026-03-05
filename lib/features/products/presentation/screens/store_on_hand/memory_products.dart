@@ -1,8 +1,10 @@
 import 'dart:ui';
 
 
+import 'package:monalisa_app_001/features/products/domain/idempiere/inventory_and_lines.dart';
 import 'package:monalisa_app_001/features/products/domain/idempiere/movement_and_lines.dart';
 import 'package:monalisa_app_001/features/products/domain/idempiere/product_with_stock.dart';
+import 'package:monalisa_app_001/features/products/domain/idempiere/put_away_movement.dart';
 
 import '../../../../../config/theme/app_theme.dart';
 import '../../../../shared/data/memory.dart';
@@ -41,6 +43,12 @@ class MemoryProducts {
   static bool lastUsePhoneCameraState =false;
 
   static ProductWithStock? productWithStock;
+
+  static InventoryAndLines? inventoryAndLines;
+
+  static var newSqlDataInventoryLineToCreate;
+
+  static PutAwayMovement putAwayMovement = PutAwayMovement();
 
   static String getDocumentStatusById(String documentStatus) {
     if (documentStatus == 'CO') {

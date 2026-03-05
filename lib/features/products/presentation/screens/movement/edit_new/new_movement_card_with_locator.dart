@@ -76,28 +76,6 @@ class MovementHeaderCardWithLocatorState extends ConsumerState<NewMovementCardWi
             );
           }
 
-          /*AwesomeDialog(
-              context: context,
-              animType: AnimType.scale,
-              dialogType: DialogType.question,
-              body: Center(child: Text(
-                Messages.COMPLETE,
-                //style: TextStyle(fontStyle: FontStyle.italic),
-              ),), // correct here
-              title: '${Messages.COMPLETE_MOVEMENT}?',
-              desc:   '',
-              //autoHide: const Duration(seconds: 3),
-              btnOkOnPress: () {
-                GoRouterHelper(context).go(
-                    AppRouter.PAGE_MOVEMENTS_CONFIRM_SCREEN,
-                    extra: widget.movementAndLines);
-              },
-              btnCancelOnPress: () {},
-              btnOkColor: themeColorSuccessful,
-              btnCancelColor: themeColorError,
-              btnCancelText: Messages.CANCEL,
-              btnOkText: Messages.OK,
-            ).show();*/
 
         },
         child: Container(
@@ -201,7 +179,7 @@ class MovementHeaderCardWithLocatorState extends ConsumerState<NewMovementCardWi
             width: 0.8,
           ),
         ),
-        padding: EdgeInsets.only(left: 16,right:16, top: 16,bottom: 16),
+        padding: EdgeInsets.all(10),
         child: Column(
           spacing: 10,
           crossAxisAlignment: CrossAxisAlignment.start,

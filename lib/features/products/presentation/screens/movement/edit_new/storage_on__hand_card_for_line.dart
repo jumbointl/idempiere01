@@ -145,11 +145,9 @@ class _StorageOnHandCardForLineState
       builder: (_) => FractionallySizedBox(
         heightFactor: Memory.FRACTIONNALLY_SIZE_SHEET_HEIGHT,
         child: UnsortedStorageOnHandSelectLocatorScreen(
-          argument: movementJson, // you were using jsonEncode(movement.toJson())
           movementAndLines: movementAndLines,
           index: MemoryProducts.index,
           storage: MemoryProducts.storage,
-          productUPC: upc,
           width: MemoryProducts.width,
         ),
       ),
