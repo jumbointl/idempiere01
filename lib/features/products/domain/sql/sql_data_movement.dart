@@ -1,4 +1,7 @@
+import 'package:monalisa_app_001/features/m_inout/domain/entities/line.dart';
+import 'package:monalisa_app_001/features/m_inout/domain/entities/m_in_out.dart';
 import 'package:monalisa_app_001/features/products/domain/idempiere/idempiere_movement.dart';
+import 'package:monalisa_app_001/features/products/domain/idempiere/idempiere_movement_line.dart';
 import 'package:monalisa_app_001/features/products/domain/idempiere/idempiere_sql_query_condition.dart';
 import 'package:monalisa_app_001/features/products/domain/sql_data.dart';
 import 'package:monalisa_app_001/features/shared/data/memory.dart';
@@ -57,9 +60,9 @@ class SqlDataMovement extends IdempiereMovement implements SqlData {
 
 
   @override
-  Map<String, dynamic>  getInsertJson() {
+  Map<String, dynamic>  getInsertJson({String? description}) {
 
-      description = Memory.getDescriptionFromApp();
+      description ??= Memory.getDescriptionFromApp();
       movementDate = DateTime.now().toIso8601String().split('T').first ;
       isActive = true;
 
@@ -87,35 +90,11 @@ class SqlDataMovement extends IdempiereMovement implements SqlData {
 
       return data;
   }
-  Map<String, dynamic>  getInsertForSwitchBetweenLocatorJson() {
+  Map<String, dynamic>  getInsertForSwitchBetweenLocatorJson({required String description}) {
 
-    description = Memory.getDescriptionMoveBetweenFromApp();
-    movementDate = DateTime.now().toIso8601String().split('T').first ;
-    isActive = true;
-
-    final Map<String, dynamic> data =  <String, dynamic>{};
-
-    if (aDOrgID != null) {
-      data['AD_Org_ID'] = aDOrgID!.toJsonForIdempiereSqlUse();
-    }
-    data['IsActive'] = isActive;
+    return getInsertJson(description: description);
 
 
-    if (mWarehouseID != null) {
-      data['M_Warehouse_ID'] = mWarehouseID!.toJsonForIdempiereSqlUse();
-    }
-    if (mWarehouseToID != null) {
-      data['M_WarehouseTo_ID'] = mWarehouseToID!.toJsonForIdempiereSqlUse();
-    }
-    data['Description'] = description ?? Memory.getDescriptionFromApp();
-    data['MovementDate'] = movementDate ?? DateTime.now().toIso8601String().split('T').first ;
-    data['model-name'] = modelName;
-    if (cDocTypeID != null) {
-      data['C_DocType_ID'] = cDocTypeID!.toJsonForIdempiereSqlUse();
-    }
-
-
-    return data;
   }
 
 

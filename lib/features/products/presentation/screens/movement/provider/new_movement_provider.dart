@@ -3,6 +3,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
+import 'package:monalisa_app_001/features/m_inout/presentation/providers/m_in_out_providers.dart';
 import 'package:monalisa_app_001/features/products/domain/idempiere/idempiere_response_message.dart';
 import 'package:monalisa_app_001/features/products/domain/idempiere/put_away_movement.dart';
 import 'package:monalisa_app_001/features/products/domain/idempiere/response_async_value.dart';
@@ -546,6 +547,10 @@ final newPutAwayMovementWithCompleteProvider = FutureProvider.autoDispose<Moveme
 
   PutAwayMovement? newMovement = ref.read(putAwayMovementCreateWithCompleteProvider);
   if(newMovement == null) return null;
+  final mInOut = ref.read(mInOutProvider).mInOut ;
+  if(mInOut == null) return null;
+  final line = ref.read(lineToUpdateLocatorProvider);
+  if(line == null || line.id == null || line.id! <=0) return null;
 
 
   Dio dio = await DioClient.create();
@@ -554,9 +559,13 @@ final newPutAwayMovementWithCompleteProvider = FutureProvider.autoDispose<Moveme
   debugPrint(step);
   int errorId = Memory.ERROR_DOCUMENT_NOT_CREATED_ID ;
   String createdMovementId ='';
+  String description = Memory.getDescriptionMoveBetweenFromApp(mInOut: mInOut, line: line);
   try {
     String url = newMovement.movementInsertUrl ??'';
-    final payLoad = newMovement.movementToCreate?.getInsertForSwitchBetweenLocatorJson() ;
+    final payLoad =
+    newMovement.movementToCreate?.getInsertForSwitchBetweenLocatorJson(description: description) ;
+    debugPrint('url $url');
+    debugPrint('payload $payLoad');
     if(url.isEmpty || payLoad == null) return null ;
 
     final response = await dio.post(url, data: payLoad);
@@ -569,7 +578,8 @@ final newPutAwayMovementWithCompleteProvider = FutureProvider.autoDispose<Moveme
       if (createdMovement.id != null && createdMovement.id! > 0) {
         MemoryProducts.movementAndLines.cloneMovement(createdMovement);
         newMovement.movementLineToCreate!.mMovementID = createdMovement;
-        var creteDataJsonEncode2 =  newMovement.movementLineInsertJson! ;
+
+        var creteDataJsonEncode2 =  newMovement.getInsertForSwitchBetweenLocatorJson(description: description) ;
         String url2 = newMovement.movementLineInsertUrl!;
         debugPrint('url $url2');
         debugPrint('payload $creteDataJsonEncode2');

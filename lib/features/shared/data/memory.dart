@@ -1,10 +1,12 @@
 
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:monalisa_app_001/features/m_inout/domain/entities/m_in_out.dart';
 import 'package:monalisa_app_001/features/products/domain/idempiere/idempiere_document_type.dart';
 import 'package:monalisa_app_001/features/products/domain/idempiere/idempiere_product.dart';
 import 'package:monalisa_app_001/features/products/domain/sql/sql_users_data.dart';
 
+import '../../m_inout/domain/entities/line.dart';
 import '../../products/domain/idempiere/idempiere_movement.dart';
 import 'messages.dart';
 
@@ -184,8 +186,10 @@ class Memory {
     String description = '${Messages.APP_DESCRIPTION} $userName';
     return description;
   }
-  static String getDescriptionMoveBetweenFromApp(){
+  static String getDescriptionMoveBetweenFromApp({required MInOut mInOut, required Line line}){
     String description = '${Messages.MOVE_BETWEEN_LOCATORS} $userName';
+    description='$description Doc: ${mInOut.documentNo}, mInOut id = ${mInOut.id}, Line id = ${line.id}, line = ${line.line} ';
+    description='$description Order: ${mInOut.cOrderId.id ?? 0}, C_InvoiceLine_ID = ${line.cOrderLineId?.id ?? 0}';
     return description;
   }
   static const MATERIAL_MOVEMENT_ID = 1000022;

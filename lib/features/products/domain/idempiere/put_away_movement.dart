@@ -1,6 +1,8 @@
 
+import 'package:monalisa_app_001/features/m_inout/domain/entities/m_in_out.dart';
 import 'package:monalisa_app_001/features/products/domain/sql/sql_data_movement.dart';
 
+import '../../../m_inout/domain/entities/line.dart';
 import '../../../shared/data/memory.dart';
 import '../sql/sql_data_movement_line.dart';
 import '../sql/sql_users_data.dart';
@@ -93,7 +95,8 @@ class PutAwayMovement {
   }
   Map<String, dynamic>? get movementLineInsertJson => movementLineToCreate?.getInsertJson();
   Map<String, dynamic>? get movementInsertJson => movementToCreate?.getInsertJson();
-  Map<String, dynamic>? get movementInsertForSwitchBetweenLocatorJson => movementToCreate?.getInsertForSwitchBetweenLocatorJson();
+  Map<String, dynamic>? getMovementInsertForSwitchBetweenLocatorJson({required String description}) =>
+      movementToCreate?.getInsertForSwitchBetweenLocatorJson(description: description);
   String? get movementInsertUrl => movementToCreate?.getInsertUrl();
   String? get movementLineInsertUrl => movementLineToCreate?.getInsertUrl();
   bool get movementCreated => movementToCreate!=null && movementToCreate!.id != null && movementToCreate!.id!>0;
@@ -125,6 +128,12 @@ class PutAwayMovement {
       }
 
     }
+
+  }
+
+
+    Map<String, dynamic> ? getInsertForSwitchBetweenLocatorJson({required String description}) {
+    return movementLineToCreate?.getInsertJson(description: description);
 
   }
 

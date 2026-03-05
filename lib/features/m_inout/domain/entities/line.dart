@@ -1,3 +1,4 @@
+import 'package:monalisa_app_001/features/products/domain/idempiere/idempiere_sales_order_line.dart';
 import 'package:monalisa_app_001/features/shared/domain/entities/ad_entity_id.dart';
 
 import '../../../products/domain/idempiere/idempiere_attribute_set_instance.dart';
@@ -14,6 +15,7 @@ class Line {
   AdEntityId? mLocatorToId;
   AdEntityId? mProductId;
   IdempiereAttributeSetInstance? mAttributeSetInstanceID;
+  IdempiereSalesOrderLine? cOrderLineId;
   String? upc;
   String? sku;
   String? productName;
@@ -44,6 +46,7 @@ class Line {
     this.confirmId,
     this.editLocator,
     this.mAttributeSetInstanceID,
+    this.cOrderLineId,
   });
 
   factory Line.fromJson(Map<String, dynamic> json) => Line(
@@ -83,6 +86,10 @@ class Line {
         mAttributeSetInstanceID: json["M_AttributeSetInstance_ID"] != null
             ? IdempiereAttributeSetInstance.fromJson(json["M_AttributeSetInstance_ID"])
             : null,
+        cOrderLineId: json["C_OrderLine_ID"] != null
+            ? IdempiereSalesOrderLine.fromJson(json["C_OrderLine_ID"])
+            : null,
+
 
       );
 
@@ -106,6 +113,7 @@ class Line {
     int? confirmId,
     int? editLocator,
     IdempiereAttributeSetInstance? mAttributeSetInstanceID,
+    IdempiereSalesOrderLine? cOrderLineId,
   }) {
     return Line(
       id: id ?? this.id,
@@ -127,6 +135,7 @@ class Line {
       confirmId: confirmId ?? this.confirmId,
       editLocator: editLocator ?? this.editLocator,
       mAttributeSetInstanceID: mAttributeSetInstanceID ?? this.mAttributeSetInstanceID,
+      cOrderLineId: cOrderLineId ?? this.cOrderLineId,
     );
   }
 
@@ -150,6 +159,7 @@ class Line {
         "ConfirmId": confirmId,
         "EditLocator": editLocator,
         "M_AttributeSetInstance_ID": mAttributeSetInstanceID?.toJson(),
+        "C_OrderLine_ID": cOrderLineId?.toJson(),
   };
 
 }

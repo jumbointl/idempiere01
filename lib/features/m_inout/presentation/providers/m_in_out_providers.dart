@@ -11,14 +11,12 @@ import 'package:monalisa_app_001/features/m_inout/domain/entities/line.dart';
 import 'package:monalisa_app_001/features/m_inout/domain/entities/m_in_out.dart';
 import 'package:monalisa_app_001/features/m_inout/domain/entities/m_in_out_confirm.dart';
 import 'package:monalisa_app_001/features/m_inout/domain/repositories/m_in_out_repositiry.dart';
-import 'package:monalisa_app_001/features/m_inout/presentation/screens/m_in_out_screen.dart';
 import 'package:monalisa_app_001/features/products/common/messages_dialog.dart';
 import 'package:monalisa_app_001/features/products/common/number_input_panel.dart';
 import 'package:monalisa_app_001/features/products/domain/idempiere/idempiere_document_type.dart';
 import 'package:monalisa_app_001/features/products/domain/idempiere/idempiere_locator.dart';
 import 'package:monalisa_app_001/features/products/domain/idempiere/idempiere_warehouse.dart';
 import 'package:monalisa_app_001/features/products/domain/idempiere/put_away_movement.dart';
-import 'package:monalisa_app_001/features/shared/domain/entities/ad_entity_id.dart';
 import '../../../../config/constants/roles_app.dart';
 import '../../../../config/theme/app_theme.dart';
 import '../../../products/common/number_sum_panel.dart';
@@ -34,7 +32,6 @@ import '../../../shared/presentation/widgets/custom_filled_button.dart';
 import '../../domain/entities/barcode.dart';
 import '../../domain/entities/line_confirm.dart';
 import '../../infrastructure/repositories/m_in_out_repository_impl.dart';
-import '../screens/delete_min_out_line_page.dart';
 import 'line_provider.dart';
 import 'm_in_ot_utils.dart';
 
@@ -58,6 +55,10 @@ final mInOutProvider = StateNotifierProvider<MInOutNotifier, MInOutStatus>((
     ref,
     ) {
   return MInOutNotifier(mInOutRepository: MInOutRepositoryImpl());
+});
+
+final lineToUpdateLocatorProvider = StateProvider<Line?>((ref) {
+  return null;
 });
 
 final savedConfirmIdProvider = StateProvider<int>((ref) {
@@ -1519,21 +1520,6 @@ class MInOutNotifier extends StateNotifier<MInOutStatus> {
     final List<Line> updatedLines = state.mInOut!.lines;
     final int index = updatedLines.indexWhere((l) => l.id == line.id);
     if (index != -1) {
-      if(state.manualQty == 0 && (state.mInOut?.docStatus.id=='DR')){
-        DeleteMInOutLinePage(
-          mInOut: state.mInOut!,
-          line: line,
-          onResult: (ref, result) {
-            Navigator.pop(context);
-            if(result.success){
-              reloadMInOut(context, ref);
-            }
-
-          },
-        );
-        return;
-      }
-
 
       final Line verifyLine = _verifyLineStatusQty(
         line,
@@ -1578,7 +1564,8 @@ class MInOutNotifier extends StateNotifier<MInOutStatus> {
   void onEditLocatorChange(String value) {
     state = state.copyWith(editLocator: value, errorMessage: '');
   }
-  Future<void> confirmEditLocatorDocNoDR(Line line, WidgetRef ref) async {
+
+  Future<void> confirmEditLocator(Line line, WidgetRef ref) async {
     String locator = line.mLocatorId!.identifier!.split(' => ').first.trim();
 
     try {
@@ -1586,33 +1573,6 @@ class MInOutNotifier extends StateNotifier<MInOutStatus> {
 
       final updatedLocator = line.mLocatorId?.copyWith(
         identifier: '$locator => ${state.editLocator}',
-      );
-      final updatedLine = line.copyWith(
-        mLocatorId: updatedLocator,
-      );
-      final updatedLines = state.mInOut!.lines
-          .map((l) => l.id == line.id ? updatedLine : l)
-          .toList();
-      state = state.copyWith(
-        mInOut: state.mInOut!.copyWith(lines: updatedLines),
-      );
-      saveMInOutSilence();
-      updatedMInOutLine('');
-    } catch (e) {
-      state = state.copyWith(
-        errorMessage: 'Error al actualizar la ubicación: ${e.toString()}',
-      );
-    }
-  }
-  Future<void> confirmEditLocatorWithDocDR(Line line, WidgetRef ref,AdEntityId newLocator) async {
-    String locator = line.mLocatorId!.identifier!.split(' => ').first.trim();
-
-    try {
-
-
-      final updatedLocator = line.mLocatorId?.copyWith(
-        identifier: '$locator => ${state.editLocator}',
-        id: newLocator.id,
       );
       final updatedLine = line.copyWith(
         mLocatorId: updatedLocator,
@@ -1718,7 +1678,8 @@ class MInOutNotifier extends StateNotifier<MInOutStatus> {
         final confirmedQty = line.confirmedQty;
 
         final bool editQty = movementQty != null &&
-            confirmedQty != null ;
+            confirmedQty != null &&
+            movementQty != confirmedQty;
 
 
         if (editQty) {
@@ -1743,7 +1704,7 @@ class MInOutNotifier extends StateNotifier<MInOutStatus> {
       if (sourceLines.isNotEmpty) {
         progress.setStep(1, 'Actualizando cantidades en líneas de movimiento...');
         for (final line in sourceLines) {
-          await mInOutRepository.updateMInOutLineMovementQtyAndLocator(line, ref);
+          await mInOutRepository.updateMInOutLineMovementQty(line, ref);
         }
       } else {
         // Igual avanzamos, para que el usuario vea que pasó esa etapa.
@@ -1905,8 +1866,6 @@ class MInOutNotifier extends StateNotifier<MInOutStatus> {
 
 
 
-
-
         if (editQty) {
           listLinesToUpdateMovementQty.add(line);
 
@@ -1929,7 +1888,7 @@ class MInOutNotifier extends StateNotifier<MInOutStatus> {
       if (listLinesToUpdateMovementQty.isNotEmpty) {
         progress.setStep(1, 'Actualizando cantidades en líneas de movimiento...');
         for (final line in listLinesToUpdateMovementQty) {
-          await mInOutRepository.updateMInOutLineMovementQtyAndLocator(line, ref);
+          await mInOutRepository.updateMInOutLineMovementQty(line, ref);
         }
       } else {
         // Igual avanzamos, para que el usuario vea que pasó esa etapa.
@@ -2130,7 +2089,7 @@ class MInOutNotifier extends StateNotifier<MInOutStatus> {
         // 1.1) EN: Update movement lines first
         for (final line in listLinesToUpdateMovementQty) {
           try {
-            await mInOutRepository.updateMInOutLineMovementQtyAndLocator(line, ref);
+            await mInOutRepository.updateMInOutLineMovementQty(line, ref);
           } catch (e) {
             final msg =
                 'UpdateMovementQty: Error al actualizar cantidad en línea ${line.line}: ${e.toString()}';

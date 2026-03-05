@@ -11,7 +11,6 @@ import 'package:monalisa_app_001/features/m_inout/domain/entities/m_in_out.dart'
 import 'package:monalisa_app_001/features/m_inout/domain/entities/m_in_out_confirm.dart';
 import 'package:monalisa_app_001/features/products/common/messages_dialog.dart';
 import 'package:monalisa_app_001/features/products/domain/idempiere/put_away_movement.dart';
-import 'package:monalisa_app_001/features/shared/domain/entities/ad_entity_id.dart';
 import 'package:monalisa_app_001/features/shared/shared.dart';
 import 'package:monalisa_app_001/features/m_inout/domain/entities/line.dart';
 import 'package:monalisa_app_001/features/m_inout/presentation/widgets/barcode_list.dart';
@@ -776,7 +775,8 @@ class _MInOutViewState extends ConsumerState<_MInOutView> {
       },
     );
   }
-  Future<void> _showEditLocatorWithDocStatusDR(
+
+  Future<void> _showEditLocator(
       BuildContext context,
       MInOutStatus mInOutState,
       Line item,
@@ -786,127 +786,7 @@ class _MInOutViewState extends ConsumerState<_MInOutView> {
     final locator = item.mLocatorId?.identifier?.split(' => ').first.trim() ?? '';
     final attSet = item.mAttributeSetInstanceID?.identifier ?? '';
     ref.invalidate(confirmMovementProvider);
-
-    return showDialog(
-      context: context,
-      builder: (dialogContext) {
-        return Consumer(
-          builder: (context, ref, _) {
-            // ✅ This will rebuild the dialog when the provider changes
-            final newLocator = ref.watch(selectedLocatorForMinOutProvider);
-            final newLocatorName = newLocator?.value ?? newLocator?.identifier ?? '';
-
-            return AlertDialog(
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(themeBorderRadius),
-              ),
-              title: const Text('Cambiar Estante'),
-              content: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min, // ✅ prevents overflow
-                  children: [
-                    OutlinedButton.icon(
-                      onPressed: () {
-                        context.push(
-                          '${AppRouter.PAGE_PRODUCT_STORE_ON_HAND_FOR_MINOUT_LINE}/$upc',
-                          extra: item,
-                        );
-                      },
-                      style: OutlinedButton.styleFrom(
-                        side: BorderSide(color: themeColorPrimary),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                      ),
-                      icon: const Icon(Icons.search),
-                      label: Text('Buscar stock por $upc'),
-                    ),
-
-                    const SizedBox(height: 10),
-                    const Text('Estante Anterior'),
-                    Text(locator),
-                    const SizedBox(height: 10),
-                    const Text('Att Set'),
-                    Text(attSet),
-                    const SizedBox(height: 10),
-                    const Text('Nuevo Estante'),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                      decoration: BoxDecoration(
-                        color: Colors.purple.withOpacity(0.08),
-                        border: Border.all(
-                          color: Colors.purple,
-                          width: 1.5,
-                        ),
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: Text(
-                        newLocatorName.isEmpty ? 'Sin estante seleccionado' : newLocatorName,
-                        style: const TextStyle(
-                          color: Colors.purple,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
-
-                  ],
-                ),
-              ),
-              actions: [
-                FilledButton.icon(
-                  onPressed: () {
-                    final selected = ref.read(selectedLocatorForMinOutProvider);
-                    final newLocatorName = newLocator?.value ?? newLocator?.identifier ?? '';
-                    final hasNewLocator =
-                        selected != null && (selected.id ?? 0) > 0;
-
-                    if (!hasNewLocator) {
-                      showErrorCenterToast(context, 'Debe ingresar un nuevo estante');
-                      return;
-                    }
-                    final newLocatorAd = AdEntityId(id: selected.id?.toString(), identifier: newLocatorName);
-                    mInOutNotifier.onEditLocatorChange(newLocatorName);
-                    mInOutNotifier.confirmEditLocatorWithDocDR(item, ref, newLocatorAd);
-
-                  },
-                  style: FilledButton.styleFrom(
-                    backgroundColor: themeColorPrimary,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                  ),
-                  icon: const Icon(Icons.check),
-                  label: const Text('Confirmar'),
-                ),
-
-                TextButton.icon(
-                  onPressed: () => Navigator.of(context).pop(),
-                  icon: const Icon(Icons.close_rounded),
-                  label: const Text('Cancelar'),
-                  style: TextButton.styleFrom(
-                    foregroundColor: themeColorGray,
-                  ),
-                ),
-
-              ],
-            );
-          },
-        );
-      },
-    );
-  }
-
-  Future<void> _showEditLocatorWithDocStatusNoDR(
-      BuildContext context,
-      MInOutStatus mInOutState,
-      Line item,
-      WidgetRef ref,
-      ) {
-    final upc = item.upc ?? '';
-    final locator = item.mLocatorId?.identifier?.split(' => ').first.trim() ?? '';
-    final attSet = item.mAttributeSetInstanceID?.identifier ?? '';
-    ref.invalidate(confirmMovementProvider);
+    ref.invalidate(lineToUpdateLocatorProvider);
 
     return showDialog(
       context: context,
@@ -981,7 +861,7 @@ class _MInOutViewState extends ConsumerState<_MInOutView> {
                             final name = selected?.value ?? selected?.identifier ?? '';
                             if(name.isEmpty) return;
                             mInOutNotifier.onEditLocatorChange(name);
-                            mInOutNotifier.confirmEditLocatorDocNoDR(item, ref);
+                            mInOutNotifier.confirmEditLocator(item, ref);
                             ref.read(selectedLocatorForMinOutProvider.notifier).state = null;
                             Navigator.of(context).pop();
                           }
@@ -1014,7 +894,7 @@ class _MInOutViewState extends ConsumerState<_MInOutView> {
                                         final name = selected?.value ?? selected?.identifier ?? '';
                                         if(name.isEmpty) return;
                                         mInOutNotifier.onEditLocatorChange(name);
-                                        mInOutNotifier.confirmEditLocatorDocNoDR(item, ref);
+                                        mInOutNotifier.confirmEditLocator(item, ref);
                                         ref.read(selectedLocatorForMinOutProvider.notifier).state = null;
                                         Navigator.of(context).pop();
                                       }
@@ -1121,6 +1001,8 @@ class _MInOutViewState extends ConsumerState<_MInOutView> {
 
                     ref.read(putAwayMovementCreateWithCompleteProvider.notifier)
                         .state = putAwayMovement;
+
+                    ref.read(lineToUpdateLocatorProvider.notifier).state = item;
 
                     ref.read(fireCreateMovementWithCompleteProvider.notifier)
                         .update((state) => state + 1);
@@ -1243,7 +1125,7 @@ class _MInOutViewState extends ConsumerState<_MInOutView> {
                             final name = selected?.value ?? selected?.identifier ?? '';
                             if(name.isEmpty) return;
                             mInOutNotifier.onEditLocatorChange(name);
-                            mInOutNotifier.confirmEditLocatorDocNoDR(item, ref);
+                            mInOutNotifier.confirmEditLocator(item, ref);
                             ref.read(selectedLocatorForMinOutProvider.notifier).state = null;
                             Navigator.of(context).pop();
                           }
@@ -1276,7 +1158,7 @@ class _MInOutViewState extends ConsumerState<_MInOutView> {
                                         final name = selected?.value ?? selected?.identifier ?? '';
                                         if(name.isEmpty) return;
                                         mInOutNotifier.onEditLocatorChange(name);
-                                        mInOutNotifier.confirmEditLocatorDocNoDR(item, ref);
+                                        mInOutNotifier.confirmEditLocator(item, ref);
                                         ref.read(selectedLocatorForMinOutProvider.notifier).state = null;
                                         Navigator.of(context).pop();
                                       }
@@ -1383,6 +1265,9 @@ class _MInOutViewState extends ConsumerState<_MInOutView> {
 
                     ref.read(putAwayMovementCreateWithCompleteProvider.notifier)
                         .state = putAwayMovement;
+
+                    ref.read(lineToUpdateLocatorProvider.notifier).state = item;
+
 
                     ref.read(fireCreateMovementWithCompleteProvider.notifier)
                         .update((state) => state + 1);
@@ -2249,12 +2134,7 @@ class _MInOutViewState extends ConsumerState<_MInOutView> {
                 Navigator.of(context).pop();
                 debugPrint('showEditLocator');
                 ref.invalidate(selectedLocatorForMinOutProvider);
-                if(mInOutState.mInOut?.docStatus=='DR'){
-                  _showEditLocatorWithDocStatusDR(context, mInOutState, item, ref);
-                } else {
-                  _showEditLocatorWithDocStatusNoDR(context, mInOutState, item, ref);
-                }
-
+                _showEditLocator(context, mInOutState, item, ref);
               },
               label: 'Estante',
               icon: const Icon(Icons.view_in_ar),

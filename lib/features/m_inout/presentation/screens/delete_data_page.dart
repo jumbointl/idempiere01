@@ -95,9 +95,15 @@ class _DeleteDataPageState extends AsyncValueFunctionConsumerState<DeleteDataPag
 
   @override
   void onResult(WidgetRef ref, ResponseAsyncValue result) {
-    widget.onResult(ref, result);
-  }
 
+    // English comment: "Execute external callback"
+    widget.onResult(ref, result);
+
+    // English comment: "Close this page and return result"
+    if (context.mounted) {
+      Navigator.of(context).pop(result);
+    }
+  }
   @override
   void onCancel(WidgetRef ref) {
     goHome();

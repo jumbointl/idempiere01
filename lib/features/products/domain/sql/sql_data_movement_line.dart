@@ -1,3 +1,5 @@
+import 'package:monalisa_app_001/features/m_inout/domain/entities/line.dart';
+import 'package:monalisa_app_001/features/m_inout/domain/entities/m_in_out.dart';
 import 'package:monalisa_app_001/features/products/domain/idempiere/idempiere_movement.dart';
 import 'package:monalisa_app_001/features/products/domain/idempiere/idempiere_sql_query_condition.dart';
 import 'package:monalisa_app_001/features/products/domain/sql_data.dart';
@@ -55,9 +57,9 @@ class SqlDataMovementLine extends IdempiereMovementLine implements SqlData {
 
 
   @override
-  Map<String, dynamic>  getInsertJson() {
+  Map<String, dynamic>  getInsertJson({String? description}) {
 
-      description = Memory.getDescriptionFromApp();
+      description ??= Memory.getDescriptionFromApp();
       isActive = true;
 
       final Map<String, dynamic> data =  <String, dynamic>{};
@@ -321,4 +323,6 @@ class SqlDataMovementLine extends IdempiereMovementLine implements SqlData {
 
     return {"MovementQty": aux};
   }
+
+
 }
