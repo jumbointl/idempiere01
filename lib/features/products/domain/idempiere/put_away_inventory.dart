@@ -63,10 +63,7 @@ class PutAwayInventory {
 
     if (!hasWarehouseFrom) return ERROR_WAREHOUSE_FROM;
 
-    if (warehouseFrom == null ||
-        warehouseFrom!.aDOrgID == null ||
-        warehouseFrom!.aDOrgID!.id == null ||
-        warehouseFrom!.aDOrgID!.id! <= 0) {
+    if (warehouseFrom == null) {
       return ERROR_ORG_WAREHOUSE_FROM;
     }
 
@@ -82,6 +79,8 @@ class PutAwayInventory {
         inventoryLineToCreate!.qtyCount! <= 0) {
       return ERROR_QUANTITY;
     }
+
+
 
     return SUCCESS;
   }
@@ -127,19 +126,7 @@ class PutAwayInventory {
   void createInventoryDocumentType() {
     if (inventoryToCreate == null) return;
 
-    if (inventoryToCreate!.mWarehouseID == null ||
-        inventoryToCreate!.mWarehouseID!.id == null) {
-      inventoryToCreate!.cDocTypeID = null;
-      return;
-    }
 
-    if (inventoryToCreate!.mWarehouseID!.aDOrgID == null ||
-        inventoryToCreate!.mWarehouseID!.aDOrgID!.id == null) {
-      inventoryToCreate!.cDocTypeID = null;
-      return;
-    }
-
-    // English: For now use physical inventory as default document type.
     inventoryToCreate!.cDocTypeID = Memory.physicalInventory;
   }
 

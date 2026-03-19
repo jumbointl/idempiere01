@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:monalisa_app_001/features/products/presentation/screens/movement/create/auto_complete_movement_ui.dart';
 
 import '../../../../../../config/constants/roles_app.dart';
 import '../../../../../../config/theme/app_theme.dart';
@@ -129,24 +130,7 @@ class UnsortedStorageOnHandScreenForInventoryState
       IdempiereStorageOnHande storage,
       int index,
       ) {
-    final productId = storage.mProductID?.id ?? -1;
-    final locatorId = storage.mLocatorID?.id ?? -1;
-    final attId =
-        storage.mAttributeSetInstanceID?.id ?? Memory.INITIAL_STATE_ID;
 
-    final existing = storageList.where((e) {
-      final sameProduct = (e.mProductID?.id ?? -1) == productId;
-      final sameLocator = (e.mLocatorID?.id ?? -1) == locatorId;
-      final sameAtt =
-          (e.mAttributeSetInstanceID?.id ?? Memory.INITIAL_STATE_ID) == attId;
-      return sameProduct && sameLocator && sameAtt;
-    }).length;
-
-    if (existing > 1) {
-      repeatedErrorMessage = Messages.REPEATED;
-      showErrorMessage(context, ref, repeatedErrorMessage);
-      return false;
-    }
 
     repeatedErrorMessage = '';
 
@@ -177,8 +161,11 @@ class UnsortedStorageOnHandScreenForInventoryState
       showErrorMessage(context, ref, 'Inventory data is null');
       return;
     }
+    final warehouse = widget.storage.mLocatorID?.mWarehouseID;
+
 
     putAwayInventory!.inventoryLineToCreate!.qtyCount = qty;
+    debugPrint('qtyCount ${qty.toString()}');
     putAwayInventory!.inventoryLineToCreate!.qtyBook =
         putAwayInventory!.inventoryLineToCreate!.qtyBook ??
             widget.storage.qtyOnHand ??
@@ -189,14 +176,22 @@ class UnsortedStorageOnHandScreenForInventoryState
         widget.storage.mAttributeSetInstanceID;
     putAwayInventory!.inventoryLineToCreate!.productName =
         widget.storage.mProductID?.name ?? widget.storage.mProductID?.identifier;
+    putAwayInventory!.inventoryToCreate!.mWarehouseID = warehouse ;
+
+
 
     final check = putAwayInventory!.canCreatePutAwayInventory();
+    debugPrint('check ${check.toString()}');
     if (check != PutAwayInventory.SUCCESS) {
       showErrorMessage(context, ref, Messages.ERROR);
       return;
     }
 
-    showSuccessMessage(context, ref, 'Inventory line prepared');
+    await openInventoryCreateBottomSheet(
+      context: ref.context,
+      putAwayInventory: putAwayInventory!,
+    );
+    return;
   }
 
   @override

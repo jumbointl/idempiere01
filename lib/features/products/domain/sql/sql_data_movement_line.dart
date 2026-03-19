@@ -1,3 +1,5 @@
+import 'package:monalisa_app_001/features/m_inout/domain/entities/line.dart';
+import 'package:monalisa_app_001/features/m_inout/domain/entities/m_in_out.dart';
 import 'package:monalisa_app_001/features/products/domain/idempiere/idempiere_movement.dart';
 import 'package:monalisa_app_001/features/products/domain/idempiere/idempiere_sql_query_condition.dart';
 import 'package:monalisa_app_001/features/products/domain/sql_data.dart';

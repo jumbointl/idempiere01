@@ -13,6 +13,8 @@ import 'package:monalisa_app_001/features/products/presentation/screens/store_on
 import 'package:monalisa_app_001/features/shared/data/memory.dart';
 import 'package:monalisa_app_001/features/shared/data/messages.dart';
 
+import '../../../providers/store_on_hand_for_put_away_movement.dart';
+
 class InventoryCreateScreen extends ConsumerStatefulWidget {
   final PutAwayInventory inventoryAndLines;
 
@@ -109,6 +111,7 @@ class _InventoryCreateScreenState extends ConsumerState<InventoryCreateScreen> {
 
           ref.read(actionScanProvider.notifier).state =
               Memory.ACTION_FIND_BY_UPC_SKU_FOR_STORE_ON_HAND;
+          ref.invalidate(productStoreOnHandCacheProvider);
 
           context.go(
             '${AppRouter.PAGE_PRODUCT_STORE_ON_HAND_FOR_INVENTORY_LINE}/-1',
