@@ -1256,7 +1256,7 @@ class MInOutNotifier extends StateNotifier<MInOutStatus> {
       if (sourceLines.isNotEmpty) {
         progress.setStep(1, 'Actualizando cantidades en líneas de movimiento...');
         for (final line in sourceLines) {
-          await mInOutRepository.updateMInOutLineMovementQty(line, ref);
+          await mInOutRepository.updateMInOutLineMovementQtyAndLocator(line, ref);
         }
       } else {
         // Igual avanzamos, para que el usuario vea que pasó esa etapa.
@@ -1440,7 +1440,7 @@ class MInOutNotifier extends StateNotifier<MInOutStatus> {
       if (listLinesToUpdateMovementQty.isNotEmpty) {
         progress.setStep(1, 'Actualizando cantidades en líneas de movimiento...');
         for (final line in listLinesToUpdateMovementQty) {
-          await mInOutRepository.updateMInOutLineMovementQty(line, ref);
+          await mInOutRepository.updateMInOutLineMovementQtyAndLocator(line, ref);
         }
       } else {
         // Igual avanzamos, para que el usuario vea que pasó esa etapa.
