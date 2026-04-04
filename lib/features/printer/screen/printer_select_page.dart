@@ -52,8 +52,8 @@ class _PrinterSelectPageState extends ConsumerState<PrinterSelectPage>
   final _btAddress = TextEditingController();
 
   // New fields
-  final _wifiLang = TextEditingController(text: PrinterState.PRINTER_TYPE_TPL);
-  final _btLang = TextEditingController(text: PrinterState.PRINTER_TYPE_TPL);
+  final _wifiLang = TextEditingController(text: PrinterState.PRINTER_TYPE_TSPL);
+  final _btLang = TextEditingController(text: PrinterState.PRINTER_TYPE_TSPL);
   final _btType = TextEditingController(text: PrinterState.PRINTER_TYPE_BLUETOOTH_NO_BLE);
 
   final box = GetStorage();
@@ -803,14 +803,30 @@ class _PrinterSelectPageState extends ConsumerState<PrinterSelectPage>
             Expanded(
               child: ElevatedButton(
                 onPressed: enableInputs
-                    ? () {
-                  final name = _wifiName.text.trim();
-                  final ip = _wifiIp.text.trim();
-                  final port = int.tryParse(_wifiPort.text.trim()) ?? 9100;
-                  final lang = _wifiLang.text.trim().toUpperCase();
+                    ? () async {
+                  final String name = _wifiName.text.trim();
+                  final String ip = _wifiIp.text.trim();
+                  final int port = int.tryParse(_wifiPort.text.trim()) ?? 9100;
 
-                  if (name.isEmpty || ip.isEmpty) return;
-                  if (lang != 'TSPL' && lang != 'ZPL' && lang != 'NIIMBOT') return;
+                  String lang = _wifiLang.text.trim().toUpperCase();
+                  if (lang == 'TPL') {
+                    lang = 'TSPL';
+                  }
+
+                  if (name.isEmpty) {
+                    await _showMsg('WiFi', 'Ingrese el nombre de la impresora.');
+                    return;
+                  }
+
+                  if (ip.isEmpty) {
+                    await _showMsg('WiFi', 'Ingrese la IP de la impresora.');
+                    return;
+                  }
+
+                  if (lang != 'TSPL' && lang != 'ZPL' && lang != 'NIIMBOT' && lang != 'TPL') {
+                    await _showMsg('WiFi', 'Language inválido. Use TSPL, ZPL o NIIMBOT.');
+                    return;
+                  }
 
                   final p = PrinterConnConfig(
                     id: 'wifi_${ip}_$port',
@@ -821,7 +837,9 @@ class _PrinterSelectPageState extends ConsumerState<PrinterSelectPage>
                     lang: lang,
                     typeText: lang,
                   );
+
                   _addOrUpdatePrinter(p);
+                  await _showMsg('WiFi', '✅ Impresora guardada.');
                 }
                     : null,
                 child: const Text('Save WiFi'),

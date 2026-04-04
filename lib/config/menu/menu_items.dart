@@ -88,6 +88,13 @@ var appHomeOptionCol1Items = <MenuItem>[
     link: AppRouter.PAGE_CREATE_ZPL_TEMPLATE,
     icon: Icons.file_copy,
   ),
+  MenuItem(
+    title: 'Example',
+    subTitle: '',
+    link: '/example',
+    icon: Icons.print
+    ,
+  ),
 ];
 
 var appHomeOptionCol2Items = <MenuItem>[
@@ -142,6 +149,7 @@ var appHomeOptionCol2Items = <MenuItem>[
     icon: Icons.print
     ,
   ),
+
 ];
 
 final appHomeOptionCol3Items = <MenuItem>[

@@ -9,6 +9,8 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  riverpod_printer:
+    path: ../riverpod_printer
   ai_barcode_scanner: ^7.0.0
   dio: ^5.7.0
   dotenv: ^4.2.0

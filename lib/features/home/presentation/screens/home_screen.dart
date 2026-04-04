@@ -182,6 +182,10 @@ List<_HomeSectionData> _buildHomeSections() {
           (e) =>
       e.title == Messages.SEARCH_PRODUCT || e.title == 'Locator List',
     ),
+    ...appHomeOptionCol1Items.where(
+          (e) =>
+      e.title == 'Example',
+    ),
   ];
 
   final utilCol2 = <MenuItem>[

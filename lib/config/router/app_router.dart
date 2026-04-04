@@ -13,6 +13,7 @@ import 'package:monalisa_app_001/features/auth/presentation/providers/auth_provi
 import 'package:monalisa_app_001/features/home/presentation/screens/home_screen.dart';
 import 'package:monalisa_app_001/features/m_inout/presentation/screens/m_in_out_barcode_list_screen.dart';
 import 'package:monalisa_app_001/features/m_inout/presentation/screens/m_in_out_screen.dart';
+import 'package:monalisa_app_001/features/printer/movement_print_example_page.dart';
 import 'package:monalisa_app_001/features/printer/movement_print_screen.dart';
 import 'package:monalisa_app_001/features/printer/printer_setup_screen.dart';
 import 'package:monalisa_app_001/features/printer/screen/niimbot_page.dart';
@@ -642,8 +643,19 @@ final goRouterProvider = Provider((ref) {
       GoRoute(
           path: AppRouter.PAGE_PRINTER_SETUP,
           builder: (context, state){
+
             return PrinterSetupScreen(
               oldAction: 0,
+            );
+
+          }
+
+
+      ),
+      GoRoute(
+          path: '/example',
+          builder: (context, state){
+            return ProductLabelTsplExamplePage(
             );
 
           }
