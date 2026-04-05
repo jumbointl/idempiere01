@@ -11,6 +11,7 @@ import '../../../common/messages_dialog.dart';
 import '../../providers/product_provider_common.dart';
 import '../../../../shared/data/messages.dart';
 import '../../../domain/idempiere/idempiere_locator.dart';
+import '../store_on_hand/memory_products.dart';
 
 class LocatorCard extends ConsumerStatefulWidget {
   bool? selected = false;
@@ -79,6 +80,8 @@ class LocatorCardState extends ConsumerState<LocatorCard> {
           trailing: IconButton(
             icon: const Icon(Icons.bluetooth),
             onPressed: () {
+
+              MemoryProducts.LAST_PAGE = 'AppRouter.PAGE_SEARCH_LOCATOR_LIST';
               ref.read(actionScanProvider.notifier).state =
                   Memory.ACTION_FIND_PRINTER_BY_QR_WIFI_BLUETOOTH;
               context.push(
@@ -125,6 +128,7 @@ class LocatorCardState extends ConsumerState<LocatorCard> {
           trailing: IconButton(
             icon: const Icon(Icons.print),
             onPressed: () {
+              MemoryProducts.LAST_PAGE = 'AppRouter.PAGE_SEARCH_LOCATOR_LIST';
               context.push(
                 AppRouter.PAGE_LOCATOR_LABEL_PRINTER_SELECT_PAGE,
                 extra: widget.data,

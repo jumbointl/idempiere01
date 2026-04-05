@@ -1,9 +1,9 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
 import 'package:monalisa_app_001/features/products/presentation/providers/product_provider_common.dart';
+import 'package:riverpod_printer/riverpod_printer.dart';
 
 import '../../../../shared/data/memory.dart';
-import '../../../common/barcode_utils.dart';
 import '../../../common/input_data_processor.dart';
 
 abstract class AppActionNotifier<T>

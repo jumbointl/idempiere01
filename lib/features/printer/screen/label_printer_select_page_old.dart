@@ -5,9 +5,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:get_storage/get_storage.dart';
 import 'package:monalisa_app_001/config/config.dart';
 import 'package:monalisa_app_001/features/products/common/scan_button_by_action_fixed_short.dart';
+import 'package:riverpod_printer/riverpod_printer.dart';
 import 'package:monalisa_app_001/features/products/presentation/providers/common_provider.dart';
 import 'package:monalisa_app_001/features/products/presentation/providers/product_provider_common.dart';
-import 'package:riverpod_printer/riverpod_printer.dart';
 
 import '../../products/common/input_dialog.dart';
 import '../../shared/data/memory.dart';
@@ -16,10 +16,10 @@ import '../printer_scan_notifier.dart';
 import 'niimbot_silence_page.dart';
 import 'printer_select_page.dart';
 
-abstract class LabelPrinterSelectPage extends ConsumerStatefulWidget {
+abstract class LabelPrinterSelectPageOld extends ConsumerStatefulWidget {
   final dynamic dataToPrint;
 
-  const LabelPrinterSelectPage({
+  const LabelPrinterSelectPageOld({
     super.key,
     required this.dataToPrint,
   });
@@ -97,11 +97,11 @@ abstract class LabelPrinterSelectPage extends ConsumerStatefulWidget {
   }
 
   @override
-  ConsumerState<LabelPrinterSelectPage> createState() =>
-      _LabelPrinterSelectPageState();
+  ConsumerState<LabelPrinterSelectPageOld> createState() =>
+      _LabelPrinterSelectPageStateOld();
 }
 
-class _LabelPrinterSelectPageState extends ConsumerState<LabelPrinterSelectPage>
+class _LabelPrinterSelectPageStateOld extends ConsumerState<LabelPrinterSelectPageOld>
     with SingleTickerProviderStateMixin {
   final GetStorage box = GetStorage();
 
@@ -361,7 +361,24 @@ class _LabelPrinterSelectPageState extends ConsumerState<LabelPrinterSelectPage>
       return;
     }
 
-    final LabelProfile p = profile.copyWith(copies: copies);
+    final LabelProfile p0 = profile;
+    final LabelProfile p = LabelProfile(
+      id: p0.id,
+      name: p0.name,
+      copies: copies,
+      widthMm: p0.widthMm,
+      heightMm: p0.heightMm,
+      marginLeftMm: p0.marginLeftMm,
+      marginTopMm: p0.marginTopMm,
+      barcodeHeightMm: p0.barcodeHeightMm,
+      charactersToPrint: p0.charactersToPrint,
+      maxCharsPerLine: p0.maxCharsPerLine,
+      barcodeHeight: p0.barcodeHeight,
+      barcodeWide: p0.barcodeWide,
+      barcodeNarrow: p0.barcodeNarrow,
+      fontId: p0.fontId,
+      gapMm: p0.gapMm,
+    );
 
     ref.read(isPrintingProvider.notifier).state = true;
 
@@ -602,6 +619,7 @@ class _LabelPrinterSelectPageState extends ConsumerState<LabelPrinterSelectPage>
       Navigator.of(context).pop();
     });
   }
+
 
   @override
   Widget build(BuildContext context) {
@@ -980,23 +998,16 @@ class _LabelConfigSheetState extends State<_LabelConfigSheet> {
   late final TextEditingController copiesC;
   late final TextEditingController wC;
   late final TextEditingController hC;
-
-  late final TextEditingController marginLeftC;
-  late final TextEditingController marginTopC;
-  late final TextEditingController marginRightC;
-  late final TextEditingController marginBottomC;
-
-  late final TextEditingController dpiC;
-  late final TextEditingController rowsPerPageC;
-  late final TextEditingController gapC;
-
-  late final TextEditingController barcodeHeightMmC;
-  late final TextEditingController charactersToPrintC;
-  late final TextEditingController maxCharsPerLineC;
-  late final TextEditingController barcodeHeightC;
-  late final TextEditingController barcodeWideC;
-  late final TextEditingController barcodeNarrowC;
+  late final TextEditingController mxC;
+  late final TextEditingController myC;
+  late final TextEditingController bhC;
+  late final TextEditingController chC;
+  late final TextEditingController maxCh;
+  late final TextEditingController barcodeW;
+  late final TextEditingController barcodeN;
+  late final TextEditingController barcodeH;
   late final TextEditingController fontIdC;
+  late final TextEditingController gapC;
 
   @override
   void initState() {
@@ -1007,30 +1018,16 @@ class _LabelConfigSheetState extends State<_LabelConfigSheet> {
     copiesC = TextEditingController(text: '${initial?.copies ?? 1}');
     wC = TextEditingController(text: '${initial?.widthMm ?? 40}');
     hC = TextEditingController(text: '${initial?.heightMm ?? 25}');
-
-    marginLeftC = TextEditingController(text: '${initial?.marginLeftMm ?? 2}');
-    marginTopC = TextEditingController(text: '${initial?.marginTopMm ?? 2}');
-    marginRightC = TextEditingController(text: '${initial?.marginRightMm ?? 0}');
-    marginBottomC = TextEditingController(text: '${initial?.marginBottomMm ?? 0}');
-
-    dpiC = TextEditingController(text: '${initial?.dpi ?? 203}');
-    rowsPerPageC =
-        TextEditingController(text: initial?.rowsPerPage?.toString() ?? '');
-    gapC = TextEditingController(text: '${initial?.gapMm ?? 2}');
-
-    barcodeHeightMmC =
-        TextEditingController(text: '${initial?.barcodeHeightMm ?? 12}');
-    charactersToPrintC =
-        TextEditingController(text: '${initial?.charactersToPrint ?? 0}');
-    maxCharsPerLineC =
-        TextEditingController(text: '${initial?.maxCharsPerLine ?? 22}');
-    barcodeHeightC =
-        TextEditingController(text: '${initial?.barcodeHeight ?? 96}');
-    barcodeWideC =
-        TextEditingController(text: '${initial?.barcodeWide ?? 3}');
-    barcodeNarrowC =
-        TextEditingController(text: '${initial?.barcodeNarrow ?? 2}');
-    fontIdC = TextEditingController(text: '${initial?.fontId ?? 2}');
+    mxC = TextEditingController(text: '${initial?.marginLeftMm ?? 2}');
+    myC = TextEditingController(text: '${initial?.marginTopMm ?? 2}');
+    bhC = TextEditingController(text: '${initial?.barcodeHeightMm ?? 12}');
+    chC = TextEditingController(text: '${initial?.charactersToPrint ?? 0}');
+    maxCh = TextEditingController(text: '${initial?.maxCharsPerLine ?? 0}');
+    barcodeW = TextEditingController(text: '${initial?.barcodeWide ?? 0}');
+    barcodeN = TextEditingController(text: '${initial?.barcodeNarrow ?? 0}');
+    barcodeH = TextEditingController(text: '${initial?.barcodeHeight ?? 0}');
+    fontIdC = TextEditingController(text: '${initial?.fontId ?? 0}');
+    gapC = TextEditingController(text: '${initial?.gapMm ?? 0}');
   }
 
   @override
@@ -1039,24 +1036,16 @@ class _LabelConfigSheetState extends State<_LabelConfigSheet> {
     copiesC.dispose();
     wC.dispose();
     hC.dispose();
-
-    marginLeftC.dispose();
-    marginTopC.dispose();
-    marginRightC.dispose();
-    marginBottomC.dispose();
-
-    dpiC.dispose();
-    rowsPerPageC.dispose();
-    gapC.dispose();
-
-    barcodeHeightMmC.dispose();
-    charactersToPrintC.dispose();
-    maxCharsPerLineC.dispose();
-    barcodeHeightC.dispose();
-    barcodeWideC.dispose();
-    barcodeNarrowC.dispose();
+    mxC.dispose();
+    myC.dispose();
+    bhC.dispose();
+    chC.dispose();
+    maxCh.dispose();
+    barcodeW.dispose();
+    barcodeN.dispose();
+    barcodeH.dispose();
     fontIdC.dispose();
-
+    gapC.dispose();
     super.dispose();
   }
 
@@ -1070,9 +1059,9 @@ class _LabelConfigSheetState extends State<_LabelConfigSheet> {
       ),
       child: DraggableScrollableSheet(
         expand: false,
-        initialChildSize: 0.90,
-        minChildSize: 0.55,
-        maxChildSize: 0.97,
+        initialChildSize: 0.85,
+        minChildSize: 0.5,
+        maxChildSize: 0.95,
         builder: (_, scrollController) {
           return SingleChildScrollView(
             controller: scrollController,
@@ -1098,21 +1087,16 @@ class _LabelConfigSheetState extends State<_LabelConfigSheet> {
                   runSpacing: 12,
                   children: <Widget>[
                     _numField(copiesC, 'Copies'),
+                    _numField(gapC, 'Gap (mm)'),
                     _numField(wC, 'Width (mm)'),
                     _numField(hC, 'Height (mm)'),
-                    _numField(gapC, 'Gap (mm)'),
-                    _numField(dpiC, 'DPI'),
-                    _numField(rowsPerPageC, 'Rows per page'),
-                    _numField(marginLeftC, 'Margin Left (mm)'),
-                    _numField(marginTopC, 'Margin Top (mm)'),
-                    _numField(marginRightC, 'Margin Right (mm)'),
-                    _numField(marginBottomC, 'Margin Bottom (mm)'),
-                    _numField(barcodeHeightMmC, 'Barcode Height (mm)'),
-                    _numField(barcodeHeightC, 'Barcode Height (dot)'),
-                    _numField(barcodeWideC, 'Barcode Wide'),
-                    _numField(barcodeNarrowC, 'Barcode Narrow'),
-                    _numField(charactersToPrintC, 'Characters to print'),
-                    _numField(maxCharsPerLineC, 'Max chars per line'),
+                    _numField(mxC, 'Margin X (mm)'),
+                    _numField(myC, 'Margin Y (mm)'),
+                    _numField(barcodeH, 'Barcode Height (dot)'),
+                    _numField(barcodeW, 'Barcode wide'),
+                    _numField(barcodeN, 'Barcode narrow'),
+                    _numField(chC, 'charactersToPrint'),
+                    _numField(maxCh, 'maxCharacterPerLine'),
                     _numField(fontIdC, 'Font Id'),
                   ],
                 ),
@@ -1128,10 +1112,9 @@ class _LabelConfigSheetState extends State<_LabelConfigSheet> {
                     ElevatedButton(
                       onPressed: () {
                         final LabelProfile? initial = widget.initial;
-                        final String id = initial?.id ??
-                            'custom_${DateTime.now().millisecondsSinceEpoch}';
-
-                        final String rowsText = rowsPerPageC.text.trim();
+                        final String id =
+                            initial?.id ??
+                                'custom_${DateTime.now().millisecondsSinceEpoch}';
 
                         final LabelProfile profile = LabelProfile(
                           id: id,
@@ -1141,31 +1124,22 @@ class _LabelConfigSheetState extends State<_LabelConfigSheet> {
                           copies: int.tryParse(copiesC.text.trim()) ?? 1,
                           widthMm: double.tryParse(wC.text.trim()) ?? 40,
                           heightMm: double.tryParse(hC.text.trim()) ?? 25,
-                          marginLeftMm:
-                          double.tryParse(marginLeftC.text.trim()) ?? 2,
-                          marginTopMm:
-                          double.tryParse(marginTopC.text.trim()) ?? 2,
-                          marginRightMm:
-                          double.tryParse(marginRightC.text.trim()) ?? 0,
-                          marginBottomMm:
-                          double.tryParse(marginBottomC.text.trim()) ?? 0,
-                          dpi: int.tryParse(dpiC.text.trim()) ?? 203,
-                          gapMm: int.tryParse(gapC.text.trim()) ?? 2,
-                          rowsPerPage:
-                          rowsText.isEmpty ? null : int.tryParse(rowsText),
-                          maxCharsPerLine:
-                          int.tryParse(maxCharsPerLineC.text.trim()) ?? 22,
+                          marginLeftMm: double.tryParse(mxC.text.trim()) ?? 2,
+                          marginTopMm: double.tryParse(myC.text.trim()) ?? 2,
                           barcodeHeightMm:
-                          int.tryParse(barcodeHeightMmC.text.trim()) ?? 12,
+                          int.tryParse(bhC.text.trim()) ?? 12,
                           charactersToPrint:
-                          int.tryParse(charactersToPrintC.text.trim()) ?? 0,
+                          int.tryParse(chC.text.trim()) ?? 0,
+                          maxCharsPerLine:
+                          int.tryParse(maxCh.text.trim()) ?? 0,
                           barcodeHeight:
-                          int.tryParse(barcodeHeightC.text.trim()) ?? 96,
+                          int.tryParse(barcodeH.text.trim()) ?? 80,
                           barcodeWide:
-                          int.tryParse(barcodeWideC.text.trim()) ?? 3,
+                          int.tryParse(barcodeW.text.trim()) ?? 3,
                           barcodeNarrow:
-                          int.tryParse(barcodeNarrowC.text.trim()) ?? 2,
+                          int.tryParse(barcodeN.text.trim()) ?? 2,
                           fontId: int.tryParse(fontIdC.text.trim()) ?? 2,
+                          gapMm: int.tryParse(gapC.text.trim()) ?? 2,
                         );
 
                         Navigator.pop(sheetContext, profile);
@@ -1184,10 +1158,10 @@ class _LabelConfigSheetState extends State<_LabelConfigSheet> {
 
   Widget _numField(TextEditingController c, String label) {
     return SizedBox(
-      width: 170,
+      width: 160,
       child: TextField(
         controller: c,
-        keyboardType: const TextInputType.numberWithOptions(decimal: true),
+        keyboardType: TextInputType.number,
         decoration: InputDecoration(labelText: label),
       ),
     );

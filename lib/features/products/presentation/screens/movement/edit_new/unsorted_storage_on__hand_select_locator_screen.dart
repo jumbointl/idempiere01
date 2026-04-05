@@ -1,4 +1,3 @@
-import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -6,8 +5,6 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../../../config/constants/roles_app.dart';
 import '../../../../../../config/router/app_router.dart';
-import '../../../../../../config/theme/app_theme.dart';
-import '../../../../../auth/presentation/providers/auth_provider.dart';
 import '../../../../../shared/data/memory.dart';
 import '../../../../../shared/data/messages.dart';
 import '../../../../common/input_dialog.dart';
@@ -23,35 +20,12 @@ import '../../../providers/locator_provider.dart';
 import '../../../providers/products_providers.dart';
 import '../../../providers/store_on_hand/action_notifier.dart';
 import '../../common/base_unsorted_storage_on_hand_state.dart';
-import '../create/auto_complete_movement_helper.dart';
-import '../create/storage_on_hand_selectable_card.dart';
 import '../provider/new_movement_provider.dart';
 import '../../store_on_hand/memory_products.dart';
 
-import 'dart:convert';
 
-import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../../../../config/constants/roles_app.dart';
-import '../../../../../../config/router/app_router.dart';
-import '../../../../../shared/data/memory.dart';
-import '../../../../../shared/data/messages.dart';
-import '../../../../common/input_dialog.dart';
-import '../../../../common/messages_dialog.dart';
-import '../../../../common/scan_button_by_action_fixed_short.dart';
-import '../../../../domain/idempiere/idempiere_locator.dart';
-import '../../../../domain/idempiere/idempiere_movement.dart';
-import '../../../../domain/idempiere/idempiere_storage_on_hande.dart';
-import '../../../../domain/idempiere/movement_and_lines.dart';
-import '../../../../domain/sql/sql_data_movement_line.dart';
-import '../../../providers/actions/find_locator_to_action_provider.dart';
-import '../../../providers/common_provider.dart';
-import '../../../providers/locator_provider.dart';
-import '../../../providers/products_providers.dart';
-import '../provider/new_movement_provider.dart';
 import '../../locator/search_locator_dialog.dart';
-import '../../store_on_hand/memory_products.dart';
 
 class UnsortedStorageOnHandSelectLocatorScreen extends ConsumerStatefulWidget {
   final IdempiereStorageOnHande storage;

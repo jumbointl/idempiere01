@@ -884,10 +884,10 @@ packages:
     dependency: "direct main"
     description:
       name: mofilo_barcode_verifier
-      sha256: "80adb2b988e3e7c8304ba7ec44b6be96b312c40aed6621e09b66a04f20fa7583"
+      sha256: "77bf0527fbeaa9e3a6fb5158f3ac33e14057699a744fe271e90afb5b94ae3741"
       url: "https://pub.dev"
     source: hosted
-    version: "1.0.1"
+    version: "1.0.2"
   network_info_plus:
     dependency: transitive
     description:

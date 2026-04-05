@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:monalisa_app_001/features/printer/screen/riverpod_printer_adapter.dart';
-import 'package:monalisa_app_001/features/products/domain/models/label_profile.dart';
 import 'package:monalisa_app_001/features/shared/data/memory.dart';
 import 'package:riverpod_printer/riverpod_printer.dart';
 
@@ -59,30 +58,14 @@ class LocatorLabelPrinterSelectPage extends LabelPrinterSelectPage {
       value: value,
     );
 
-    final LabelProfile profileWithCopies = LabelProfile(
-      id: profile.id,
-      name: profile.name,
-      copies: copies,
-      widthMm: profile.widthMm,
-      heightMm: profile.heightMm,
-      marginXmm: profile.marginXmm,
-      marginYmm: profile.marginYmm,
-      barcodeHeightMm: profile.barcodeHeightMm,
-      charactersToPrint: profile.charactersToPrint,
-      maxCharsPerLine: profile.maxCharsPerLine,
-      barcodeHeight: profile.barcodeHeight,
-      barcodeWidth: profile.barcodeWidth,
-      barcodeNarrow: profile.barcodeNarrow,
-      fontId: profile.fontId,
-      gapMm: profile.gapMm,
-    );
+    final LabelProfile profileWithCopies = profile.copyWith(copies: copies);
 
     final PrintJob<LocatorLabelItem> job = PrintJob<LocatorLabelItem>(
       document: LocatorLabelPrintable(
         documentTitle: 'Locator Labels',
         items: <LocatorLabelItem>[item],
       ),
-      pageConfig: pageConfigFromLabelProfile(profileWithCopies),
+      labelProfile: profileWithCopies,
       printer: printerDeviceFromConnConfig(selectedPrinter),
       printerType: PrinterType.label,
       printerLanguage: PrinterLanguage.tspl,

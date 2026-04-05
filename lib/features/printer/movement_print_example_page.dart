@@ -27,13 +27,14 @@ class ProductLabelTsplExamplePage extends ConsumerWidget {
                   ),
                 ],
               ),
-              pageConfig: const PageConfig(
+              labelProfile: const LabelProfile(
                 widthMm: 60,
                 heightMm: 40,
                 gapMm: 3,
                 dpi: 203,
                 copies: 1,
                 rowsPerPage: 1,
+                id: '', name: '',
               ),
               printer: const SocketPrinterDevice(
                 id: 'tspl_1',

@@ -2,14 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:monalisa_app_001/features/printer/screen/riverpod_printer_adapter.dart';
 import 'package:monalisa_app_001/features/products/domain/idempiere/idempiere_product.dart';
-import 'package:monalisa_app_001/features/shared/data/memory.dart';
 import 'package:riverpod_printer/riverpod_printer.dart';
+import 'package:monalisa_app_001/features/shared/data/memory.dart';
 
 import '../models/printer_select_models.dart';
 import 'label_printer_select_page.dart';
 
-class ProductLabelPrinterSelectPage extends LabelPrinterSelectPage {
-  const ProductLabelPrinterSelectPage({
+class ProductLabelPrinterSelectPageOld extends LabelPrinterSelectPage {
+  const ProductLabelPrinterSelectPageOld({
     super.key,
     required super.dataToPrint,
   });
@@ -59,7 +59,23 @@ class ProductLabelPrinterSelectPage extends LabelPrinterSelectPage {
       kind: kind,
     );
 
-    final LabelProfile profileWithCopies = profile.copyWith(copies: copies);
+    final LabelProfile profileWithCopies = LabelProfile(
+      id: profile.id,
+      name: profile.name,
+      copies: copies,
+      widthMm: profile.widthMm,
+      heightMm: profile.heightMm,
+      marginLeftMm: profile.marginLeftMm,
+      marginTopMm: profile.marginTopMm,
+      barcodeHeightMm: profile.barcodeHeightMm,
+      charactersToPrint: profile.charactersToPrint,
+      maxCharsPerLine: profile.maxCharsPerLine,
+      barcodeHeight: profile.barcodeHeight,
+      barcodeWide: profile.barcodeWide,
+      barcodeNarrow: profile.barcodeNarrow,
+      fontId: profile.fontId,
+      gapMm: profile.gapMm,
+    );
 
     final PrintJob<ProductLabelItem> job = PrintJob<ProductLabelItem>(
       document: ProductLabelPrintable(

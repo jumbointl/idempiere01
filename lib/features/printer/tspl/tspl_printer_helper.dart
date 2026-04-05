@@ -1,7 +1,7 @@
 // -----------------------------------------------------------------------------
 // QR helper: calculate cellWidth (magnification) for TSPL QRCODE
 // -----------------------------------------------------------------------------
-import '../../products/domain/models/label_profile.dart';
+import 'package:riverpod_printer/riverpod_printer.dart';
 
 /// Calculates a TSPL QR cell width (module size in dots) that fits inside the
 /// printable area, based on label width and available height.
@@ -111,7 +111,7 @@ int calculateCenteredTextX({
   final String t = text.replaceAll('\n', ' ').replaceAll('\r', ' ').trim();
 
   final int labelW = (profile.widthMm * dotsPerMm).round();
-  final int mx = (profile.marginXmm * dotsPerMm).round();
+  final int mx = (profile.marginLeftMm * dotsPerMm).round();
 
   final int fontId = (fontIdOverride ?? profile.fontId);
   final int safeFontId = fontId > 0 ? fontId : 2;

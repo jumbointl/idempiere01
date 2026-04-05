@@ -1,6 +1,6 @@
 import 'dart:convert';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../products/domain/models/label_profile.dart';
+import 'package:riverpod_printer/riverpod_printer.dart';
 import '../../products/presentation/providers/common_provider.dart';
 import '../models/printer_select_models.dart';
 

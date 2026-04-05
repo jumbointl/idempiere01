@@ -1,7 +1,5 @@
 import 'package:monalisa_app_001/features/products/domain/idempiere/idempiere_product.dart';
 import 'package:riverpod_printer/riverpod_printer.dart';
-import 'package:monalisa_app_001/features/products/domain/models/label_profile.dart';
-import 'package:riverpod_printer/riverpod_printer.dart';
 
 import '../models/printer_select_models.dart';
 
@@ -35,18 +33,6 @@ ProductLabelItem productToLabelItem(
 
 
 
-PageConfig pageConfigFromLabelProfile(LabelProfile profile) {
-  return PageConfig(
-    widthMm: profile.widthMm,
-    heightMm: profile.heightMm,
-    gapMm: profile.gapMm,
-    copies: profile.copies,
-    dpi: 203,
-    rowsPerPage: 1,
-  );
-}
-
-
 PrinterDevice printerDeviceFromConnConfig(PrinterConnConfig printer) {
   if (printer.type == PrinterConnType.wifi) {
     return SocketPrinterDevice(
@@ -65,5 +51,15 @@ PrinterDevice printerDeviceFromConnConfig(PrinterConnConfig printer) {
     type: PrinterType.label,
     language: PrinterLanguage.tspl,
     address: printer.btAddress ?? '',
+  );
+}
+
+LocatorLabelItem locatorToLabelItem(
+    String value, {
+      required LocatorLabelKind kind,
+    }) {
+  return LocatorLabelItem(
+    kind: kind,
+    value: value.trim(),
   );
 }

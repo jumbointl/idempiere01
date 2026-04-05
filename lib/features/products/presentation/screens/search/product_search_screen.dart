@@ -6,9 +6,10 @@ import 'package:monalisa_app_001/features/products/presentation/providers/action
 import 'package:monalisa_app_001/features/products/presentation/screens/search/product_detail_with_photo_card.dart';
 import 'package:monalisa_app_001/features/products/presentation/providers/actions/product_search_actions.dart';
 import 'package:monalisa_app_001/features/products/presentation/screens/search/update_product_upc_view.dart';
+import 'package:riverpod_printer/riverpod_printer.dart';
 
 import '../../../../../config/router/app_router.dart';
-import '../../../common/barcode_utils.dart';
+
 import '../../../common/common_consumer_with_tab_bar_state.dart';
 import '../../../common/input_dialog.dart';
 import '../../../common/messages_dialog.dart';
@@ -329,7 +330,7 @@ class _ProductSearchScreenState
             goToUpcSearch(productUPC);
           },
           onPrintTap: (){
-            context.go(AppRouter.PAGE_PRODUCT_LABEL_PRINTER_SELECT_PAGE,extra: products[index]);
+            context.push(AppRouter.PAGE_PRODUCT_LABEL_PRINTER_SELECT_PAGE,extra: products[index]);
           },
         );
       },

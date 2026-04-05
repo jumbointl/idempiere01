@@ -9,7 +9,7 @@ import 'package:material_symbols_icons/symbols.dart';
 import 'package:monalisa_app_001/config/config.dart';
 import 'package:monalisa_app_001/features/products/common/messages_dialog.dart';
 
-import '../../products/domain/models/label_profile.dart';
+import 'package:riverpod_printer/riverpod_printer.dart';
 import 'niimbot_page.dart';
 import 'niimbot_page_helper.dart';
 import 'niimbot_silence_page_provider.dart';

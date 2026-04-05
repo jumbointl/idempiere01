@@ -7,7 +7,7 @@ import 'package:get_storage/get_storage.dart';
 import 'package:monalisa_app_001/config/constants/roles_app.dart';
 import 'package:monalisa_app_001/features/products/presentation/providers/product_provider_common.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-
+import 'package:riverpod_printer/riverpod_printer.dart';
 import '../../../m_inout/presentation/providers/m_in_out_providers.dart';
 import '../../../printer/models/mo_printer.dart';
 import '../../../printer/models/printer_select_models.dart';
@@ -18,7 +18,6 @@ import '../../domain/idempiere/inventory_and_lines.dart';
 import '../../domain/idempiere/movement_and_lines.dart';
 import '../../domain/idempiere/response_async_value.dart';
 import '../../domain/models/ftpconfig.dart';
-import '../../domain/models/label_profile.dart';
 import '../screens/movement/provider/new_movement_provider.dart';
 import 'actions/find_locator_to_action_provider.dart';
 import 'locator_provider.dart';

@@ -1,5 +1,6 @@
 *.apk
 .env
+*.zip
 
 # Miscellaneous
 *.class

@@ -16,7 +16,7 @@ import 'package:niim_blue_flutter/niim_blue_flutter.dart';
 import 'package:permission_handler/permission_handler.dart';
 
 import '../../products/common/input_dialog.dart';
-import '../../products/domain/models/label_profile.dart';
+import 'package:riverpod_printer/riverpod_printer.dart';
 
 import '../../products/domain/idempiere/idempiere_locator.dart';
 import '../../products/domain/idempiere/idempiere_product.dart';
@@ -97,13 +97,13 @@ class NiimbotState {
       copies: 1,
       widthMm: 50,
       heightMm: 30,
-      marginXmm: 2,
-      marginYmm: 2,
+      marginLeftMm: 2,
+      marginTopMm: 2,
       barcodeHeightMm: 12,
       charactersToPrint: 0,
       maxCharsPerLine: 22,
       barcodeHeight: 96,
-      barcodeWidth: 3,
+      barcodeWide: 3,
       barcodeNarrow: 2,
       fontId: 2,
       gapMm: 2,
@@ -497,13 +497,13 @@ class NiimbotController extends StateNotifier<NiimbotState> {
       copies: (overrideCopies) ? copiesTemp : p0.copies,
       widthMm: p0.widthMm,
       heightMm: p0.heightMm,
-      marginXmm: p0.marginXmm,
-      marginYmm: p0.marginYmm,
+      marginLeftMm: p0.marginLeftMm,
+      marginTopMm: p0.marginTopMm,
       barcodeHeightMm: p0.barcodeHeightMm,
       charactersToPrint: p0.charactersToPrint,
       maxCharsPerLine: p0.maxCharsPerLine,
       barcodeHeight: p0.barcodeHeight,
-      barcodeWidth: p0.barcodeWidth,
+      barcodeWide: p0.barcodeWide,
       barcodeNarrow: p0.barcodeNarrow,
       fontId: p0.fontId,
       gapMm: p0.gapMm,
@@ -557,13 +557,13 @@ class NiimbotController extends StateNotifier<NiimbotState> {
       copies: 1,
       widthMm: 50,
       heightMm: 30,
-      marginXmm: 2,
-      marginYmm: 2,
+      marginLeftMm: 2,
+      marginTopMm: 2,
       barcodeHeightMm: 12,
       charactersToPrint: 0,
       maxCharsPerLine: 22,
       barcodeHeight: 96,
-      barcodeWidth: 3,
+      barcodeWide: 3,
       barcodeNarrow: 2,
       fontId: 2,
       gapMm: 2,
@@ -1373,8 +1373,8 @@ class NiimbotController extends StateNotifier<NiimbotState> {
     final widthPx = _pxFromMm(profile.widthMm);
     final heightPx = _pxFromMm(profile.heightMm);
 
-    final marginX = _pxMarginXFromMm(profile.marginXmm);
-    final marginY = _pxFromMm(profile.marginYmm);
+    final marginX = _pxMarginXFromMm(profile.marginLeftMm);
+    final marginY = _pxFromMm(profile.marginTopMm);
 
     final safeName =
     (product.name ?? '').replaceAll('\n', ' ').replaceAll('\r', ' ').trim();
@@ -1598,8 +1598,8 @@ class NiimbotController extends StateNotifier<NiimbotState> {
     final widthPx = _pxFromMm(profile.widthMm);
     final heightPx = _pxFromMm(profile.heightMm);
 
-    final marginX = _pxMarginXFromMm(profile.marginXmm);
-    final marginY = _pxFromMm(profile.marginYmm);
+    final marginX = _pxMarginXFromMm(profile.marginLeftMm);
+    final marginY = _pxFromMm(profile.marginTopMm);
 
     final value =
     (locator.value ?? '').replaceAll('\n', ' ').replaceAll('\r', ' ').trim();
@@ -1667,8 +1667,8 @@ class NiimbotController extends StateNotifier<NiimbotState> {
     final widthPx = _pxFromMm(profile.widthMm);
     final heightPx = _pxFromMm(profile.heightMm);
 
-    final marginX = _pxMarginXFromMm(profile.marginXmm);
-    final marginY = _pxFromMm(profile.marginYmm);
+    final marginX = _pxMarginXFromMm(profile.marginLeftMm);
+    final marginY = _pxFromMm(profile.marginTopMm);
 
     final name = (cfg.printerInformationName).replaceAll('\n', ' ').replaceAll('\r', ' ').trim();
     final bt = (cfg.printerInformationAddress.isEmpty ?
@@ -1753,8 +1753,8 @@ class NiimbotController extends StateNotifier<NiimbotState> {
     final widthPx = _pxFromMm(profile.widthMm);
     final heightPx = _pxFromMm(profile.heightMm);
 
-    final marginX = _pxMarginXFromMm(profile.marginXmm);
-    final marginY = _pxFromMm(profile.marginYmm);
+    final marginX = _pxMarginXFromMm(profile.marginLeftMm);
+    final marginY = _pxFromMm(profile.marginTopMm);
 
     final value =
     (locator.value ?? '').replaceAll('\n', ' ').replaceAll('\r', ' ').trim();
@@ -2849,7 +2849,7 @@ class _NiimbotPageState extends ConsumerState<NiimbotPage> {
   String _profileSummary(LabelProfile? p) {
     final x = p;
     if (x == null) return 'None';
-    return '${x.name}  ${x.widthMm}x${x.heightMm}mm  copies:${x.copies}  margin:${x.marginXmm}/${x.marginYmm}  font:${x.fontId}';
+    return '${x.name}  ${x.widthMm}x${x.heightMm}mm  copies:${x.copies}  margin:${x.marginLeftMm}/${x.marginTopMm}  font:${x.fontId}';
   }
 
   Future<void> popScopAction(BuildContext context, WidgetRef ref) async {

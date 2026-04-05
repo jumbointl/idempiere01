@@ -50,6 +50,8 @@ class MemoryProducts {
 
   static PutAwayMovement putAwayMovement = PutAwayMovement();
 
+  static String LAST_PAGE='';
+
   static String getDocumentStatusById(String documentStatus) {
     if (documentStatus == 'CO') {
       return Messages.COMPLETED;

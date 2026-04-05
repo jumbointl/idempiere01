@@ -1,8 +1,6 @@
 
-import 'package:monalisa_app_001/features/m_inout/domain/entities/m_in_out.dart';
 import 'package:monalisa_app_001/features/products/domain/sql/sql_data_movement.dart';
 
-import '../../../m_inout/domain/entities/line.dart';
 import '../../../shared/data/memory.dart';
 import '../sql/sql_data_movement_line.dart';
 import '../sql/sql_users_data.dart';

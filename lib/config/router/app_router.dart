@@ -26,6 +26,7 @@ import 'package:monalisa_app_001/features/products/presentation/screens/store_on
 import 'package:monalisa_app_001/features/products/presentation/screens/movement/edit_new/product_store_on_hand_screen_for_line.dart';
 import 'package:monalisa_app_001/features/products/presentation/screens/store_on_hand/unsorted_storage_on__hand_read_only_screen.dart';
 import 'package:monalisa_app_001/features/sales_order/screen/sales_order_barcode_list_screen.dart';
+import 'package:riverpod_printer/riverpod_printer.dart';
 import '../../features/auth/presentation/screens/auth_data_screen.dart';
 import '../../features/m_inout/domain/entities/line.dart';
 import '../../features/m_inout/domain/entities/m_in_out.dart';
@@ -41,7 +42,6 @@ import '../../features/printer/web_template/screen/create_zpl_template_page.dart
 import '../../features/products/domain/idempiere/idempiere_locator.dart';
 import '../../features/products/domain/idempiere/inventory_and_lines.dart';
 import '../../features/products/domain/idempiere/movement_and_lines.dart';
-import '../../features/products/domain/models/label_profile.dart';
 import '../../features/products/domain/models/product_image.dart';
 import '../../features/products/presentation/screens/inventory/edit/inventory_cancel_screen.dart';
 import '../../features/products/presentation/screens/inventory/edit/inventory_confirm_screen.dart';
@@ -514,9 +514,10 @@ final goRouterProvider = Provider((ref) {
       GoRoute(
           path: AppRouter.PAGE_PRODUCT_LABEL_PRINTER_SELECT_PAGE,
           builder: (context, state){
+            final product = state.extra as IdempiereProduct ;
 
             return ProductLabelPrinterSelectPage(
-                dataToPrint: state.extra as IdempiereProduct,
+                dataToPrint: product,
                 );
           }
       ),

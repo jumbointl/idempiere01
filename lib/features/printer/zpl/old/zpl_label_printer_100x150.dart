@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:math';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -12,8 +13,10 @@ import 'package:monalisa_app_001/features/shared/data/messages.dart';
 
 import '../../../products/common/messages_dialog.dart';
 import '../../../products/domain/idempiere/idempiere_locator.dart';
+import '../../../products/domain/idempiere/idempiere_movement_line.dart';
 import '../../../products/domain/idempiere/movement_and_lines.dart';
 import '../../../products/domain/idempiere/response_async_value.dart';
+import '../../../shared/data/memory.dart';
 import '../../printer_scan_notifier.dart';
 import '../../web_template/screen/show_search_zpl_template_sheet.dart';
 import '../new/models/locator_zpl_template.dart';
@@ -23,7 +26,6 @@ import '../new/screen/template_zpl_on_use_sheet.dart';
 import '../new/provider/template_zpl_provider.dart';
 import '../new/models/zpl_template_store.dart';
 import '../new/provider/template_zpl_utils.dart';
-import '../template/tspl_label_printer.dart';
 import '../zpl_send_item_result.dart';
 import 'zpl_print_profile_providers.dart';
 
@@ -428,6 +430,295 @@ Future<void> printMovementTsplDirectOrConfigure(WidgetRef ref,
     marginY: profile.marginY,
   );
 }
+
+Future<void> printLabelMovementByProductTspl60x150NoLogo({
+  required String ip,
+  required int port,
+  required dynamic movementAndLines, // tu MovementAndLines real
+  required int rowsPerLabel,         // max filas por etiqueta (ej 8)
+  required int marginX,              // dots
+  required int marginY,
+  required WidgetRef ref,              // dots
+}) async {
+  // =============================
+  // FÍSICO (203 dpi = 8 dots/mm)
+  // =============================
+  const int defaultRowsPerLabel = 13;
+  const int dotsPerMm = 8;
+  const int labelWmm = 60;
+  const int labelHmm = 150;
+  const int gapMm = 3;
+  rowsPerLabel =  rowsPerLabel<defaultRowsPerLabel ? defaultRowsPerLabel : rowsPerLabel;
+  const int reduceMm = 2;
+  final int reduceDots = reduceMm * dotsPerMm;
+
+  final int pw = labelWmm * dotsPerMm; // 480
+  final int ll = labelHmm * dotsPerMm; // 1200
+  final int usableWidth = pw - reduceDots;
+
+  final int footerHeight = 10 * dotsPerMm; // 80
+
+  // QR
+  final int qrSize = 16 * dotsPerMm; // 128
+  const int qrModel = 5;
+
+  String stripAccents(String s) {
+    return s
+        .replaceAll('á', 'a')
+        .replaceAll('é', 'e')
+        .replaceAll('í', 'i')
+        .replaceAll('ó', 'o')
+        .replaceAll('ú', 'u')
+        .replaceAll('ñ', 'n')
+        .replaceAll('Á', 'A')
+        .replaceAll('É', 'E')
+        .replaceAll('Í', 'I')
+        .replaceAll('Ó', 'O')
+        .replaceAll('Ú', 'U')
+        .replaceAll('Ñ', 'N')
+        .replaceAll('ü', 'u')
+        .replaceAll('Ü', 'U')
+        .replaceAll('ç', 'c')
+        .replaceAll('Ç', 'C');
+  }
+
+  String safe(dynamic v) {
+    if (v == null) return '';
+    if (v is num) return Memory.numberFormatter0Digit.format(v);
+
+    final s = stripAccents(
+      v.toString()
+          .replaceAll('\n', ' ')
+          .replaceAll('\r', ' ')
+          .replaceAll('"', r'\"')
+          .trim(),
+    );
+
+    if (s.isEmpty) return '';
+
+    final asNum = num.tryParse(s.replaceAll(',', '.'));
+    if (asNum != null) return Memory.numberFormatter0Digit.format(asNum);
+
+    return s;
+  }
+
+  bool isEmptyRowProduct(IdempiereMovementLine r) {
+    final name = (r.productName ?? r.uPC ?? r.sKU ?? '').trim();
+    final qty = (r.movementQty is num) ? (r.movementQty as num) : num.tryParse('${r.movementQty}'.replaceAll(',', '.')) ?? 0;
+    return name.isEmpty && qty == 0;
+  }
+
+  String truncateToMaxChars(String s, int maxChars) {
+    final t = s.trim();
+    if (maxChars <= 0) return '';
+    if (t.length <= maxChars) return t;
+    if (maxChars <= 1) return t.substring(0, 1);
+    return '${t.substring(0, maxChars - 1)}…';
+  }
+
+  // =============================
+  // HEADER DATA
+  // =============================
+  final String qrData = safe(movementAndLines.documentNumber ?? '');
+  final String documentNumber = safe(movementAndLines.documentNumber ?? '');
+  final String date = safe(movementAndLines.movementDate ?? '');
+  final String documentStatus = safe(movementAndLines.documentStatus ?? '');
+  final String title = safe(movementAndLines.documentMovementTitle ?? '');
+
+  final String company = (movementAndLines.cBPartnerID?.identifier == null)
+      ? ''
+      : '${Messages.COMPANY} : ${safe(movementAndLines.cBPartnerID?.identifier)}';
+
+  final String address = safe(movementAndLines.cBPartnerLocationID?.identifier ?? '');
+
+  final String whFrom =
+      '${Messages.FROM} : ${safe(movementAndLines.mWarehouseID?.identifier ?? '')}';
+  final String whTo =
+      '${Messages.TO} : ${safe(movementAndLines.warehouseTo?.identifier ?? '')}';
+
+  final String totalQty = safe(movementAndLines.totalMovementQty ?? '');
+  final int rowHeight = 46;   // antes 32
+  final int sepY = 34;        // línea separadora dentro de la fila
+  final int nameBlockH = 40;  // alto para 2 líneas
+
+  // =============================
+  // PRODUCTS (sin vacíos)
+  // =============================
+  final List<IdempiereMovementLine> raw =
+      (movementAndLines.movementLines as List<IdempiereMovementLine>?) ?? <IdempiereMovementLine>[];
+
+  final List<IdempiereMovementLine> lines =
+  raw.where((r) => !isEmptyRowProduct(r)).toList();
+
+  final int perPage = max(1, rowsPerLabel);
+  final pages = chunkByRows<IdempiereMovementLine>(lines, perPage);
+  final int totalPages = pages.isEmpty ? 1 : pages.length;
+  Socket? socket ;
+  try {
+    // Socket
+    socket = await Socket.connect(
+        ip, port, timeout: const Duration(seconds: 5));
+
+    final List<List<IdempiereMovementLine>> safePages =
+    pages.isEmpty
+        ? <List<IdempiereMovementLine>>[<IdempiereMovementLine>[]]
+        : pages;
+
+    for (int page = 0; page < safePages.length; page++) {
+      final slice = safePages[page];
+      final sb = StringBuffer();
+
+      // =============================
+      // TSPL SETUP
+      // =============================
+      sb.writeln('SIZE $labelWmm mm,$labelHmm mm');
+      sb.writeln('GAP $gapMm mm,0 mm');
+      sb.writeln('DENSITY 7');
+      sb.writeln('SPEED 4');
+      sb.writeln('DIRECTION 1');
+      sb.writeln('REFERENCE 0,0');
+      sb.writeln('CLS');
+
+      // =========================
+      // QR arriba centrado
+      // =========================
+      final int qrX = marginX + ((pw - qrSize) ~/ 2);
+      final int qrY = marginY + 20;
+      sb.writeln('QRCODE $qrX,$qrY,L,$qrModel,A,0,"$qrData"');
+
+      // =========================
+      // HEADER (igual que tu versión actual)
+      // =========================
+      int hy = qrY + qrSize + 14;
+
+      final int hx = marginX + 20;
+      final int hw = usableWidth - 40;
+
+      final int fontSizeTitleY = 2;
+      int fontSizeTitleX = 2;
+      final int fontSize = 1;
+      if (documentNumber.length > 20) fontSizeTitleX = 1;
+
+      sb.writeln(
+          'BLOCK $hx,$hy,$hw,54,"0",0,$fontSizeTitleX,$fontSizeTitleY,0,0,"No : $documentNumber"');
+      hy += 60;
+
+      final int halfW = (hw ~/ 2);
+      sb.writeln(
+          'BLOCK $hx,$hy,$halfW,28,"0",0,$fontSize,$fontSize,0,0,"$date"');
+      sb.writeln(
+          'BLOCK ${hx +
+              halfW},$hy,$halfW,28,"0",0,$fontSize,$fontSize,0,2,"$documentStatus"');
+      hy += 34;
+
+      sb.writeln('BLOCK $hx,$hy,$hw,34,"0",0,$fontSize,$fontSize,0,0,"$title"');
+      hy += 38;
+
+      if (company.isNotEmpty) {
+        sb.writeln(
+            'BLOCK $hx,$hy,$hw,28,"0",0,$fontSize,$fontSize,0,0,"$company"');
+        hy += 32;
+      }
+      if (address.isNotEmpty) {
+        sb.writeln(
+            'BLOCK $hx,$hy,$hw,26,"0",0,$fontSize,$fontSize,0,0,"$address"');
+        hy += 30;
+      }
+      sb.writeln(
+          'BLOCK $hx,$hy,$hw,26,"0",0,$fontSize,$fontSize,0,0,"$whFrom"');
+      hy += 30;
+      sb.writeln('BLOCK $hx,$hy,$hw,26,"0",0,$fontSize,$fontSize,0,0,"$whTo"');
+      hy += 34;
+
+      // =========================
+      // TABLE HEADER
+      // =========================
+      sb.writeln('BAR ${marginX + 20},$hy,$hw,2');
+      hy += 18;
+
+      final int colNoX = marginX + 20;
+      final int colNameX = marginX + 70;
+      final int colQtyW = 96;
+      final int colQtyX = marginX + pw - 20 - colQtyW;
+
+      sb.writeln('TEXT $colNoX,$hy,"0",0,1,1,"No"');
+      sb.writeln('TEXT $colNameX,$hy,"0",0,1,1,"PRODUCT"');
+      sb.writeln('BLOCK $colQtyX,$hy,$colQtyW,22,"0",0,1,1,0,2,"QTY"');
+
+      hy += 26;
+      sb.writeln('BAR ${marginX + 20},$hy,$hw,2');
+      hy += 24;
+
+      // max chars para productName
+      final int nameMaxDots = max(0, (colQtyX - 8) - colNameX);
+      final int maxNameChars = max(4, (nameMaxDots ~/ 8));
+
+      // =========================
+      // BODY
+      // =========================
+      int y = hy;
+      final int nameW = (colQtyX - 8) - colNameX;
+      for (int i = 0; i < slice.length; i++) {
+        final IdempiereMovementLine m = slice[i];
+        const int nameLineSpacing = 10;
+        final seq = safe(m.line ?? (page * perPage + i + 1));
+        final nameRaw = safe(m.productName ?? m.uPC ?? m.sKU ?? '');
+        final qty = safe(m.movementQty ?? 0);
+
+        // si llega vacío de verdad
+        if (nameRaw.isEmpty && qty == '0') continue;
+
+        // Truncado: ahora calcula por ancho, pero pensando en 2 líneas
+        // (dejamos un poco más de margen por seguridad)
+        final int maxNameChars2Lines = max(8, (nameMaxDots ~/ 8) * 2);
+        final name = truncateToMaxChars(nameRaw, maxNameChars2Lines);
+
+        sb.writeln('TEXT $colNoX,$y,"0",0,1,1,"$seq"');
+
+        // ✅ productName en 2 líneas (alineado izquierda)
+        sb.writeln(
+            'BLOCK $colNameX,$y,$nameW,$nameBlockH,"0",0,1,1,$nameLineSpacing,0,"$name"'
+        );
+        sb.writeln('BLOCK $colQtyX,$y,$colQtyW,24,"0",0,1,1,0,2,"$qty"');
+
+        sb.writeln('BAR ${marginX + 20},${y + sepY},$hw,1');
+        y += rowHeight;
+
+        final footerTop = ll - marginY - footerHeight;
+        if (y > footerTop - 60) break;
+      }
+
+
+      // =========================
+      // FOOTER
+      // =========================
+      final int fy = marginY + 1060;
+
+      sb.writeln(
+          'BLOCK ${marginX + 20},$fy,200,24,"0",0,1,1,0,0,"TOTAL QTY :"');
+      sb.writeln('BLOCK $colQtyX,$fy,$colQtyW,24,"0",0,1,1,0,2,"$totalQty"');
+
+      sb.writeln('BAR ${marginX + 20},${fy + 28},$hw,2');
+
+      final pageInfo = '${page + 1}/$totalPages';
+      sb.writeln('BLOCK $colQtyX,${fy + 54},80,24,"0",0,1,1,0,2,"$pageInfo"');
+
+      sb.writeln('PRINT 1,1');
+
+      socket.add(utf8.encode(sb.toString()));
+    }
+
+    await socket.flush();
+    await socket.close();
+    if(ref.context.mounted)showSuccessMessage(ref.context, ref, Messages.LABEL_PRINTED);
+  } catch(e){
+    print('Error: $e');
+    socket?.close();
+    if(ref.context.mounted)showErrorMessage(ref.context, ref, "${Messages.ERROR}: ${e.toString()}");
+  }
+}
+
+
 
 
 

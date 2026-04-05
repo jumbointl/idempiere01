@@ -7,7 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:get_storage/get_storage.dart';
 
-import 'package:monalisa_app_001/features/products/domain/models/label_profile.dart';
+import 'package:riverpod_printer/riverpod_printer.dart';
 import 'package:monalisa_app_001/features/products/presentation/providers/common_provider.dart';
 import '../models/printer_select_models.dart';
 
@@ -44,13 +44,13 @@ class _LabelConfigPageState extends ConsumerState<LabelConfigPage> {
       copies: 1,
       widthMm: 50,
       heightMm: 30,
-      marginXmm: 2,
-      marginYmm: 2,
+      marginLeftMm: 2,
+      marginTopMm: 2,
       barcodeHeightMm: 12,
       charactersToPrint: 0,
       maxCharsPerLine: 22,
       barcodeHeight: 96,
-      barcodeWidth: 3,
+      barcodeWide: 3,
       barcodeNarrow: 2,
       fontId: 2,
       gapMm: 2,
@@ -335,8 +335,8 @@ class _LabelProfileEditorSheetState extends State<_LabelProfileEditorSheet> {
   late final TextEditingController _copies;
   late final TextEditingController _widthMm;
   late final TextEditingController _heightMm;
-  late final TextEditingController _marginXmm;
-  late final TextEditingController _marginYmm;
+  late final TextEditingController _marginLeftMm;
+  late final TextEditingController _marginTopMm;
   late final TextEditingController _barcodeHeightMm;
   late final TextEditingController _charactersToPrint;
   late final TextEditingController _maxCharsPerLine;
@@ -355,13 +355,13 @@ class _LabelProfileEditorSheetState extends State<_LabelProfileEditorSheet> {
     _copies = TextEditingController(text: '${p?.copies ?? 1}');
     _widthMm = TextEditingController(text: '${p?.widthMm ?? 50}');
     _heightMm = TextEditingController(text: '${p?.heightMm ?? 30}');
-    _marginXmm = TextEditingController(text: '${p?.marginXmm ?? 2}');
-    _marginYmm = TextEditingController(text: '${p?.marginYmm ?? 2}');
+    _marginLeftMm = TextEditingController(text: '${p?.marginLeftMm ?? 2}');
+    _marginTopMm = TextEditingController(text: '${p?.marginTopMm ?? 2}');
     _barcodeHeightMm = TextEditingController(text: '${p?.barcodeHeightMm ?? 12}');
     _charactersToPrint = TextEditingController(text: '${p?.charactersToPrint ?? 0}');
     _maxCharsPerLine = TextEditingController(text: '${p?.maxCharsPerLine ?? 22}');
     _barcodeHeight = TextEditingController(text: '${p?.barcodeHeight ?? 96}');
-    _barcodeWidth = TextEditingController(text: '${p?.barcodeWidth ?? 3}');
+    _barcodeWidth = TextEditingController(text: '${p?.barcodeWide ?? 3}');
     _barcodeNarrow = TextEditingController(text: '${p?.barcodeNarrow ?? 2}');
     _fontId = TextEditingController(text: '${p?.fontId ?? 2}');
     _gapMm = TextEditingController(text: '${p?.gapMm ?? 2}');
@@ -373,8 +373,8 @@ class _LabelProfileEditorSheetState extends State<_LabelProfileEditorSheet> {
     _copies.dispose();
     _widthMm.dispose();
     _heightMm.dispose();
-    _marginXmm.dispose();
-    _marginYmm.dispose();
+    _marginLeftMm.dispose();
+    _marginTopMm.dispose();
     _barcodeHeightMm.dispose();
     _charactersToPrint.dispose();
     _maxCharsPerLine.dispose();
@@ -396,8 +396,8 @@ class _LabelProfileEditorSheetState extends State<_LabelProfileEditorSheet> {
     final widthMm = _toDouble(_widthMm.text, fallback: 50);
     final heightMm = _toDouble(_heightMm.text, fallback: 30);
 
-    final marginXmm = _toDouble(_marginXmm.text, fallback: 2);
-    final marginYmm = _toDouble(_marginYmm.text, fallback: 2);
+    final marginLeftMm = _toDouble(_marginLeftMm.text, fallback: 2);
+    final marginTopMm = _toDouble(_marginTopMm.text, fallback: 2);
 
     final barcodeHeightMm = _toInt(_barcodeHeightMm.text, fallback: 12);
     final charactersToPrint = _toInt(_charactersToPrint.text, fallback: 0);
@@ -418,13 +418,13 @@ class _LabelProfileEditorSheetState extends State<_LabelProfileEditorSheet> {
       copies: copies < 1 ? 1 : copies,
       widthMm: widthMm <= 0 ? 50 : widthMm,
       heightMm: heightMm <= 0 ? 30 : heightMm,
-      marginXmm: marginXmm < 0 ? 0 : marginXmm,
-      marginYmm: marginYmm < 0 ? 0 : marginYmm,
+      marginLeftMm: marginLeftMm < 0 ? 0 : marginLeftMm,
+      marginTopMm: marginTopMm < 0 ? 0 : marginTopMm,
       barcodeHeightMm: barcodeHeightMm <= 0 ? 12 : barcodeHeightMm,
       charactersToPrint: charactersToPrint < 0 ? 0 : charactersToPrint,
       maxCharsPerLine: maxCharsPerLine <= 0 ? 22 : maxCharsPerLine,
       barcodeHeight: barcodeHeight <= 0 ? 96 : barcodeHeight,
-      barcodeWidth: barcodeWidth <= 0 ? 3 : barcodeWidth,
+      barcodeWide: barcodeWidth <= 0 ? 3 : barcodeWidth,
       barcodeNarrow: barcodeNarrow <= 0 ? 2 : barcodeNarrow,
       fontId: fontId <= 0 ? 2 : fontId,
       gapMm: gapMm < 0 ? 0 : gapMm,
@@ -483,9 +483,9 @@ class _LabelProfileEditorSheetState extends State<_LabelProfileEditorSheet> {
               ),
               Row(
                 children: [
-                  Expanded(child: _field('Margin X (mm)', _marginXmm, keyboardType: TextInputType.number)),
+                  Expanded(child: _field('Margin X (mm)', _marginLeftMm, keyboardType: TextInputType.number)),
                   const SizedBox(width: 8),
-                  Expanded(child: _field('Margin Y (mm)', _marginYmm, keyboardType: TextInputType.number)),
+                  Expanded(child: _field('Margin Y (mm)', _marginTopMm, keyboardType: TextInputType.number)),
                 ],
               ),
               Row(

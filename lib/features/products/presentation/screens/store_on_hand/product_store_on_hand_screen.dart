@@ -10,45 +10,21 @@ import '../../../../../config/router/app_router.dart';
 import '../../../../../config/theme/app_theme.dart';
 import '../../../../auth/presentation/providers/auth_provider.dart';
 import '../../../common/input_dialog.dart';
+import '../../providers/product_provider_common.dart';
 import '../common/async_value_consumer_product_state.dart';
 import '../../../domain/idempiere/idempiere_product.dart';
 import '../../../domain/idempiere/response_async_value.dart';
-import '../../../domain/idempiere/response_async_value_ui_model.dart';
-import '../../providers/actions/find_product_by_sku_name_action_provider.dart';
 import '../../providers/common_provider.dart';
 import '../../../../shared/data/memory.dart';
 import '../../../../shared/data/messages.dart';
 import '../../providers/locator_provider.dart';
-import '../../providers/product_provider_common.dart';
 import '../../widget/product_search_mode_button.dart';
-import '../../widget/response_async_value_messages_card.dart';
 import 'memory_products.dart';
 import 'new_storage_on_hand_card.dart';
 import 'product_detail_card.dart';
 import 'product_resume_card.dart';
 
-import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 
-import '../../../../../config/router/app_router.dart';
-import '../../../../../config/theme/app_theme.dart';
-import '../../../../auth/presentation/providers/auth_provider.dart';
-import '../../../../shared/data/memory.dart';
-import '../../../../shared/data/messages.dart';
-import '../../../common/input_dialog.dart';
-import '../../../common/messages_dialog.dart';
-import '../../../domain/idempiere/idempiere_product.dart';
-import '../../../domain/idempiere/idempiere_storage_on_hande.dart';
-import '../../../domain/idempiere/product_with_stock.dart';
-import '../../../domain/idempiere/response_async_value.dart';
-import '../../providers/common_provider.dart';
-import '../../providers/product_provider_common.dart';
-import '../../widget/no_records_card.dart';
-import '../../widget/product_search_mode_button.dart';
-import 'new_storage_on_hand_card.dart';
-import 'product_detail_card.dart';
-import 'product_resume_card.dart';
 
 class ProductStoreOnHandScreen extends ConsumerStatefulWidget {
   String? productId;
@@ -211,11 +187,13 @@ class _ProductStoreOnHandScreenState
         }
         goToUpcSearch(productUPC);
       },
-      onPrintTap: () {
-        context.go(
+      onPrintTap: () async {
+        final oldAction = ref.read(actionScanProvider);
+        await context.push(
           AppRouter.PAGE_PRODUCT_LABEL_PRINTER_SELECT_PAGE,
           extra: product,
         );
+        ref.read(actionScanProvider.notifier).state = oldAction;
       },
     );
   }

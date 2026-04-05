@@ -16,7 +16,7 @@ import 'package:niim_blue_flutter/niim_blue_flutter.dart';
 
 import '../../products/common/messages_dialog.dart';
 import '../../products/domain/idempiere/response_async_value.dart';
-import '../../products/domain/models/label_profile.dart';
+import 'package:riverpod_printer/riverpod_printer.dart';
 import '../../products/presentation/providers/product_provider_common.dart';
 import 'niimbot_page.dart';
 
