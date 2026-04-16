@@ -11,6 +11,9 @@ import '../../products/domain/idempiere/idempiere_movement.dart';
 import 'messages.dart';
 
 class Memory {
+  static const production = false ;
+  static const String APP_NAME = 'MONALISA';
+  static const String APP_NAME_WITH_VERSION = '$APP_NAME 2.01.30';
   static int DELAY_TO_REFRESH_PROVIDER_MILLISECOND = 1500;
   static const int  TOKEN_EXPIRE_MINUTES = 720;
   static const int REFRESH_TOKEN_EXPIRE_MINUTES = 1200;
@@ -137,7 +140,6 @@ class Memory {
 
   static String URL_CUPS_SERVER ='http://192.168.188.108:3100/print';
 
-  static String APP_NAME='MONALISA';
 
   static String getUrlCupsServerWithPrinter({required String ip,
     required String port,required String printerName}){
@@ -240,6 +242,8 @@ class Memory {
   static String lastSearchUpc='';
 
   static String lastSearchLocator='';
+
+  static String APP_PLAY_STORE_LINK='https://play.google.com/store/apps/details?id=org.compiere.monalisapy';
 
 
 

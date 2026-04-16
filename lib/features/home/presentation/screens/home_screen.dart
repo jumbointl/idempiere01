@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
 import 'package:go_router/go_router.dart';
 import 'package:monalisa_app_001/config/config.dart';
+import 'package:monalisa_app_001/features/products/common/messages_dialog.dart';
 import 'package:monalisa_app_001/features/products/presentation/screens/store_on_hand/memory_products.dart';
 import 'package:monalisa_app_001/features/shared/shared.dart';
 import 'package:upgrader/upgrader.dart';
@@ -31,7 +32,9 @@ class HomeScreen extends ConsumerWidget {
       durationUntilAlertAgain: const Duration(days: 1),
     );
 
-    final functionText = Memory.APP_NAME;
+    final functionText = Memory.production
+        ? '${Memory.APP_NAME} ${upgrader.versionInfo?.installedVersion ?? 0}'
+        :Memory.APP_NAME_WITH_VERSION;
     final sections = _buildHomeSections();
 
     return UpgradeAlert(
@@ -42,17 +45,24 @@ class HomeScreen extends ConsumerWidget {
         drawer: SideMenu(scaffoldKey: scaffoldKey),
         appBar: AppBar(
           title: Text(
-            '$functionText ${upgrader.versionInfo?.installedVersion ?? 0}',
+            functionText,
           ),
           actions: [
-            IconButton(
+            Memory.production ? IconButton(
               icon: const Icon(Icons.system_update_alt),
               tooltip: 'Check update',
               onPressed: () async {
                 await Upgrader.clearSavedSettings();
                 ref.read(upgradeAlertSeedProvider.notifier).state++;
               },
-            ),
+            ) : IconButton(
+              icon: const Icon(Icons.link),
+              tooltip: 'Link',
+              onPressed: () async {
+                String message = Memory.APP_PLAY_STORE_LINK;
+                showSuccessMessage(context, ref, message);
+              },
+            ) ,
             IconButton(
               icon: const Icon(Icons.exit_to_app),
               onPressed: () {

@@ -1475,6 +1475,8 @@ class Messages{
 
   static String ERROR_DELETED='ERROR ELIMINADO';
 
+  static String FIND_ITEM='BUSCAR ITEM';
+
 
 
 
