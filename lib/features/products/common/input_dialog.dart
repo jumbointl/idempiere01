@@ -1157,6 +1157,7 @@ Widget numberButtonsNoProcessor(
 
 
 Future<void> getDoubleDialog({
+  bool allowNegative = false,
   double? maxValue,
   double? minValue,
   required WidgetRef ref,
@@ -1174,7 +1175,7 @@ Future<void> getDoubleDialog({
   final int actualAction = ref.read(actionScanProvider);
   ref.read(actionScanProvider.notifier).state = Memory.ACTION_NO_SCAN_ACTION;
   ref.read(isDialogShowedProvider.notifier).state = true;
-
+  debugPrint('show dialog maxVlue ${maxValue}');
   bool focusRequested = false;
   bool isClosing = false;
   try {
@@ -1261,6 +1262,8 @@ Future<void> getDoubleDialog({
                                       ref2.read(isDialogShowedProvider.notifier).state = false;
                                       Navigator.of(ctx).pop();
                                     } else {
+                                      debugPrint('maxvalue ${maxValue ?? null}');
+                                      debugPrint('minvalue ${maxValue ?? null}');
                                       String message = '${Messages.ERROR} $aux';
                                       showErrorCenterToast(context, message);
                                     }
@@ -1385,10 +1388,23 @@ Future<void> getDoubleDialog({
                                         .state = false;
                                     Navigator.of(ctx).pop();
                                   } else {
+                                    if(aux.isNegative && allowNegative==false){
+                                      final message = '${Messages.ERROR_QUANTITY} < 0';
+                                      showErrorMessage(context, ref, message);
+                                      return ;
+                                    }
 
-                                    final msg =
-                                        '${Messages.ERROR_QUANTITY} ${Memory.numberFormatter0Digit.format(aux)} >'
-                                        ' ${Memory.numberFormatter0Digit.format(maxValue)} \no < ${Memory.numberFormatter0Digit.format(minValue)}';
+                                    String msg = '${Messages.ERROR_QUANTITY} ${Memory.numberFormatter0Digit.format(aux)}';
+
+                                    if (maxValue != null && aux > maxValue) {
+                                      msg += ' > ${Memory.numberFormatter0Digit.format(maxValue)}';
+                                    }
+
+                                    if (minValue != null && aux < minValue) {
+                                      msg += ' < ${Memory.numberFormatter0Digit.format(minValue)}';
+                                    }
+
+
                                     showErrorMessage(ctx, ref2, msg);
                                     quantityController.text =
                                         Memory.numberFormatter0Digit

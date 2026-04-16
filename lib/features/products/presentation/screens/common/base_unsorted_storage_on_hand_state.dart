@@ -334,7 +334,7 @@ abstract class BaseUnsortedStorageOnHandState<T extends ConsumerStatefulWidget>
         await getDoubleDialog(
           ref: ref,
           minValue: minSelectableQtyOnTap,
-          maxValue: qtyOnHand,
+          maxValue: null, //qtyOnHand,
           quantity: qtyOnHand,
           targetProvider: quantityToMoveProvider,
         );
@@ -453,8 +453,8 @@ abstract class BaseUnsortedStorageOnHandState<T extends ConsumerStatefulWidget>
                               final maxQty = fromStorage.qtyOnHand ?? 0;
                               await getDoubleDialog(
                                 ref: ref,
-                                maxValue: maxQty,
-                                minValue: 1,
+                                maxValue: null,
+                                minValue: 0,
                                 quantity: maxQty,
                                 targetProvider: quantityToMoveProvider,
                               );

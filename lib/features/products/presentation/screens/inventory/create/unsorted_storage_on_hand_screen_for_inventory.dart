@@ -271,7 +271,7 @@ class UnsortedStorageOnHandScreenForInventoryState
 
                           await getDoubleDialog(
                             ref: ref,
-                            maxValue: storage.qtyOnHand ?? 0,
+                            maxValue: null, //storage.qtyOnHand ?? 0,
                             minValue: 0,
                             quantity: storage.qtyOnHand ?? 0,
                             targetProvider: quantityToMoveProvider,
