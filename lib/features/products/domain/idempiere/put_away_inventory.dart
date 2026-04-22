@@ -76,7 +76,7 @@ class PutAwayInventory {
     if (inventoryLineToCreate!.mProductID == null) return ERROR_PRODUCT;
     if (inventoryLineToCreate!.mLocatorID == null) return ERROR_LOCATOR_FROM;
     if (inventoryLineToCreate!.qtyCount == null ||
-        inventoryLineToCreate!.qtyCount! <= 0) {
+        inventoryLineToCreate!.qtyCount! < 0) {
       return ERROR_QUANTITY;
     }
 

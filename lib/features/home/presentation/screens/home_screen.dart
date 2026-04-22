@@ -46,6 +46,10 @@ class HomeScreen extends ConsumerWidget {
         appBar: AppBar(
           title: Text(
             functionText,
+            style: const TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+            ),
           ),
           actions: [
             Memory.production ? IconButton(
