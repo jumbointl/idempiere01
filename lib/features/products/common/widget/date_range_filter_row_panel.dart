@@ -21,12 +21,21 @@ class DateRangeFilterRowPanel extends ConsumerWidget {
   static const String RECEIVE ='RECEIVE';
   static const String SHIPPING ='SHIPPING';
   static const String CANCEL ='CANCEL';
+  // M_InOut by-type filter labels (alphabetical)
+  static const String PICK_CONFIRM = 'PICK CONFIRM';
+  static const String QA_CONFIRM = 'QA CONFIRM';
+  static const String RECEIPT = 'RECEIPT';
+  static const String RECEIPT_CONFIRM = 'RECEIPT CONFIRM';
+  static const String SHIPMENT = 'SHIPMENT';
+  static const String SHIPMENT_CONFIRM = 'SHIPMENT CONFIRM';
+  static const String SHIPMENT_PREPARE = 'SHIPMENT PREPARE';
 
 
   final bool orientationUpper;
   final List<String> values ;
   StateProvider<DateTimeRange> selectedDatesProvider;
   StateProvider<String>selectionFilterProvider;
+  final bool useDropdown;
 
 
   DateRangeFilterRowPanel({
@@ -38,6 +47,7 @@ class DateRangeFilterRowPanel extends ConsumerWidget {
     required this.values,
     required this.selectedDatesProvider,
     required this.selectionFilterProvider,
+    this.useDropdown = false,
   });
 
   final void Function(DateTimeRange dateRange, String inOut) onOk;
@@ -194,41 +204,76 @@ class DateRangeFilterRowPanel extends ConsumerWidget {
       ],
     );
 
-    // --------- SEGUNDA LINHA (filtro IN/OUT/...) ----------
+    // --------- SEGUNDA LINHA (filtro IN/OUT/... o combo) ----------
     if(values.isNotEmpty) {
-      final secondRow = Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Expanded(
-            child: SegmentedButton<String>(
-              segments: values.map((value) {
-                return ButtonSegment<String>(
-                  value: value,
-                  icon: Icon(_iconFor(value), size: 20),
-                  label: Text(
-                    value,
-                    style: TextStyle(fontSize: themeFontSizeSmall),
+      final dropdownValue = values.contains(selectedValue) ? selectedValue : values.first;
+      final Widget secondRow = useDropdown
+          ? Container(
+              height: 36,
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              decoration: BoxDecoration(
+                border: Border.all(color: Colors.grey.shade400),
+                borderRadius: BorderRadius.circular(8.0),
+                color: Colors.white,
+              ),
+              child: DropdownButtonHideUnderline(
+                child: DropdownButton<String>(
+                  isExpanded: true,
+                  value: dropdownValue,
+                  iconEnabledColor: Colors.purple,
+                  style: TextStyle(
+                    color: Colors.purple,
+                    fontSize: themeFontSizeNormal,
+                    fontWeight: FontWeight.w600,
                   ),
-                );
-              }).toList(),
-              selected: <String>{selectedValue},
-              onSelectionChanged: (newSelection) {
-
-                onSelectionChanged(newSelection, ref);
-
-              },
-              style: ButtonStyle(
-                visualDensity: VisualDensity.compact,
-                padding: WidgetStateProperty.all(
-                  const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  items: values.map((value) {
+                    return DropdownMenuItem<String>(
+                      value: value,
+                      child: Row(
+                        children: [
+                          Icon(_iconFor(value), size: 20, color: Colors.purple),
+                          const SizedBox(width: 8),
+                          Text(value),
+                        ],
+                      ),
+                    );
+                  }).toList(),
+                  onChanged: (newValue) {
+                    if (newValue == null) return;
+                    onSelectionChanged({newValue}, ref);
+                  },
                 ),
               ),
-            ),
-
-          ),
-
-        ],
-      );
+            )
+          : Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Expanded(
+                  child: SegmentedButton<String>(
+                    segments: values.map((value) {
+                      return ButtonSegment<String>(
+                        value: value,
+                        icon: Icon(_iconFor(value), size: 20),
+                        label: Text(
+                          value,
+                          style: TextStyle(fontSize: themeFontSizeSmall),
+                        ),
+                      );
+                    }).toList(),
+                    selected: <String>{selectedValue},
+                    onSelectionChanged: (newSelection) {
+                      onSelectionChanged(newSelection, ref);
+                    },
+                    style: ButtonStyle(
+                      visualDensity: VisualDensity.compact,
+                      padding: WidgetStateProperty.all(
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            );
       return Column(
         children: orientationUpper ? [secondRow, firstRow] : [firstRow, secondRow],
       );
@@ -242,9 +287,11 @@ class DateRangeFilterRowPanel extends ConsumerWidget {
     switch (value) {
       case DateRangeFilterRowPanel.IN:
       case DateRangeFilterRowPanel.RECEIVE:
+      case DateRangeFilterRowPanel.RECEIPT:
         return Icons.arrow_downward;
       case DateRangeFilterRowPanel.OUT:
       case DateRangeFilterRowPanel.SHIPPING:
+      case DateRangeFilterRowPanel.SHIPMENT:
         return Icons.arrow_upward;
       case DateRangeFilterRowPanel.SWAP:
         return Icons.swap_horiz;
@@ -259,6 +306,16 @@ class DateRangeFilterRowPanel extends ConsumerWidget {
       case DateRangeFilterRowPanel.RUNNING:
       case DateRangeFilterRowPanel.IN_PROGRESS:
         return Symbols.arrow_upload_progress_rounded;
+      case DateRangeFilterRowPanel.PICK_CONFIRM:
+        return Symbols.pan_tool_rounded;
+      case DateRangeFilterRowPanel.QA_CONFIRM:
+        return Symbols.fact_check_rounded;
+      case DateRangeFilterRowPanel.RECEIPT_CONFIRM:
+        return Symbols.assignment_turned_in_rounded;
+      case DateRangeFilterRowPanel.SHIPMENT_CONFIRM:
+        return Symbols.local_shipping_rounded;
+      case DateRangeFilterRowPanel.SHIPMENT_PREPARE:
+        return Symbols.inventory_2_rounded;
 
       default:
         return Icons.question_mark;

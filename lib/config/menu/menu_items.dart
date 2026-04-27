@@ -105,6 +105,13 @@ var appHomeOptionCol2Items = <MenuItem>[
       link: '/mInOut/${MInOutType.receipt.name}',
       icon: Icons.download,
     ),
+  if (RolesApp.appReceipt)
+    MenuItem(
+      title: 'Multiple Receipt',
+      subTitle: '',
+      link: '/multipleMInOut/${MInOutType.receipt.name}',
+      icon: Icons.download_for_offline,
+    ),
   if (RolesApp.appReceiptconfirm)
     MenuItem(
       title: 'Receipt Confirm',
@@ -127,6 +134,12 @@ var appHomeOptionCol2Items = <MenuItem>[
       icon: Icons.list
       ,
     ),
+  MenuItem(
+    title: 'M In/Out by Type',
+    subTitle: '',
+    link: AppRouter.PAGE_M_IN_OUT_BY_TYPE_LIST,
+    icon: Icons.filter_list,
+  ),
   if (RolesApp.canEditMovement)
     MenuItem(
       title: Messages.MOVEMENT_EDIT,

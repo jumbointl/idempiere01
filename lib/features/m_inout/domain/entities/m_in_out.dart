@@ -11,6 +11,7 @@ class MInOut {
   AdEntityId mWarehouseId;
   AdEntityId mWarehouseToId;
   AdEntityId cOrderId;
+  AdEntityId? cDocTypeId;
   DateTime? dateOrdered;
   AdEntityId docStatus;
   List<Line> lines;
@@ -26,6 +27,7 @@ class MInOut {
     required this.mWarehouseId,
     required this.mWarehouseToId,
     required this.cOrderId,
+    this.cDocTypeId,
     required this.dateOrdered,
     required this.docStatus,
     this.lines = const [],
@@ -54,6 +56,9 @@ class MInOut {
         cOrderId: json["C_Order_ID"] != null
             ? AdEntityId.fromJson(json["C_Order_ID"])
             : AdEntityId(),
+        cDocTypeId: json["C_DocType_ID"] != null
+            ? AdEntityId.fromJson(json["C_DocType_ID"])
+            : null,
         dateOrdered: json["DateOrdered"] != null
             ? DateTime.parse(json["DateOrdered"])
             : null,
@@ -81,6 +86,7 @@ class MInOut {
     AdEntityId? mWarehouseId,
     AdEntityId? mWarehouseToId,
     AdEntityId? cOrderId,
+    AdEntityId? cDocTypeId,
     DateTime? dateOrdered,
     AdEntityId? docStatus,
     List<Line>? lines, List<Line>? allLines,
@@ -95,6 +101,7 @@ class MInOut {
       mWarehouseId: mWarehouseId ?? this.mWarehouseId,
       mWarehouseToId: mWarehouseToId ?? this.mWarehouseToId,
       cOrderId: cOrderId ?? this.cOrderId,
+      cDocTypeId: cDocTypeId ?? this.cDocTypeId,
       dateOrdered: dateOrdered ?? this.dateOrdered,
       docStatus: docStatus ?? this.docStatus,
       lines: lines ?? this.lines,
@@ -112,6 +119,7 @@ class MInOut {
         "M_Warehouse_ID": mWarehouseId.toJson(),
         "M_WarehouseTo_ID": mWarehouseToId.toJson(),
         "C_Order_ID": cOrderId.toJson(),
+        "C_DocType_ID": cDocTypeId?.toJson(),
         "DateOrdered": dateOrdered?.toIso8601String(),
         "DocStatus": docStatus.toJson(),
         "m_inoutline": List<dynamic>.from(lines.map((x) => x.toJson())),

@@ -4,6 +4,7 @@ import 'package:monalisa_app_001/features/m_inout/domain/entities/line_confirm.d
 import 'package:monalisa_app_001/features/m_inout/domain/entities/m_in_out.dart';
 import 'package:monalisa_app_001/features/m_inout/domain/entities/m_in_out_confirm.dart';
 
+import '../../presentation/providers/m_in_out_type.dart';
 import '../entities/line.dart';
 
 abstract class MInOutDataSource {
@@ -37,6 +38,15 @@ abstract class MInOutDataSource {
 
   Future getMovementListByDateRange({required WidgetRef ref, required DateTimeRange<DateTime> dates
     , required String inOut});
+
+  /// Dispatcher for the by-type list screen (RECEIPT, RECEIPT_CONFIRM,
+  /// QA_CONFIRM, PICK_CONFIRM, SHIPMENT, SHIPMENT_PREPARE, SHIPMENT_CONFIRM).
+  /// Confirm-type queries hit M_InOutConfirm; receipt/shipment queries hit M_InOut.
+  Future<List<MInOut>> getMInOutListByType({
+    required WidgetRef ref,
+    required DateTimeRange<DateTime> dates,
+    required MInOutType type,
+  });
 
   Future<List<LineConfirm>> getLinesMInOutConfirmToUpdateTargetQty({
   required List<int> listConfirmsIds, required List<int> mInOutLineIds, required WidgetRef ref});

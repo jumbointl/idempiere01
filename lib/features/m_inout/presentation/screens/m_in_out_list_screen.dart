@@ -16,6 +16,7 @@ import '../../../products/common/widget/show_document_type_filter_sheet.dart';
 import '../../../products/domain/models/m_in_out_list_type.dart';
 import '../../../products/presentation/screens/movement/provider/new_movement_provider.dart';
 import '../../../shared/data/messages.dart';
+import '../../infrastructure/repositories/m_in_out_repository_impl.dart';
 import '../providers/m_in_out_list_provider.dart';
 
 class MInOutListScreen extends ConsumerStatefulWidget {
@@ -231,8 +232,46 @@ Widget _buildMInOutList(
                       ),
                     ),
                     IconButton(
+                      icon: const Icon(Icons.print),
+                      color: themeColorPrimary,
+                      tooltip: 'Print',
+                      onPressed: () async {
+                        final id = item.id ?? -1;
+                        if (id <= 0) return;
+
+                        // Lines are not loaded by the list query; fetch them
+                        // now before navigating so the print screen has data
+                        // to render.
+                        showDialog(
+                          context: context,
+                          barrierDismissible: false,
+                          builder: (_) =>
+                              const Center(child: CircularProgressIndicator()),
+                        );
+
+                        try {
+                          final lines = await MInOutRepositoryImpl()
+                              .getLinesMInOut(id, ref);
+                          item.lines = lines;
+
+                          if (!context.mounted) return;
+                          Navigator.of(context, rootNavigator: true).pop();
+
+                          context.push(AppRouter.PAGE_M_IN_OUT_PRINTER_SETUP,
+                              extra: item);
+                        } catch (e) {
+                          if (!context.mounted) return;
+                          Navigator.of(context, rootNavigator: true).pop();
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('${Messages.ERROR}: $e')),
+                          );
+                        }
+                      },
+                    ),
+                    IconButton(
                       icon: const Icon(Icons.qr_code),
                       color: themeColorPrimary,
+                      tooltip: 'QR',
                       onPressed: (){
                         context.push(AppRouter.PAGE_M_IN_OUT_BARCODE_LIST,
                             extra: item);

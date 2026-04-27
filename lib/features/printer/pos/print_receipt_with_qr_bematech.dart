@@ -14,10 +14,13 @@ import 'package:monalisa_app_001/features/printer/pos/pos_text_utils.dart';
 import 'package:monalisa_app_001/features/printer/pos/printer_action_notifier.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 
+import '../../m_inout/domain/entities/line.dart';
+import '../../m_inout/domain/entities/m_in_out.dart';
 import '../../products/domain/idempiere/idempiere_movement_line.dart';
 import '../../products/domain/idempiere/movement_and_lines.dart';
 import '../../products/presentation/providers/common_provider.dart';
 import '../../products/presentation/providers/product_provider_common.dart';
+import '../../products/presentation/screens/store_on_hand/memory_products.dart';
 import '../../shared/data/memory.dart';
 import '../printer_scan_notifier.dart';
 import 'PosTicket.dart';
@@ -385,6 +388,304 @@ Future<void> printMovementReceiptWithQr(
   final now = DateTime.now();
   String datetime = now.toIso8601String().split('.').first.replaceAll('T', ' ');
   bytes += generator.text(datetime, styles: const PosStyles(align: PosAlign.center));
+
+  bytes += generator.feed(5);
+  bytes += generator.cut();
+
+  await printPosTicket(ref, ip, port, bytes);
+}
+
+/// POS receipt for [MInOut] documents. Mirrors [printMovementReceiptWithQr]
+/// adapted to the MInOut entity: uses [MInOut.documentNo] as QR/barcode data,
+/// renders [MInOut.isSoTrx] as the document title (SHIPMENT vs RECEIPT) and
+/// iterates over [MInOut.lines]. MInOut has no description, no
+/// cBPartnerLocationID and no confirms list, so those sections are skipped.
+Future<void> printMInOutReceiptWithQr(
+    WidgetRef ref,
+    MInOut mInOut,
+    ) async {
+  final state = ref.read(printerScanNotifierProvider);
+  final port = int.tryParse(state.portController.text) ?? 9100;
+  final ip = state.ipController.text.trim();
+  if (ip.isEmpty || port == 0) return;
+  debugPrint('printMInOutReceiptWithQr');
+
+  ref.read(isDialogShowedProvider.notifier).state = true;
+  ref.read(enableScannerKeyboardProvider.notifier).state = false;
+  final actual = ref.read(actionScanProvider);
+  ref.read(actionScanProvider.notifier).state = Memory.ACTION_NO_SCAN_ACTION;
+
+  final PosAdjustmentValues? adj = await showPosAdjustmentSelectorSheet(
+    context: ref.context,
+    ref: ref,
+    ip: ip,
+    port: port,
+    alwaysOpen: false,
+  );
+
+  ref.read(enableScannerKeyboardProvider.notifier).state = true;
+  ref.read(actionScanProvider.notifier).state = actual;
+  ref.read(isDialogShowedProvider.notifier).state = false;
+  if (adj == null) return;
+
+  final int cols = BematechEscPos.baseCols(adj.paperSize) +
+      adj.charactersPerLineAdjustment;
+
+  final profile = await CapabilityProfile.load();
+  final generator = Generator(adj.paperSize, profile);
+
+  String codePage = 'CP1252';
+  switch (adj.charSet) {
+    case PosCharSet.cp850:
+      codePage = 'CP850';
+      break;
+    case PosCharSet.cp1252:
+      codePage = 'CP1252';
+      break;
+    case PosCharSet.cp858:
+      codePage = 'CP858';
+      break;
+    default:
+      codePage = 'CP1252';
+      break;
+  }
+
+  List<int> bytes = [];
+  bytes += generator.reset();
+  bytes += generator.setGlobalCodeTable(codePage);
+  bytes += BematechEscPos.applyCharSet(adj);
+
+  // ---------- LOGO + QR ----------
+  final String docNo = mInOut.documentNo ?? '';
+  final String qrData = docNo;
+  final String type = (mInOut.isSoTrx == true) ? 'Shipment' : 'Receipt';
+  final String title = mInOut.cDocTypeId?.identifier ?? type;
+  // Reuse the movement asset; MInOut has no dedicated logo getter.
+  final int imageWidth = BematechEscPos.imageWidthDots(adj);
+
+  final barData = '{B$qrData';
+  final barcodeDocNo = Barcode.code128(barData.split(""));
+
+  bytes += generator.barcode(
+    barcodeDocNo,
+    width: 1,
+    height: 40,
+    font: BarcodeFont.fontB,
+    textPos: BarcodeText.below,
+  );
+  bytes += generator.feed(1);
+
+  // ---------- DOCUMENT BARCODE (HEADER) ----------
+  final Uint8List barcodeHeaderBytes = await combineBarcodeOnly(
+    barcodeData: qrData,
+    totalWidth: imageWidth,
+    barcodeWidthBase: imageWidth - 20,
+  );
+  final img.Image? barcodeHeaderImage =
+      img.decodeImage(barcodeHeaderBytes);
+  if (barcodeHeaderImage != null) {
+    bytes += generator.image(barcodeHeaderImage);
+    bytes += generator.feed(1);
+  }
+
+  final Uint8List headerBytes = await combineLogoAndQrCode(
+    logo: 'assets/images/monalisa_logo_movement.jpg',
+    qrData: qrData,
+    totalWidth: imageWidth,
+  );
+  final img.Image? headerImage = img.decodeImage(headerBytes);
+  if (headerImage != null) {
+    bytes += generator.image(headerImage);
+    bytes += generator.feed(1);
+  }
+
+  // ---------- CABECERA ----------
+  final String date = mInOut.movementDate != null
+      ? mInOut.movementDate!.toIso8601String().substring(0, 10)
+      : '';
+  final String company = mInOut.cBPartnerId.identifier ?? '';
+  final String documentStatus =
+      MemoryProducts.getDocumentStatusById(mInOut.docStatus.id ?? '');
+
+  bytes += generator.row([
+    PosColumn(text: '', width: 1),
+    PosColumn(
+      text: title,
+      width: 10,
+      styles: const PosStyles(
+          align: PosAlign.center, bold: true, height: PosTextSize.size2),
+    ),
+    PosColumn(text: '', width: 1),
+  ]);
+  bytes += generator.feed(1);
+
+  bytes += generator.row([
+    PosColumn(
+        text: date, width: 6, styles: const PosStyles(align: PosAlign.left)),
+    PosColumn(
+        text: '', width: 6, styles: const PosStyles(align: PosAlign.right)),
+  ]);
+
+  bytes += generator.row([
+    PosColumn(
+        text: documentStatus,
+        width: 4,
+        styles: const PosStyles(align: PosAlign.left)),
+    PosColumn(
+      text: docNo,
+      width: 8,
+      styles: const PosStyles(
+          align: PosAlign.right, bold: true, height: PosTextSize.size2),
+    ),
+  ]);
+
+  addTextByMode(
+    bytes: bytes,
+    gen: generator,
+    adj: adj,
+    text: company,
+  );
+
+  bytes += generator.feed(1);
+  bytes += generator.hr(ch: '-', len: cols);
+
+  // ---------- TABLA TITULOS ----------
+  bytes += generator.row([
+    PosColumn(
+        text: 'UPC/SKU',
+        width: 6,
+        styles: const PosStyles(align: PosAlign.left)),
+    PosColumn(
+        text: 'HASTA/DESDE',
+        width: 6,
+        styles: const PosStyles(align: PosAlign.right)),
+  ]);
+  bytes += generator.row([
+    PosColumn(
+        text: 'ATTRIBUTO',
+        width: 6,
+        styles: const PosStyles(align: PosAlign.left)),
+    PosColumn(
+        text: 'CANTIDAD',
+        width: 6,
+        styles: const PosStyles(align: PosAlign.right)),
+  ]);
+  bytes += generator.row([
+    PosColumn(
+        text: 'LINEA/NOMBRE DE PRODUCTO',
+        width: 7,
+        styles: const PosStyles(align: PosAlign.left)),
+    PosColumn(text: '', width: 5),
+  ]);
+  bytes += generator.hr(ch: '-', len: cols);
+
+  // ---------- DETALLE ----------
+  final List<Line> rows = mInOut.lines;
+  double totalItems = 0;
+
+  for (int i = 0; i < rows.length; i++) {
+    final line = rows[i];
+    final double quantity = line.movementQty ?? 0;
+    totalItems += quantity;
+
+    final String quantityStr = Memory.numberFormatter0Digit.format(quantity);
+    final String product =
+        '${line.line ?? ''} ${line.productName ?? line.mProductId?.identifier ?? ''}';
+    final String upc = line.upc ?? '';
+    final String sku = line.sku ?? '';
+    final String to = line.mLocatorToId?.identifier ?? '';
+    final String from = line.mLocatorId?.identifier ?? '';
+    final String atr = line.mAttributeSetInstanceID?.identifier ?? '--';
+
+    bytes += generator.row([
+      PosColumn(
+          text: upc,
+          width: 5,
+          styles: const PosStyles(align: PosAlign.left, bold: true)),
+      PosColumn(
+          text: to,
+          width: 7,
+          styles: const PosStyles(align: PosAlign.right, bold: true)),
+    ]);
+    bytes += generator.row([
+      PosColumn(
+          text: sku,
+          width: 5,
+          styles: const PosStyles(align: PosAlign.left)),
+      PosColumn(
+          text: from,
+          width: 7,
+          styles: const PosStyles(align: PosAlign.right)),
+    ]);
+    bytes += generator.row([
+      PosColumn(
+          text: atr,
+          width: 5,
+          styles: const PosStyles(align: PosAlign.left)),
+      PosColumn(text: '', width: 7),
+    ]);
+    final String productSafe = sanitizeForPos(product);
+    bytes += generator.row([
+      PosColumn(
+          text: productSafe,
+          width: 7,
+          styles: const PosStyles(align: PosAlign.left, bold: true)),
+      PosColumn(
+        text: quantityStr,
+        width: 5,
+        styles: const PosStyles(
+            align: PosAlign.right,
+            bold: true,
+            height: PosTextSize.size2,
+            width: PosTextSize.size2),
+      ),
+    ]);
+    if (i < rows.length - 1) {
+      bytes += generator.hr(ch: '-', len: cols);
+    } else {
+      bytes += generator.hr(ch: '=', len: cols, linesAfter: 1);
+    }
+  }
+
+  int totalColWidth = 6;
+  if (adj.paperSize != PaperSize.mm80) {
+    totalColWidth = 7;
+  }
+  PosTextSize totalFontWidth = PosTextSize.size2;
+  if (adj.paperSize == PaperSize.mm58) {
+    totalFontWidth = PosTextSize.size1;
+  }
+
+  final String totalItemsString =
+      Memory.numberFormatter0Digit.format(totalItems);
+  bytes += generator.row([
+    PosColumn(
+      text: 'ITEMS TOTAL',
+      width: totalColWidth,
+      styles: PosStyles(
+          align: PosAlign.left,
+          height: PosTextSize.size2,
+          width: totalFontWidth),
+    ),
+    PosColumn(
+      text: totalItemsString,
+      width: 12 - totalColWidth,
+      styles: PosStyles(
+          align: PosAlign.right,
+          bold: true,
+          height: PosTextSize.size2,
+          width: totalFontWidth),
+    ),
+  ]);
+
+  bytes += generator.feed(1);
+
+  // ---------- FOOTER ----------
+  final now = DateTime.now();
+  final String datetime =
+      now.toIso8601String().split('.').first.replaceAll('T', ' ');
+  bytes += generator.text(datetime,
+      styles: const PosStyles(align: PosAlign.center));
 
   bytes += generator.feed(5);
   bytes += generator.cut();

@@ -1,8 +1,7 @@
 name: monalisa_app_001
 description: "A new Flutter project."
 publish_to: 'none'
-version: 2.01.00+31
-
+version: 2.01.00+7
 environment:
   sdk: ">=3.11.0 <4.0.0"
 
@@ -56,6 +55,7 @@ dependencies:
   barcode_widget: ^2.0.4
   share_plus: ^12.0.1
   path_provider: ^2.1.5
+  archive: ^4.0.2
   ftpconnect: ^2.0.10
   google_mlkit_text_recognition: ^0.15.1
   device_info_plus: ^12.3.0

@@ -7,6 +7,7 @@ import 'package:monalisa_app_001/features/m_inout/domain/repositories/m_in_out_r
 import '../../domain/datasources/m_inout_datasource.dart';
 import '../../domain/entities/line.dart';
 import '../../domain/entities/m_in_out_confirm.dart';
+import '../../presentation/providers/m_in_out_type.dart';
 import '../datasources/m_in_out_datasource_impl.dart';
 
 class MInOutRepositoryImpl implements MInOutRepository {
@@ -155,6 +156,15 @@ class MInOutRepositoryImpl implements MInOutRepository {
   @override
   Future getMovementListByDateRange(WidgetRef ref, {required DateTimeRange<DateTime> dates, required String inOut}) {
     return dataSource.getMovementListByDateRange(ref:ref, dates:dates, inOut:inOut);
+  }
+
+  @override
+  Future<List<MInOut>> getMInOutListByType({
+    required WidgetRef ref,
+    required DateTimeRange<DateTime> dates,
+    required MInOutType type,
+  }) {
+    return dataSource.getMInOutListByType(ref: ref, dates: dates, type: type);
   }
 
 }

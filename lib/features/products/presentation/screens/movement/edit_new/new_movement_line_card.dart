@@ -38,6 +38,7 @@ class NewMovementLineCard extends ConsumerStatefulWidget {
 
 class NewMovementLineCardState extends ConsumerState<NewMovementLineCard> {
   bool _resultHandled = false;
+  bool _selected = false;
 
   late AsyncValue<double?> quantityAsync;
   late AsyncValue<bool?> deleteAsync;
@@ -216,22 +217,23 @@ class NewMovementLineCardState extends ConsumerState<NewMovementLineCard> {
     String quantity =
     Memory.numberFormatter0Digit.format(widget.movementLine.movementQty ?? 0);
 
-    Color backGroundColor = Colors.cyan[800]!;
+    final Color backGroundColor = _selected ? Colors.white : Colors.cyan[800]!;
+    final Color fgColor = _selected ? Colors.black : Colors.white;
     TextStyle textStyleTitle = TextStyle(
       fontSize: themeFontSizeNormal,
-      color: Colors.white,
+      color: fgColor,
       fontWeight: FontWeight.bold,
     );
     TextStyle textStyle = TextStyle(
       fontSize: themeFontSizeSmall,
-      color: Colors.white,
+      color: fgColor,
       fontWeight: FontWeight.bold,
     );
     TextStyle textStyleTitleBlue = TextStyle(
       fontSize: themeFontSizeNormal,
-      color: Colors.white,
+      color: _selected ? Colors.black : Colors.white,
       fontWeight: FontWeight.bold,
-      backgroundColor: themeColorPrimary,
+      backgroundColor: _selected ? null : themeColorPrimary,
     );
 
     int line = widget.movementLine.line?.toInt() ?? 0;
@@ -261,11 +263,32 @@ class NewMovementLineCardState extends ConsumerState<NewMovementLineCard> {
         crossAxisAlignment: CrossAxisAlignment.start,
         spacing: 5,
         children: [
-          Text(
-            widget.movementLine.productName ?? '--',
-            style: textStyle,
-            overflow: TextOverflow.ellipsis,
-            maxLines: 2,
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              SizedBox(
+                width: 28,
+                height: 28,
+                child: Checkbox(
+                  value: _selected,
+                  onChanged: (v) => setState(() => _selected = v ?? false),
+                  side: BorderSide(color: fgColor, width: 2),
+                  activeColor: Colors.cyan[800],
+                  checkColor: Colors.white,
+                  materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  visualDensity: VisualDensity.compact,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  widget.movementLine.productName ?? '--',
+                  style: textStyle,
+                  overflow: TextOverflow.ellipsis,
+                  maxLines: 2,
+                ),
+              ),
+            ],
           ),
           Row(
             spacing: 5,
@@ -277,7 +300,7 @@ class NewMovementLineCardState extends ConsumerState<NewMovementLineCard> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(Messages.ID, style: textStyleTitle),
-                    if (widget.canEdit)
+                    if (widget.canEdit && !_selected)
                       GestureDetector(
                         onTap: () async {
                           double qty = widget.movementLine.movementQty ?? 0;

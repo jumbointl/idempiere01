@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/legacy.dart';
 import '../../domain/entities/m_in_out.dart';
 import '../../domain/repositories/m_in_out_repositiry.dart';
 import '../../infrastructure/repositories/m_in_out_repository_impl.dart';
+import 'm_in_out_type.dart';
 
 // Si también filtras "movement", tu repo ya tiene:
 // getMovementListByDateRange(ref, dates:..., inOut:...)
@@ -67,6 +68,29 @@ class MInOutListNotifier extends StateNotifier<MInOutListStatus> {
       );
     } catch (e) {
       print('Error: $e');
+      state = state.copyWith(
+        isLoading: false,
+        list: const [],
+        errorMessage: e.toString().replaceAll('Exception: ', ''),
+      );
+    }
+  }
+
+  /// Fetch list filtered by MInOutType (receipt / shipment / *_confirm / *_prepare).
+  Future<void> findByMInOutType({
+    required WidgetRef ref,
+    required DateTimeRange dates,
+    required MInOutType type,
+  }) async {
+    state = state.copyWith(isLoading: true, errorMessage: '');
+    try {
+      final list = await repo.getMInOutListByType(
+        ref: ref,
+        dates: dates,
+        type: type,
+      );
+      state = state.copyWith(isLoading: false, list: list);
+    } catch (e) {
       state = state.copyWith(
         isLoading: false,
         list: const [],

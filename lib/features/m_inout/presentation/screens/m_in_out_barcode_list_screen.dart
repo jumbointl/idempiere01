@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:monalisa_app_001/features/m_inout/domain/entities/m_in_out.dart';
 import 'package:monalisa_app_001/features/products/domain/idempiere/response_async_value.dart';
 import 'package:monalisa_app_001/features/products/presentation/providers/common/code_and_fire_action_notifier.dart';
+import 'package:monalisa_app_001/features/shared/data/messages.dart';
 
 import '../../../products/common/barcode_list_screen.dart';
 import '../../../products/domain/models/barcode_models.dart';
@@ -82,10 +83,11 @@ class _MInOutBarcodeListScreenState
     final toWh = (d.mWarehouseToId.identifier ?? 'TO').trim();
 
     final result = <LocatorQrItem>[];
+    final seen = <String>{};
 
     for (final line in d.lines) {
       final locFrom = (line.mLocatorId?.identifier ?? '').trim();
-      if (locFrom.isNotEmpty) {
+      if (locFrom.isNotEmpty && seen.add('FROM|$locFrom|$fromWh')) {
         result.add(LocatorQrItem(
           locator: locFrom,
           warehouse: fromWh,
@@ -94,7 +96,7 @@ class _MInOutBarcodeListScreenState
       }
 
       final locTo = (line.mLocatorToId?.identifier ?? '').trim();
-      if (locTo.isNotEmpty) {
+      if (locTo.isNotEmpty && seen.add('TO|$locTo|$toWh')) {
         result.add(LocatorQrItem(
           locator: locTo,
           warehouse: toWh,
@@ -107,57 +109,37 @@ class _MInOutBarcodeListScreenState
   }
 
   @override
-  // TODO: implement actionScanTypeInt
-  int get actionScanTypeInt => throw UnimplementedError();
+  int get actionScanTypeInt => 0;
 
   @override
-  void afterAsyncValueAction(WidgetRef ref, {required ResponseAsyncValue result}) {
-    // TODO: implement afterAsyncValueAction
-  }
+  void afterAsyncValueAction(WidgetRef ref, {required ResponseAsyncValue result}) {}
 
   @override
   Widget asyncValueErrorHandle(WidgetRef ref, {required ResponseAsyncValue result}) {
-    // TODO: implement asyncValueErrorHandle
-    throw UnimplementedError();
+    return Text(result.message ?? Messages.ERROR);
   }
 
   @override
   Widget asyncValueSuccessPanel(WidgetRef ref, {required ResponseAsyncValue result}) {
-    // TODO: implement asyncValueSuccessPanel
-    throw UnimplementedError();
+    return const SizedBox.shrink();
   }
 
   @override
-  void executeAfterShown() {
-    // TODO: implement executeAfterShown
-  }
-
+  void executeAfterShown() {}
 
   @override
-  double getWidth() {
-    // TODO: implement getWidth
-    throw UnimplementedError();
-  }
+  double getWidth() => MediaQuery.of(context).size.width - 30;
 
   @override
-  Future<void> handleInputString({required WidgetRef ref, required String inputData, required int actionScan}) {
-    // TODO: implement handleInputString
-    throw UnimplementedError();
-  }
+  Future<void> handleInputString({required WidgetRef ref, required String inputData, required int actionScan}) async {}
 
   @override
-  void initialSettingAtBuild(BuildContext context, WidgetRef ref) {
-    // TODO: implement initialSetting
-  }
+  void initialSettingAtBuild(BuildContext context, WidgetRef ref) {}
 
   @override
-  Future<void> setDefaultValuesOnInitState(BuildContext context, WidgetRef ref) {
-    // TODO: implement setDefaultValues
-    throw UnimplementedError();
-  }
+  Future<void> setDefaultValuesOnInitState(BuildContext context, WidgetRef ref) async {}
 
   @override
-  // TODO: implement mainNotifier
   CodeAndFireActionNotifier get mainNotifier => throw UnimplementedError();
 
 }

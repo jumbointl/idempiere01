@@ -15,6 +15,7 @@ import '../../../auth/presentation/providers/auth_provider.dart';
 import '../../../products/common/idempiere_rest_api.dart';
 import '../../../products/domain/models/idempiere_query_page_utils.dart';
 import '../../../products/domain/models/m_in_out_list_type.dart';
+import '../../../shared/domain/entities/ad_entity_id.dart';
 import '../../../shared/shared.dart';
 import '../../domain/entities/line.dart';
 import '../../domain/entities/m_in_out_confirm.dart';
@@ -1150,6 +1151,144 @@ class MInOutDataSourceImpl implements MInOutDataSource {
     } catch (e) {
       throw Exception('Error al obtener la lista de ${mInOutState.title}: $e');
     }
+  }
+
+  @override
+  Future<List<MInOut>> getMInOutListByType({
+    required WidgetRef ref,
+    required DateTimeRange<DateTime> dates,
+    required MInOutType type,
+  }) async {
+    switch (type) {
+      case MInOutType.receipt:
+        return getMInOutListByDateRange(
+          ref: ref,
+          dates: dates,
+          inOut: MInOutListTypeX.RECEIVE,
+        );
+      case MInOutType.shipment:
+      // TODO(pablo): some shipments are released without a Confirm step.
+      // Until that rule is defined, SHIPMENT_PREPARE shares the SHIPPING
+      // fetch and is narrowed only by the user-selected DocStatus filter.
+      case MInOutType.shipmentPrepare:
+        return getMInOutListByDateRange(
+          ref: ref,
+          dates: dates,
+          inOut: MInOutListTypeX.SHIPPING,
+        );
+
+      // M_InOutConfirm-backed filters. ConfirmType differentiates SC vs PC,
+      // and the parent M_InOut.IsSOTrx differentiates inbound vs outbound:
+      //   RECEIPT_CONFIRM   = SC + IsSOTrx=false
+      //   SHIPMENT_CONFIRM  = SC + IsSOTrx=true
+      //   QA_CONFIRM        = PC + IsSOTrx=false
+      //   PICK_CONFIRM      = PC + IsSOTrx=true
+      case MInOutType.receiptConfirm:
+        return _getMInOutListFromConfirms(
+          ref: ref,
+          dates: dates,
+          confirmType: 'SC',
+          isSOTrx: false,
+        );
+      case MInOutType.shipmentConfirm:
+        return _getMInOutListFromConfirms(
+          ref: ref,
+          dates: dates,
+          confirmType: 'SC',
+          isSOTrx: true,
+        );
+      case MInOutType.qaConfirm:
+        return _getMInOutListFromConfirms(
+          ref: ref,
+          dates: dates,
+          confirmType: 'PC',
+          isSOTrx: false,
+        );
+      case MInOutType.pickConfirm:
+        return _getMInOutListFromConfirms(
+          ref: ref,
+          dates: dates,
+          confirmType: 'PC',
+          isSOTrx: true,
+        );
+
+      case MInOutType.move:
+      case MInOutType.moveConfirm:
+        throw Exception('move/moveConfirm not handled by getMInOutListByType');
+    }
+  }
+
+  /// Fetches M_InOutConfirm records expanding their parent M_InOut, then
+  /// filters client-side by warehouse, parent IsSOTrx and parent MovementDate
+  /// range. Each result is mapped to a MInOut so the existing list cards work.
+  Future<List<MInOut>> _getMInOutListFromConfirms({
+    required WidgetRef ref,
+    required DateTimeRange<DateTime> dates,
+    required String confirmType,
+    required bool isSOTrx,
+  }) async {
+    await _dioInitialized;
+
+    final mInOutState = ref.read(mInOutProvider);
+    final int warehouseID = ref.read(authProvider).selectedWarehouse!.id;
+    final String docStatus = ref.read(documentTypeListMInOutFilterProvider);
+
+    final String startDate = dates.start.toString().substring(0, 10);
+    final String endDate = dates.end.toString().substring(0, 10);
+
+    // The MovementDate / warehouse / IsSOTrx filters live on the parent
+    // M_InOut record, so we expand it and filter client-side after parsing.
+    final String baseUrl =
+        "/api/v1/models/m_inoutConfirm?\$filter="
+        "ConfirmType%20eq%20'$confirmType'%20AND%20"
+        "DocStatus%20eq%20'$docStatus'"
+        "&\$expand=M_InOut_ID";
+
+    try {
+      final meta = PaginationMeta();
+      final List<MInOut> raw = await fetchAllPages<MInOut>(
+        orderByColumn: 'M_InOutConfirm_ID',
+        dio: dio,
+        baseUrl: baseUrl,
+        filterSuffix: '',
+        parser: _parseMInOutFromConfirmJson,
+        outMeta: meta,
+      );
+
+      final filtered = raw.where((m) {
+        if (m.isSoTrx != isSOTrx) return false;
+        final pwh = int.tryParse(m.mWarehouseId.id ?? '') ?? 0;
+        if (pwh != warehouseID) return false;
+        final md = m.movementDate;
+        if (md == null) return false;
+        final mdStr = md.toIso8601String().substring(0, 10);
+        if (mdStr.compareTo(startDate) < 0) return false;
+        if (mdStr.compareTo(endDate) > 0) return false;
+        return true;
+      }).toList();
+
+      return filtered;
+    } on DioException catch (e) {
+      final authDataNotifier = ref.read(authProvider.notifier);
+      throw CustomErrorDioException(e, authDataNotifier);
+    } catch (e) {
+      throw Exception('Error al obtener la lista de ${mInOutState.title}: $e');
+    }
+  }
+
+  /// Parses an m_inoutConfirm record (with $expand=M_InOut_ID) into a MInOut
+  /// using the parent's display fields. The parent's DocStatus is replaced
+  /// with the confirm's DocStatus so the card surface reflects confirm state.
+  static MInOut _parseMInOutFromConfirmJson(Map<String, dynamic> json) {
+    final parentRaw = json['M_InOut_ID'];
+    final Map<String, dynamic> parentJson = (parentRaw is Map<String, dynamic>)
+        ? parentRaw
+        : <String, dynamic>{};
+    final parent = MInOut.fromJson(parentJson);
+    if (json['DocStatus'] != null) {
+      parent.docStatus = AdEntityId.fromJson(json['DocStatus']);
+    }
+    return parent;
   }
 
   @override

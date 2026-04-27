@@ -12,7 +12,10 @@ import 'package:monalisa_app_001/features/auth/auth.dart';
 import 'package:monalisa_app_001/features/auth/presentation/providers/auth_provider.dart';
 import 'package:monalisa_app_001/features/home/presentation/screens/home_screen.dart';
 import 'package:monalisa_app_001/features/m_inout/presentation/screens/m_in_out_barcode_list_screen.dart';
+import 'package:monalisa_app_001/features/m_inout/presentation/screens/m_in_out_by_type_list_screen.dart';
 import 'package:monalisa_app_001/features/m_inout/presentation/screens/m_in_out_screen.dart';
+import 'package:monalisa_app_001/features/m_inout/presentation/screens/multi_m_in_out_screen.dart';
+import 'package:monalisa_app_001/features/printer/m_in_out_print_screen.dart';
 import 'package:monalisa_app_001/features/printer/movement_print_example_page.dart';
 import 'package:monalisa_app_001/features/printer/movement_print_screen.dart';
 import 'package:monalisa_app_001/features/printer/printer_setup_screen.dart';
@@ -113,6 +116,8 @@ class AppRouter {
   static String PAGE_SALES_ORDER_LIST_SCREEN='/sales_order_list';
 
   static String PAGE_M_IN_OUT_BARCODE_LIST='/m_in_out_barcode_list';
+  static String PAGE_M_IN_OUT_BY_TYPE_LIST='/m_in_out_by_type_list';
+  static String PAGE_M_IN_OUT_PRINTER_SETUP='/m_in_out_printer_set_up';
   static String PAGE_SALES_ORDER_BARCODE_LIST='/sales_order_barcode_list';
 
   static String PAGE_PRODUCT_STORE_ON_HAND_FOR_MINOUT_LINE='/product_store_on_hand_for_minout_line';
@@ -401,6 +406,15 @@ final goRouterProvider = Provider((ref) {
           final documentNo = state.pathParameters['documentNo'] ?? '-1';
 
           return MInOutScreen(type: type, documentNo: documentNo);
+        },
+      ),
+
+      ///* Multiple MInOut Routes
+      GoRoute(
+        path: '/multipleMInOut/:type',
+        builder: (context, state) {
+          final type = state.pathParameters['type'] ?? 'receipt';
+          return MultiMInOutScreen(type: type);
         },
       ),
 
@@ -752,6 +766,44 @@ final goRouterProvider = Provider((ref) {
           }
 
 
+      ),
+      GoRoute(
+        path: AppRouter.PAGE_M_IN_OUT_BY_TYPE_LIST,
+        pageBuilder: (context, state) {
+          if (RolesApp.hasStockPrivilege) {
+            return CustomTransitionPage(
+              key: state.pageKey,
+              child: const MInOutByTypeListScreen(),
+              transitionDuration:
+                  Duration(milliseconds: transitionTimeMilliseconds2),
+              transitionsBuilder:
+                  (context, animation, secondaryAnimation, child) {
+                const begin = Offset(-1.0, 0.0);
+                const end = Offset.zero;
+                final tween = Tween(begin: begin, end: end)
+                    .chain(CurveTween(curve: Curves.easeInOut));
+                return SlideTransition(
+                    position: animation.drive(tween), child: child);
+              },
+            );
+          } else {
+            return const NoTransitionPage(child: HomeScreen());
+          }
+        },
+      ),
+      GoRoute(
+        path: AppRouter.PAGE_M_IN_OUT_PRINTER_SETUP,
+        builder: (context, state) {
+          if (RolesApp.hasStockPrivilege) {
+            final MInOut data = state.extra as MInOut;
+            return MInOutPrintScreen(
+              dataToPrint: data,
+              oldAction: 0,
+            );
+          } else {
+            return const HomeScreen();
+          }
+        },
       ),
       GoRoute(
           path: AppRouter.PAGE_MOVEMENT_BARCODE_LIST,

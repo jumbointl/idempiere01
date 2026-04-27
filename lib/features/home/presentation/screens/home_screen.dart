@@ -152,8 +152,10 @@ List<_HomeSectionData> _buildHomeSections() {
 
   final shipCol3 = <MenuItem>[
     ...appHomeOptionCol2Items.where((e) => e.title == 'Receipt'),
+    ...appHomeOptionCol2Items.where((e) => e.title == 'Multiple Receipt'),
     ...appHomeOptionCol2Items.where((e) => e.title == 'Receipt Confirm'),
     ...appHomeOptionCol2Items.where((e) => e.title == 'QA Confirm'),
+    ...appHomeOptionCol2Items.where((e) => e.title == 'M In/Out by Type'),
   ];
 
   final moveCol1 = <MenuItem>[

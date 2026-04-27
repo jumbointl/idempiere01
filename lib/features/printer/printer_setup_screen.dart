@@ -32,6 +32,7 @@ import 'package:simple_barcode_scanner/simple_barcode_scanner.dart';
 import 'dart:io';
 import 'package:path_provider/path_provider.dart';
 
+import '../m_inout/domain/entities/m_in_out.dart';
 import '../products/common/messages_dialog.dart';
 import '../products/common/widget_utils.dart';
 import '../products/domain/idempiere/movement_and_lines.dart';
@@ -40,11 +41,13 @@ import '../products/presentation/providers/product_provider_common.dart';
 import '../shared/data/memory.dart';
 import '../shared/data/messages.dart';
 import 'cups_printer.dart';
+import 'm_in_out_pdf_generator.dart';
 import 'models/mo_printer.dart';
 import 'movement_pdf_generator.dart';
 import 'printer_scan_notifier.dart';
 
 class PrinterSetupScreen extends ConsumerStatefulWidget {
+  //Use MovementPrintScreen to print a movement
   final dynamic dataToPrint;
   final int oldAction;
 
@@ -988,37 +991,48 @@ class PrinterSetupScreen extends ConsumerStatefulWidget {
   Future<void> printPdf(WidgetRef ref, BuildContext context,
       {required bool direct}) async {
     if (dataToPrint == null) return;
-    if (dataToPrint is! MovementAndLines) {
-      MovementAndLines movementAndLines = dataToPrint as MovementAndLines;
-      final image = await imageLogo;
-      final pdfBytes = await generateMovementDocument(movementAndLines, image);
-      direct ? ref.read(printerScanNotifierProvider.notifier).printDirectly(
-          bytes: pdfBytes, ref: ref)
-          : await Printing.sharePdf(bytes: pdfBytes, filename: 'documento.pdf');
+    final image = await imageLogo;
+    Uint8List? pdfBytes;
+    if (dataToPrint is MovementAndLines) {
+      pdfBytes = await generateMovementDocument(
+          dataToPrint as MovementAndLines, image);
+    } else if (dataToPrint is MInOut) {
+      pdfBytes = await generateMInOutDocument(dataToPrint as MInOut, image);
+    }
+    if (pdfBytes != null) {
+      if (direct) {
+        ref
+            .read(printerScanNotifierProvider.notifier)
+            .printDirectly(bytes: pdfBytes, ref: ref);
+      } else {
+        await Printing.sharePdf(bytes: pdfBytes, filename: 'documento.pdf');
+      }
+      return;
     }
     if (context.mounted) {
-      String message = Messages.NOT_IMPLEMENTED_YET;
-      showWarningCenterToast(context, message);
+      showWarningCenterToast(context, Messages.NOT_IMPLEMENTED_YET);
     }
   }
 
 
   Future<void> openPrintDialog(WidgetRef ref, BuildContext context) async {
     if (dataToPrint == null) return;
+    final image = await imageLogo;
+    Uint8List? pdfBytes;
     if (dataToPrint is MovementAndLines) {
-      MovementAndLines movementAndLines = dataToPrint as MovementAndLines;
-      final image = await imageLogo;
-      final pdfBytes = await generateMovementDocument(movementAndLines, image);
+      pdfBytes = await generateMovementDocument(
+          dataToPrint as MovementAndLines, image);
+    } else if (dataToPrint is MInOut) {
+      pdfBytes = await generateMInOutDocument(dataToPrint as MInOut, image);
+    }
+    if (pdfBytes != null) {
       await Printing.layoutPdf(
-        onLayout: (PdfPageFormat format) async {
-          // No necesitas llamar a generateDocument aquí, ya tienes los bytes
-          return pdfBytes;
-        },
+        onLayout: (PdfPageFormat format) async => pdfBytes!,
       );
+      return;
     }
     if (context.mounted) {
-      String message = Messages.NOT_IMPLEMENTED_YET;
-      showWarningCenterToast(context, message);
+      showWarningCenterToast(context, Messages.NOT_IMPLEMENTED_YET);
     }
   }
 
@@ -1030,6 +1044,16 @@ class PrinterSetupScreen extends ConsumerStatefulWidget {
       iconData = Symbols.receipt_long;
       title = 'Movement Doc No ${dataToPrint.documentNo ?? ''}';
       subtitle = 'Date: ${dataToPrint.movementDate ?? ''}';
+    }
+    if (dataToPrint is MInOut) {
+      iconData = Symbols.receipt_long;
+      String type = (dataToPrint.isSoTrx == true) ? 'Shipment' : 'Receipt';
+      final docKind = dataToPrint.cDocTypeId?.identifier ?? type;
+      final dateStr = dataToPrint.movementDate != null
+          ? dataToPrint.movementDate!.toIso8601String().substring(0, 10)
+          : '';
+      title = '$docKind Doc No ${dataToPrint.documentNo ?? ''}';
+      subtitle = 'Date: $dateStr';
     }
     if (dataToPrint is List<IdempiereLocator>) {
       iconData = Symbols.fork_left;

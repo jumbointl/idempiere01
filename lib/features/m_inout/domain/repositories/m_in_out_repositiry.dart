@@ -1,6 +1,7 @@
 import 'package:flutter/src/material/date.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../presentation/providers/m_in_out_type.dart';
 import '../entities/line.dart';
 import '../entities/line_confirm.dart';
 import '../entities/m_in_out.dart';
@@ -41,4 +42,10 @@ abstract class MInOutRepository {
 
   Future getMInOutListByDateRange({required WidgetRef ref, required DateTimeRange<DateTime> dates,
     required String inOut});
+
+  Future<List<MInOut>> getMInOutListByType({
+    required WidgetRef ref,
+    required DateTimeRange<DateTime> dates,
+    required MInOutType type,
+  });
 }
