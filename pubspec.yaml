@@ -1,7 +1,7 @@
 name: monalisa_app_001
 description: "A new Flutter project."
 publish_to: 'none'
-version: 2.01.00+7
+version: 2.01.00+41
 environment:
   sdk: ">=3.11.0 <4.0.0"
 
