@@ -1,5 +1,5 @@
 
-import '../models/printer_type.dart';
+import 'package:monalisapy_features/printer/models/printer_type.dart';
 
 class PrinterConnectionState {
   final String ip;

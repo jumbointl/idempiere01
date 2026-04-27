@@ -9,10 +9,10 @@ import '../../../../products/presentation/providers/common_provider.dart';
 import '../../../../products/presentation/screens/movement/provider/new_movement_provider.dart';
 import '../../../../shared/data/memory.dart';
 import '../../../printer_scan_notifier.dart';
-import '../models/zpl_template.dart';
+import 'package:monalisapy_features/zpl_template/models/zpl_template.dart';
 import '../provider/template_zpl_utils.dart';
 import '../screen/template_zpl_preview_screen.dart';
-import '../models/zpl_template_store.dart';
+import 'package:monalisapy_features/printer/zpl/new/models/zpl_template_store.dart';
 // (opcional) si separas editor
 
 Future<void> showCreateZplTemplateDialog({

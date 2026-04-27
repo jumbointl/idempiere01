@@ -6,7 +6,7 @@ import 'package:monalisa_app_001/features/products/domain/idempiere/idempiere_wa
 import 'package:monalisa_app_001/features/products/domain/sql/sql_data_movement_line.dart';
 import 'package:monalisa_app_001/features/products/presentation/screens/store_on_hand/memory_products.dart';
 
-import '../../../printer/zpl/new/models/category_agg.dart';
+import 'package:monalisapy_features/printer/zpl/new/models/category_agg.dart';
 import '../../../shared/data/memory.dart';
 import '../../common/utils/common_string_utils.dart';
 import '../sql/sql_users_data.dart';

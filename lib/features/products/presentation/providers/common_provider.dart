@@ -9,8 +9,8 @@ import 'package:monalisa_app_001/features/products/presentation/providers/produc
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:riverpod_printer/riverpod_printer.dart';
 import '../../../m_inout/presentation/providers/m_in_out_providers.dart';
-import '../../../printer/models/mo_printer.dart';
-import '../../../printer/models/printer_select_models.dart';
+import 'package:monalisapy_features/printer/models/mo_printer.dart';
+import 'package:monalisapy_features/printer/models/printer_select_models.dart';
 import '../../../shared/data/memory.dart';
 import '../../../shared/data/messages.dart';
 import '../../domain/idempiere/idempiere_locator.dart';

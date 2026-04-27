@@ -9,7 +9,7 @@ import 'package:get_storage/get_storage.dart';
 
 import 'package:riverpod_printer/riverpod_printer.dart';
 import 'package:monalisa_app_001/features/products/presentation/providers/common_provider.dart';
-import '../models/printer_select_models.dart';
+import 'package:monalisapy_features/printer/models/printer_select_models.dart';
 
 // If you already have a confirm dialog helper, keep using it.
 // Otherwise, this file includes a small confirm dialog.

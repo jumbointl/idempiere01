@@ -8,7 +8,7 @@ import 'package:path_provider/path_provider.dart';
 
 import '../../../products/domain/models/zpl_printing_template.dart';
 import '../../../shared/data/memory.dart';
-import '../../zpl/new/models/zpl_template.dart';
+import 'package:monalisapy_features/zpl_template/models/zpl_template.dart';
 import '../models/create_zpl_template_request.dart';
 
 // ----------------------------

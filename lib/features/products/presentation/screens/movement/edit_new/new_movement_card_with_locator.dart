@@ -9,8 +9,8 @@ import 'package:monalisa_app_001/features/products/domain/idempiere/movement_and
 
 import '../../../../../../config/router/app_router.dart';
 import '../../../../../../config/theme/app_theme.dart';
-import '../../../../../printer/zpl/new/models/zpl_template.dart';
-import '../../../../../printer/zpl/new/provider/template_zpl_provider.dart';
+import 'package:monalisapy_features/zpl_template/models/zpl_template.dart';
+import 'package:monalisapy_features/printer/zpl/new/provider/template_zpl_provider.dart';
 import '../../../../../shared/data/memory.dart';
 import '../../../../../shared/data/messages.dart';
 import '../../../../common/messages_dialog.dart';

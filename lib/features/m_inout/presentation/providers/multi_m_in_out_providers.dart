@@ -333,9 +333,10 @@ class MultiMInOutNotifier extends StateNotifier<MultiMInOutState> {
   Future<void> resolveChoice(
     String code,
     String sessionId,
-    int? lineId,
-  ) async {
-    _confirmInternal(sessionId, lineId, 1);
+    int? lineId, {
+    double qty = 1,
+  }) async {
+    _confirmInternal(sessionId, lineId, qty);
     final session =
         state.activeSessions.firstWhere((s) => s.sessionId == sessionId);
     _appendBarcodeToSession(sessionId, code);

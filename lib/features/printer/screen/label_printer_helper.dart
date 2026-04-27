@@ -3,7 +3,7 @@ import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:niim_blue_flutter/niim_blue_flutter.dart';
 
-import '../models/printer_select_models.dart';
+import 'package:monalisapy_features/printer/models/printer_select_models.dart';
 import 'niimbot_page.dart';
 
 Future<PrinterConnConfig?> showPrinterPickerBottomSheet({

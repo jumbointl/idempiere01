@@ -11,9 +11,9 @@ import '../../../../products/presentation/screens/movement/provider/new_movement
 import '../../../../shared/data/memory.dart';
 import '../../../printer_scan_notifier.dart';
 
-import '../models/zpl_template.dart';
-import '../models/zpl_template_store.dart';
-import '../provider/template_zpl_provider.dart';
+import 'package:monalisapy_features/zpl_template/models/zpl_template.dart';
+import 'package:monalisapy_features/printer/zpl/new/models/zpl_template_store.dart';
+import 'package:monalisapy_features/printer/zpl/new/provider/template_zpl_provider.dart';
 import '../provider/template_zpl_utils.dart';
 import '../screen/template_zpl_preview_screen.dart';
 

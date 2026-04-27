@@ -6,8 +6,8 @@ import 'package:monalisa_app_001/features/products/common/widget/app_initializer
 import '../../../products/domain/models/zpl_printing_template.dart';
 import '../../../products/presentation/providers/common_provider.dart';
 import '../../../shared/data/messages.dart';
-import '../../zpl/new/models/zpl_template.dart';
-import '../../zpl/new/models/zpl_template_store.dart';
+import 'package:monalisapy_features/zpl_template/models/zpl_template.dart';
+import 'package:monalisapy_features/printer/zpl/new/models/zpl_template_store.dart';
 import '../provider/refresh_all_zpl_templates_from_ftp_provider.dart';
 
 Future<List<ZplTemplate>?> showSearchZplTemplateSheet({

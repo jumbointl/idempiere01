@@ -5,20 +5,20 @@ import 'package:flutter_net_printer/flutter_net_printer.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
 import 'package:monalisa_app_001/features/printer/pos/print_receipt_with_qr_bematech.dart';
-import 'package:monalisa_app_001/features/printer/printer_utils.dart';
+import 'package:monalisapy_features/printer/helpers/printer_utils.dart';
 import 'package:monalisa_app_001/features/printer/zpl/old/zpl_label_printer_100x150.dart';
 import 'package:monalisa_app_001/features/products/common/messages_dialog.dart';
-import 'package:monalisa_app_001/features/products/domain/idempiere/idempiere_locator.dart';
+import 'package:monalisapy_features/models/idempiere/idempiere_locator.dart';
 import 'package:monalisa_app_001/features/products/domain/idempiere/movement_and_lines.dart';
 import '../m_inout/domain/entities/m_in_out.dart';
 import '../products/presentation/providers/common_provider.dart';
 import '../products/presentation/screens/movement/provider/new_movement_provider.dart';
 import '../shared/data/memory.dart';
 import '../shared/data/messages.dart';
+import 'package:monalisapy_features/printer/helpers/lite_ipp_print.dart';
+import 'package:monalisapy_features/printer/models/mo_printer.dart';
 import 'cups_printer.dart';
-import 'lite_ipp_print.dart';
 import 'm_in_out_pdf_generator.dart';
-import 'models/mo_printer.dart';
 import 'movement_pdf_generator.dart';
 
 // Definir el enum para los tipos de impresora

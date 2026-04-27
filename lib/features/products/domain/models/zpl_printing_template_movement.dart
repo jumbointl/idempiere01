@@ -1,4 +1,4 @@
-import '../../../printer/zpl/new/models/zpl_template.dart';
+import 'package:monalisapy_features/zpl_template/models/zpl_template.dart';
 import 'zpl_printing_template.dart';
 
 class ZplPrintingTemplateMovement extends ZplPrintingTemplate {

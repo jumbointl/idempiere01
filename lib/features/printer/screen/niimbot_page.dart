@@ -22,7 +22,7 @@ import '../../products/domain/idempiere/idempiere_locator.dart';
 import '../../products/domain/idempiere/idempiere_product.dart';
 
 import '../../products/presentation/providers/common_provider.dart';
-import '../models/printer_select_models.dart';
+import 'package:monalisapy_features/printer/models/printer_select_models.dart';
 
 import 'label_config_page.dart';
 import 'label_profiles_storage_helper.dart';

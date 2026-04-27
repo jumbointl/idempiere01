@@ -4,11 +4,11 @@ import 'package:get_storage/get_storage.dart';
 import 'package:go_router/go_router.dart';
 import 'package:monalisa_app_001/features/printer/printer_scan_notifier.dart';
 import 'package:monalisa_app_001/features/printer/printer_setup_screen.dart';
-import 'package:monalisa_app_001/features/printer/zpl/new/models/zpl_template.dart';
-import 'package:monalisa_app_001/features/printer/zpl/new/models/zpl_template_store.dart';
-import 'package:monalisa_app_001/features/printer/zpl/new/provider/always_use_last_template_provider.dart';
+import 'package:monalisapy_features/zpl_template/models/zpl_template.dart';
+import 'package:monalisapy_features/printer/zpl/new/models/zpl_template_store.dart';
+import 'package:monalisapy_features/printer/zpl/new/provider/always_use_last_template_provider.dart';
 import 'package:monalisa_app_001/features/printer/zpl/new/provider/template_zpl_utils.dart';
-import 'package:monalisa_app_001/features/printer/zpl/new/screen/template_zpl_on_use_sheet.dart';
+import 'package:monalisapy_features/printer/zpl/new/screen/template_zpl_on_use_sheet.dart';
 import 'package:monalisa_app_001/features/printer/zpl/new/screen/template_zpl_preview_screen.dart';
 import 'package:printing/printing.dart';
 import '../../config/router/app_router.dart';
@@ -20,8 +20,8 @@ import '../products/presentation/providers/common_provider.dart';
 import '../products/presentation/providers/product_provider_common.dart';
 import '../shared/data/memory.dart';
 import '../shared/data/messages.dart';
+import 'package:monalisapy_features/printer/models/mo_printer.dart';
 import 'cups_printer.dart';
-import 'models/mo_printer.dart';
 import 'movement_pdf_generator.dart';
 // Tu método para generar el PDF
 

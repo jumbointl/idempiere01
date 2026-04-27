@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:get_storage/get_storage.dart';
 import 'package:monalisa_app_001/features/products/common/widget/app_initializer_overlay.dart';
 import '../../../../shared/data/memory.dart';
-import '../models/zpl_template.dart';
-import '../models/zpl_template_store.dart';
+import 'package:monalisapy_features/zpl_template/models/zpl_template.dart';
+import 'package:monalisapy_features/printer/zpl/new/models/zpl_template_store.dart';
 import '../provider/preview_provider.dart';
 
 Future<void> showZplPreviewSheet({

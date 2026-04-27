@@ -8,8 +8,8 @@ import '../../../../products/common/messages_dialog.dart';
 import '../../../../products/common/widget_utils.dart';
 import '../../../../products/presentation/screens/movement/provider/new_movement_provider.dart';
 import '../../../printer_scan_notifier.dart';
-import '../models/zpl_template.dart';
-import '../models/zpl_template_store.dart';
+import 'package:monalisapy_features/zpl_template/models/zpl_template.dart';
+import 'package:monalisapy_features/printer/zpl/new/models/zpl_template_store.dart';
 import '../provider/template_zpl_utils.dart';
 import '../screen/template_zpl_preview_screen.dart';
 

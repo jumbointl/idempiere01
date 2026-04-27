@@ -8,7 +8,7 @@ import 'package:monalisa_app_001/features/products/common/messages_dialog.dart';
 
 import '../../../shared/data/memory.dart';
 import '../../../shared/data/messages.dart';
-import '../new/models/category_agg.dart';
+import 'package:monalisapy_features/printer/zpl/new/models/category_agg.dart';
 
 String buildTspl100x150TemplateNoLogoAll({
   required int marginX,

@@ -9,8 +9,8 @@ import 'package:flutter/services.dart' show rootBundle, Uint8List, ByteData;
 import 'package:flutter_esc_pos_network/flutter_esc_pos_network.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image/image.dart' as img;
-import 'package:monalisa_app_001/features/printer/pos/pos_logo_and_qr_with_aligment.dart';
-import 'package:monalisa_app_001/features/printer/pos/pos_text_utils.dart';
+import 'package:monalisapy_features/printer/pos/pos_logo_and_qr_with_aligment.dart';
+import 'package:monalisapy_features/printer/pos/pos_text_utils.dart';
 import 'package:monalisa_app_001/features/printer/pos/printer_action_notifier.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 
@@ -23,10 +23,10 @@ import '../../products/presentation/providers/product_provider_common.dart';
 import '../../products/presentation/screens/store_on_hand/memory_products.dart';
 import '../../shared/data/memory.dart';
 import '../printer_scan_notifier.dart';
-import 'PosTicket.dart';
-import 'bematech_escpos.dart';
+import 'package:monalisapy_features/printer/pos/PosTicket.dart';
+import 'package:monalisapy_features/printer/pos/bematech_escpos.dart';
+import 'package:monalisapy_features/printer/pos/pos_adjustment_values.dart';
 import 'pos_adjustment_selector_sheet.dart';
-import 'pos_adjustment_values.dart';
 
 const int qrSize = 110;
 const int rightMargin = 0;

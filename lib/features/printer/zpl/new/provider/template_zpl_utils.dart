@@ -9,9 +9,9 @@ import '../../../../products/domain/idempiere/movement_and_lines.dart';
 import '../../../../products/domain/models/zpl_printing_template.dart';
 import '../../../../shared/data/memory.dart';
 import '../../../web_template/provider/providers_create_zpl_template_request.dart';
-import '../models/category_agg.dart';
-import '../models/zpl_template.dart';
-import '../models/zpl_template_store.dart';
+import 'package:monalisapy_features/printer/zpl/new/models/category_agg.dart';
+import 'package:monalisapy_features/zpl_template/models/zpl_template.dart';
+import 'package:monalisapy_features/printer/zpl/new/models/zpl_template_store.dart';
 
 // ========= Tokens base (tuyos) =========
 const String DOCUMENT_NUMBER__ = '__DOCUMENT_NUMBER';

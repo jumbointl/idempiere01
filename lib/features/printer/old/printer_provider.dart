@@ -5,7 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_net_printer/flutter_net_printer.dart';
 import 'package:flutter_riverpod/legacy.dart';
 import 'printer_connection_state.dart';
-import '../models/printer_type.dart';
+import 'package:monalisapy_features/printer/models/printer_type.dart';
 
 class PrinterNotifier extends StateNotifier<PrinterConnectionState> {
   PrinterNotifier() : super(const PrinterConnectionState(ip: '192.168.0.100', port: 9100));

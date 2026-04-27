@@ -1,6 +1,6 @@
 import 'dart:convert';
 
-import '../../../printer/zpl/new/models/zpl_template.dart';
+import 'package:monalisapy_features/zpl_template/models/zpl_template.dart';
 
 class ZplPrintingTemplate {
   // Filters used to classify files by name

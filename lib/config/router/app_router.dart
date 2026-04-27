@@ -37,8 +37,8 @@ import '../../features/m_inout/presentation/screens/product_store_on_hand_screen
 import '../../features/printer/locator_print_screen.dart';
 import '../../features/printer/locator_zpl_sentence_editor_screen.dart';
 import '../../features/printer/mo_printer_editor_screen.dart';
-import '../../features/printer/models/mo_printer.dart';
-import '../../features/printer/models/printer_select_models.dart';
+import 'package:monalisapy_features/printer/models/mo_printer.dart';
+import 'package:monalisapy_features/printer/models/printer_select_models.dart';
 import '../../features/printer/screen/locator_label_printer_select_page.dart';
 import '../../features/printer/screen/product_label_printer_select_page.dart';
 import '../../features/printer/web_template/screen/create_zpl_template_page.dart';

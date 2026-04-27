@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:riverpod_printer/riverpod_printer.dart';
 import '../../products/presentation/providers/common_provider.dart';
-import '../models/printer_select_models.dart';
+import 'package:monalisapy_features/printer/models/printer_select_models.dart';
 
 typedef DefaultProfileFactory = LabelProfile Function();
 

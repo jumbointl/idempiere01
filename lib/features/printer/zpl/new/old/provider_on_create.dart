@@ -3,8 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../products/presentation/providers/common_provider.dart';
 import '../../../../products/presentation/providers/product_provider_common.dart';
-import '../models/category_agg.dart';
-import '../models/zpl_template.dart';
+import 'package:monalisapy_features/printer/zpl/new/models/category_agg.dart';
+import 'package:monalisapy_features/zpl_template/models/zpl_template.dart';
 import '../provider/template_zpl_utils.dart';
 
 /// BottomSheet con búsqueda.

@@ -17,7 +17,7 @@ import '../../products/common/bluetooth_permission.dart';
 import '../../products/presentation/providers/common_provider.dart';
 import '../../products/presentation/providers/product_provider_common.dart';
 import '../../shared/data/memory.dart';
-import '../models/printer_select_models.dart';
+import 'package:monalisapy_features/printer/models/printer_select_models.dart';
 import '../niimbot/niimbot_printer_helper.dart';
 import '../printer_scan_notifier.dart';
 

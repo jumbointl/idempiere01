@@ -8,7 +8,7 @@ import 'package:path_provider/path_provider.dart';
 
 import '../../../products/common/utils/common_string_utils.dart';
 import '../../../shared/data/memory.dart';
-import '../../zpl/new/models/zpl_template.dart';
+import 'package:monalisapy_features/zpl_template/models/zpl_template.dart';
 import '../screen/show_ftp_configuration.dart';
 
 final refreshAllZplTemplatesFromFtpProvider =

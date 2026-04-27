@@ -11,7 +11,7 @@ import 'package:riverpod_printer/riverpod_printer.dart';
 
 import '../../products/common/input_dialog.dart';
 import '../../shared/data/memory.dart';
-import '../models/printer_select_models.dart';
+import 'package:monalisapy_features/printer/models/printer_select_models.dart';
 import '../printer_scan_notifier.dart';
 import 'niimbot_silence_page.dart';
 import 'printer_select_page.dart';

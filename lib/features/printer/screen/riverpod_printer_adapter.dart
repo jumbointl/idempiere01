@@ -1,7 +1,7 @@
 import 'package:monalisa_app_001/features/products/domain/idempiere/idempiere_product.dart';
 import 'package:riverpod_printer/riverpod_printer.dart';
 
-import '../models/printer_select_models.dart';
+import 'package:monalisapy_features/printer/models/printer_select_models.dart';
 
 ProductLabelItem productToLabelItem(
     IdempiereProduct product, {

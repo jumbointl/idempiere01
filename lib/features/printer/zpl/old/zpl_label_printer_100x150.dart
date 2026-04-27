@@ -6,27 +6,27 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:get_storage/get_storage.dart';
 import 'package:image/image.dart' as img;
-import 'package:monalisa_app_001/features/printer/zpl/new/models/locator_zpl_template_provider.dart';
+import 'package:monalisapy_features/printer/zpl/new/models/locator_zpl_template_provider.dart';
 import 'package:monalisa_app_001/features/printer/zpl/old/zpl_print_widget.dart';
 import 'package:monalisa_app_001/features/products/presentation/providers/common_provider.dart';
 import 'package:monalisa_app_001/features/shared/data/messages.dart';
 
 import '../../../products/common/messages_dialog.dart';
-import '../../../products/domain/idempiere/idempiere_locator.dart';
+import 'package:monalisapy_features/models/idempiere/idempiere_locator.dart';
 import '../../../products/domain/idempiere/idempiere_movement_line.dart';
 import '../../../products/domain/idempiere/movement_and_lines.dart';
-import '../../../products/domain/idempiere/response_async_value.dart';
+import 'package:monalisapy_core/api_client/response_async_value.dart';
 import '../../../shared/data/memory.dart';
 import '../../printer_scan_notifier.dart';
 import '../../web_template/screen/show_search_zpl_template_sheet.dart';
-import '../new/models/locator_zpl_template.dart';
-import '../new/models/zpl_template.dart';
-import '../new/provider/always_use_last_template_provider.dart';
-import '../new/screen/template_zpl_on_use_sheet.dart';
-import '../new/provider/template_zpl_provider.dart';
-import '../new/models/zpl_template_store.dart';
+import 'package:monalisapy_features/printer/zpl/new/models/locator_zpl_template.dart';
+import 'package:monalisapy_features/zpl_template/models/zpl_template.dart';
+import 'package:monalisapy_features/printer/zpl/new/provider/always_use_last_template_provider.dart';
+import 'package:monalisapy_features/printer/zpl/new/screen/template_zpl_on_use_sheet.dart';
+import 'package:monalisapy_features/printer/zpl/new/provider/template_zpl_provider.dart';
+import 'package:monalisapy_features/printer/zpl/new/models/zpl_template_store.dart';
 import '../new/provider/template_zpl_utils.dart';
-import '../zpl_send_item_result.dart';
+import 'package:monalisapy_features/printer/zpl/zpl_send_item_result.dart';
 import 'zpl_print_profile_providers.dart';
 
 

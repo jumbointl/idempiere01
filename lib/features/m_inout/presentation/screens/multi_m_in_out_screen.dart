@@ -857,6 +857,7 @@ class _ScanTabState extends ConsumerState<_ScanTab> {
             code.trim(),
             picked.sessionId,
             picked.lineId,
+            qty: picked.qty,
           );
         }
         break;
@@ -1000,10 +1001,11 @@ class _ScanTabState extends ConsumerState<_ScanTab> {
 class _DispatchPick {
   final String sessionId;
   final int? lineId;
-  _DispatchPick(this.sessionId, this.lineId);
+  final double qty;
+  _DispatchPick(this.sessionId, this.lineId, this.qty);
 }
 
-class _DispatchChooserDialog extends StatelessWidget {
+class _DispatchChooserDialog extends StatefulWidget {
   final String code;
   final List<MapEntry<MultiMInOutSession, List<Line>>> candidates;
 
@@ -1013,35 +1015,101 @@ class _DispatchChooserDialog extends StatelessWidget {
   });
 
   @override
+  State<_DispatchChooserDialog> createState() => _DispatchChooserDialogState();
+}
+
+class _DispatchChooserDialogState extends State<_DispatchChooserDialog> {
+  final TextEditingController _qtyCtrl = TextEditingController(text: '1');
+  String? _qtyError;
+
+  @override
+  void dispose() {
+    _qtyCtrl.dispose();
+    super.dispose();
+  }
+
+  // Returns the parsed qty if valid (>= 0); otherwise sets _qtyError and
+  // returns null. Called when the user taps a candidate row.
+  double? _validateQty() {
+    final raw = _qtyCtrl.text.trim().replaceAll(',', '.');
+    final parsed = double.tryParse(raw);
+    if (parsed == null) {
+      setState(() => _qtyError = 'Cantidad invalida');
+      return null;
+    }
+    if (parsed < 0) {
+      setState(() => _qtyError = 'Minimo 0');
+      return null;
+    }
+    if (_qtyError != null) {
+      setState(() => _qtyError = null);
+    }
+    return parsed;
+  }
+
+  @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: Text('Elegir destino para $code'),
+      title: Text('Elegir destino para ${widget.code}'),
       content: SizedBox(
         width: 360,
-        child: ListView(
-          shrinkWrap: true,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            for (final entry in candidates)
-              for (final line in entry.value)
-                ListTile(
-                  leading: CircleAvatar(
-                    backgroundColor:
-                        accentForSessionIndex(entry.key.colorIndex),
-                    child: Text(
-                      labelForSessionIndex(entry.key.colorIndex),
-                      style: const TextStyle(color: Colors.white),
-                    ),
-                  ),
-                  title: Text(line.productName ?? '(sin nombre)'),
-                  subtitle: Text(
-                    'Doc: ${entry.key.documentNo}  ·  '
-                    'UPC: ${line.upc}  ·  '
-                    'Conf: ${line.confirmedQty ?? 0}/${line.movementQty ?? 0}',
-                  ),
-                  onTap: () => Navigator.of(context).pop(
-                    _DispatchPick(entry.key.sessionId, line.id),
-                  ),
-                ),
+            TextField(
+              controller: _qtyCtrl,
+              keyboardType:
+                  const TextInputType.numberWithOptions(decimal: true),
+              inputFormatters: [
+                FilteringTextInputFormatter.allow(RegExp(r'[0-9.,]')),
+              ],
+              decoration: InputDecoration(
+                labelText: 'Cantidad',
+                errorText: _qtyError,
+                border: const OutlineInputBorder(),
+                isDense: true,
+              ),
+              onChanged: (_) {
+                if (_qtyError != null) {
+                  setState(() => _qtyError = null);
+                }
+              },
+            ),
+            const SizedBox(height: 8),
+            Flexible(
+              child: ListView(
+                shrinkWrap: true,
+                children: [
+                  for (final entry in widget.candidates)
+                    for (final line in entry.value)
+                      ListTile(
+                        leading: CircleAvatar(
+                          backgroundColor:
+                              accentForSessionIndex(entry.key.colorIndex),
+                          child: Text(
+                            labelForSessionIndex(entry.key.colorIndex),
+                            style: const TextStyle(color: Colors.white),
+                          ),
+                        ),
+                        title: Text(line.productName ?? '(sin nombre)'),
+                        subtitle: Text(
+                          'Doc: ${entry.key.documentNo}  ·  '
+                          'UPC: ${line.upc}  ·  '
+                          'Conf: ${line.confirmedQty ?? 0}/${line.movementQty ?? 0}',
+                        ),
+                        onTap: () {
+                          final qty = _validateQty();
+                          if (qty == null) return;
+                          Navigator.of(context).pop(
+                            _DispatchPick(
+                                entry.key.sessionId, line.id, qty),
+                          );
+                        },
+                      ),
+                ],
+              ),
+            ),
           ],
         ),
       ),

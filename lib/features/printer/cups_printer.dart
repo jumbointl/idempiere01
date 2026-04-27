@@ -10,7 +10,7 @@ import 'package:monalisa_app_001/features/products/common/messages_dialog.dart';
 import 'package:monalisa_app_001/features/shared/data/messages.dart';
 
 import '../products/presentation/providers/common_provider.dart';
-import 'lite_ipp_print.dart';
+import 'package:monalisapy_features/printer/helpers/lite_ipp_print.dart';
 
 Future<bool> sendPdfToNode(WidgetRef ref, Uint8List pdfBytes, String cupsServiceUrl,String printerName) async {
 

@@ -1,19 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_esc_pos_network/flutter_esc_pos_network.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:monalisa_app_001/features/printer/pos/pos_adjustment_values.dart';
-import 'package:monalisa_app_001/features/printer/pos/pos_paper_size_pick_sheet.dart';
-import 'package:monalisa_app_001/features/printer/pos/pos_test_pick_sheets.dart';
+import 'package:monalisapy_features/printer/pos/pos_adjustment_values.dart';
+import 'package:monalisapy_features/printer/pos/pos_paper_size_pick_sheet.dart';
+import 'package:monalisapy_features/printer/pos/pos_test_pick_sheets.dart';
 import 'package:monalisa_app_001/features/products/common/input_dialog.dart';
 import 'package:monalisa_app_001/features/products/common/messages_dialog.dart';
 import 'package:monalisa_app_001/features/products/presentation/providers/product_provider_common.dart';
 
 import '../../shared/data/messages.dart';
-import 'pos_adjustment_helpers.dart';
-import 'pos_adjustment_profile_editor_sheet.dart';
-import 'pos_adjustment_providers.dart';
-import 'pos_adjustment_storage.dart';
-import 'pos_test_print.dart';
+import 'package:monalisapy_features/printer/pos/pos_adjustment_helpers.dart';
+import 'package:monalisapy_features/printer/pos/pos_adjustment_profile_editor_sheet.dart';
+import 'package:monalisapy_features/printer/pos/pos_adjustment_providers.dart';
+import 'package:monalisapy_features/printer/pos/pos_adjustment_storage.dart';
+import 'package:monalisapy_features/printer/pos/pos_test_print.dart';
 
 Future<PosAdjustmentValues?> showPosAdjustmentSelectorSheet({
   required BuildContext context,

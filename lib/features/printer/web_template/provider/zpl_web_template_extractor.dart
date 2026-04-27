@@ -11,8 +11,8 @@ import '../../../products/common/utils/common_string_utils.dart';
 import '../../../products/domain/models/zpl_printing_template.dart';
 import '../../../products/domain/models/zpl_printing_template_movement.dart';
 import '../../../shared/data/memory.dart';
-import '../../zpl/new/models/zpl_template.dart';
-import '../../zpl/new/models/zpl_template_store.dart';
+import 'package:monalisapy_features/zpl_template/models/zpl_template.dart';
+import 'package:monalisapy_features/printer/zpl/new/models/zpl_template_store.dart';
 import '../screen/show_ftp_configuration.dart';
 
 final modeOfPrintToSearchAtFtpProvider =

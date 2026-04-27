@@ -8,7 +8,7 @@ import '../../../products/domain/models/zpl_printing_template.dart';
 import '../../../products/presentation/providers/common_provider.dart';
 import '../../../shared/data/memory.dart';
 import '../../../shared/data/messages.dart';
-import '../../zpl/new/models/zpl_template.dart';
+import 'package:monalisapy_features/zpl_template/models/zpl_template.dart';
 import '../../zpl/new/provider/template_zpl_utils.dart';
 import '../models/create_zpl_template_request.dart';
 import '../models/printer_config.dart';

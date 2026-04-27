@@ -9,8 +9,8 @@ import 'package:pdf/pdf.dart';
 import 'package:printing/printing.dart';
 
 import '../../../../shared/data/messages.dart';
-import '../models/zpl_template.dart';
-import '../models/zpl_template_store.dart';
+import 'package:monalisapy_features/zpl_template/models/zpl_template.dart';
+import 'package:monalisapy_features/printer/zpl/new/models/zpl_template_store.dart';
 
 const int kLabelDpmm203 = 8; // 203 dpi
 const String kLabelSize100x150mm = '3.94x5.91';

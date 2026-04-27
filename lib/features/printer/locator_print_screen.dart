@@ -4,13 +4,13 @@ import 'package:go_router/go_router.dart';
 import 'package:monalisa_app_001/config/config.dart';
 import 'package:monalisa_app_001/features/printer/printer_scan_notifier.dart';
 import 'package:monalisa_app_001/features/printer/printer_setup_screen.dart';
-import 'package:monalisa_app_001/features/printer/zpl/new/models/locator_zpl_template.dart';
-import 'package:monalisa_app_001/features/printer/zpl/new/models/locator_zpl_template_provider.dart';
+import 'package:monalisapy_features/printer/zpl/new/models/locator_zpl_template.dart';
+import 'package:monalisapy_features/printer/zpl/new/models/locator_zpl_template_provider.dart';
 import 'package:monalisa_app_001/features/printer/zpl/new/provider/template_zpl_utils.dart';
 
 import '../products/common/messages_dialog.dart';
 import '../products/common/widget_utils.dart';
-import '../products/domain/idempiere/idempiere_locator.dart';
+import 'package:monalisapy_features/models/idempiere/idempiere_locator.dart';
 import '../products/presentation/providers/common_provider.dart';
 import '../shared/data/messages.dart';
 
