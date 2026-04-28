@@ -4,7 +4,9 @@ import 'package:get_storage/get_storage.dart';
 import 'package:go_router/go_router.dart';
 import 'package:monalisa_app_001/features/printer/printer_scan_notifier.dart';
 import 'package:monalisa_app_001/features/printer/printer_setup_screen.dart';
+import 'package:monalisapy_features/actions/monalisa_action.dart';
 import 'package:monalisapy_features/printer/models/mo_printer.dart';
+import 'package:monalisapy_features/printer/transport/zpl_socket_transport.dart';
 import 'package:monalisapy_features/printer/zpl/new/models/zpl_template_store.dart';
 import 'package:monalisapy_features/printer/zpl/new/provider/always_use_last_template_provider.dart';
 import 'package:monalisapy_features/printer/zpl/new/screen/template_zpl_on_use_sheet.dart';
@@ -20,20 +22,27 @@ import '../products/presentation/providers/product_provider_common.dart';
 import '../products/printables/movement_printable.dart';
 import '../shared/data/memory.dart';
 import '../shared/data/messages.dart';
+import 'cups_printer.dart';
 import 'zpl/new/provider/template_zpl_utils.dart';
 import 'zpl/new/screen/template_zpl_preview_screen.dart';
 
 class MovementPrintScreen extends PrinterSetupScreen {
   /// Kept around for the ZPL preview flow (which needs the underlying
   /// movement to substitute tokens). The base screen sees this through
-  /// [dataToPrint] as a [MovementPrintable].
+  /// [printable] as a [MovementPrintable].
   final MovementAndLines movementAndLines;
 
   MovementPrintScreen({
     super.key,
     required this.movementAndLines,
-    required super.oldAction,
-  }) : super(dataToPrint: MovementPrintable(movementAndLines));
+    required int oldAction,
+  }) : super(
+          printable: MovementPrintable(movementAndLines),
+          oldAction: MonalisaAction.fromInt(oldAction),
+          loadLogoBytes: () => imageLogo,
+          onOpenMoPrinterEditor: _openMoPrinterEditor,
+          onOpenLocatorSentenceEditor: _openLocatorSentenceEditor,
+        );
 
   @override
   void popScopeAction(BuildContext context, WidgetRef ref) {
@@ -178,7 +187,7 @@ class MovementPrintScreen extends PrinterSetupScreen {
       ..noDelete = noDeleteFlag
       ..serverPort = serverPort;
 
-    await savePrinterToStorage(ref, printer);
+    await savePrinterToStorageLocal(ref, printer);
 
     int portInt = int.tryParse(port) ?? 91000;
 
@@ -195,4 +204,33 @@ class MovementPrintScreen extends PrinterSetupScreen {
       }
     }
   }
+}
+
+Future<MOPrinter?> _openMoPrinterEditor({
+  required BuildContext context,
+  required WidgetRef ref,
+  required FocusNode focusNode,
+  MOPrinter? initial,
+}) {
+  return context.push<MOPrinter>(
+    AppRouter.PAGE_MO_PRINTER_EDITOR,
+    extra: {
+      'focusNode': focusNode,
+      'initial': initial,
+    },
+  );
+}
+
+Future<String?> _openLocatorSentenceEditor({
+  required BuildContext context,
+  required FocusNode focusNode,
+  required String initialSentence,
+}) {
+  return context.push<String>(
+    AppRouter.PAGE_LOCATOR_SENTENCE_EDITOR,
+    extra: {
+      'sentence': initialSentence,
+      'focusNode': focusNode,
+    },
+  );
 }

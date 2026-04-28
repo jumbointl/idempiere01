@@ -9,7 +9,6 @@ import 'package:monalisa_app_001/features/products/presentation/providers/produc
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:riverpod_printer/riverpod_printer.dart';
 import '../../../m_inout/presentation/providers/m_in_out_providers.dart';
-import 'package:monalisapy_features/printer/models/mo_printer.dart';
 import 'package:monalisapy_features/printer/models/printer_select_models.dart';
 import '../../../shared/data/memory.dart';
 import '../../../shared/data/messages.dart';
@@ -21,6 +20,15 @@ import '../../domain/models/ftpconfig.dart';
 import '../screens/movement/provider/new_movement_provider.dart';
 import 'actions/find_locator_to_action_provider.dart';
 import 'locator_provider.dart';
+
+// Re-export the printer-app providers (now living in monalisapy_features) so
+// every existing import inside this app keeps resolving without changes.
+export 'package:monalisapy_features/printer/providers/printer_app_providers.dart'
+    show
+        enableScannerKeyboardProvider,
+        lastPrinterProvider,
+        directPrintWithLastPrinterProvider,
+        isPrintingProvider;
 
 final sharedPreferencesProvider = Provider<SharedPreferences>(
       (ref) => throw UnimplementedError(),
@@ -59,17 +67,11 @@ final inputStringProvider = StateProvider.autoDispose<String>((ref) {
 
 
 
-final lastPrinterProvider = StateProvider<MOPrinter?>((ref) {
-  return null;
-});
-
-final directPrintWithLastPrinterProvider = StateProvider<bool>((ref) {
-  return false;
-});
-
-final isPrintingProvider = StateProvider.autoDispose<bool>((ref) {
-  return false;
-});
+// `lastPrinterProvider`, `directPrintWithLastPrinterProvider` and
+// `isPrintingProvider` now live in
+// `monalisapy_features/printer/providers/printer_app_providers.dart`.
+// They're re-exported at the top of this file so existing imports stay
+// valid.
 
 final isCupsPrintingProvider = StateProvider.autoDispose<bool>((ref) {
   return false;
@@ -323,7 +325,9 @@ class NumButtonData {
   NumButtonData({required this.label, required this.value});
 }
 
-final enableScannerKeyboardProvider =  StateProvider<bool>((ref) => true);
+// `enableScannerKeyboardProvider` is re-exported from
+// `monalisapy_features/printer/providers/printer_app_providers.dart` (see
+// the export at the top of this file).
 
 final movementInSameWarehouseProvider =  StateProvider<bool>((ref) => false);
 final labelProfilesProvider = StateProvider<List<LabelProfile>>((ref) => []);

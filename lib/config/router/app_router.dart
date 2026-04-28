@@ -36,7 +36,9 @@ import '../../features/m_inout/domain/entities/m_in_out.dart';
 import '../../features/m_inout/presentation/screens/product_store_on_hand_screen_for_minout_line.dart';
 import '../../features/printer/locator_print_screen.dart';
 import '../../features/printer/locator_zpl_sentence_editor_screen.dart';
+import '../../features/printer/cups_printer.dart';
 import '../../features/printer/mo_printer_editor_screen.dart';
+import 'package:monalisapy_features/actions/monalisa_action.dart';
 import 'package:monalisapy_features/printer/models/mo_printer.dart';
 import 'package:monalisapy_features/printer/models/printer_select_models.dart';
 import '../../features/printer/screen/locator_label_printer_select_page.dart';
@@ -660,7 +662,33 @@ final goRouterProvider = Provider((ref) {
           builder: (context, state){
 
             return PrinterSetupScreen(
-              oldAction: 0,
+              oldAction: MonalisaAction.noAction,
+              loadLogoBytes: () => imageLogo,
+              onOpenMoPrinterEditor: ({
+                required BuildContext context,
+                required WidgetRef ref,
+                required FocusNode focusNode,
+                MOPrinter? initial,
+              }) =>
+                  context.push<MOPrinter>(
+                AppRouter.PAGE_MO_PRINTER_EDITOR,
+                extra: {
+                  'focusNode': focusNode,
+                  'initial': initial,
+                },
+              ),
+              onOpenLocatorSentenceEditor: ({
+                required BuildContext context,
+                required FocusNode focusNode,
+                required String initialSentence,
+              }) =>
+                  context.push<String>(
+                AppRouter.PAGE_LOCATOR_SENTENCE_EDITOR,
+                extra: {
+                  'sentence': initialSentence,
+                  'focusNode': focusNode,
+                },
+              ),
             );
 
           }

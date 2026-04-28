@@ -4,6 +4,9 @@ import 'package:go_router/go_router.dart';
 import 'package:monalisa_app_001/config/config.dart';
 import 'package:monalisa_app_001/features/printer/printer_scan_notifier.dart';
 import 'package:monalisa_app_001/features/printer/printer_setup_screen.dart';
+import 'package:monalisapy_features/actions/monalisa_action.dart';
+import 'package:monalisapy_features/printer/models/mo_printer.dart';
+import 'package:monalisapy_features/printer/transport/zpl_socket_transport.dart';
 import 'package:monalisapy_features/printer/zpl/new/models/locator_zpl_template.dart';
 import 'package:monalisapy_features/printer/zpl/new/models/locator_zpl_template_provider.dart';
 
@@ -12,7 +15,7 @@ import '../products/common/widget_utils.dart';
 import '../products/presentation/providers/common_provider.dart';
 import '../products/printables/locator_list_printable.dart';
 import '../shared/data/messages.dart';
-import 'zpl/new/provider/template_zpl_utils.dart';
+import 'cups_printer.dart';
 
 class LocatorPrintScreen extends PrinterSetupScreen {
   /// Accepts a [List] of locator entities. The list is dynamic because two
@@ -22,8 +25,14 @@ class LocatorPrintScreen extends PrinterSetupScreen {
   LocatorPrintScreen({
     super.key,
     required List<dynamic> locators,
-    required super.oldAction,
-  }) : super(dataToPrint: LocatorListPrintable(locators));
+    required int oldAction,
+  }) : super(
+          printable: LocatorListPrintable(locators),
+          oldAction: MonalisaAction.fromInt(oldAction),
+          loadLogoBytes: () => imageLogo,
+          onOpenMoPrinterEditor: _openMoPrinterEditor,
+          onOpenLocatorSentenceEditor: _openLocatorSentenceEditor,
+        );
 
   @override
   Widget getPrintPanel(WidgetRef ref, BuildContext context) {
@@ -180,4 +189,33 @@ class LocatorPrintScreen extends PrinterSetupScreen {
       ],
     );
   }
+}
+
+Future<MOPrinter?> _openMoPrinterEditor({
+  required BuildContext context,
+  required WidgetRef ref,
+  required FocusNode focusNode,
+  MOPrinter? initial,
+}) {
+  return context.push<MOPrinter>(
+    AppRouter.PAGE_MO_PRINTER_EDITOR,
+    extra: {
+      'focusNode': focusNode,
+      'initial': initial,
+    },
+  );
+}
+
+Future<String?> _openLocatorSentenceEditor({
+  required BuildContext context,
+  required FocusNode focusNode,
+  required String initialSentence,
+}) {
+  return context.push<String>(
+    AppRouter.PAGE_LOCATOR_SENTENCE_EDITOR,
+    extra: {
+      'sentence': initialSentence,
+      'focusNode': focusNode,
+    },
+  );
 }

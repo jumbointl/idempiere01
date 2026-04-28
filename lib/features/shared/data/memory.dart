@@ -5,6 +5,7 @@ import 'package:monalisa_app_001/features/m_inout/domain/entities/m_in_out.dart'
 import 'package:monalisa_app_001/features/products/domain/idempiere/idempiere_document_type.dart';
 import 'package:monalisa_app_001/features/products/domain/idempiere/idempiere_product.dart';
 import 'package:monalisa_app_001/features/products/domain/sql/sql_users_data.dart';
+import 'package:monalisapy_features/printer/transport/cups_urls.dart';
 
 import '../../m_inout/domain/entities/line.dart';
 import '../../products/domain/idempiere/idempiere_movement.dart';
@@ -138,20 +139,28 @@ class Memory {
 
 
 
-  static String URL_CUPS_SERVER ='http://192.168.188.108:3100/print';
+  // Delegated to monalisapy_features/CupsUrls so the package's
+  // printer transport can build the same URLs without depending on
+  // app-side `Memory`. Keep the old API surface for existing callers.
+  static String get URL_CUPS_SERVER => CupsUrls.URL_CUPS_SERVER;
+  static set URL_CUPS_SERVER(String v) => CupsUrls.URL_CUPS_SERVER = v;
 
+  static String getUrlCupsServerWithPrinter({
+    required String ip,
+    required String port,
+    required String printerName,
+  }) =>
+      CupsUrls.getUrlCupsServerWithPrinter(
+        ip: ip,
+        port: port,
+        printerName: printerName,
+      );
 
-  static String getUrlCupsServerWithPrinter({required String ip,
-    required String port,required String printerName}){
-    if(ip.startsWith('http')) return '$ip:$port/print';
-    // Si no comienza con 'http', agrega 'http://'
-    return 'http://$ip:$port/printers/$printerName';
-  }
-  static String getUrlNodeCupsServer({required String ip,required String port}){
-    if(ip.startsWith('http')) return '$ip:$port/printers';
-    // Si no comienza con 'http', agrega 'http://'
-    return 'http://$ip:$port/printers';
-  }
+  static String getUrlNodeCupsServer({
+    required String ip,
+    required String port,
+  }) =>
+      CupsUrls.getUrlNodeCupsServer(ip: ip, port: port);
 
   static bool canConformMovement(IdempiereMovement movement){
     if(movement.docStatus!= null && movement.docStatus!.id !=null

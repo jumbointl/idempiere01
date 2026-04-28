@@ -1,7 +1,8 @@
-import 'dart:convert';
 import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:monalisa_app_001/features/shared/data/messages.dart';
+import 'package:monalisapy_features/printer/transport/zpl_socket_transport.dart';
 import 'package:path/path.dart' as p;
 import '../../../../products/domain/idempiere/idempiere_locator.dart';
 import '../../../../products/domain/idempiere/idempiere_movement_line.dart';
@@ -12,6 +13,11 @@ import '../../../web_template/provider/providers_create_zpl_template_request.dar
 import 'package:monalisapy_features/printer/zpl/new/models/category_agg.dart';
 import 'package:monalisapy_features/zpl_template/models/zpl_template.dart';
 import 'package:monalisapy_features/printer/zpl/new/models/zpl_template_store.dart';
+
+// Re-export the package's socket-based ZPL sender so existing callers
+// keep importing it from the same legacy path.
+export 'package:monalisapy_features/printer/transport/zpl_socket_transport.dart'
+    show sendZplBySocket;
 
 // ========= Tokens base (tuyos) =========
 const String DOCUMENT_NUMBER__ = '__DOCUMENT_NUMBER';
@@ -97,37 +103,8 @@ String replaceAllTokens(String template, Map<String, String> tokens) {
 }
 
 /// ========= Socket =========
-/// Sends ZPL to printer by TCP socket.
-/// Returns true on success, throws Exception on error.
-
-Future<bool> sendZplBySocket({
-  required String ip,
-  required int port,
-  required String zpl,
-  Duration timeout = const Duration(seconds: 5),
-}) async {
-  Socket? socket;
-  try {
-    socket = await Socket.connect(ip, port, timeout: timeout);
-    // ✅ CRLF por línea + CRLF final
-    final payload = '${zpl.trim().replaceAll('\n', '\r\n')}\r\n\r\n';
-    debugPrint('zpl send:');
-    debugPrint(payload);
-    debugPrint('zpl send: to $ip $port');
-
-    // Zebra suele ir bien con latin1 (ASCII extendido); UTF-8 a veces mete bytes raros
-    socket.add(latin1.encode(payload));
-
-    await socket.flush();
-    // ✅ importante: cerrar para que el printer “suelte” el job
-    await socket.close();
-
-    return true;
-  } catch (e) {
-    try { socket?.destroy(); } catch (_) {}
-    return false;
-  }
-}
+/// `sendZplBySocket` lives in `monalisapy_features` —
+/// see the export at the top of this file.
 
 Map<String, String> buildLocatorCommonTokens({
   required IdempiereLocator locator,
