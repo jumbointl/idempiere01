@@ -15,6 +15,8 @@ import 'package:monalisapy_features/printer/pos/show_socket_timeout_selector_dia
 import 'package:monalisapy_features/printer/helpers/printer_utils.dart';
 import 'package:monalisa_app_001/features/printer/web_template/screen/show_ftp_configuration.dart';
 import 'package:monalisa_app_001/features/printer/web_template/screen/show_search_zpl_template_sheet.dart';
+import 'package:monalisapy_features/printer/printable/pdf_printable.dart';
+import 'package:monalisapy_features/printer/printable/printable.dart';
 import 'package:monalisapy_features/printer/widgets/printer_commands_menu.dart';
 import 'package:monalisapy_features/printer/zpl/new/models/locator_zpl_template.dart';
 import 'package:monalisapy_features/printer/zpl/new/models/locator_zpl_template_provider.dart';
@@ -24,7 +26,6 @@ import 'package:monalisapy_features/printer/zpl/new/provider/always_use_last_tem
 import 'package:monalisa_app_001/features/printer/zpl/new/provider/template_zpl_utils.dart';
 import 'package:monalisapy_features/printer/zpl/new/screen/template_zpl_on_use_sheet.dart';
 import 'package:monalisa_app_001/features/products/common/widget/app_initializer_overlay.dart';
-import 'package:monalisa_app_001/features/products/domain/idempiere/idempiere_locator.dart';
 import 'package:pdf/pdf.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:printing/printing.dart';
@@ -32,18 +33,14 @@ import 'package:simple_barcode_scanner/simple_barcode_scanner.dart';
 import 'dart:io';
 import 'package:path_provider/path_provider.dart';
 
-import '../m_inout/domain/entities/m_in_out.dart';
 import '../products/common/messages_dialog.dart';
 import '../products/common/widget_utils.dart';
-import '../products/domain/idempiere/movement_and_lines.dart';
 import '../products/presentation/providers/common_provider.dart';
 import '../products/presentation/providers/product_provider_common.dart';
 import '../shared/data/memory.dart';
 import '../shared/data/messages.dart';
 import 'package:monalisapy_features/printer/models/mo_printer.dart';
 import 'cups_printer.dart';
-import 'm_in_out_pdf_generator.dart';
-import 'movement_pdf_generator.dart';
 import 'printer_scan_notifier.dart';
 
 class PrinterSetupScreen extends ConsumerStatefulWidget {
@@ -990,84 +987,38 @@ class PrinterSetupScreen extends ConsumerStatefulWidget {
 
   Future<void> printPdf(WidgetRef ref, BuildContext context,
       {required bool direct}) async {
-    if (dataToPrint == null) return;
+    if (dataToPrint is! PdfPrintable) return;
+    final printable = dataToPrint as PdfPrintable;
     final image = await imageLogo;
-    Uint8List? pdfBytes;
-    if (dataToPrint is MovementAndLines) {
-      pdfBytes = await generateMovementDocument(
-          dataToPrint as MovementAndLines, image);
-    } else if (dataToPrint is MInOut) {
-      pdfBytes = await generateMInOutDocument(dataToPrint as MInOut, image);
-    }
-    if (pdfBytes != null) {
-      if (direct) {
-        ref
-            .read(printerScanNotifierProvider.notifier)
-            .printDirectly(bytes: pdfBytes, ref: ref);
-      } else {
-        await Printing.sharePdf(bytes: pdfBytes, filename: 'documento.pdf');
-      }
-      return;
-    }
-    if (context.mounted) {
-      showWarningCenterToast(context, Messages.NOT_IMPLEMENTED_YET);
+    final pdfBytes = await printable.generatePdfBytes(logoBytes: image);
+    if (direct) {
+      ref
+          .read(printerScanNotifierProvider.notifier)
+          .printDirectly(bytes: pdfBytes, ref: ref);
+    } else {
+      await Printing.sharePdf(bytes: pdfBytes, filename: printable.pdfFilename);
     }
   }
 
 
   Future<void> openPrintDialog(WidgetRef ref, BuildContext context) async {
-    if (dataToPrint == null) return;
+    if (dataToPrint is! PdfPrintable) return;
+    final printable = dataToPrint as PdfPrintable;
     final image = await imageLogo;
-    Uint8List? pdfBytes;
-    if (dataToPrint is MovementAndLines) {
-      pdfBytes = await generateMovementDocument(
-          dataToPrint as MovementAndLines, image);
-    } else if (dataToPrint is MInOut) {
-      pdfBytes = await generateMInOutDocument(dataToPrint as MInOut, image);
-    }
-    if (pdfBytes != null) {
-      await Printing.layoutPdf(
-        onLayout: (PdfPageFormat format) async => pdfBytes!,
-      );
-      return;
-    }
-    if (context.mounted) {
-      showWarningCenterToast(context, Messages.NOT_IMPLEMENTED_YET);
-    }
+    final pdfBytes = await printable.generatePdfBytes(logoBytes: image);
+    await Printing.layoutPdf(
+      onLayout: (PdfPageFormat format) async => pdfBytes,
+    );
   }
 
   Widget getDataPanel(BuildContext context, WidgetRef ref, dataToPrint) {
-    late IconData iconData = Symbols.upload_file;
+    IconData iconData = Symbols.upload_file;
     String title = 'Printer setup';
     String subtitle = 'Sent ZPL template to printer';
-    if (dataToPrint is MovementAndLines) {
-      iconData = Symbols.receipt_long;
-      title = 'Movement Doc No ${dataToPrint.documentNo ?? ''}';
-      subtitle = 'Date: ${dataToPrint.movementDate ?? ''}';
-    }
-    if (dataToPrint is MInOut) {
-      iconData = Symbols.receipt_long;
-      String type = (dataToPrint.isSoTrx == true) ? 'Shipment' : 'Receipt';
-      final docKind = dataToPrint.cDocTypeId?.identifier ?? type;
-      final dateStr = dataToPrint.movementDate != null
-          ? dataToPrint.movementDate!.toIso8601String().substring(0, 10)
-          : '';
-      title = '$docKind Doc No ${dataToPrint.documentNo ?? ''}';
-      subtitle = 'Date: $dateStr';
-    }
-    if (dataToPrint is List<IdempiereLocator>) {
-      iconData = Symbols.fork_left;
-
-
-
-      if(dataToPrint.length==1){
-        title = 'Locator to print : ${dataToPrint[0].value ?? dataToPrint[0].identifier ?? ''}';
-        subtitle = 'Warehouse: ${dataToPrint[0].mWarehouseID?.identifier ?? ''}';
-      } else {
-        title = 'Total Locator to print : ${dataToPrint.length}';
-        subtitle = 'Warehouse: ${dataToPrint[0].mWarehouseID?.identifier ?? ''} may others';
-      }
-
+    if (dataToPrint is Printable) {
+      iconData = dataToPrint.dataPanelIcon;
+      title = dataToPrint.dataPanelTitle;
+      subtitle = dataToPrint.dataPanelSubtitle;
     }
 
     return Card(

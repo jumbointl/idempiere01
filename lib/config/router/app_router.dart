@@ -650,7 +650,7 @@ final goRouterProvider = Provider((ref) {
           final int oldAction = extra['oldAction'] as int;
 
           return LocatorPrintScreen(
-            dataToPrint: list,
+            locators: list,
             oldAction: oldAction,
           );
         },
@@ -724,7 +724,7 @@ final goRouterProvider = Provider((ref) {
               final int oldAction = extra['oldAction'] as int;
 
               return MovementPrintScreen(
-                dataToPrint: movementAndLines,
+                movementAndLines: movementAndLines,
                 oldAction: oldAction,
               );
 
@@ -797,7 +797,7 @@ final goRouterProvider = Provider((ref) {
           if (RolesApp.hasStockPrivilege) {
             final MInOut data = state.extra as MInOut;
             return MInOutPrintScreen(
-              dataToPrint: data,
+              mInOut: data,
               oldAction: 0,
             );
           } else {

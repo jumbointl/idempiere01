@@ -4,22 +4,19 @@ import 'package:flutter/material.dart';
 import 'package:flutter_net_printer/flutter_net_printer.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
-import 'package:monalisa_app_001/features/printer/pos/print_receipt_with_qr_bematech.dart';
 import 'package:monalisapy_features/printer/helpers/printer_utils.dart';
-import 'package:monalisa_app_001/features/printer/zpl/old/zpl_label_printer_100x150.dart';
+import 'package:monalisapy_features/printer/printable/pdf_printable.dart';
+import 'package:monalisapy_features/printer/printable/pos_receipt_printable.dart';
+import 'package:monalisapy_features/printer/printable/printable.dart';
+import 'package:monalisapy_features/printer/printable/tspl_printable.dart';
+import 'package:monalisapy_features/printer/printable/zpl_printable.dart';
 import 'package:monalisa_app_001/features/products/common/messages_dialog.dart';
-import 'package:monalisapy_features/models/idempiere/idempiere_locator.dart';
-import 'package:monalisa_app_001/features/products/domain/idempiere/movement_and_lines.dart';
-import '../m_inout/domain/entities/m_in_out.dart';
 import '../products/presentation/providers/common_provider.dart';
-import '../products/presentation/screens/movement/provider/new_movement_provider.dart';
 import '../shared/data/memory.dart';
 import '../shared/data/messages.dart';
 import 'package:monalisapy_features/printer/helpers/lite_ipp_print.dart';
 import 'package:monalisapy_features/printer/models/mo_printer.dart';
 import 'cups_printer.dart';
-import 'm_in_out_pdf_generator.dart';
-import 'movement_pdf_generator.dart';
 
 // Definir el enum para los tipos de impresora
 
@@ -109,22 +106,23 @@ class PrinterScanNotifier extends StateNotifier<PrinterState>  {
   bool isLabel(String type){
     return type == PrinterState.PRINTER_TYPE_LABEL;
   }
-  /// Dispatcher: route a print job to the right CUPS handler based on the
-  /// runtime type of [data]. Each branch can be customized independently
-  /// (the user wants the MInOut path tunable separately from Movement).
+  /// Dispatcher: route a print job to the right CUPS handler. The job
+  /// must implement [PdfPrintable] — the host wraps its business entity in
+  /// a printable so this layer stays type-agnostic.
   Future<void> printToCupsPdf(WidgetRef ref, dynamic data) async {
-    if (data is MovementAndLines) {
-      return printMovementAndLinesToCupsPdf(ref);
-    }
-    if (data is MInOut) {
-      return printMInOutToCupsPdf(ref, data);
+    if (data is PdfPrintable) {
+      return printPdfPrintableToCupsPdf(ref, data);
     }
     if (ref.context.mounted) {
       showWarningCenterToast(ref.context, Messages.NOT_IMPLEMENTED_YET);
     }
   }
 
-  Future<void> printMovementAndLinesToCupsPdf(WidgetRef ref) async {
+  /// Generic CUPS PDF dispatcher driven by [PdfPrintable]. Pulls bytes
+  /// and document number from the printable abstraction so it works for
+  /// any host type (MInOut, Movement, or future entities).
+  Future<void> printPdfPrintableToCupsPdf(
+      WidgetRef ref, PdfPrintable printable) async {
     if (state.serverIpController.text.isEmpty ||
         state.nameController.text.isEmpty ||
         state.serverPortController.text.isEmpty) {
@@ -136,11 +134,10 @@ class PrinterScanNotifier extends StateNotifier<PrinterState>  {
     isPrinting.state = true;
 
     try {
-      final movementAndLines = ref.read(movementAndLinesProvider);
       final image = await imageLogo;
-      final pdfBytes = await generateMovementDocument(movementAndLines, image);
+      final pdfBytes = await printable.generatePdfBytes(logoBytes: image);
 
-      final documentNo = movementAndLines.documentNo ?? 'document-mo';
+      final documentNo = printable.documentNo;
       final port = state.serverPortController.text.trim();
       final ip = state.serverIpController.text.trim();
       final printerName = state.nameController.text.trim();
@@ -173,84 +170,17 @@ class PrinterScanNotifier extends StateNotifier<PrinterState>  {
 
         if (ref.context.mounted) {
           res
-              ? showSuccessMessage(ref.context, ref, '${Messages.PRINT_SUCCESS} $nodeUrl $printerName')
-              : showErrorMessage(ref.context, ref, '${Messages.NETWORK_ERROR} $nodeUrl $printerName');
+              ? showSuccessMessage(ref.context, ref,
+                  '${Messages.PRINT_SUCCESS} $nodeUrl $printerName')
+              : showErrorMessage(ref.context, ref,
+                  '${Messages.NETWORK_ERROR} $nodeUrl $printerName');
         }
       }
 
       await Future.delayed(const Duration(seconds: 1));
-      debugPrint('Impresion finalizada');
+      debugPrint('Impresion finalizada (${printable.runtimeType})');
     } catch (e, st) {
-      debugPrint('printToCupsPdf ERROR: $e\n$st');
-      if (ref.context.mounted) {
-        showErrorMessage(ref.context, ref, 'Error: $e');
-      }
-    } finally {
-      // ✅ pase lo que pase, se apaga el loading
-      isPrinting.state = false;
-    }
-  }
-
-  /// Parallel of [printMovementAndLinesToCupsPdf] for the [MInOut] entity.
-  /// Kept separate from the Movement path so the user can tune the MInOut
-  /// PDF / CUPS flow without touching the Movement flow.
-  Future<void> printMInOutToCupsPdf(WidgetRef ref, MInOut mInOut) async {
-    if (state.serverIpController.text.isEmpty ||
-        state.nameController.text.isEmpty ||
-        state.serverPortController.text.isEmpty) {
-      showErrorMessage(ref.context, ref, Messages.ERROR_EMPTY_FIELDS);
-      return;
-    }
-
-    final isPrinting = ref.read(isPrintingProvider.notifier);
-    isPrinting.state = true;
-
-    try {
-      final image = await imageLogo;
-      final pdfBytes = await generateMInOutDocument(mInOut, image);
-
-      final documentNo = mInOut.documentNo ?? 'document-mio';
-      final port = state.serverPortController.text.trim();
-      final ip = state.serverIpController.text.trim();
-      final printerName = state.nameController.text.trim();
-
-      bool res;
-      if (port.startsWith('631')) {
-        final cupsUrl = Memory.getUrlCupsServerWithPrinter(
-          ip: ip,
-          port: port,
-          printerName: printerName,
-        );
-
-        res = await printPdfToCUPSDirect(
-          ref,
-          pdfBytes,
-          cupsUrl,
-          documentNo,
-          LiteIppPrintOptions.PRINTER_ORIENTATION_LANDSCAPE,
-        );
-
-        if (ref.context.mounted) {
-          res
-              ? showSuccessMessage(ref.context, ref, Messages.PRINT_SUCCESS)
-              : showErrorMessage(ref.context, ref, Messages.ERROR_CUPS_PRINT);
-        }
-      } else {
-        final nodeUrl = Memory.getUrlNodeCupsServer(ip: ip, port: port);
-
-        res = await sendPdfToNode(ref, pdfBytes, nodeUrl, printerName);
-
-        if (ref.context.mounted) {
-          res
-              ? showSuccessMessage(ref.context, ref, '${Messages.PRINT_SUCCESS} $nodeUrl $printerName')
-              : showErrorMessage(ref.context, ref, '${Messages.NETWORK_ERROR} $nodeUrl $printerName');
-        }
-      }
-
-      await Future.delayed(const Duration(seconds: 1));
-      debugPrint('Impresion finalizada (MInOut)');
-    } catch (e, st) {
-      debugPrint('printMInOutToCupsPdf ERROR: $e\n$st');
+      debugPrint('printPdfPrintableToCupsPdf ERROR: $e\n$st');
       if (ref.context.mounted) {
         showErrorMessage(ref.context, ref, 'Error: $e');
       }
@@ -382,7 +312,7 @@ class PrinterScanNotifier extends StateNotifier<PrinterState>  {
 
 
   void printPdfByDataType(WidgetRef ref, dataToPrint) {
-    if (dataToPrint is MovementAndLines || dataToPrint is MInOut) {
+    if (dataToPrint is PdfPrintable) {
       printToCupsPdf(ref, dataToPrint);
       return;
     }
@@ -392,12 +322,8 @@ class PrinterScanNotifier extends StateNotifier<PrinterState>  {
   }
 
   Future<void> printPOSByDataType(WidgetRef ref, {dynamic dataToPrint}) async {
-    if (dataToPrint is MovementAndLines) {
-      await printMovementReceiptWithQr(ref, dataToPrint);
-      return;
-    }
-    if (dataToPrint is MInOut) {
-      await printMInOutReceiptWithQr(ref, dataToPrint);
+    if (dataToPrint is PosReceiptPrintable) {
+      await dataToPrint.printPosReceipt(ref);
       return;
     }
     if (ref.context.mounted) {
@@ -408,77 +334,45 @@ class PrinterScanNotifier extends StateNotifier<PrinterState>  {
 
   void printZplDirectOrConfigureByDataType(WidgetRef ref,
       dynamic dataToPrint) {
-    if(dataToPrint is MovementAndLines) {
-      printMovementZplDirectOrConfigure(ref, dataToPrint);
+    if (dataToPrint is ZplPrintable) {
+      dataToPrint.printZpl(ref);
       return;
     }
-    if(dataToPrint is List<IdempiereLocator>) {
-      printListLocatorZplDirectOrConfigure(ref, dataToPrint);
-      return;
+    if (ref.context.mounted) {
+      showWarningCenterToast(ref.context, Messages.NOT_IMPLEMENTED_YET);
     }
-    if(ref.context.mounted) {
-      String message = Messages.NOT_IMPLEMENTED_YET;
-      showWarningCenterToast(ref.context, message);
-    }
-
   }
 
   void printTsplDirectOrConfigureByDataType(WidgetRef ref,
       dynamic dataToPrint) {
-
-    if(dataToPrint is MovementAndLines) {
-      printMovementTsplDirectOrConfigure(ref, dataToPrint);
-    }
-    if(ref.context.mounted) {
-      String message = Messages.NOT_IMPLEMENTED_YET;
-      showWarningCenterToast(ref.context, message);
-    }
-
-  }
-  /// Dispatcher used by [printDirectly] when the printer is A4/LASER and the
-  /// document body must be generated as PDF and pushed to a CUPS-style sink.
-  /// Routes by runtime type of [data] to a Movement-specific or
-  /// MInOut-specific sender so each branch can evolve independently.
-  Future<void> sendPdfDirectByDataType(WidgetRef ref, dynamic data) async {
-    if (data is MInOut) {
-      await sendMInOutPdfDirect(ref, data);
+    if (dataToPrint is TsplPrintable) {
+      dataToPrint.printTspl(ref);
       return;
     }
-    final movementAndLines = (data is MovementAndLines)
-        ? data
-        : ref.read(movementAndLinesProvider);
-    await sendMovementPdfDirect(ref, movementAndLines);
-  }
-
-  /// Movement-side of [sendPdfDirectByDataType]. Mirrors the original A4/LASER
-  /// branch verbatim: build the Movement PDF and push it to the configured
-  /// node-CUPS endpoint.
-  Future<void> sendMovementPdfDirect(
-      WidgetRef ref, MovementAndLines movementAndLines) async {
-    final image = await imageLogo;
-    final pdfBytes = await generateMovementDocument(movementAndLines, image);
-
-    String cupsServiceUrl = Memory.URL_CUPS_SERVER;
-    if (state.serverPortController.text.isNotEmpty &&
-        state.serverIpController.text != '' &&
-        state.nameController.text != '') {
-      cupsServiceUrl = Memory.getUrlCupsServerWithPrinter(
-        ip: state.serverPortController.text,
-        port: state.serverPortController.text,
-        printerName: state.nameController.text,
-      );
+    if (ref.context.mounted) {
+      showWarningCenterToast(ref.context, Messages.NOT_IMPLEMENTED_YET);
     }
-    final printerName = state.nameController.text == ''
-        ? 'BR_HL_10003'
-        : state.nameController.text;
-    await sendPdfToNode(ref, pdfBytes, cupsServiceUrl, printerName);
+  }
+  /// Dispatcher used by [printDirectly] when the printer is A4/LASER and
+  /// the document body must be generated as PDF and pushed to a CUPS-style
+  /// sink. The host wraps its entity in a [PdfPrintable] so this layer
+  /// stays type-agnostic.
+  Future<void> sendPdfDirectByDataType(WidgetRef ref, dynamic data) async {
+    if (data is PdfPrintable) {
+      await sendPdfPrintableDirect(ref, data);
+      return;
+    }
+    if (ref.context.mounted) {
+      showWarningCenterToast(ref.context, Messages.NOT_IMPLEMENTED_YET);
+    }
   }
 
-  /// MInOut-side of [sendPdfDirectByDataType]. Same shape as the Movement
-  /// variant; the user can customize this independently later.
-  Future<void> sendMInOutPdfDirect(WidgetRef ref, MInOut mInOut) async {
+  /// A4/LASER direct sender driven by [PdfPrintable]. Pulls the bytes from
+  /// the abstraction.
+  Future<void> sendPdfPrintableDirect(
+      WidgetRef ref, PdfPrintable printable) async {
     final image = await imageLogo;
-    final pdfBytes = await generateMInOutDocument(mInOut, image);
+    final pdfBytes = await printable.generatePdfBytes(logoBytes: image);
 
     String cupsServiceUrl = Memory.URL_CUPS_SERVER;
     if (state.serverPortController.text.isNotEmpty &&
@@ -527,47 +421,21 @@ class PrinterScanNotifier extends StateNotifier<PrinterState>  {
     );
   }
 
-  /// Dispatcher: routes the raw-bytes leg of [printDirectly] (TCP socket via
-  /// FlutterNetPrinter) by document type. Movement and MInOut have parallel
-  /// senders so each can diverge later (different socket framing, headers,
-  /// retry policy, etc.) without affecting the other.
+  /// Raw-bytes leg of [printDirectly] (TCP socket via FlutterNetPrinter).
+  /// The [data] is only used to tag log lines with the printable type.
   Future<void> sendBytesDirectByDataType({
     required WidgetRef ref,
     required Uint8List bytes,
     required int port,
     required dynamic data,
   }) async {
-    if (data is MInOut) {
-      await sendMInOutBytesDirect(ref: ref, bytes: bytes, port: port);
-      return;
-    }
-    // Movement (or null/unknown — preserve historical behavior).
-    await sendMovementBytesDirect(ref: ref, bytes: bytes, port: port);
-  }
-
-  /// Movement-side: connect to the configured network printer and push the
-  /// pre-built [bytes] payload over a single TCP session.
-  Future<void> sendMovementBytesDirect({
-    required WidgetRef ref,
-    required Uint8List bytes,
-    required int port,
-  }) async {
-    await _sendBytesViaNetPrinter(bytes: bytes, port: port, label: 'Movement');
-  }
-
-  /// MInOut-side parallel of [sendMovementBytesDirect]. Identical body for
-  /// now; kept separate so the user can customize the MInOut socket flow.
-  Future<void> sendMInOutBytesDirect({
-    required WidgetRef ref,
-    required Uint8List bytes,
-    required int port,
-  }) async {
-    await _sendBytesViaNetPrinter(bytes: bytes, port: port, label: 'MInOut');
+    final label = data is Printable ? data.runtimeType.toString() : 'unknown';
+    await _sendBytesViaNetPrinter(bytes: bytes, port: port, label: label);
   }
 
   /// Shared transport: opens a FlutterNetPrinter session against the printer
   /// IP currently in [state] and writes [bytes]. The [label] only tags log
-  /// lines so we can tell Movement vs MInOut apart in console output.
+  /// lines so we can tell printable types apart in console output.
   Future<void> _sendBytesViaNetPrinter({
     required Uint8List bytes,
     required int port,
