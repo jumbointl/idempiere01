@@ -328,7 +328,7 @@ class NiimbotController extends StateNotifier<NiimbotState> {
       return;
     }
 
-    if (data is PrinterConnConfig) {
+    if (data is PrinterDevice) {
       // Elegí barcode o QR como default. Acá uso barcode.
       final page = await _buildPageForPrinterConfigQr(
         profile: profile, cfg: data,
@@ -346,33 +346,34 @@ class NiimbotController extends StateNotifier<NiimbotState> {
     // Si no es soportado:
     throw Exception('Unsupported dataToPrint type: ${data.runtimeType}');
   }
-  PrinterConnConfig? buildPrinterConnConfigFromClient() {
+  PrinterDevice? buildPrinterDeviceFromClient() {
     final client = state.client;
     if (client == null || !client.isConnected()) {
-      _log('buildPrinterConnConfigFromClient: not connected');
+      _log('buildPrinterDeviceFromClient: not connected');
       return null;
     }
 
     final device = client.getDevice();
     if (device == null) {
-      _log('buildPrinterConnConfigFromClient: device null');
+      _log('buildPrinterDeviceFromClient: device null');
       return null;
     }
-    _log('buildPrinterConnConfigFromClient: device=${device.toString()}');
+    _log('buildPrinterDeviceFromClient: device=${device.toString()}');
 
     final name = device.platformName.isEmpty ? 'NIIMBOT' : device.platformName;
     final btAddress = device.remoteId.str;
 
-    final newPrinter = PrinterConnConfig(
-      btAddress: btAddress,
+    final newPrinter = PrinterDevice(
       id: 'bt_$btAddress',
-      type: PrinterConnType.bluetooth,
       name: name,
-      lang: 'NIIMBOT',
-      typeText: 'BLE',
+      transport: PrinterTransport.bluetooth,
+      language: PrinterLanguage.niimbot,
+      type: PrinterType.niimbot,
+      bluetoothAddress: btAddress,
+      metadata: const <String, Object?>{'bluetoothType': 'BLE'},
     );
 
-    _log('buildPrinterConnConfigFromClient: name="$name" addr="$btAddress"');
+    _log('buildPrinterDeviceFromClient: name="$name" addr="$btAddress"');
     return newPrinter;
   }
 
@@ -1158,7 +1159,7 @@ class NiimbotController extends StateNotifier<NiimbotState> {
 
   Future<void> printPrinterInformationQr(
       BuildContext context, {
-        required PrinterConnConfig printer,
+        required PrinterDevice printer,
         required LabelProfile? profile,
       }) async {
     if (!isConnected()) {
@@ -1661,7 +1662,7 @@ class NiimbotController extends StateNotifier<NiimbotState> {
   }
 
   Future<PrintPage> _buildPageForPrinterConfigQr({
-    required PrinterConnConfig cfg,
+    required PrinterDevice cfg,
     required LabelProfile profile,
   }) async {
     final widthPx = _pxFromMm(profile.widthMm);
@@ -1670,12 +1671,15 @@ class NiimbotController extends StateNotifier<NiimbotState> {
     final marginX = _pxMarginXFromMm(profile.marginLeftMm);
     final marginY = _pxFromMm(profile.marginTopMm);
 
-    final name = (cfg.printerInformationName).replaceAll('\n', ' ').replaceAll('\r', ' ').trim();
-    final bt = (cfg.printerInformationAddress.isEmpty ?
-    'No address' : cfg.printerInformationAddress)
-        .replaceAll('\n', ' ').replaceAll('\r', ' ').trim();
+    final name = cfg.displayName.replaceAll('\n', ' ').replaceAll('\r', ' ').trim();
+    final bt = (cfg.displayAddress.isEmpty
+            ? 'No address'
+            : cfg.displayAddress)
+        .replaceAll('\n', ' ')
+        .replaceAll('\r', ' ')
+        .trim();
 
-    final qrValue  = cfg.getPrinterInfoQRString();
+    final qrValue = cfg.toQrInfoString();
 
     final page = PrintPage(widthPx, heightPx);
     final centerX = (widthPx / 2).round();
@@ -2053,7 +2057,7 @@ class _NiimbotPageState extends ConsumerState<NiimbotPage> {
   Future<void> _openPrinterSelectAndPrintQr() async {
     final ctrl = ref.read(niimbotControllerProvider.notifier);
 
-    final PrinterConnConfig? picked = await Navigator.push<PrinterConnConfig?>(
+    final PrinterDevice? picked = await Navigator.push<PrinterDevice?>(
       context,
       MaterialPageRoute(
         builder: (_) => PrinterSelectPage(dataToPrint: widget.dataToPrint),
@@ -2065,8 +2069,8 @@ class _NiimbotPageState extends ConsumerState<NiimbotPage> {
     ref.read(selectedPrinterConfigProvider.notifier).state = picked;
 
     // If user picked NIIMBOT BLE, auto-connect to that address (optional but helpful)
-    final isNiimbot = (picked.lang ?? '').toUpperCase() == 'NIIMBOT';
-    final addr = (picked.btAddress ?? '').trim();
+    final isNiimbot = picked.language == PrinterLanguage.niimbot;
+    final addr = (picked.bluetoothAddress ?? '').trim();
     if (isNiimbot && addr.isNotEmpty && !ctrl.isConnected()) {
       ref.read(isPrintingProvider.notifier).state = true;
       await ctrl.connectToAddressSilence(context, address: addr);
@@ -2585,15 +2589,15 @@ class _NiimbotPageState extends ConsumerState<NiimbotPage> {
       },
     );
   }
-  String _printerSummary(PrinterConnConfig? p) {
+  String _printerSummary(PrinterDevice? p) {
     if (p == null) return 'None';
-    final name = (p.name ?? '').trim().isEmpty ? 'Printer' : p.name;
-    final addr = (p.printerInformationAddress).trim();
-    final lang = (p.lang ?? '').trim();
-    final type = (p.typeText ?? '').trim();
+    final name = p.name.trim().isEmpty ? 'Printer' : p.name;
+    final addr = p.displayAddress.trim();
+    final lang = p.language.name.toUpperCase();
+    final type = p.type.name;
     return '$name (${addr.isEmpty ? 'no addr' : addr})'
-        '${lang.isEmpty ? '' : '  lang:$lang'}'
-        '${type.isEmpty ? '' : '  type:$type'}';
+        '  lang:$lang'
+        '  type:$type';
   }
 
   // Common button builder
@@ -2658,7 +2662,7 @@ class _NiimbotPageState extends ConsumerState<NiimbotPage> {
           label: '🖨️ Printer Information QR(Actual)',
           onPressed: isConnected
               ? () {
-            final newPrinter = ctrl.buildPrinterConnConfigFromClient();
+            final newPrinter = ctrl.buildPrinterDeviceFromClient();
             if (newPrinter == null) {
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(content: Text('Printer data not available')),

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_symbols_icons/symbols.dart';
-import 'package:monalisapy_features/models/idempiere/idempiere_locator.dart';
+import 'package:monalisapy_core/models/idempiere/idempiere_locator.dart';
 import 'package:monalisapy_features/printer/printable/zpl_printable.dart';
 
 import '../../printer/zpl/old/zpl_label_printer_100x150.dart';

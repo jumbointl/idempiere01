@@ -65,6 +65,8 @@ import '../../features/products/presentation/screens/movement/pos/movement_pos_p
 import '../../features/products/presentation/screens/search/ai_dashboard.dart';
 import '../../features/products/presentation/screens/search/ai_processor_screen.dart';
 import '../../features/products/presentation/screens/search/product_search_screen.dart';
+import '../../features/products/presentation/screens/locator_stock/locator_stock_detail_screen.dart';
+import '../../features/products/presentation/screens/movement_minout_check/movement_minout_check_screen.dart';
 import '../../features/products/presentation/screens/store_on_hand/product_store_on_hand_screen.dart';
 import '../../features/products/presentation/screens/movement/edit_new/unsorted_storage_on__hand_screen_for_line.dart';
 import '../../features/products/presentation/screens/search/update_product_upc_screen.dart';
@@ -92,6 +94,8 @@ class AppRouter {
   static const String PAGE_MOVEMENTS_LIST = '/movement_list';
 
   static const String PAGE_SEARCH_LOCATOR_LIST = '/search_locator_list';
+  static const String PAGE_LOCATOR_STOCK_DETAIL = '/locator_stock_detail';
+  static const String PAGE_MOVEMENT_MINOUT_CHECK = '/movement_minout_check';
   static const String PAGE_SEARCH_LOCATOR_TO = '/product/movement/createMovement/searchLocatorTo';
   static const String PAGE_CREATE_MOVEMENT_LINE = '/create_movement_line';
   static const String PAGE_MOVEMENTS_CONFIRM_SCREEN = '/movement_confirm_screen';
@@ -587,7 +591,7 @@ final goRouterProvider = Provider((ref) {
         path: '/niimbot_print_silence_page/thermal_printer',
         builder: (context, state) {
           final extra = state.extra as Map<String, dynamic>;
-          final locator = extra['dataToPrint'] as PrinterConnConfig;
+          final locator = extra['dataToPrint'] as PrinterDevice;
           final profile = extra['profile'] as LabelProfile?;
           final bluetoothAddress = extra['bluetoothAddress'] as String;
 
@@ -1035,6 +1039,14 @@ final goRouterProvider = Provider((ref) {
         SearchLocatorScreen(readOnly: true) ,
       ),
       GoRoute(
+        path: AppRouter.PAGE_LOCATOR_STOCK_DETAIL,
+        builder: (context, state) => const LocatorStockDetailScreen(),
+      ),
+      GoRoute(
+        path: AppRouter.PAGE_MOVEMENT_MINOUT_CHECK,
+        builder: (context, state) => const MovementMInOutCheckScreen(),
+      ),
+      GoRoute(
         path: AppRouter.PAGE_SEARCH_LOCATOR_TO,
         builder: (context, state) => RolesApp.hasStockPrivilege ?
         SearchLocatorScreen( readOnly: false) : const HomeScreen(),
@@ -1238,4 +1250,5 @@ class LoadingController extends StateNotifier<bool> {
   void start() => state = true;
   void stop() => state = false;
 }
+
 

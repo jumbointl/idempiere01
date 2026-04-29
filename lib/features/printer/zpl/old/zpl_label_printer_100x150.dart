@@ -12,7 +12,7 @@ import 'package:monalisa_app_001/features/products/presentation/providers/common
 import 'package:monalisa_app_001/features/shared/data/messages.dart';
 
 import '../../../products/common/messages_dialog.dart';
-import 'package:monalisapy_features/models/idempiere/idempiere_locator.dart';
+import 'package:monalisapy_core/models/idempiere/idempiere_locator.dart';
 import '../../../products/domain/idempiere/idempiere_movement_line.dart';
 import '../../../products/domain/idempiere/movement_and_lines.dart';
 import 'package:monalisapy_core/api_client/response_async_value.dart';
@@ -651,7 +651,6 @@ Future<void> printLabelMovementByProductTspl60x150NoLogo({
 
       // max chars para productName
       final int nameMaxDots = max(0, (colQtyX - 8) - colNameX);
-      final int maxNameChars = max(4, (nameMaxDots ~/ 8));
 
       // =========================
       // BODY
@@ -712,7 +711,7 @@ Future<void> printLabelMovementByProductTspl60x150NoLogo({
     await socket.close();
     if(ref.context.mounted)showSuccessMessage(ref.context, ref, Messages.LABEL_PRINTED);
   } catch(e){
-    print('Error: $e');
+    debugPrint('Error: $e');
     socket?.close();
     if(ref.context.mounted)showErrorMessage(ref.context, ref, "${Messages.ERROR}: ${e.toString()}");
   }

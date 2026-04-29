@@ -7,6 +7,7 @@ import 'package:monalisa_app_001/features/products/common/messages_dialog.dart';
 import 'package:monalisa_app_001/features/products/presentation/screens/store_on_hand/memory_products.dart';
 import 'package:monalisa_app_001/features/shared/shared.dart';
 import 'package:upgrader/upgrader.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../../auth/presentation/screens/exit_app.dart';
 import '../../../shared/data/memory.dart';
@@ -36,7 +37,7 @@ class HomeScreen extends ConsumerWidget {
         ? '${Memory.APP_NAME} ${upgrader.versionInfo?.installedVersion ?? 0}'
         :Memory.APP_NAME_WITH_VERSION;
     final sections = _buildHomeSections();
-
+    final Uri uri = Uri.parse(Memory.APP_PLAY_STORE_LINK);
     return UpgradeAlert(
       key: ValueKey(upgradeSeed),
       upgrader: upgrader,
@@ -63,8 +64,40 @@ class HomeScreen extends ConsumerWidget {
               icon: const Icon(Icons.link),
               tooltip: 'Link',
               onPressed: () async {
-                String message = Memory.APP_PLAY_STORE_LINK;
-                showSuccessMessage(context, ref, message);
+
+                showDialog(
+                  context: context,
+                  builder: (BuildContext dialogContext) {
+                    return AlertDialog(
+                      title: Text(Messages.UPDATE),
+                      content: InkWell(
+                        onTap: () async {
+                          if (await canLaunchUrl(uri)) {
+                            await launchUrl(
+                              uri,
+                              mode: LaunchMode.externalApplication,
+                            );
+                          }
+                        },
+                        child: Text(
+                        Memory.APP_PLAY_STORE_LINK,
+                          style: const TextStyle(
+                            color: Colors.blue,
+                            decoration: TextDecoration.underline,
+                          ),
+                        ),
+                      ),
+                      actions: [
+                        TextButton(
+                          onPressed: () {
+                            Navigator.of(dialogContext).pop();
+                          },
+                          child: Text('CERRAR'),
+                        ),
+                      ],
+                    );
+                  },
+                );
               },
             ) ,
             IconButton(
@@ -207,11 +240,13 @@ List<_HomeSectionData> _buildHomeSections() {
   final utilCol2 = <MenuItem>[
     ...appHomeOptionCol1Items.where((e) => e.title == 'ZPL Template'),
     ...appHomeOptionCol2Items.where((e) => e.title == 'NIIMBOT config'),
+    ...appHomeOptionCol1Items.where((e) => e.title == 'Mov MInOut Check'),
   ];
 
   final utilCol3 = <MenuItem>[
     ...appHomeOptionCol2Items.where((e) => e.title == 'Printer config'),
     ...appHomeOptionCol3Items.where((e) => e.title == Messages.STORE_ON_HAND),
+    ...appHomeOptionCol1Items.where((e) => e.title == 'Locator Detail'),
   ];
 
   return [

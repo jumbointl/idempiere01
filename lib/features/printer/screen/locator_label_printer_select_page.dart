@@ -1,11 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:monalisa_app_001/features/printer/screen/riverpod_printer_adapter.dart';
 import 'package:monalisa_app_001/features/shared/data/memory.dart';
 import 'package:riverpod_printer/riverpod_printer.dart';
 
 import '../../products/domain/idempiere/idempiere_locator.dart';
-import 'package:monalisapy_features/printer/models/printer_select_models.dart';
 import 'label_printer_select_page.dart';
 
 class LocatorLabelPrinterSelectPage extends LabelPrinterSelectPage {
@@ -44,7 +42,7 @@ class LocatorLabelPrinterSelectPage extends LabelPrinterSelectPage {
     required WidgetRef ref,
     required LabelProfile profile,
     required bool printSimpleData,
-    required PrinterConnConfig selectedPrinter,
+    required PrinterDevice selectedPrinter,
     required int copies,
   }) async {
     final IdempiereLocator locator = dataToPrint as IdempiereLocator;
@@ -66,7 +64,7 @@ class LocatorLabelPrinterSelectPage extends LabelPrinterSelectPage {
         items: <LocatorLabelItem>[item],
       ),
       labelProfile: profileWithCopies,
-      printer: printerDeviceFromConnConfig(selectedPrinter),
+      printer: selectedPrinter,
       printerType: PrinterType.label,
       printerLanguage: PrinterLanguage.tspl,
     );
@@ -79,7 +77,7 @@ class LocatorLabelPrinterSelectPage extends LabelPrinterSelectPage {
   Widget buildPrintingPanel({
     required BuildContext context,
     required WidgetRef ref,
-    required PrinterConnConfig? selectedPrinter,
+    required PrinterDevice? selectedPrinter,
     required LabelProfile profile40,
     required LabelProfile profile60,
     required Future<void> Function({

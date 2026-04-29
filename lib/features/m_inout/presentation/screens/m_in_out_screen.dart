@@ -2085,6 +2085,7 @@ class _MInOutViewState extends ConsumerState<_MInOutView> {
                     _buildTableRow("SKU:", item.sku?.toString() ?? '', false),
                     _buildTableRow(
                         "Producto:", item.productName?.toString() ?? '', false),
+                    _buildTableRow("ATT:", item.mAttributeSetInstanceID?.identifier ?? '--', false),
                     _buildTableRow("Estante:",
                         item.mLocatorId?.identifier.toString() ?? '', false),
                     if (mInOutState.rolShowQty)

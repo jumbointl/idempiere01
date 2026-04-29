@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:flutter/services.dart';
 import 'package:monalisa_app_001/config/config.dart';
 import 'package:monalisa_app_001/config/constants/roles_app.dart';
+import 'package:monalisa_app_001/config/deep_link/open_in_monalisa002.dart';
 import 'package:monalisa_app_001/features/products/domain/idempiere/idempiere_document_status.dart';
 import 'package:monalisa_app_001/features/products/domain/idempiere/idempiere_movement.dart';
 import 'package:monalisa_app_001/features/products/domain/idempiere/idempiere_warehouse.dart';
@@ -243,7 +244,27 @@ class MovementListScreenState extends AsyncValueConsumerSimpleState<MovementList
               contentPadding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 0),
               leading: Icon(Icons.circle,color: docColor),
               trailing: movementId > 0
-                  ? Icon(iconData,color: iconColor,) : null,
+                  ? Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        IconButton(
+                          icon: const Icon(Icons.open_in_new),
+                          color: Colors.purple,
+                          tooltip: 'Check in 002',
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(
+                            minWidth: 32,
+                            minHeight: 32,
+                          ),
+                          onPressed: () => _shareMovementToMonalisa002(
+                            context,
+                            movement.documentNo ?? '',
+                          ),
+                        ),
+                        Icon(iconData, color: iconColor),
+                      ],
+                    )
+                  : null,
               title: Text(movement.documentNo ?? '$movementId',
                   style: TextStyle(color: textColor,fontSize: fontSize)),
               subtitle: Text(
@@ -257,6 +278,39 @@ class MovementListScreenState extends AsyncValueConsumerSimpleState<MovementList
       separatorBuilder: (BuildContext context, int index) =>
       const SizedBox(height: 2),
     );
+  }
+
+  Future<void> _shareMovementToMonalisa002(
+    BuildContext context,
+    String documentNo,
+  ) async {
+    if (documentNo.isEmpty) return;
+    // Copy to clipboard so the user can paste it manually in 002 if the
+    // auto-search fails for any reason.
+    await Clipboard.setData(ClipboardData(text: documentNo));
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Copied: $documentNo'),
+          duration: const Duration(seconds: 1),
+        ),
+      );
+    }
+    final ok = await openInMonalisa002(
+      action: Memory.ACTION_FIND_BY_DOC_NO_FOR_MOV_MINOUT_CHECK,
+      value: <String, dynamic>{
+        'documentNo': documentNo,
+        'type': 'Movement',
+      },
+    );
+    if (!ok && context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('monalisa_app_002 is not installed.'),
+          duration: Duration(seconds: 2),
+        ),
+      );
+    }
   }
 
   void showMovementOptionsSheet({

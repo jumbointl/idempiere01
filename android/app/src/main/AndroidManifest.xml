@@ -74,6 +74,11 @@
             <action android:name="android.intent.action.PROCESS_TEXT"/>
             <data android:mimeType="text/plain"/>
         </intent>
+        <!-- Cross-app deep link to monalisa_app_002 (Android 11+ package visibility) -->
+        <intent>
+            <action android:name="android.intent.action.VIEW"/>
+            <data android:scheme="monalisa002"/>
+        </intent>
     </queries>
 
 </manifest>

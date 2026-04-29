@@ -2,16 +2,16 @@ import 'package:flutter/material.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:niim_blue_flutter/niim_blue_flutter.dart';
+import 'package:riverpod_printer/riverpod_printer.dart';
 
-import 'package:monalisapy_features/printer/models/printer_select_models.dart';
 import 'niimbot_page.dart';
 
-Future<PrinterConnConfig?> showPrinterPickerBottomSheet({
+Future<PrinterDevice?> showPrinterPickerBottomSheet({
   required BuildContext context,
   required WidgetRef ref,
   required NiimbotController controller,
 }) async {
-  return showModalBottomSheet<PrinterConnConfig?>(
+  return showModalBottomSheet<PrinterDevice?>(
     context: context,
     isScrollControlled: true,
     backgroundColor: Colors.white,
@@ -36,7 +36,7 @@ class _PrinterPickerSheetState extends ConsumerState<_PrinterPickerSheet> {
   bool _scanning = false;
 
   // Saved printers from pos_universal_printer (you adapt)
-  List<PrinterConnConfig> _saved = [];
+  List<PrinterDevice> _saved = [];
 
   // Nearby devices found by scan (NiimbotBluetoothClient.listDevices)
   List<BluetoothDevice> _nearby = [];
@@ -52,18 +52,6 @@ class _PrinterPickerSheetState extends ConsumerState<_PrinterPickerSheet> {
     try {
       // TODO: Use pos_universal_printer here.
       // Replace this adapter with your real call that returns saved bluetooth printers.
-      //
-      // Example idea (fake):
-      // final saved = await PosUniversalPrinter.instance.getSavedBluetoothPrinters();
-      // _saved = saved.map((p) => PrinterConnConfig(
-      //   btAddress: p.address,
-      //   id: 'bt_${p.address}',
-      //   type: PrinterConnType.bluetooth,
-      //   name: p.name ?? 'BT Printer',
-      //   lang: p.lang ?? 'NIIMBOT',
-      //   typeText: p.isBle ? 'BLE' : 'BT',
-      // )).toList();
-
       _saved = []; // keep empty if you haven't wired it yet
     } finally {
       if (mounted) setState(() => _loadingSaved = false);
@@ -94,20 +82,17 @@ class _PrinterPickerSheetState extends ConsumerState<_PrinterPickerSheet> {
   Future<void> _connectAndReturnBluetooth({
     required String name,
     required String btAddress,
-    required String lang,
-    required String typeText,
+    required PrinterLanguage language,
+    required PrinterType type,
     BluetoothDevice? device,
   }) async {
     final ctrl = widget.controller;
 
     // If already connected: disconnect first (as requested)
     if (ctrl.isConnected()) {
-      try{
+      try {
         await ctrl.handleDisconnect(context);
-      }catch(_){
-
-      }
-
+      } catch (_) {}
     }
 
     // Connect using BluetoothDevice if provided, else use silent address
@@ -121,13 +106,13 @@ class _PrinterPickerSheetState extends ConsumerState<_PrinterPickerSheet> {
 
     if (!ok) return;
 
-    final newPrinter = PrinterConnConfig(
-      btAddress: btAddress,
+    final newPrinter = PrinterDevice(
       id: 'bt_$btAddress',
-      type: PrinterConnType.bluetooth,
       name: name.isEmpty ? 'NIIMBOT' : name,
-      lang: lang.isEmpty ? 'NIIMBOT' : lang,
-      typeText: typeText.isEmpty ? 'BLE' : typeText,
+      transport: PrinterTransport.bluetooth,
+      language: language,
+      type: type,
+      bluetoothAddress: btAddress,
     );
 
     if (!mounted) return;
@@ -139,7 +124,6 @@ class _PrinterPickerSheetState extends ConsumerState<_PrinterPickerSheet> {
     final ctrl = widget.controller;
 
     return SafeArea(
-
       child: Padding(
         padding: EdgeInsets.only(
           left: 12,
@@ -176,7 +160,7 @@ class _PrinterPickerSheetState extends ConsumerState<_PrinterPickerSheet> {
                   value: _timeoutSec,
                   items: List.generate(
                     49, // 12..60 inclusive => 49 values
-                        (i) {
+                    (i) {
                       final v = 12 + i;
                       return DropdownMenuItem(
                         value: v,
@@ -187,19 +171,19 @@ class _PrinterPickerSheetState extends ConsumerState<_PrinterPickerSheet> {
                   onChanged: _scanning
                       ? null
                       : (v) {
-                    if (v == null) return;
-                    setState(() => _timeoutSec = v);
-                  },
+                          if (v == null) return;
+                          setState(() => _timeoutSec = v);
+                        },
                 ),
                 const Spacer(),
                 ElevatedButton.icon(
                   onPressed: _scanning ? null : _scanNearby,
                   icon: _scanning
                       ? const SizedBox(
-                    width: 16,
-                    height: 16,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
                       : const Icon(Icons.bluetooth_searching),
                   label: const Text('Scan'),
                 ),
@@ -236,15 +220,16 @@ class _PrinterPickerSheetState extends ConsumerState<_PrinterPickerSheet> {
                   itemCount: _saved.length,
                   itemBuilder: (_, i) {
                     final p = _saved[i];
+                    final addr = p.bluetoothAddress ?? '';
                     return ListTile(
                       leading: const Icon(Icons.print),
                       title: Text(p.name),
-                      subtitle: Text(p.btAddress! ),
+                      subtitle: Text(addr),
                       onTap: () => _connectAndReturnBluetooth(
                         name: p.name,
-                        btAddress: p.btAddress!,
-                        lang: p.lang!,
-                        typeText: p.typeText!,
+                        btAddress: addr,
+                        language: p.language,
+                        type: p.type,
                       ),
                     );
                   },
@@ -286,8 +271,8 @@ class _PrinterPickerSheetState extends ConsumerState<_PrinterPickerSheet> {
                       onTap: () => _connectAndReturnBluetooth(
                         name: name,
                         btAddress: btAddress,
-                        lang: 'NIIMBOT',
-                        typeText: 'BLE',
+                        language: PrinterLanguage.niimbot,
+                        type: PrinterType.niimbot,
                         device: d,
                       ),
                     );

@@ -11,7 +11,8 @@ import 'package:flutter_riverpod/legacy.dart';
 import 'package:get_storage/get_storage.dart';
 import 'package:monalisa_app_001/config/config.dart';
 import 'package:monalisa_app_001/features/products/common/messages_dialog.dart';
-import 'package:pos_universal_printer/pos_universal_printer.dart';
+import 'package:pos_universal_printer/pos_universal_printer.dart' as posUni;
+import 'package:riverpod_printer/riverpod_printer.dart';
 
 import '../../products/common/bluetooth_permission.dart';
 import '../../products/presentation/providers/common_provider.dart';
@@ -21,7 +22,7 @@ import 'package:monalisapy_features/printer/models/printer_select_models.dart';
 import '../niimbot/niimbot_printer_helper.dart';
 import '../printer_scan_notifier.dart';
 
-final printerListProvider = StateProvider<List<PrinterConnConfig>>((ref) => []);
+final printerListProvider = StateProvider<List<PrinterDevice>>((ref) => []);
 final selectedPrinterIdProvider = StateProvider<String?>((ref) => null);
 final printerConnectedProvider = StateProvider<bool>((ref) => false);
 enum ScanAction { scan, stop }
@@ -59,11 +60,11 @@ class _PrinterSelectPageState extends ConsumerState<PrinterSelectPage>
   final box = GetStorage();
 
   // pos_universal_printer
-  final PosUniversalPrinter _pos = PosUniversalPrinter.instance;
+  final posUni.PosUniversalPrinter _pos = posUni.PosUniversalPrinter.instance;
 
   // --- SCAN TAB STATE ---
-  StreamSubscription<PrinterDevice>? _btScanSub;
-  final List<PrinterDevice> _btScanDevices = <PrinterDevice>[];
+  StreamSubscription<posUni.PrinterDevice>? _btScanSub;
+  final List<posUni.PrinterDevice> _btScanDevices = <posUni.PrinterDevice>[];
   bool _isScanning = false;
   Timer? _scanTimer;
 
@@ -112,7 +113,7 @@ class _PrinterSelectPageState extends ConsumerState<PrinterSelectPage>
 
     if (raw is String && raw.trim().isNotEmpty) {
       final list = (jsonDecode(raw) as List)
-          .map((e) => PrinterConnConfig.fromJson(Map<String, dynamic>.from(e)))
+          .map((e) => PrinterDevice.fromJson(Map<String, dynamic>.from(e)))
           .toList();
       ref.read(printerListProvider.notifier).state = list;
     }
@@ -132,7 +133,7 @@ class _PrinterSelectPageState extends ConsumerState<PrinterSelectPage>
     box.write(PrinterSelectStorageKeys.selectedPrinterId, selected);
   }
 
-  void _addOrUpdatePrinter(PrinterConnConfig p) {
+  void _addOrUpdatePrinter(PrinterDevice p) {
     debugPrint('addOrUpdatePrinter: $p');
     final list = [...ref.read(printerListProvider)];
     final idx = list.indexWhere((x) => x.id == p.id);
@@ -159,20 +160,21 @@ class _PrinterSelectPageState extends ConsumerState<PrinterSelectPage>
     _savePrintersToStorage();
   }
 
-  void _fillFormForEdit(PrinterConnConfig p) {
-    if (p.type == PrinterConnType.wifi) {
+  void _fillFormForEdit(PrinterDevice p) {
+    if (p.isTcp) {
       _tab.index = 1;
       _wifiName.text = p.name;
-      _wifiIp.text = p.ip ?? '';
+      _wifiIp.text = p.host ?? '';
       _wifiPort.text = '${p.port ?? 9100}';
-      _wifiLang.text = (p.lang ?? PrinterState.PRINTER_TYPE_TPL).toUpperCase();
+      _wifiLang.text = p.language.name.toUpperCase();
     } else {
       _tab.index = 0;
       _btName.text = p.name;
-      _btAddress.text = p.btAddress ?? '';
-      _btLang.text = (p.lang ?? PrinterState.PRINTER_TYPE_TPL).toUpperCase();
-      _btType.text =
-          (p.typeText ?? PrinterState.PRINTER_TYPE_BLUETOOTH_NO_BLE).toUpperCase();
+      _btAddress.text = p.bluetoothAddress ?? '';
+      _btLang.text = p.language.name.toUpperCase();
+      _btType.text = (p.metadata['bluetoothType']?.toString() ??
+              PrinterState.PRINTER_TYPE_BLUETOOTH_NO_BLE)
+          .toUpperCase();
     }
   }
 
@@ -196,7 +198,7 @@ class _PrinterSelectPageState extends ConsumerState<PrinterSelectPage>
   // ------------------------------------------------------------
   // Selection + return (disconnect and return printer)
   // ------------------------------------------------------------
-  Future<void> _selectAndReturnPrinter(PrinterConnConfig p) async {
+  Future<void> _selectAndReturnPrinter(PrinterDevice p) async {
     ref.read(selectedPrinterIdProvider.notifier).state = p.id;
     _savePrintersToStorage();
 
@@ -206,7 +208,7 @@ class _PrinterSelectPageState extends ConsumerState<PrinterSelectPage>
     }
   }
 
-  Future<void> _testSelectReturn(PrinterConnConfig p) async {
+  Future<void> _testSelectReturn(PrinterDevice p) async {
     // Test connection (it already disconnects internally for pos_universal_printer).
     final ok = await testConnectionPrinter(context, p);
     ref.read(printerConnectedProvider.notifier).state = ok;
@@ -215,7 +217,7 @@ class _PrinterSelectPageState extends ConsumerState<PrinterSelectPage>
 
     // Select + return printer (and ensure no lingering connection)
     try {
-      await _pos.unregisterDevice(PosPrinterRole.sticker);
+      await _pos.unregisterDevice(posUni.PosPrinterRole.sticker);
     } catch (_) {}
 
     await _selectAndReturnPrinter(p);
@@ -292,7 +294,7 @@ class _PrinterSelectPageState extends ConsumerState<PrinterSelectPage>
       await _showMsg('Bluetooth', '❌ Error al iniciar scan: $e');
     }
   }
-  Future<void> _selectFromScanAndReturn(PrinterDevice d) async {
+  Future<void> _selectFromScanAndReturn(posUni.PrinterDevice d) async {
     final name = (d.name.trim().isEmpty) ? 'BT Printer' : d.name.trim();
     final mac = d.address?.trim() ?? '';
 
@@ -301,14 +303,18 @@ class _PrinterSelectPageState extends ConsumerState<PrinterSelectPage>
       return;
     }
 
+    final lang = _scanLang.toUpperCase();
+    final btType = _scanBtType.toUpperCase();
+
     // Solo construir objeto, SIN conectar
-    final cfg = PrinterConnConfig(
-      btAddress: mac,
+    final cfg = PrinterDevice(
       id: 'bt_$mac',
-      type: PrinterConnType.bluetooth,
       name: name,
-      lang: _scanLang.toUpperCase(),   // si lo estás usando
-      typeText: _scanBtType.toUpperCase(),
+      transport: PrinterTransport.bluetooth,
+      language: PrinterDevice.languageFromString(lang),
+      type: PrinterDevice.typeFromString(lang),
+      bluetoothAddress: mac,
+      metadata: <String, Object?>{'bluetoothType': btType},
     );
 
     // Retornar directamente
@@ -405,13 +411,13 @@ class _PrinterSelectPageState extends ConsumerState<PrinterSelectPage>
               if (ctx.mounted) setState(() {});
             }
 
-            Future<void> connectAndFill(PrinterDevice d) async {
+            Future<void> connectAndFill(posUni.PrinterDevice d) async {
               await stopScan();
 
               try {
-                await _pos.registerDevice(PosPrinterRole.sticker, d);
+                await _pos.registerDevice(posUni.PosPrinterRole.sticker, d);
 
-                final connected = _pos.isRoleConnected(PosPrinterRole.sticker);
+                final connected = _pos.isRoleConnected(posUni.PosPrinterRole.sticker);
                 if (!connected) {
                   if (!ctx.mounted) return;
                   await _showMsg('Bluetooth', '❌ No se pudo conectar a ${d.address}');
@@ -432,20 +438,23 @@ class _PrinterSelectPageState extends ConsumerState<PrinterSelectPage>
                   }
                 }
 
-                final p = PrinterConnConfig(
+                final lang = _btLang.text.trim().toUpperCase();
+                final btType = _btType.text.trim().toUpperCase();
+                final p = PrinterDevice(
                   id: 'bt_${d.address?.trim() ?? ''}',
-                  type: PrinterConnType.bluetooth,
                   name: _btName.text.trim().isEmpty ? 'BT Printer' : _btName.text.trim(),
-                  btAddress: d.address?.trim() ?? '',
-                  lang: _btLang.text.trim().toUpperCase(),
-                  typeText: _btType.text.trim().toUpperCase(),
+                  transport: PrinterTransport.bluetooth,
+                  language: PrinterDevice.languageFromString(lang),
+                  type: PrinterDevice.typeFromString(lang),
+                  bluetoothAddress: d.address?.trim() ?? '',
+                  metadata: <String, Object?>{'bluetoothType': btType},
                 );
                 _addOrUpdatePrinter(p);
 
                 // Disconnect (safe)
                 try {
                   await Future.delayed(const Duration(milliseconds: 150));
-                  await _pos.unregisterDevice(PosPrinterRole.sticker);
+                  await _pos.unregisterDevice(posUni.PosPrinterRole.sticker);
                 } catch (_) {}
 
                 if (ctx.mounted) Navigator.pop(ctx);
@@ -636,12 +645,13 @@ class _PrinterSelectPageState extends ConsumerState<PrinterSelectPage>
           const Text('No printers saved yet.')
         else
           ...list.map((p) {
-            if (p.type != PrinterConnType.bluetooth) {
+            if (!p.isBluetooth) {
               return const SizedBox.shrink();
             }
 
+            final btType = p.metadata['bluetoothType']?.toString() ?? '-';
             final subtitle =
-                'BT: ${p.btAddress}  lang:${p.lang ?? "-"}  type:${p.typeText ?? "-"}';
+                'BT: ${p.bluetoothAddress}  lang:${p.language.name.toUpperCase()}  type:$btType';
 
             return Card(
               child: ListTile(
@@ -697,12 +707,12 @@ class _PrinterSelectPageState extends ConsumerState<PrinterSelectPage>
           const Text('No printers saved yet.')
         else
           ...list.map((p) {
-            if (p.type != PrinterConnType.wifi) {
+            if (!p.isTcp) {
               return const SizedBox.shrink();
             }
 
             final subtitle =
-                'WiFi: ${p.ip}:${p.port}  lang:${p.lang ?? "-"}';
+                'WiFi: ${p.host}:${p.port}  lang:${p.language.name.toUpperCase()}';
 
             return Card(
               child: ListTile(
@@ -828,14 +838,14 @@ class _PrinterSelectPageState extends ConsumerState<PrinterSelectPage>
                     return;
                   }
 
-                  final p = PrinterConnConfig(
+                  final p = PrinterDevice(
                     id: 'wifi_${ip}_$port',
-                    type: PrinterConnType.wifi,
                     name: name,
-                    ip: ip,
+                    transport: PrinterTransport.tcp,
+                    language: PrinterDevice.languageFromString(lang),
+                    type: PrinterDevice.typeFromString(lang),
+                    host: ip,
                     port: port,
-                    lang: lang,
-                    typeText: lang,
                   );
 
                   _addOrUpdatePrinter(p);
@@ -907,13 +917,14 @@ class _PrinterSelectPageState extends ConsumerState<PrinterSelectPage>
                     return;
                   }
 
-                  final p = PrinterConnConfig(
+                  final p = PrinterDevice(
                     id: 'bt_$address',
-                    type: PrinterConnType.bluetooth,
                     name: name,
-                    btAddress: address,
-                    lang: lang,
-                    typeText: btType,
+                    transport: PrinterTransport.bluetooth,
+                    language: PrinterDevice.languageFromString(lang),
+                    type: PrinterDevice.typeFromString(lang),
+                    bluetoothAddress: address,
+                    metadata: <String, Object?>{'bluetoothType': btType},
                   );
                   _addOrUpdatePrinter(p);
                 }
@@ -1060,8 +1071,8 @@ class _PrinterSelectPageState extends ConsumerState<PrinterSelectPage>
 
 Future<bool> testConnectionPrinter(
     BuildContext context,
-    PrinterConnConfig p, {
-      PosUniversalPrinter? pos,
+    PrinterDevice p, {
+      posUni.PosUniversalPrinter? pos,
     }) async {
   Future<void> showMsg(String title, String msg) async {
     if (!context.mounted) return;
@@ -1081,9 +1092,9 @@ Future<bool> testConnectionPrinter(
   }
 
   // NIIMBOT
-  if ((p.lang ?? '').toUpperCase() == 'NIIMBOT') {
+  if (p.language == PrinterLanguage.niimbot) {
     debugPrint('testConnectionPrinter: NIIMBOT');
-    final mac = (p.btAddress ?? '').trim();
+    final mac = (p.bluetoothAddress ?? '').trim();
     final helper = NiimbotPrinterHelper();
     final ok = await helper.testConnectionNiimbot(
       context: context,
@@ -1095,8 +1106,8 @@ Future<bool> testConnectionPrinter(
   }
 
   try {
-    if (p.type == PrinterConnType.wifi) {
-      final ip = (p.ip ?? '').trim();
+    if (p.isTcp) {
+      final ip = (p.host ?? '').trim();
       final port = p.port ?? 9100;
 
       if (ip.isEmpty) {
@@ -1116,30 +1127,30 @@ Future<bool> testConnectionPrinter(
     }
 
     // Bluetooth (pos_universal_printer)
-    final mac = (p.btAddress ?? '').trim();
+    final mac = (p.bluetoothAddress ?? '').trim();
     if (mac.isEmpty) {
       await showMsg('Connection', '❌ BT address vacío');
       return false;
     }
 
-    final posInst = pos ?? PosUniversalPrinter.instance;
+    final posInst = pos ?? posUni.PosUniversalPrinter.instance;
 
     // Build device
-    final device = PrinterDevice(
+    final device = posUni.PrinterDevice(
       name: p.name.isEmpty ? 'BT Printer' : p.name,
       address: mac,
       id: p.id,
-      type: PrinterType.bluetooth,
+      type: posUni.PrinterType.bluetooth,
     );
 
     // Ensure disconnected first
     try {
-      await posInst.unregisterDevice(PosPrinterRole.sticker);
+      await posInst.unregisterDevice(posUni.PosPrinterRole.sticker);
     } catch (_) {}
 
-    await posInst.registerDevice(PosPrinterRole.sticker, device);
+    await posInst.registerDevice(posUni.PosPrinterRole.sticker, device);
 
-    final connected = posInst.isRoleConnected(PosPrinterRole.sticker);
+    final connected = posInst.isRoleConnected(posUni.PosPrinterRole.sticker);
     if (!connected) {
       await showMsg('Connection', '❌ Bluetooth ERROR: $mac');
       return false;
@@ -1147,7 +1158,7 @@ Future<bool> testConnectionPrinter(
 
     await Future.delayed(const Duration(milliseconds: 200));
     try {
-      await posInst.unregisterDevice(PosPrinterRole.sticker);
+      await posInst.unregisterDevice(posUni.PosPrinterRole.sticker);
     } catch (_) {}
 
     await showMsg('Connection', '✅ Bluetooth OK: $mac');
@@ -1155,8 +1166,8 @@ Future<bool> testConnectionPrinter(
   } catch (e) {
     await showMsg('Connection', '❌ Error: $e');
     try {
-      final posInst = pos ?? PosUniversalPrinter.instance;
-      await posInst.unregisterDevice(PosPrinterRole.sticker);
+      final posInst = pos ?? posUni.PosUniversalPrinter.instance;
+      await posInst.unregisterDevice(posUni.PosPrinterRole.sticker);
     } catch (_) {}
     return false;
   }
@@ -1164,12 +1175,12 @@ Future<bool> testConnectionPrinter(
 
 Future<bool> testConnectionPrinterSilence(
     BuildContext context,
-    PrinterConnConfig p, {
-      PosUniversalPrinter? pos,
+    PrinterDevice p, {
+      posUni.PosUniversalPrinter? pos,
     }) async {
   try {
-    if (p.type == PrinterConnType.wifi) {
-      final ip = (p.ip ?? '').trim();
+    if (p.isTcp) {
+      final ip = (p.host ?? '').trim();
       final port = p.port ?? 9100;
 
       if (ip.isEmpty) {
@@ -1186,27 +1197,27 @@ Future<bool> testConnectionPrinterSilence(
     }
 
     // Bluetooth (pos_universal_printer)
-    final mac = (p.btAddress ?? '').trim();
+    final mac = (p.bluetoothAddress ?? '').trim();
     if (mac.isEmpty) {
       return false;
     }
 
-    final posInst = pos ?? PosUniversalPrinter.instance;
+    final posInst = pos ?? posUni.PosUniversalPrinter.instance;
 
-    final device = PrinterDevice(
+    final device = posUni.PrinterDevice(
       name: p.name.isEmpty ? 'BT Printer' : p.name,
       address: mac,
       id: p.id,
-      type: PrinterType.bluetooth,
+      type: posUni.PrinterType.bluetooth,
     );
 
     try {
-      await posInst.unregisterDevice(PosPrinterRole.sticker);
+      await posInst.unregisterDevice(posUni.PosPrinterRole.sticker);
     } catch (_) {}
 
-    await posInst.registerDevice(PosPrinterRole.sticker, device);
+    await posInst.registerDevice(posUni.PosPrinterRole.sticker, device);
 
-    final connected = posInst.isRoleConnected(PosPrinterRole.sticker);
+    final connected = posInst.isRoleConnected(posUni.PosPrinterRole.sticker);
     if (!connected) {
       return false;
     }
@@ -1214,14 +1225,14 @@ Future<bool> testConnectionPrinterSilence(
     // Disconnect after test
     try {
       await Future.delayed(const Duration(milliseconds: 120));
-      await posInst.unregisterDevice(PosPrinterRole.sticker);
+      await posInst.unregisterDevice(posUni.PosPrinterRole.sticker);
     } catch (_) {}
 
     return true;
   } catch (_) {
     try {
-      final posInst = pos ?? PosUniversalPrinter.instance;
-      await posInst.unregisterDevice(PosPrinterRole.sticker);
+      final posInst = pos ?? posUni.PosUniversalPrinter.instance;
+      await posInst.unregisterDevice(posUni.PosPrinterRole.sticker);
     } catch (_) {}
     return false;
   }

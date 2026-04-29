@@ -14,7 +14,7 @@ import 'messages.dart';
 class Memory {
   static const production = false ;
   static const String APP_NAME = 'MONALISA';
-  static const String APP_NAME_WITH_VERSION = '$APP_NAME 2.01.42';
+  static const String APP_NAME_WITH_VERSION = '$APP_NAME 2.01.48';
   static int DELAY_TO_REFRESH_PROVIDER_MILLISECOND = 1500;
   static const int  TOKEN_EXPIRE_MINUTES = 720;
   static const int REFRESH_TOKEN_EXPIRE_MINUTES = 1200;
@@ -75,6 +75,8 @@ class Memory {
   static const int ACTION_FIND_PRINTER_BY_QR = 10;
   static const int ACTION_FIND_PRINTER_BY_QR_WIFI_BLUETOOTH = 11;
   static const int ACTION_FIND_INVENTORY_BY_ID = 12;
+  static const int ACTION_FIND_BY_LOCATOR_VALUE_FOR_STOCK_DETAIL = 13;
+  static const int ACTION_FIND_BY_DOC_NO_FOR_MOV_MINOUT_CHECK = 14;
   static const int ACTION_NO_SCAN_ACTION =200;
 
   static const int UPC_EXITS = -1;

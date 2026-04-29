@@ -18,6 +18,7 @@ import '../../providers/common_provider.dart';
 import '../../../../shared/data/memory.dart';
 import '../../../../shared/data/messages.dart';
 import '../../providers/locator_provider.dart';
+import '../../providers/store_on_hand/store_on_hand_input_providers.dart';
 import '../../widget/product_search_mode_button.dart';
 import 'memory_products.dart';
 import 'new_storage_on_hand_card.dart';
@@ -88,6 +89,122 @@ class _ProductStoreOnHandScreenState
             });
           },
         ),
+      ],
+    );
+  }
+
+  /// Mirrors the input into [productCodeInputProvider] so a scan, manual
+  /// dialog or URL launcher all converge on the same source before firing
+  /// the search. Then delegates to the parent which routes through the
+  /// active mode notifier (UPC vs SKU/NAME).
+  @override
+  Future<void> handleInputString({
+    required WidgetRef ref,
+    required String inputData,
+    required int actionScan,
+  }) async {
+    ref.read(productCodeInputProvider.notifier).state = inputData.trim();
+    await super.handleInputString(
+      ref: ref,
+      inputData: inputData,
+      actionScan: actionScan,
+    );
+  }
+
+  /// Re-fires the search with whatever is currently in
+  /// [productCodeInputProvider]. Bound to the search button next to the
+  /// code TextField.
+  Future<void> _runSearchFromInput() async {
+    final code = ref.read(productCodeInputProvider).trim();
+    if (code.isEmpty) return;
+    await handleInputString(
+      ref: ref,
+      inputData: code,
+      actionScan: actionScanTypeInt,
+    );
+  }
+
+  Future<void> _openProductCodeInputDialog() async {
+    final current = ref.read(productCodeInputProvider);
+    final controller = TextEditingController(text: current);
+    // Suppress scan dispatch while the dialog is open so a stray scan
+    // doesn't re-fire the screen's search handler. Restored on dialog
+    // close via finally (covers OK, Cancel, dismiss, and exceptions).
+    final oldAction = ref.read(actionScanProvider);
+    ref.read(actionScanProvider.notifier).state = 0;
+    String? result;
+    try {
+      result = await showDialog<String>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Text('UPC / SKU'),
+          content: TextField(
+            controller: controller,
+            autofocus: true,
+            decoration: const InputDecoration(hintText: 'Scan or type'),
+            onSubmitted: (v) => Navigator.of(ctx).pop(v),
+          ),
+          actions: <Widget>[
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(),
+              child: Text(Messages.CANCEL),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.of(ctx).pop(controller.text),
+              child: Text(Messages.OK),
+            ),
+          ],
+        ),
+      );
+    } finally {
+      ref.read(actionScanProvider.notifier).state = oldAction;
+    }
+    if (result == null) return;
+    final code = result.trim();
+    if (code.isEmpty) return;
+    await handleInputString(
+      ref: ref,
+      inputData: code,
+      actionScan: actionScanTypeInt,
+    );
+  }
+
+  @override
+  Widget getMainDataCard(BuildContext context, WidgetRef ref) {
+    final code = ref.watch(productCodeInputProvider);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: <Widget>[
+        // UPC/SKU input row — read-only TextField mirroring the provider;
+        // tap opens manual dialog; search button re-fires.
+        Row(
+          children: <Widget>[
+            Expanded(
+              child: GestureDetector(
+                onTap: _openProductCodeInputDialog,
+                child: AbsorbPointer(
+                  child: TextField(
+                    readOnly: true,
+                    controller: TextEditingController(text: code),
+                    decoration: const InputDecoration(
+                      labelText: 'UPC / SKU',
+                      border: OutlineInputBorder(),
+                      isDense: true,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(width: 6),
+            IconButton(
+              icon: const Icon(Icons.search, color: Colors.purple),
+              tooltip: 'BUSCAR',
+              onPressed: _runSearchFromInput,
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        super.getMainDataCard(context, ref),
       ],
     );
   }

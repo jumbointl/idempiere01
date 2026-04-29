@@ -1,7 +1,7 @@
 name: monalisa_app_001
 description: "A new Flutter project."
 publish_to: 'none'
-version: 2.01.00+42
+version: 2.01.00+48
 environment:
   sdk: ">=3.11.0 <4.0.0"
 
@@ -10,8 +10,12 @@ dependencies:
     sdk: flutter
   riverpod_printer:
     path: ../riverpod_printer
+  riverpod_printer_ui:
+    path: ../riverpod_printer_ui
   monalisapy_features:
     path: ../monalisapy_features
+  monalisapy_core:
+    path: ../monalisapy_core
   ai_barcode_scanner: ^7.0.0
   dio: ^5.7.0
   dotenv: ^4.2.0
@@ -56,6 +60,7 @@ dependencies:
   barcode: ^2.2.8
   barcode_widget: ^2.0.4
   share_plus: ^12.0.1
+  url_launcher: ^6.3.0
   path_provider: ^2.1.5
   archive: ^4.0.2
   ftpconnect: ^2.0.10

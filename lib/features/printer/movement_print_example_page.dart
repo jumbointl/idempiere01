@@ -36,9 +36,10 @@ class ProductLabelTsplExamplePage extends ConsumerWidget {
                 rowsPerPage: 1,
                 id: '', name: '',
               ),
-              printer: const SocketPrinterDevice(
+              printer: const PrinterDevice(
                 id: 'tspl_1',
                 name: 'TSPL Printer',
+                transport: PrinterTransport.tcp,
                 type: PrinterType.label,
                 language: PrinterLanguage.tspl,
                 host: '192.168.188.100',

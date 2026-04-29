@@ -5,7 +5,6 @@ import 'package:monalisa_app_001/features/products/domain/idempiere/idempiere_pr
 import 'package:monalisa_app_001/features/shared/data/memory.dart';
 import 'package:riverpod_printer/riverpod_printer.dart';
 
-import 'package:monalisapy_features/printer/models/printer_select_models.dart';
 import 'label_printer_select_page.dart';
 
 class ProductLabelPrinterSelectPage extends LabelPrinterSelectPage {
@@ -46,7 +45,7 @@ class ProductLabelPrinterSelectPage extends LabelPrinterSelectPage {
     required WidgetRef ref,
     required LabelProfile profile,
     required bool printSimpleData,
-    required PrinterConnConfig selectedPrinter,
+    required PrinterDevice selectedPrinter,
     required int copies,
   }) async {
     final IdempiereProduct product = dataToPrint as IdempiereProduct;
@@ -67,7 +66,7 @@ class ProductLabelPrinterSelectPage extends LabelPrinterSelectPage {
         items: <ProductLabelItem>[item],
       ),
       labelProfile: profileWithCopies,
-      printer: printerDeviceFromConnConfig(selectedPrinter),
+      printer: selectedPrinter,
       printerType: PrinterType.label,
       printerLanguage: PrinterLanguage.tspl,
     );
@@ -80,7 +79,7 @@ class ProductLabelPrinterSelectPage extends LabelPrinterSelectPage {
   Widget buildPrintingPanel({
     required BuildContext context,
     required WidgetRef ref,
-    required PrinterConnConfig? selectedPrinter,
+    required PrinterDevice? selectedPrinter,
     required LabelProfile profile40,
     required LabelProfile profile60,
     required Future<void> Function({

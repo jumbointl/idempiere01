@@ -35,14 +35,14 @@ abstract class LabelPrinterSelectPage extends ConsumerStatefulWidget {
     required WidgetRef ref,
     required LabelProfile profile,
     required bool printSimpleData,
-    required PrinterConnConfig selectedPrinter,
+    required PrinterDevice selectedPrinter,
     required int copies,
   });
 
   Widget buildPrintingPanel({
     required BuildContext context,
     required WidgetRef ref,
-    required PrinterConnConfig? selectedPrinter,
+    required PrinterDevice? selectedPrinter,
     required LabelProfile profile40,
     required LabelProfile profile60,
     required Future<void> Function({
@@ -123,16 +123,16 @@ class _LabelPrinterSelectPageState extends ConsumerState<LabelPrinterSelectPage>
 
       await Future.delayed(const Duration(milliseconds: 200));
 
-      final PrinterConnConfig? selectedPrinter = _selectedPrinter();
+      final PrinterDevice? selectedPrinter = _selectedPrinter();
       if (selectedPrinter != null &&
-          selectedPrinter.btAddress != null &&
-          selectedPrinter.lang == PrinterState.PRINTER_TYPE_NIIMBOT) {
+          selectedPrinter.bluetoothAddress != null &&
+          selectedPrinter.language == PrinterLanguage.niimbot) {
         if (!mounted) return;
         await widget.goNiimbotPageBottomSheet(
           context,
           ref,
           dataToPrint: widget.dataToPrint,
-          bluetoothAddress: selectedPrinter.btAddress!,
+          bluetoothAddress: selectedPrinter.bluetoothAddress!,
           profile: selectedProfileOrDefault50(),
           popScopeAction: () async => popScopeAction(context, ref),
         );
@@ -292,8 +292,8 @@ class _LabelPrinterSelectPageState extends ConsumerState<LabelPrinterSelectPage>
     box.read(PrinterSelectStorageKeys.selectedPrinterId);
 
     if (raw is String && raw.trim().isNotEmpty) {
-      final List<PrinterConnConfig> list = (jsonDecode(raw) as List)
-          .map((e) => PrinterConnConfig.fromJson(Map<String, dynamic>.from(e)))
+      final List<PrinterDevice> list = (jsonDecode(raw) as List)
+          .map((e) => PrinterDevice.fromJson(Map<String, dynamic>.from(e)))
           .toList();
 
       ref.read(printerListProvider.notifier).state = list;
@@ -305,7 +305,7 @@ class _LabelPrinterSelectPageState extends ConsumerState<LabelPrinterSelectPage>
   }
 
   void _savePrintersToStorageFromHere() {
-    final List<PrinterConnConfig> list = ref.read(printerListProvider);
+    final List<PrinterDevice> list = ref.read(printerListProvider);
     box.write(
       PrinterSelectStorageKeys.printersList,
       jsonEncode(list.map((e) => e.toJson()).toList()),
@@ -315,14 +315,14 @@ class _LabelPrinterSelectPageState extends ConsumerState<LabelPrinterSelectPage>
     box.write(PrinterSelectStorageKeys.selectedPrinterId, selected);
   }
 
-  PrinterConnConfig? _selectedPrinter() {
-    final List<PrinterConnConfig> list = ref.read(printerListProvider);
+  PrinterDevice? _selectedPrinter() {
+    final List<PrinterDevice> list = ref.read(printerListProvider);
     final String? selectedId = ref.read(selectedPrinterIdProvider);
     if (selectedId == null) return null;
 
     return list
         .where((e) => e.id == selectedId)
-        .cast<PrinterConnConfig?>()
+        .cast<PrinterDevice?>()
         .firstWhere((e) => e != null, orElse: () => null);
   }
 
@@ -349,7 +349,7 @@ class _LabelPrinterSelectPageState extends ConsumerState<LabelPrinterSelectPage>
     required bool printSimpleData,
     required int copies,
   }) async {
-    final PrinterConnConfig? printer = _selectedPrinter();
+    final PrinterDevice? printer = _selectedPrinter();
     if (printer == null) {
       await showMsg('Printer', 'Select a printer first.');
       return;
@@ -428,7 +428,7 @@ class _LabelPrinterSelectPageState extends ConsumerState<LabelPrinterSelectPage>
           btType == PrinterState.PRINTER_TYPE_BLUETOOTH_NO_BLE;
     }
 
-    late final PrinterConnConfig scannedPrinter;
+    late final PrinterDevice scannedPrinter;
 
     if (qrData.toUpperCase().startsWith('BLUETOOTH*')) {
       final List<String> parts = qrData.split('*');
@@ -468,13 +468,14 @@ class _LabelPrinterSelectPageState extends ConsumerState<LabelPrinterSelectPage>
         return;
       }
 
-      scannedPrinter = PrinterConnConfig(
-        btAddress: btAddress,
+      scannedPrinter = PrinterDevice(
         id: 'bt_$btAddress',
-        type: PrinterConnType.bluetooth,
         name: name,
-        lang: lang,
-        typeText: bluetoothType,
+        transport: PrinterTransport.bluetooth,
+        language: PrinterDevice.languageFromString(lang),
+        type: PrinterDevice.typeFromString(lang),
+        bluetoothAddress: btAddress,
+        metadata: <String, Object?>{'bluetoothType': bluetoothType},
       );
     } else {
       final List<String> parts = qrData.split(':');
@@ -506,18 +507,18 @@ class _LabelPrinterSelectPageState extends ConsumerState<LabelPrinterSelectPage>
           ? parts[3].trim()
           : 'WiFi Printer $ip';
 
-      scannedPrinter = PrinterConnConfig(
+      scannedPrinter = PrinterDevice(
         id: 'wifi_${ip}_$port',
-        type: PrinterConnType.wifi,
         name: name,
-        ip: ip,
+        transport: PrinterTransport.tcp,
+        language: PrinterDevice.languageFromString(lang),
+        type: PrinterDevice.typeFromString(lang),
+        host: ip,
         port: port,
-        lang: lang,
-        typeText: lang,
       );
     }
 
-    final List<PrinterConnConfig> list = <PrinterConnConfig>[
+    final List<PrinterDevice> list = <PrinterDevice>[
       ...ref.read(printerListProvider),
     ];
     final int idx = list.indexWhere((p) => p.id == scannedPrinter.id);
@@ -540,7 +541,7 @@ class _LabelPrinterSelectPageState extends ConsumerState<LabelPrinterSelectPage>
         ref,
         dataToPrint: widget.dataToPrint,
         profile: selectedProfileOrDefault50(),
-        bluetoothAddress: scannedPrinter.btAddress!,
+        bluetoothAddress: scannedPrinter.bluetoothAddress!,
         popScopeAction: () async => popScopeAction(context, ref),
       );
     } else {
@@ -608,7 +609,7 @@ class _LabelPrinterSelectPageState extends ConsumerState<LabelPrinterSelectPage>
     final List<LabelProfile> profiles = ref.watch(labelProfilesProvider);
     final String? selectedProfileId = ref.watch(selectedLabelProfileIdProvider);
 
-    final List<PrinterConnConfig> printers = ref.watch(printerListProvider);
+    final List<PrinterDevice> printers = ref.watch(printerListProvider);
     final String? selectedPrinterId = ref.watch(selectedPrinterIdProvider);
 
     final LabelProfile selectedProfile = profiles.firstWhere(
@@ -616,8 +617,8 @@ class _LabelPrinterSelectPageState extends ConsumerState<LabelPrinterSelectPage>
       orElse: () => defaultLabel40x25(),
     );
 
-    final PrinterConnConfig? selectedPrinter = printers
-        .cast<PrinterConnConfig?>()
+    final PrinterDevice? selectedPrinter = printers
+        .cast<PrinterDevice?>()
         .firstWhere((p) => p?.id == selectedPrinterId, orElse: () => null);
 
     final PrinterInputMode inputMode = ref.watch(printerInputModeProvider);
@@ -674,16 +675,15 @@ class _LabelPrinterSelectPageState extends ConsumerState<LabelPrinterSelectPage>
 
   Widget _buildHomeTab({
     required LabelProfile selectedProfile,
-    required PrinterConnConfig? selectedPrinter,
+    required PrinterDevice? selectedPrinter,
   }) {
-    final List<PrinterConnConfig> printers = ref.watch(printerListProvider);
+    final List<PrinterDevice> printers = ref.watch(printerListProvider);
     final String? selectedPrinterId = ref.watch(selectedPrinterIdProvider);
     final LabelProfile profile40 = selectedProfileOrDefault40();
     final LabelProfile profile60 = selectedProfileOrDefault60();
 
-    final bool isNiimbot =
-        selectedPrinter != null &&
-            (selectedPrinter.lang ?? '').toUpperCase() == 'NIIMBOT';
+    final bool isNiimbot = selectedPrinter != null &&
+        selectedPrinter.language == PrinterLanguage.niimbot;
 
     final int copiesTemp = ref.watch(copiesTempProvider);
     final bool isPrinting = ref.read(isPrintingProvider);
@@ -717,9 +717,9 @@ class _LabelPrinterSelectPageState extends ConsumerState<LabelPrinterSelectPage>
               subtitle: Text(
                 selectedPrinter == null
                     ? 'Go to Printers tab to add/select one.'
-                    : (selectedPrinter.type == PrinterConnType.wifi)
-                    ? 'WiFi: ${selectedPrinter.ip}:${selectedPrinter.port}  lang:${selectedPrinter.lang ?? "-"}'
-                    : 'BT: ${selectedPrinter.btAddress}  lang:${selectedPrinter.lang ?? "-"}  type:${selectedPrinter.typeText ?? "-"}',
+                    : selectedPrinter.isTcp
+                    ? 'WiFi: ${selectedPrinter.host}:${selectedPrinter.port}  lang:${selectedPrinter.language.name.toUpperCase()}'
+                    : 'BT: ${selectedPrinter.bluetoothAddress}  lang:${selectedPrinter.language.name.toUpperCase()}  type:${selectedPrinter.type.name}',
               ),
               trailing: const Icon(Icons.print),
               onTap: () => _tab.index = 2,
@@ -804,10 +804,9 @@ class _LabelPrinterSelectPageState extends ConsumerState<LabelPrinterSelectPage>
                 )
               else
                 ...printers.map((p) {
-                  final String subtitle =
-                  (p.type == PrinterConnType.wifi)
-                      ? 'WiFi: ${p.ip}:${p.port}  lang:${p.lang ?? "-"}'
-                      : 'BT: ${p.btAddress}  lang:${p.lang ?? "-"}  type:${p.typeText ?? "-"}';
+                  final String subtitle = p.isTcp
+                      ? 'WiFi: ${p.host}:${p.port}  lang:${p.language.name.toUpperCase()}'
+                      : 'BT: ${p.bluetoothAddress}  lang:${p.language.name.toUpperCase()}  type:${p.type.name}';
 
                   return RadioListTile<String>(
                     value: p.id,
@@ -904,7 +903,7 @@ class _LabelPrinterSelectPageState extends ConsumerState<LabelPrinterSelectPage>
 
   Widget buildNiimbotConnectCard(
       WidgetRef ref,
-      PrinterConnConfig selectedPrinter,
+      PrinterDevice selectedPrinter,
       ) {
     LabelProfile getSelectedProfile() {
       final List<LabelProfile> profiles = ref.read(labelProfilesProvider);
@@ -938,7 +937,7 @@ class _LabelPrinterSelectPageState extends ConsumerState<LabelPrinterSelectPage>
                   ref,
                   dataToPrint: widget.dataToPrint,
                   profile: getSelectedProfile(),
-                  bluetoothAddress: selectedPrinter.btAddress ?? '',
+                  bluetoothAddress: selectedPrinter.bluetoothAddress ?? '',
                   popScopeAction: () async => popScopeAction(context, ref),
                 );
               },
