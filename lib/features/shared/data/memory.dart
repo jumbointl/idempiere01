@@ -14,7 +14,7 @@ import 'messages.dart';
 class Memory {
   static const production = false ;
   static const String APP_NAME = 'MONALISA';
-  static const String APP_NAME_WITH_VERSION = '$APP_NAME 2.01.48';
+  static const String APP_NAME_WITH_VERSION = '$APP_NAME 2.01.49';
   static int DELAY_TO_REFRESH_PROVIDER_MILLISECOND = 1500;
   static const int  TOKEN_EXPIRE_MINUTES = 720;
   static const int REFRESH_TOKEN_EXPIRE_MINUTES = 1200;
