@@ -1483,115 +1483,7 @@ class _MInOutViewState extends ConsumerState<_MInOutView> {
     );
   }
 
-  /*Widget _buildMInOutList(WidgetRef ref,MInOutStatus stateNow) {
-    final mInOutList = stateNow.mInOutList;
-    final loadedMInOutList = ref.watch(loadedMInOutListProvider(stateNow.mInOutType));
-    return mInOutList.isNotEmpty
-        ? Column(
-      children: [
-        ListView.builder(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          itemCount: mInOutList.length,
-          itemBuilder: (context, index) {
-            final item = mInOutList[index];
-            return GestureDetector(
-              onTap: () async {
-                mInOutNotifier.onDocChange(item.documentNo.toString());
-                await loadMInOutAndLine(context, ref);
-              },
-              child: Column(
-                children: [
-                  Divider(height: 0),
-                  Container(
-                    color: item.docStatus.id == 'IP'
-                        ? themeColorWarningLight
-                        : null,
-                    child: Row(
-                      children: [
-                        Padding(
-                          padding: const EdgeInsets.fromLTRB(16, 8, 8, 8),
-                          child: Text(
-                            item.movementDate != null
-                                ? DateFormat('dd/MM/yyyy')
-                                .format(item.movementDate!)
-                                : '',
-                            style: TextStyle(
-                                fontSize: themeFontSizeSmall,
-                                color: themeColorGray),
-                          ),
-                        ),
-                        Expanded(
-                          child: Padding(
-                            padding:
-                            const EdgeInsets.symmetric(horizontal: 8),
-                            child: Text(
-                              item.documentNo.toString(),
-                              style: const TextStyle(
-                                fontSize: themeFontSizeLarge,
-                              ),
-                            ),
-                          ),
-                        ),
-                        Padding(
-                          padding: const EdgeInsets.all(8),
-                          child: GestureDetector(
-                            onTap: () => _showMInOutData(context, item,stateNow),
-                            child: Icon(
-                              Icons.info_rounded,
-                              color: themeColorPrimary,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  Divider(height: 0),
-                ],
-              ),
-            );
-          },
-        ),
-      ],
-    )
-        : stateNow.isLoadingMInOutList
-        ? Padding(
-      padding: const EdgeInsets.only(top: 32),
-      child: Center(
-        child: CircularProgressIndicator(),
-      ),
-    )
-        : Padding(
-      padding: const EdgeInsets.only(top: 32),
-      child: Row(
-        children: [
-          Expanded(
-            child: CustomFilledButton(
-              label: 'Cargar lista',
-              onPressed: () async {
-                await mInOutNotifier.loadDataList(ref);
-              },
-            ),
-          ),
-          const SizedBox(width: 8),
-          if(loadedMInOutList.isNotEmpty)
-            Expanded(
-              child: CustomFilledButton(
-                label: 'Lista Guardada',
-                icon: const Icon(Icons.history_rounded),
-                isPosting: stateNow.isLoadingMInOutList,            // 👈 spinner también
-                expand: true,
-                onPressed: stateNow.isLoadingMInOutList
-                    ? null
-                    : () async {
-                  await mInOutNotifier.loadSavedDataList(ref);
-                },
-              ),
-            ),
-        ],
-      ),
-    );
-  }*/
+
   Future<void> _showMInOutData(BuildContext context, MInOut mInOut,MInOutStatus stateNow) {
     return showDialog(
       context: context,
@@ -1955,13 +1847,26 @@ class _MInOutViewState extends ConsumerState<_MInOutView> {
                             child: Padding(
                               padding:
                               const EdgeInsets.symmetric(horizontal: 8),
-                              child: Text(
-                                item.upc?.isNotEmpty == true
-                                    ? item.upc.toString()
-                                    : '',
-                                style: const TextStyle(
-                                  fontSize: themeFontSizeLarge,
-                                ),
+                              child: Row(
+                                children: [
+                                  Text(
+                                    item.upc?.isNotEmpty == true
+                                        ? item.upc.toString()
+                                        : '',
+                                    style: const TextStyle(
+                                      fontSize: themeFontSizeLarge,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 10),
+                                  ((item.mAttributeSetInstanceID?.id ?? 0) <= 0) ?
+                                    Text('ATT: --') :
+                                    Text(
+                                      'ATT: ${item.mAttributeSetInstanceID?.identifier ?? ''}',
+                                      style: const TextStyle(
+                                        fontSize: themeFontSizeLarge,
+                                      ),
+                                    ),
+                                                                  ],
                               ),
                             ),
                           ),
@@ -2174,7 +2079,6 @@ class _MInOutViewState extends ConsumerState<_MInOutView> {
   }
   Future<void> _showUpdateManualLine(
       BuildContext context, MInOutStatus mInOutState, Line item) {
-    debugPrint('showUpdateManualLine');
     return showDialog(
       context: context,
       builder: (BuildContext context) {
@@ -2213,8 +2117,8 @@ class _MInOutViewState extends ConsumerState<_MInOutView> {
               onPressed: () async {
                  final mInOutState = ref.read(mInOutProvider);
                 if(mInOutState.manualQty==0){
-                  String message = 'La cantidad confirmada es 0, desea continuar?';
-                  String title = 'Confirmed Qty = 0' ;
+                  String message = 'La cantidad confirmada es 0, desea continuar?\nSi continuas vas a borrar esta linea.';
+                  String title = 'Borrando linea, cantidad confirmada = 0';
                   bool accept = await showConfirmDialog(context, title: title, message: message);
                   debugPrint('confirmManualLine accept $accept');
                   if(!accept){
@@ -2287,8 +2191,8 @@ class _MInOutViewState extends ConsumerState<_MInOutView> {
               onPressed: () async {
                 final mInOutState = ref.read(mInOutProvider);
                 if(mInOutState.manualQty==0){
-                  String message = 'La cantidad confirmada es 0, desea continuar?';
-                  String title = 'Confirmed Qty = 0' ;
+                  String message = 'La cantidad confirmada es 0, desea continuar?\nSi continuas vas a borrar esta linea.';
+                  String title = 'Borrando linea, cantidad confirmada = 0' ;
                   bool accept = await showConfirmDialog(context, title: title, message: message);
                   debugPrint('confirmManualLine accept $accept');
                   if(!accept){
