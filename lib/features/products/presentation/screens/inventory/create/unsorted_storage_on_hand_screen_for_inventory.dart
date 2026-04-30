@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:monalisa_app_001/features/products/presentation/screens/movement/create/auto_complete_movement_ui.dart';
+import 'package:monalisapy_core/monalisapy_core.dart' show SafeBottomBar;
 
 import '../../../../../../config/constants/roles_app.dart';
 import '../../../../../../config/theme/app_theme.dart';
@@ -211,12 +212,14 @@ class UnsortedStorageOnHandScreenForInventoryState
         title: screenTitle,
       ),
       bottomNavigationBar: canShowBottomBar
-          ? buildCommonBottomSlider(
-        context: context,
-        ref: ref,
-        text: sliderText,
-        onConfirmation: onPrimarySliderConfirmed,
-      )
+          ? SafeBottomBar(
+              child: buildCommonBottomSlider(
+                context: context,
+                ref: ref,
+                text: sliderText,
+                onConfirmation: onPrimarySliderConfirmed,
+              ),
+            )
           : null,
       body: SafeArea(
         child: PopScope(

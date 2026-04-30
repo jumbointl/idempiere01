@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:monalisa_app_001/config/config.dart';
 import 'package:monalisa_app_001/features/products/domain/sql/sql_data_inventory_line.dart';
 import 'package:monalisa_app_001/features/products/presentation/providers/store_on_hand_for_put_away_movement.dart';
+import 'package:monalisapy_core/monalisapy_core.dart' show SafeBottomBar;
 
 import '../../../../domain/idempiere/idempiere_inventory.dart';
 import '../../../../domain/idempiere/idempiere_inventory_line.dart';
@@ -84,17 +85,19 @@ class InventoryLinesCreateScreenState
         ),
         title: Text(title, overflow: TextOverflow.ellipsis),
       ),
-      bottomNavigationBar: BottomAppBar(
-        height: Memory.BOTTOM_BAR_HEIGHT,
-        color: themeColorPrimary,
-        child: Center(
-          child: Text(
-            Messages.PLEASE_WAIT,
-            style: const TextStyle(
-              fontSize: themeFontSizeLarge,
-              color: Colors.white,
+      bottomNavigationBar: SafeBottomBar(
+        child: BottomAppBar(
+          height: Memory.BOTTOM_BAR_HEIGHT,
+          color: themeColorPrimary,
+          child: Center(
+            child: Text(
+              Messages.PLEASE_WAIT,
+              style: const TextStyle(
+                fontSize: themeFontSizeLarge,
+                color: Colors.white,
+              ),
+              overflow: TextOverflow.ellipsis,
             ),
-            overflow: TextOverflow.ellipsis,
           ),
         ),
       ),

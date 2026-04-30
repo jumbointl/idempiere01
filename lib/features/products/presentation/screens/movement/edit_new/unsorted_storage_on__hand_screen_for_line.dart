@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:monalisa_app_001/features/products/common/input_data_processor.dart';
 import 'package:monalisa_app_001/features/products/domain/idempiere/movement_and_lines.dart';
+import 'package:monalisapy_core/monalisapy_core.dart' show SafeBottomBar;
 import 'package:monalisa_app_001/features/products/presentation/providers/products_providers.dart';
 
 import '../../../../../../config/constants/roles_app.dart';
@@ -217,12 +218,14 @@ class UnsortedStorageOnHandScreenForLineState
         ],
       ),
       bottomNavigationBar: canShowBottomBar
-          ? buildCommonBottomSlider(
-        context: context,
-        ref: ref,
-        text: sliderText,
-        onConfirmation: onPrimarySliderConfirmed,
-      )
+          ? SafeBottomBar(
+              child: buildCommonBottomSlider(
+                context: context,
+                ref: ref,
+                text: sliderText,
+                onConfirmation: onPrimarySliderConfirmed,
+              ),
+            )
           : null,
       body: SafeArea(
         child: PopScope(

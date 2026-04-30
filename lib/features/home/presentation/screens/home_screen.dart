@@ -6,6 +6,7 @@ import 'package:monalisa_app_001/config/config.dart';
 import 'package:monalisa_app_001/features/products/common/messages_dialog.dart';
 import 'package:monalisa_app_001/features/products/presentation/screens/store_on_hand/memory_products.dart';
 import 'package:monalisa_app_001/features/shared/shared.dart';
+import 'package:monalisapy_core/monalisapy_core.dart' show SafeBottomBar;
 import 'package:upgrader/upgrader.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -108,30 +109,30 @@ class HomeScreen extends ConsumerWidget {
             ),
           ],
         ),
-        bottomNavigationBar: NavigationBar(
-
-          selectedIndex: sectionIndex,
-          onDestinationSelected: (index) {
-            ref.read(homeSectionIndexProvider.notifier).state = index;
-          },
-          destinations: const [
-            NavigationDestination(
-
-              icon: Icon(Icons.local_shipping_outlined),
-              selectedIcon: Icon(Icons.local_shipping),
-              label: 'Ship',
-            ),
-            NavigationDestination(
-              icon: Icon(Icons.swap_horiz_outlined),
-              selectedIcon: Icon(Icons.swap_horiz),
-              label: 'Move',
-            ),
-            NavigationDestination(
-              icon: Icon(Icons.build_outlined),
-              selectedIcon: Icon(Icons.build),
-              label: 'Util',
-            ),
-          ],
+        bottomNavigationBar: SafeBottomBar(
+          child: NavigationBar(
+            selectedIndex: sectionIndex,
+            onDestinationSelected: (index) {
+              ref.read(homeSectionIndexProvider.notifier).state = index;
+            },
+            destinations: const [
+              NavigationDestination(
+                icon: Icon(Icons.local_shipping_outlined),
+                selectedIcon: Icon(Icons.local_shipping),
+                label: 'Ship',
+              ),
+              NavigationDestination(
+                icon: Icon(Icons.swap_horiz_outlined),
+                selectedIcon: Icon(Icons.swap_horiz),
+                label: 'Move',
+              ),
+              NavigationDestination(
+                icon: Icon(Icons.build_outlined),
+                selectedIcon: Icon(Icons.build),
+                label: 'Util',
+              ),
+            ],
+          ),
         ),
         body: PopScope(
           canPop: false,

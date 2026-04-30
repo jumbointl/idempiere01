@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:monalisapy_core/monalisapy_core.dart' show SafeBottomBar;
 
 import '../../../../../../config/constants/roles_app.dart';
 import '../../../../../../config/router/app_router.dart';
@@ -198,12 +199,14 @@ class UnsortedStorageOnHandSelectLocatorScreenState
         ],
       ),
       bottomNavigationBar: canShowBottomBar
-          ? buildCommonBottomSlider(
-        context: context,
-        ref: ref,
-        text: sliderText,
-        onConfirmation: onPrimarySliderConfirmed,
-      )
+          ? SafeBottomBar(
+              child: buildCommonBottomSlider(
+                context: context,
+                ref: ref,
+                text: sliderText,
+                onConfirmation: onPrimarySliderConfirmed,
+              ),
+            )
           : null,
       body: SafeArea(
         child: PopScope(

@@ -8,6 +8,7 @@ import 'package:monalisa_app_001/features/products/domain/idempiere/inventory_an
 import 'package:monalisa_app_001/features/products/domain/idempiere/put_away_inventory.dart';
 import 'package:monalisa_app_001/features/products/presentation/providers/product_provider_common.dart';
 import 'package:monalisa_app_001/features/products/presentation/screens/movement/create/no_data_created_put_away_movement_card.dart';
+import 'package:monalisapy_core/monalisapy_core.dart' show SafeBottomBar;
 import 'package:monalisa_app_001/features/products/presentation/screens/inventory/provider/new_inventory_provider.dart';
 import 'package:monalisa_app_001/features/products/presentation/screens/store_on_hand/memory_products.dart';
 import 'package:monalisa_app_001/features/shared/data/memory.dart';
@@ -61,17 +62,19 @@ class _InventoryCreateScreenState extends ConsumerState<InventoryCreateScreen> {
           overflow: TextOverflow.ellipsis,
         ),
       ),
-      bottomNavigationBar: BottomAppBar(
-        height: Memory.BOTTOM_BAR_HEIGHT,
-        color: themeColorPrimary,
-        child: Center(
-          child: Text(
-            Messages.PLEASE_WAIT,
-            style: TextStyle(
-              fontSize: themeFontSizeLarge,
-              color: Colors.white,
+      bottomNavigationBar: SafeBottomBar(
+        child: BottomAppBar(
+          height: Memory.BOTTOM_BAR_HEIGHT,
+          color: themeColorPrimary,
+          child: Center(
+            child: Text(
+              Messages.PLEASE_WAIT,
+              style: TextStyle(
+                fontSize: themeFontSizeLarge,
+                color: Colors.white,
+              ),
+              overflow: TextOverflow.ellipsis,
             ),
-            overflow: TextOverflow.ellipsis,
           ),
         ),
       ),

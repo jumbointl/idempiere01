@@ -1,12 +1,15 @@
 
 
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter/services.dart';
 import 'package:monalisa_app_001/config/config.dart';
 import 'package:monalisa_app_001/config/constants/roles_app.dart';
-import 'package:monalisa_app_001/config/deep_link/open_in_monalisa002.dart';
+import 'package:share_plus/share_plus.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:monalisa_app_001/features/products/domain/idempiere/idempiere_document_status.dart';
 import 'package:monalisa_app_001/features/products/domain/idempiere/idempiere_movement.dart';
 import 'package:monalisa_app_001/features/products/domain/idempiere/idempiere_warehouse.dart';
@@ -22,8 +25,11 @@ import '../../../../common/messages_dialog.dart';
 import '../../../../common/time_utils.dart';
 import '../../../../common/widget/date_range_filter_row_panel.dart';
 import '../../../../domain/idempiere/movement_and_lines.dart';
+import '../../../../domain/idempiere/movement_minout_check.dart';
 import '../../../../domain/idempiere/response_async_value.dart';
 import '../../../providers/common_provider.dart';
+import '../../../providers/movement_minout_check/find_movement_minout_by_doc_no_providers.dart';
+import '../../../providers/movement_minout_check/movement_minout_check_input_providers.dart';
 import '../../../providers/product_provider_common.dart';
 import '../movement_no_data_card.dart';
 
@@ -247,18 +253,26 @@ class MovementListScreenState extends AsyncValueConsumerSimpleState<MovementList
                   ? Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        IconButton(
-                          icon: const Icon(Icons.open_in_new),
-                          color: Colors.purple,
-                          tooltip: 'Check in 002',
-                          padding: EdgeInsets.zero,
-                          constraints: const BoxConstraints(
-                            minWidth: 32,
-                            minHeight: 32,
-                          ),
-                          onPressed: () => _shareMovementToMonalisa002(
-                            context,
-                            movement.documentNo ?? '',
+                        // Tap: open the doc in this app's MovementMInOutCheckScreen.
+                        // Long press: hand off to monalisa_app_002 via deep link.
+                        // (IconButton has no onLongPress, so we use InkWell.)
+                        Tooltip(
+                          message: 'Tap: check here  •  Long press: open in 002',
+                          child: InkWell(
+                            onTap: () => _checkMovementInThisApp(
+                              movement.documentNo ?? '',
+                            ),
+                            onLongPress: () => _shareMovementToMonalisa002(
+                              context,
+                              movement.documentNo ?? '',
+                            ),
+                            child: const Padding(
+                              padding: EdgeInsets.all(6),
+                              child: Icon(
+                                Icons.open_in_new,
+                                color: Colors.purple,
+                              ),
+                            ),
                           ),
                         ),
                         Icon(iconData, color: iconColor),
@@ -280,6 +294,55 @@ class MovementListScreenState extends AsyncValueConsumerSimpleState<MovementList
     );
   }
 
+  /// Tap handler for the open-in-new icon: navigates to this app's own
+  /// MovementMInOutCheckScreen with the documentNo pre-filled and the
+  /// search auto-fired. Pre-seeds the input providers, then schedules the
+  /// search after the destination screen mounts so the autoDispose fire
+  /// counter has a watcher when it gets incremented.
+  Future<void> _checkMovementInThisApp(String documentNo) async {
+    if (documentNo.isEmpty) return;
+    ref.read(docNoInputProvider.notifier).state =
+        documentNo.trim().toUpperCase();
+    ref.read(movMInOutCheckSourceProvider.notifier).state =
+        MovementMInOutCheckSource.movement;
+
+    if (!context.mounted) return;
+    context.go(AppRouter.PAGE_MOVEMENT_MINOUT_CHECK);
+
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      final action = ref.read(findMovMInOutByDocNoActionProvider);
+      await action.handleInputString(
+        ref: ref,
+        inputData: documentNo,
+        actionScan: Memory.ACTION_FIND_BY_DOC_NO_FOR_MOV_MINOUT_CHECK,
+      );
+    });
+  }
+
+  /// Build a `monalisa002://run?action=14&value={...}` URL pointing at
+  /// app 002's MovementMInOutCheckScreen with the documentNo pre-filled.
+  String _buildMovementShareUrl(String documentNo) {
+    final uri = Uri(
+      scheme: 'monalisa002',
+      host: 'run',
+      queryParameters: <String, String>{
+        'action':
+            Memory.ACTION_FIND_BY_DOC_NO_FOR_MOV_MINOUT_CHECK.toString(),
+        'value': jsonEncode(<String, String>{
+          'documentNo': documentNo,
+          'type': 'Movement',
+        }),
+      },
+    );
+    return uri.toString();
+  }
+
+  /// Long-press handler — mirrors `LocatorCheckCard._onLineLongPress`:
+  /// opens a bottom sheet with two actions:
+  ///   - "Compartir": opens the system share sheet with the descriptive
+  ///     text + deep link (for sending over WhatsApp / email / etc.).
+  ///   - "Abrir en monalisa 002": launches the `monalisa002://` URL
+  ///     directly via `url_launcher`.
   Future<void> _shareMovementToMonalisa002(
     BuildContext context,
     String documentNo,
@@ -288,28 +351,52 @@ class MovementListScreenState extends AsyncValueConsumerSimpleState<MovementList
     // Copy to clipboard so the user can paste it manually in 002 if the
     // auto-search fails for any reason.
     await Clipboard.setData(ClipboardData(text: documentNo));
-    if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Copied: $documentNo'),
-          duration: const Duration(seconds: 1),
+
+    final url = _buildMovementShareUrl(documentNo);
+    final text = <String>[
+      'Tipo: Movement',
+      'Doc N°: $documentNo',
+      url,
+    ].join('\n');
+
+    if (!context.mounted) return;
+    final action = await showModalBottomSheet<String>(
+      context: context,
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            ListTile(
+              leading: const Icon(Icons.share, color: Colors.purple),
+              title: const Text('Compartir'),
+              subtitle: const Text('WhatsApp, email, etc.'),
+              onTap: () => Navigator.of(ctx).pop('share'),
+            ),
+            ListTile(
+              leading: const Icon(Icons.open_in_new, color: Colors.purple),
+              title: const Text('Abrir en monalisa 002'),
+              subtitle: const Text('Abre el link aquí mismo'),
+              onTap: () => Navigator.of(ctx).pop('open'),
+            ),
+          ],
         ),
-      );
-    }
-    final ok = await openInMonalisa002(
-      action: Memory.ACTION_FIND_BY_DOC_NO_FOR_MOV_MINOUT_CHECK,
-      value: <String, dynamic>{
-        'documentNo': documentNo,
-        'type': 'Movement',
-      },
+      ),
     );
-    if (!ok && context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('monalisa_app_002 is not installed.'),
-          duration: Duration(seconds: 2),
-        ),
-      );
+
+    if (action == 'share') {
+      await SharePlus.instance.share(ShareParams(text: text));
+    } else if (action == 'open') {
+      final uri = Uri.parse(url);
+      final ok = await launchUrl(uri, mode: LaunchMode.externalApplication);
+      if (!ok && context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'No se pudo abrir el link — ¿está instalada monalisa 002?',
+            ),
+          ),
+        );
+      }
     }
   }
 

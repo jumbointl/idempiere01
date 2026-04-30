@@ -11,6 +11,7 @@ import 'package:flutter_riverpod/legacy.dart';
 import 'package:get_storage/get_storage.dart';
 import 'package:monalisa_app_001/config/config.dart';
 import 'package:monalisa_app_001/features/products/common/messages_dialog.dart';
+import 'package:monalisapy_core/monalisapy_core.dart' show SafeBottomBar;
 import 'package:pos_universal_printer/pos_universal_printer.dart' as posUni;
 import 'package:riverpod_printer/riverpod_printer.dart';
 
@@ -554,7 +555,7 @@ class _PrinterSelectPageState extends ConsumerState<PrinterSelectPage>
         ),
 
       ),
-      bottomNavigationBar: !widget.popOnSelect ? BottomAppBar(
+      bottomNavigationBar: !widget.popOnSelect ? SafeBottomBar(child: BottomAppBar(
           height: 75,
           //child: buttonConfirm(context, ref)
           child: Column(
@@ -609,7 +610,7 @@ class _PrinterSelectPageState extends ConsumerState<PrinterSelectPage>
               ),
             ],
           )
-      ):null,
+      )):null,
       body: SafeArea(
         child: TabBarView(
           controller: _tab,

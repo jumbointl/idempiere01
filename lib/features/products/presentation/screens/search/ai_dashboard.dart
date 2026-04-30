@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:monalisa_app_001/config/config.dart';
+import 'package:monalisapy_core/monalisapy_core.dart' show SafeBottomBar;
 import '../../providers/ai/gallery_provider.dart';
 import '../../providers/ai/global_providers.dart';
 
@@ -126,24 +127,26 @@ class _AiDashboardScreenState extends ConsumerState<AiDashboardScreen> {
           );
         },
       ),
-      bottomNavigationBar: Padding(
-        padding: const EdgeInsets.all(20),
-        child: ElevatedButton.icon(
-          style: ElevatedButton.styleFrom(
-            backgroundColor: themeColorPrimary,
-            foregroundColor: Colors.white,
-            minimumSize: const Size(double.infinity, 30),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          ),
-          onPressed: () async {
-            // NAVEGA AL PROCESADOR SIN IMAGEN (NUEVA FOTO)
-            goToAiProcessorScreen(context, ref);
+      bottomNavigationBar: SafeBottomBar(
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: ElevatedButton.icon(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: themeColorPrimary,
+              foregroundColor: Colors.white,
+              minimumSize: const Size(double.infinity, 30),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+            onPressed: () async {
+              // NAVEGA AL PROCESADOR SIN IMAGEN (NUEVA FOTO)
+              goToAiProcessorScreen(context, ref);
 
-          },
-          icon: const Icon(Icons.add_a_photo),
-          label: const Text(
-            'ADD NEW PRODUCT PHOTO',
-            style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+            },
+            icon: const Icon(Icons.add_a_photo),
+            label: const Text(
+              'ADD NEW PRODUCT PHOTO',
+              style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+            ),
           ),
         ),
       ),

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:monalisapy_core/monalisapy_core.dart' show SafeBottomBar;
 import 'package:share_plus/share_plus.dart';
 import 'package:simple_barcode_scanner/simple_barcode_scanner.dart';
 
@@ -126,10 +127,11 @@ class _MultiMInOutScreenState extends ConsumerState<MultiMInOutScreen> {
                   _CompletedTab(state: state),
                 ],
               ),
-        bottomNavigationBar: BottomAppBar(
-          height: 56,
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-          child: Row(
+        bottomNavigationBar: SafeBottomBar(
+          child: BottomAppBar(
+            height: 56,
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            child: Row(
             children: [
               Expanded(
                 child: OutlinedButton.icon(
@@ -175,6 +177,7 @@ class _MultiMInOutScreenState extends ConsumerState<MultiMInOutScreen> {
                 ),
               ),
             ],
+          ),
           ),
         ),
       ),

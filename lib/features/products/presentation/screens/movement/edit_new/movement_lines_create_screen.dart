@@ -9,6 +9,7 @@ import 'package:monalisa_app_001/features/products/domain/sql/sql_data_movement_
 import 'package:monalisa_app_001/features/products/presentation/providers/store_on_hand_for_put_away_movement.dart';
 import 'package:monalisa_app_001/features/products/presentation/screens/movement/edit_new/movement_card_without_controller.dart';
 import 'package:monalisa_app_001/features/products/presentation/screens/movement/create/movement_line_card_without_controller.dart';
+import 'package:monalisapy_core/monalisapy_core.dart' show SafeBottomBar;
 
 import '../../../../domain/idempiere/idempiere_movement.dart';
 import '../../../../domain/idempiere/idempiere_movement_line.dart';
@@ -84,14 +85,16 @@ class MovementLinesCreateScreenState extends ConsumerState<MovementLinesCreateSc
 
       ),
 
-      bottomNavigationBar: BottomAppBar(
-          height: Memory.BOTTOM_BAR_HEIGHT,
-          color: themeColorPrimary,
-          //child: buttonConfirm(context, ref)
-          child: Center(
-            child: Text(Messages.PLEASE_WAIT,style: TextStyle(fontSize: themeFontSizeLarge,
-                color: Colors.white),overflow: TextOverflow.ellipsis,),
-          )
+      bottomNavigationBar: SafeBottomBar(
+        child: BottomAppBar(
+            height: Memory.BOTTOM_BAR_HEIGHT,
+            color: themeColorPrimary,
+            //child: buttonConfirm(context, ref)
+            child: Center(
+              child: Text(Messages.PLEASE_WAIT,style: TextStyle(fontSize: themeFontSizeLarge,
+                  color: Colors.white),overflow: TextOverflow.ellipsis,),
+            )
+        ),
       ),
       body: SafeArea(
         child: PopScope(

@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:monalisa_app_001/features/products/common/scan_button_by_action_fixed_short.dart';
+import 'package:monalisapy_core/monalisapy_core.dart' show SafeBottomBar;
 
 import '../../../config/theme/app_theme.dart';
 import '../../shared/data/memory.dart';
@@ -98,7 +99,7 @@ abstract class AsyncValueConsumerState<T extends ConsumerStatefulWidget>
         floatingActionButton: showFab
             ?  floatingActionButton: null,
 
-        bottomNavigationBar: getBottomAppBar(context,ref),
+        bottomNavigationBar: _wrappedBottomAppBar(context, ref),
         body: SafeArea(
           child: PopScope(
             canPop: false,
@@ -167,6 +168,13 @@ abstract class AsyncValueConsumerState<T extends ConsumerStatefulWidget>
 
   BottomAppBar? getBottomAppBar(BuildContext context, WidgetRef ref) {
     return null ;
+  }
+
+  /// Wraps the (possibly null) result of [getBottomAppBar] in [SafeBottomBar]
+  /// so child screens stay above the system gesture/nav bar on Android 15+.
+  Widget? _wrappedBottomAppBar(BuildContext context, WidgetRef ref) {
+    final BottomAppBar? bar = getBottomAppBar(context, ref);
+    return bar == null ? null : SafeBottomBar(child: bar);
   }
   void initialSettingAtBuild(BuildContext context, WidgetRef ref);
 

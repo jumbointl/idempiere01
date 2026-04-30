@@ -192,6 +192,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:monalisa_app_001/config/config.dart';
 import 'package:monalisa_app_001/features/products/common/input_dialog.dart';
+import 'package:monalisapy_core/monalisapy_core.dart' show SafeBottomBar;
 import 'package:monalisa_app_001/features/products/domain/idempiere/movement_and_lines.dart';
 import 'package:monalisa_app_001/features/products/domain/idempiere/put_away_movement.dart';
 import 'package:monalisa_app_001/features/products/presentation/providers/common_provider.dart';
@@ -273,14 +274,16 @@ class MovementsCreateScreenState extends ConsumerState<MovementsCreateScreen> {
 
       ),
 
-      bottomNavigationBar: BottomAppBar(
-          height: Memory.BOTTOM_BAR_HEIGHT,
-          color: themeColorPrimary,
-          //child: buttonConfirm(context, ref)
-          child: Center(
-            child: Text(Messages.PLEASE_WAIT,style: TextStyle(fontSize: themeFontSizeLarge,
-            color: Colors.white),overflow: TextOverflow.ellipsis,),
-          )
+      bottomNavigationBar: SafeBottomBar(
+        child: BottomAppBar(
+            height: Memory.BOTTOM_BAR_HEIGHT,
+            color: themeColorPrimary,
+            //child: buttonConfirm(context, ref)
+            child: Center(
+              child: Text(Messages.PLEASE_WAIT,style: TextStyle(fontSize: themeFontSizeLarge,
+              color: Colors.white),overflow: TextOverflow.ellipsis,),
+            )
+        ),
       ),
       body: SafeArea(
           child: PopScope(
